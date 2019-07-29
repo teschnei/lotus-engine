@@ -1,0 +1,44 @@
+#include <SDL.h>
+
+#include "core/core.h"
+#include "core/game.h"
+#include "core/entity/renderable_entity.h"
+#include "core/task/entity_render.h"
+#include "core/task/renderable_entity_init.h"
+#include "core/scene.h"
+#include <iostream>
+#include "ffxi/ffxi_load_land_test.h"
+
+class Game : public lotus::Game
+{
+public:
+    Game(const std::string appname, uint32_t appversion) : lotus::Game(appname, appversion)
+    {
+        FFXILoadLandTest test(this);
+        auto entity = test.getLand();
+        scene = std::make_unique<lotus::Scene>();
+        scene->entities.push_back(std::shared_ptr<lotus::RenderableEntity>(entity));
+        for (auto& entity : scene->entities)
+        {
+        }
+        engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .01f, 1000.f);
+        engine->camera.setPos(0.f, -30.f, 0.f);
+    }
+    virtual void tick(lotus::time_point time, lotus::duration delta) override
+    {
+    }
+};
+
+int main(int argc, char* argv[]) {
+
+    Game game{ "core-test", VK_MAKE_VERSION(1, 0, 0) };
+
+    try {
+        game.run();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}

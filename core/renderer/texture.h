@@ -1,0 +1,65 @@
+#pragma once
+
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vulkan/vulkan.hpp>
+#include "memory.h"
+#include "../work_item.h"
+
+namespace lotus
+{
+    class Engine;
+
+    class Texture
+    {
+    public:
+        //TODO: figure out how to get engine out of this call
+        template<typename TextureLoader>
+        static std::pair<std::shared_ptr<Texture>, std::unique_ptr<WorkItem>> LoadTexture(Engine* engine, const std::string& texturename)
+        {
+            if (auto found = texture_map.find(texturename); found != texture_map.end())
+            {
+                return { found->second.lock(), nullptr };
+            }
+            auto new_texture = std::shared_ptr<Texture>(new Texture());
+            TextureLoader loader{};
+            loader.setEngine(engine);
+            auto work_item = loader.LoadTexture(new_texture);
+            return { texture_map.emplace(texturename, new_texture).first->second.lock(), std::move(work_item) };
+        }
+        Texture(const Texture&) = delete;
+        Texture& operator=(const Texture&) = delete;
+        Texture(Texture&&) = default;
+        Texture& operator=(Texture&&) = default;
+        virtual ~Texture() = default;
+
+        uint32_t getWidth() const { return width; }
+        uint32_t getHeight() const { return height; }
+        void setWidth(uint32_t _width) { width = _width; }
+        void setHeight(uint32_t _height) { height = _height; }
+
+        std::unique_ptr<Image> image;
+        vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> image_view;
+        vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
+
+    protected:
+        Texture() = default;
+
+        uint32_t width {0};
+        uint32_t height {0};
+
+        inline static std::unordered_map<std::string, std::weak_ptr<Texture>> texture_map{};
+    };
+
+    class TextureLoader
+    {
+    public:
+        TextureLoader() {}
+        void setEngine(Engine* _engine) { engine = _engine; }
+        virtual std::unique_ptr<WorkItem> LoadTexture(std::shared_ptr<Texture>&) = 0;
+        virtual ~TextureLoader() = default;
+    protected:
+        Engine* engine {nullptr};
+    };
+}
