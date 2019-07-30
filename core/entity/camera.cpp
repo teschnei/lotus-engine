@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include "component/camera_component.h"
+#include <iostream>
 
 namespace lotus
 {
@@ -35,6 +36,7 @@ namespace lotus
         pos += forward_offset * camera_rot;
         pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, -1.f, 0.f)));
         view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        std::cout << "camera pos: x " << pos.x << " y " << pos.y << " z " << pos.z << std::endl;
     }
 
     void Camera::look(float rot_x_offset, float rot_z_offset)

@@ -1,6 +1,6 @@
 #pragma once
 #include "core/core.h"
-#include "core/renderer/model.h"
+#include "core/renderer/mesh.h"
 #include "core/renderer/texture.h"
 #include "core/task/model_init.h"
 #include "core/task/texture_init.h"
@@ -9,7 +9,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-class TestLoader : public lotus::ModelLoader
+class TestLoader : public lotus::MeshLoader
 {
 struct Vertex {
     glm::vec3 pos;
@@ -66,7 +66,7 @@ struct Vertex {
     };
 
 public:
-    virtual std::unique_ptr<lotus::WorkItem> LoadModel(std::shared_ptr<lotus::Model>& model) override
+    virtual std::unique_ptr<lotus::WorkItem> LoadMesh(std::shared_ptr<lotus::Mesh>& model) override
     {
         model->setVertexInputAttributeDescription(Vertex::getAttributeDescriptions());
         model->setVertexInputBindingDescription(Vertex::getBindingDescriptions());

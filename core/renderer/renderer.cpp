@@ -195,10 +195,14 @@ namespace lotus
 
     void Renderer::createSwapchain()
     {
-        device->waitIdle(dispatch);
-        swapchain_image_views.clear();
-        swapchain_images.clear();
-        swapchain.reset();
+        //device->waitIdle(dispatch);
+        //swapchain_image_views.clear();
+        //swapchain_images.clear();
+        //swapchain.reset();
+        if (swapchain)
+        {
+            old_swapchain = std::move(swapchain);
+        }
         auto swap_chain_info = getSwapChainInfo(physical_device);
         vk::SurfaceFormatKHR surface_format;
         if (swap_chain_info.formats.size() == 1 && swap_chain_info.formats[0].format == vk::Format::eUndefined)
@@ -263,6 +267,11 @@ namespace lotus
         swapchain_create_info.imageArrayLayers = 1;
         swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
+        if (old_swapchain)
+        {
+            swapchain_create_info.oldSwapchain = *old_swapchain;
+        }
+
         auto [graphics, present] = getQueueFamilies(physical_device);
         uint32_t queueIndices[] = { graphics.value(), present.value() };
         if (graphics.value() != present.value())
@@ -283,9 +292,12 @@ namespace lotus
 
         swapchain_image_format = surface_format.format;
         swapchain = device->createSwapchainKHRUnique(swapchain_create_info, nullptr, dispatch);
-        for(const auto& image : device->getSwapchainImagesKHR(*swapchain, dispatch))
+        if (swapchain_images.empty())
         {
-            swapchain_images.emplace_back(image);
+            for (const auto& image : device->getSwapchainImagesKHR(*swapchain, dispatch))
+            {
+                swapchain_images.emplace_back(image);
+            }
         }
         swapchain_extent = swap_extent;
 
@@ -298,10 +310,13 @@ namespace lotus
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
 
-        for (auto& swapchain_image : swapchain_images)
+        if (swapchain_image_views.empty())
         {
-            image_view_info.image = swapchain_image;
-            swapchain_image_views.push_back(device->createImageViewUnique(image_view_info, nullptr, dispatch));
+            for (auto& swapchain_image : swapchain_images)
+            {
+                image_view_info.image = swapchain_image;
+                swapchain_image_views.push_back(device->createImageViewUnique(image_view_info, nullptr, dispatch));
+            }
         }
     }
 

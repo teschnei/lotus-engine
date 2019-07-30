@@ -3,8 +3,7 @@
 #include "entity.h"
 
 #include <memory>
-#include "../renderer/model.h"
-#include "../renderer/texture.h"
+#include "core/renderer/model.h"
 
 namespace lotus
 {
@@ -25,8 +24,7 @@ namespace lotus
 
         virtual void render(Engine* engine, std::shared_ptr<RenderableEntity>& sp);
 
-        std::shared_ptr<Model> model;
-        std::shared_ptr<Texture> texture;
+        std::vector<std::unique_ptr<Model>> models;
 
         glm::mat4 getModelMatrix();
 

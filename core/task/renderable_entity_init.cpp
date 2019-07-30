@@ -35,32 +35,31 @@ namespace lotus
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.graphics_pipeline, thread->engine->renderer.dispatch);
 
-            drawModel(thread, *command_buffer, *entity->model, *entity->texture, *entity->uniform_buffers[i]->buffer);
+            for (const auto& model : entity->models)
+            {
+                drawModel(thread, *command_buffer, *model, *entity->uniform_buffers[i]->buffer);
+            }
 
             command_buffer->end(thread->engine->renderer.dispatch);
         }
     }
 
-    void RenderableEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, Model& model, Texture& texture, vk::Buffer uniform_buffer)
+    void RenderableEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, const Model& model, vk::Buffer uniform_buffer)
     {
-        if (model.vertex_buffer)
+        for (const auto& mesh : model.meshes)
         {
-            drawPiece(thread, command_buffer, model, texture, uniform_buffer);
-        }
-        for (const auto& piece : model.m_pieces)
-        {
-            if (piece->vertex_buffer)
+            if (mesh->vertex_buffer)
             {
-                drawPiece(thread, command_buffer, *piece, texture, uniform_buffer);
+                drawMesh(thread, command_buffer, *mesh, uniform_buffer);
             }
         }
     }
 
-    void RenderableEntityInitTask::drawPiece(WorkerThread* thread, vk::CommandBuffer command_buffer, Model& model, Texture& texture, vk::Buffer uniform_buffer)
+    void RenderableEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::Buffer uniform_buffer)
     {
         vk::DeviceSize offsets = 0;
-        command_buffer.bindVertexBuffers(0, *model.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
-        command_buffer.bindIndexBuffer(*model.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
+        command_buffer.bindVertexBuffers(0, *mesh.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
+        command_buffer.bindIndexBuffer(*mesh.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
 
         vk::DescriptorBufferInfo buffer_info;
         buffer_info.buffer = uniform_buffer;
@@ -69,8 +68,8 @@ namespace lotus
 
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        image_info.imageView = *texture.image_view;
-        image_info.sampler = *texture.sampler;
+        image_info.imageView = *mesh.texture->image_view;
+        image_info.sampler = *mesh.texture->sampler;
 
         std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
@@ -90,7 +89,7 @@ namespace lotus
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
-        command_buffer.drawIndexed(model.getIndexCount(), 1, 0, 0, 0, thread->engine->renderer.dispatch);
+        command_buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0, thread->engine->renderer.dispatch);
     }
 
     void RenderableEntityInitTask::createBuffers(WorkerThread* thread, RenderableEntity* _entity)

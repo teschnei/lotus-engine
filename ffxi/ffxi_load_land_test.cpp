@@ -90,23 +90,22 @@ FFXILoadLandTest::FFXILoadLandTest(lotus::Game* _game) : game(_game)
 std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
 {
     auto entity = std::make_shared<lotus::LandscapeEntity>();
-    entity->model = std::make_shared<lotus::Model>();
     auto [texture, texture_task] = lotus::Texture::LoadTexture<TestTextureLoader>(game->engine.get(), "test");
-    entity->texture = texture;
     game->engine->worker_pool.addWork(std::move(texture_task));
 
     for (const auto& mmb : mmbs)
     {
         std::string name(mmb->name, 16);
-        auto model = std::make_shared<lotus::Model>();
+        auto model = std::make_unique<lotus::Model>(name);
 
         for (const auto& mmb_model : mmb->models)
         {
-            auto mmb_piece = std::make_shared<lotus::Model>();
+            auto mesh = std::make_shared<lotus::Mesh>();
+            mesh->texture = texture;
 
-            mmb_piece->setVertexInputAttributeDescription(FFXI::MMB::Vertex::getAttributeDescriptions());
-            mmb_piece->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
-            mmb_piece->setIndexCount(static_cast<int>(mmb_model.indices.size()));
+            mesh->setVertexInputAttributeDescription(FFXI::MMB::Vertex::getAttributeDescriptions());
+            mesh->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
+            mesh->setIndexCount(static_cast<int>(mmb_model.indices.size()));
 
             std::vector<uint8_t> vertices_uint8;
             vertices_uint8.resize(mmb_model.vertices.size() * sizeof(FFXI::MMB::Vertex));
@@ -116,18 +115,19 @@ std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
             indices_uint8.resize(mmb_model.indices.size() * sizeof(uint16_t));
             memcpy(indices_uint8.data(), mmb_model.indices.data(), indices_uint8.size());
 
-            mmb_piece->vertex_buffer = game->engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-            mmb_piece->index_buffer = game->engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->vertex_buffer = game->engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->index_buffer = game->engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-            game->engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(game->engine->renderer.getCurrentImage(), mmb_piece, std::move(vertices_uint8), std::move(indices_uint8)));
+            game->engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(game->engine->renderer.getCurrentImage(), mesh, std::move(vertices_uint8), std::move(indices_uint8)));
 
-            model->m_pieces.push_back(std::move(mmb_piece));
+            if (!lotus::Mesh::addMesh(name, mesh))
+            {
+                //__debugbreak();
+            }
+
+            model->meshes.push_back(std::move(mesh));
         }
-        if (!lotus::Model::addModel(name, model))
-        {
-            //__debugbreak();
-        }
-        entity->instance_models.push_back(std::make_pair(name, model));
+        entity->models.push_back(std::move(model));
     }
 
     entity->instance_buffer = game->engine->renderer.memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),

@@ -31,6 +31,7 @@ namespace lotus
         vk::Queue graphics_queue;
         vk::Queue present_queue;
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> swapchain;
+        vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> old_swapchain;
         vk::Extent2D swapchain_extent{};
         vk::Format swapchain_image_format{};
         std::vector<vk::Image> swapchain_images;

@@ -166,6 +166,7 @@
     <ClCompile Include="core\entity\renderable_entity.cpp" />
     <ClCompile Include="core\input.cpp" />
     <ClCompile Include="core\renderer\memory.cpp" />
+    <ClCompile Include="core\renderer\mesh.cpp" />
     <ClCompile Include="core\renderer\model.cpp" />
     <ClCompile Include="core\renderer\renderer.cpp" />
     <ClCompile Include="core\renderer\texture.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="core\game.h" />
     <ClInclude Include="core\input.h" />
     <ClInclude Include="core\renderer\memory.h" />
+    <ClInclude Include="core\renderer\mesh.h" />
     <ClInclude Include="core\renderer\model.h" />
     <ClInclude Include="core\renderer\renderer.h" />
     <ClInclude Include="core\renderer\texture.h" />

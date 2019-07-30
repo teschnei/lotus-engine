@@ -69,7 +69,7 @@ namespace FFXI
         float u, v;
     };
 
-    class MMBLoader : public lotus::ModelLoader
+    class MMBLoader : public lotus::MeshLoader
     {
         
     };

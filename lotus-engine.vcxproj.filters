@@ -18,9 +18,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="core\renderer\model.cpp">
-      <Filter>core\renderer</Filter>
-    </ClCompile>
     <ClCompile Include="core\renderer\texture.cpp">
       <Filter>core\renderer</Filter>
     </ClCompile>
@@ -90,11 +87,14 @@
     <ClCompile Include="core\task\landscape_entity_init.cpp">
       <Filter>core\task</Filter>
     </ClCompile>
+    <ClCompile Include="core\renderer\mesh.cpp">
+      <Filter>core\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="core\renderer\model.cpp">
+      <Filter>core\renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="core\renderer\model.h">
-      <Filter>core\renderer</Filter>
-    </ClInclude>
     <ClInclude Include="core\renderer\texture.h">
       <Filter>core\renderer</Filter>
     </ClInclude>
@@ -169,6 +169,12 @@
     </ClInclude>
     <ClInclude Include="core\task\landscape_entity_init.h">
       <Filter>core\task</Filter>
+    </ClInclude>
+    <ClInclude Include="core\renderer\mesh.h">
+      <Filter>core\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="core\renderer\model.h">
+      <Filter>core\renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

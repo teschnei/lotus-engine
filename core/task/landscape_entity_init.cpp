@@ -42,13 +42,29 @@ namespace lotus
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.graphics_pipeline, thread->engine->renderer.dispatch);
 
-            drawModel(thread, *command_buffer, *entity->texture, *entity->uniform_buffers[i]->buffer);
+            drawModel(thread, *command_buffer, *entity->uniform_buffers[i]->buffer);
 
             command_buffer->end(thread->engine->renderer.dispatch);
         }
     }
 
-    void LandscapeEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, Texture& texture, vk::Buffer uniform_buffer)
+    void LandscapeEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, vk::Buffer uniform_buffer)
+    {
+        for (const auto& model : entity->models)
+        {
+            auto [offset, count] = entity->instance_offsets[model->name];
+            if (count > 0 && !model->meshes.empty())
+            {
+                command_buffer.bindVertexBuffers(1, *entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo), thread->engine->renderer.dispatch);
+                for (const auto& mesh : model->meshes)
+                {
+                    drawMesh(thread, command_buffer, *mesh, uniform_buffer, count);
+                }
+            }
+        }
+    }
+
+    void LandscapeEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::Buffer uniform_buffer, vk::DeviceSize count)
     {
         vk::DescriptorBufferInfo buffer_info;
         buffer_info.buffer = uniform_buffer;
@@ -57,8 +73,13 @@ namespace lotus
 
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        image_info.imageView = *texture.image_view;
-        image_info.sampler = *texture.sampler;
+
+        //TODO: debug texture? probably AYAYA
+        if (mesh.texture)
+        {
+            image_info.imageView = *mesh.texture->image_view;
+            image_info.sampler = *mesh.texture->sampler;
+        }
 
         std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
@@ -78,31 +99,11 @@ namespace lotus
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
-        for (auto [name, model] : entity->instance_models)
-        {
-            auto [offset, count] = entity->instance_offsets[name];
-            if (count > 0 && (model->vertex_buffer || !model->m_pieces.empty()))
-            {
-                command_buffer.bindVertexBuffers(1, *entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo), thread->engine->renderer.dispatch);
-                if (model->vertex_buffer)
-                {
-                    drawPiece(thread, command_buffer, *model, texture, uniform_buffer, count);
-                }
-                for (const auto& piece : model->m_pieces)
-                {
-                    drawPiece(thread, command_buffer, *piece, texture, uniform_buffer, count);
-                }
-            }
-        }
-    }
-
-    void LandscapeEntityInitTask::drawPiece(WorkerThread* thread, vk::CommandBuffer command_buffer, Model& model, Texture& texture, vk::Buffer uniform_buffer, vk::DeviceSize count)
-    {
         vk::DeviceSize offsets = 0;
-        command_buffer.bindVertexBuffers(0, *model.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
-        command_buffer.bindIndexBuffer(*model.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
+        command_buffer.bindVertexBuffers(0, *mesh.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
+        command_buffer.bindIndexBuffer(*mesh.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
 
-        command_buffer.drawIndexed(model.getIndexCount(), count, 0, 0, 0, thread->engine->renderer.dispatch);
+        command_buffer.drawIndexed(mesh.getIndexCount(), count, 0, 0, 0, thread->engine->renderer.dispatch);
     }
 
     void LandscapeEntityInitTask::populateInstanceBuffer(WorkerThread* thread)

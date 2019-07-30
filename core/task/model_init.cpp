@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    ModelInitTask::ModelInitTask(int _image_index, std::shared_ptr<Model> _model, std::vector<uint8_t>&& _vertex_buffer,
+    ModelInitTask::ModelInitTask(int _image_index, std::shared_ptr<Mesh> _model, std::vector<uint8_t>&& _vertex_buffer,
         std::vector<uint8_t>&& _index_buffer) : WorkItem(), image_index(_image_index), model(std::move(_model)), vertex_buffer(std::move(_vertex_buffer)), index_buffer(std::move(_index_buffer))
     {
         priority = -1;
