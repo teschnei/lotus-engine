@@ -14,6 +14,9 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     outColor = handleColor(texSampler, fragTexCoord, fragColor, fragPos, normal);
-    outColor.a = 1;
+    if (outColor.a > 0)
+        outColor.a = 1;
+    else
+        discard;
 }
 

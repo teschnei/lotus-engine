@@ -242,7 +242,7 @@ namespace FFXI
                         SMMBBlockVertex2* vertex_head = (SMMBBlockVertex2*)(buffer + offset);
                         vertex.pos = { vertex_head->x, vertex_head->y, vertex_head->z };
                         vertex.normal = { vertex_head->hx, vertex_head->hy, vertex_head->hz };
-                        vertex.color = { (vertex_head->color & 0xFF0000) >> 16, (vertex_head->color & 0xFF00) >> 8, vertex_head->color & 0xFF};
+                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f};
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex2);
                     }
@@ -251,7 +251,7 @@ namespace FFXI
                         SMMBBlockVertex* vertex_head = (SMMBBlockVertex*)(buffer + offset);
                         vertex.pos = { vertex_head->x, vertex_head->y, vertex_head->z };
                         vertex.normal = { vertex_head->hx, vertex_head->hy, vertex_head->hz };
-                        vertex.color = { (vertex_head->color & 0xFF0000) >> 16, (vertex_head->color & 0xFF00) >> 8, vertex_head->color & 0xFF};
+                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f};
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex);
                     }

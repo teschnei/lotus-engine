@@ -24,7 +24,6 @@ namespace lotus
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
         std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
         std::vector<std::vector<vk::CommandBuffer>> secondary_buffers;
-        std::vector<std::vector<std::pair<glm::vec3, vk::CommandBuffer>>> blended_buffers;
         vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderStatic> desc_pool;
 
         WorkerPool* pool{ nullptr };

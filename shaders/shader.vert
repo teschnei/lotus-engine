@@ -15,9 +15,14 @@ layout(location = 4) in mat4 instanceModelMat;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
+layout(location = 2) out vec3 fragPos;
+layout(location = 3) out vec3 normal;
 
 void main() {
     gl_Position = ubo.proj * ubo.view * ubo.model * instanceModelMat * vec4(inPosition, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
+
+    fragPos = (ubo.model * instanceModelMat * vec4(inPosition, 1.0)).xyz;
+    normal = inNormal;
 }

@@ -26,7 +26,6 @@ lotus::WorkerThread::WorkerThread(Engine* _engine, WorkerPool* _pool) : pool(_po
 
     primary_buffers.resize(engine->renderer.getImageCount());
     secondary_buffers.resize(engine->renderer.getImageCount());
-    blended_buffers.resize(engine->renderer.getImageCount());
 }
 
 void lotus::WorkerThread::WorkLoop()

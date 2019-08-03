@@ -38,4 +38,12 @@
       <Filter>ffxi</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\frag_common.frag" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="shaders\shader.frag" />
+    <CustomBuild Include="shaders\shader.vert" />
+    <CustomBuild Include="shaders\shader_blend.frag" />
+  </ItemGroup>
 </Project>

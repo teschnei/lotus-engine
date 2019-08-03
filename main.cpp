@@ -18,11 +18,8 @@ public:
         auto entity = test.getLand();
         scene = std::make_unique<lotus::Scene>();
         scene->entities.push_back(std::shared_ptr<lotus::RenderableEntity>(entity));
-        for (auto& entity : scene->entities)
-        {
-        }
         engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .01f, 1000.f);
-        engine->camera.setPos(glm::vec3(0.f, -30.f, 0.f));
+        engine->camera.setPos(glm::vec3(259.f, -90.f, 82.f));
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {

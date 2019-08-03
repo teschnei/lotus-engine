@@ -512,7 +512,11 @@ namespace lotus
 
         main_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
 
-        color_blend_attachment.blendEnable = true;
+        fragment_module = getShader("shaders/frag_blend.spv");
+
+        frag_shader_stage_info.module = *fragment_module;
+
+        shaderStages[1] = frag_shader_stage_info;
 
         blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
     }
@@ -642,7 +646,7 @@ namespace lotus
         renderpass_info.renderArea.extent = swapchain_extent;
 
         std::array<vk::ClearValue, 2> clearValues = {};
-        clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
+        clearValues[0].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
         clearValues[1].depthStencil = { 1.0f, 0 };
 
         renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
