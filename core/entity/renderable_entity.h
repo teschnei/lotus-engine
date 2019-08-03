@@ -30,6 +30,7 @@ namespace lotus
 
         std::vector<std::unique_ptr<Buffer>> uniform_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
+        std::vector<std::vector<std::pair<glm::vec3, vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>> blended_buffers;
         
     protected:
         glm::vec3 scale{ 1.f, 1.f, 1.f };

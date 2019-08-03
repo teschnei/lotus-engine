@@ -15,10 +15,12 @@ namespace lotus
         glm::mat4& getViewMatrix() { return view; }
         glm::mat4& getProjMatrix() { return proj; }
 
-        void setPos(float x, float y, float z);
+        void setPos(glm::vec3);
         void setPerspective(float radians, float aspect, float near, float far);
         void move(float forward_offset, float right_offset);
         void look(float rot_x_offset, float rot_y_offset);
+
+        glm::vec3 getRotationVector() { return camera_rot; }
 
     private:
 

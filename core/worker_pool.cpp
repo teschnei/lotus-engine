@@ -60,6 +60,21 @@ namespace lotus
             buffers.insert(buffers.end(), thread->secondary_buffers[image].begin(), thread->secondary_buffers[image].end());
             thread->secondary_buffers[image].clear();
         }
+        //std::vector<std::pair<float, vk::CommandBuffer>> blend_buffers;
+        //for (const auto& thread : threads)
+        //{
+        //    for (const auto& [pos, buffer] : thread->blended_buffers[image] )
+        //    {
+        //        auto distance = glm::length(pos - thread->engine->camera.getPos());
+        //        blend_buffers.emplace_back(distance, buffer);
+        //    }
+        //    thread->blended_buffers[image].clear();
+        //}
+        //std::sort(blend_buffers.begin(), blend_buffers.end(), [](const auto& a, const auto& b) {return a.first > b.first; });
+        //for (auto& buffer : blend_buffers)
+        {
+            //buffers.push_back(buffer.second);
+        }
         return buffers;
     }
 

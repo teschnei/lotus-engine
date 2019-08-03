@@ -22,7 +22,7 @@ public:
         {
         }
         engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .01f, 1000.f);
-        engine->camera.setPos(0.f, -30.f, 0.f);
+        engine->camera.setPos(glm::vec3(0.f, -30.f, 0.f));
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {

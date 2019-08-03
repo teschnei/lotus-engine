@@ -33,12 +33,20 @@ namespace lotus
 
             command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.graphics_pipeline, thread->engine->renderer.dispatch);
+            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_graphics_pipeline, thread->engine->renderer.dispatch);
 
             for (const auto& model : entity->models)
             {
                 drawModel(thread, *command_buffer, *model, *entity->uniform_buffers[i]->buffer);
             }
+
+            //TODO: transparent meshes
+            //command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.blended_graphics_pipeline, thread->engine->renderer.dispatch);
+
+            //for (const auto& model : entity->models)
+            //{
+            //    drawModel(thread, *command_buffer, *model, *entity->uniform_buffers[i]->buffer, true);
+            //}
 
             command_buffer->end(thread->engine->renderer.dispatch);
         }
@@ -47,8 +55,8 @@ namespace lotus
     void RenderableEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, const Model& model, vk::Buffer uniform_buffer)
     {
         for (const auto& mesh : model.meshes)
-        {
-            if (mesh->vertex_buffer)
+        { 
+            if (mesh->vertex_buffer && !mesh->has_transparency)
             {
                 drawMesh(thread, command_buffer, *mesh, uniform_buffer);
             }

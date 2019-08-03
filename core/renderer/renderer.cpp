@@ -465,13 +465,19 @@ namespace lotus
         vk::PipelineDepthStencilStateCreateInfo depth_stencil;
         depth_stencil.depthTestEnable = true;
         depth_stencil.depthWriteEnable = true;
-        depth_stencil.depthCompareOp = vk::CompareOp::eLess;
+        depth_stencil.depthCompareOp = vk::CompareOp::eLessOrEqual;
         depth_stencil.depthBoundsTestEnable = false;
         depth_stencil.stencilTestEnable = false;
 
         vk::PipelineColorBlendAttachmentState color_blend_attachment;
         color_blend_attachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
         color_blend_attachment.blendEnable = false;
+        color_blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
+        color_blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
+        color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+        color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+        color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;
@@ -504,7 +510,11 @@ namespace lotus
         pipeline_info.subpass = 0;
         pipeline_info.basePipelineHandle = nullptr;
 
-        graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+        main_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+
+        color_blend_attachment.blendEnable = true;
+
+        blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
     }
 
     void Renderer::createDepthImage()
@@ -647,7 +657,6 @@ namespace lotus
         render_commandbuffers[image_index] = std::move(buffer[0]);
         return *render_commandbuffers[image_index];
     }
-
 
     bool Renderer::checkValidationLayerSupport() const
     {

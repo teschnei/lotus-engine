@@ -16,6 +16,9 @@
     <ClCompile Include="ffxi\mmb.cpp">
       <Filter>ffxi</Filter>
     </ClCompile>
+    <ClCompile Include="ffxi\texture.cpp">
+      <Filter>ffxi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test_loader.h" />
@@ -29,6 +32,9 @@
       <Filter>ffxi</Filter>
     </ClInclude>
     <ClInclude Include="ffxi\mmb.h">
+      <Filter>ffxi</Filter>
+    </ClInclude>
+    <ClInclude Include="ffxi\texture.h">
       <Filter>ffxi</Filter>
     </ClInclude>
   </ItemGroup>

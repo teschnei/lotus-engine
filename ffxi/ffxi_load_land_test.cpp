@@ -26,6 +26,66 @@ typedef struct
 } DATHEAD;
 #pragma pack(pop)
 
+class TextureLoader : public lotus::TextureLoader
+{
+public:
+    TextureLoader(uint32_t _width, uint32_t _height, uint8_t* _pixels, vk::Format _format) : lotus::TextureLoader(), width(_width), height(_height), pixels(_pixels), format(_format) {}
+    virtual std::unique_ptr<lotus::WorkItem> LoadTexture(std::shared_ptr<lotus::Texture>& texture) override
+    {
+        uint32_t stride = 4;
+        if (format == vk::Format::eBc2UnormBlock)
+            stride = 1;
+        VkDeviceSize imageSize = width * height * stride;
+
+        texture->setWidth(width);
+        texture->setHeight(height);
+
+        if (!pixels) {
+            throw std::runtime_error("failed to load texture image!");
+        }
+
+        std::vector<uint8_t> texture_data;
+        texture_data.resize(imageSize);
+        memcpy(texture_data.data(), pixels, imageSize);
+
+        texture->image = engine->renderer.memory_manager->GetImage(texture->getWidth(), texture->getHeight(), format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.image = *texture->image->image;
+        image_view_info.viewType = vk::ImageViewType::e2D;
+        image_view_info.format = format;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = 1;
+
+        texture->image_view = engine->renderer.device->createImageViewUnique(image_view_info, nullptr, engine->renderer.dispatch);
+
+        vk::SamplerCreateInfo sampler_info = {};
+        sampler_info.magFilter = vk::Filter::eLinear;
+        sampler_info.minFilter = vk::Filter::eLinear;
+        sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+        sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+        sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+        sampler_info.anisotropyEnable = true;
+        sampler_info.maxAnisotropy = 16;
+        sampler_info.borderColor = vk::BorderColor::eIntOpaqueBlack;
+        sampler_info.unnormalizedCoordinates = false;
+        sampler_info.compareEnable = false;
+        sampler_info.compareOp = vk::CompareOp::eAlways;
+        sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+
+        texture->sampler = engine->renderer.device->createSamplerUnique(sampler_info, nullptr, engine->renderer.dispatch);
+
+        return std::make_unique<lotus::TextureInitTask>(engine->renderer.getCurrentImage(), texture, format, vk::ImageTiling::eOptimal, std::move(texture_data));
+    }
+    
+    uint32_t width;
+    uint32_t height;
+    uint8_t* pixels;
+    vk::Format format;
+};
 
 
 FFXILoadLandTest::FFXILoadLandTest(lotus::Game* _game) : game(_game)
@@ -70,6 +130,7 @@ FFXILoadLandTest::FFXILoadLandTest(lotus::Game* _game) : game(_game)
             break;
         case 0x20:
             IMG++;
+            textures.push_back(std::make_unique<FFXI::Texture>(&buffer[offset + sizeof(DATHEAD)]));
             break;
         case 0x29:
             BONE++;
@@ -90,8 +151,20 @@ FFXILoadLandTest::FFXILoadLandTest(lotus::Game* _game) : game(_game)
 std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
 {
     auto entity = std::make_shared<lotus::LandscapeEntity>();
-    auto [texture, texture_task] = lotus::Texture::LoadTexture<TestTextureLoader>(game->engine.get(), "test");
+    auto [default_texture, texture_task] = lotus::Texture::LoadTexture<TestTextureLoader>(game->engine.get(), "test");
     game->engine->worker_pool.addWork(std::move(texture_task));
+    std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
+
+    for (const auto& texture_data : textures)
+    {
+        if (texture_data->width > 0)
+        {
+            auto [texture, texture_task] = lotus::Texture::LoadTexture<TextureLoader>(game->engine.get(), texture_data->name, texture_data->width, texture_data->height, texture_data->pixels.data(), texture_data->format);
+            if (texture_task)
+                game->engine->worker_pool.addWork(std::move(texture_task));
+            texture_map[texture_data->name] = std::move(texture);
+        }
+    }
 
     for (const auto& mmb : mmbs)
     {
@@ -101,11 +174,19 @@ std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
         for (const auto& mmb_model : mmb->models)
         {
             auto mesh = std::make_shared<lotus::Mesh>();
-            mesh->texture = texture;
+            if (auto texture = texture_map.find(std::string(mmb_model.textureName, 16)); texture != texture_map.end())
+            {
+                mesh->texture = texture->second;
+            }
+            else
+            {
+                mesh->texture = default_texture;
+            }
 
             mesh->setVertexInputAttributeDescription(FFXI::MMB::Vertex::getAttributeDescriptions());
             mesh->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
             mesh->setIndexCount(static_cast<int>(mmb_model.indices.size()));
+            mesh->has_transparency = mmb_model.blending & 0x8000 || name[0] == '_';
 
             std::vector<uint8_t> vertices_uint8;
             vertices_uint8.resize(mmb_model.vertices.size() * sizeof(FFXI::MMB::Vertex));

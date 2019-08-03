@@ -14,10 +14,10 @@ namespace lotus
         }
     }
 
-    void Entity::setPos(float x, float y, float z)
+    void Entity::setPos(glm::vec3 pos)
     {
-        this->pos = glm::vec3(x, y, z);
-        this->pos_mat = glm::translate(glm::mat4{ 1.f }, glm::vec3{ x, y, z });
+        this->pos = pos;
+        this->pos_mat = glm::translate(glm::mat4{ 1.f }, pos);
     }
 
     void Entity::setRot(float rot)
@@ -29,6 +29,11 @@ namespace lotus
     void Entity::setRot(glm::quat quat)
     {
         this->rot_mat = glm::toMat4(quat);
+    }
+
+    glm::vec3 Entity::getPos()
+    {
+        return this->pos;
     }
 
 }

@@ -15,15 +15,15 @@ namespace lotus
     {
     public:
         //TODO: figure out how to get engine out of this call
-        template<typename TextureLoader>
-        static std::pair<std::shared_ptr<Texture>, std::unique_ptr<WorkItem>> LoadTexture(Engine* engine, const std::string& texturename)
+        template<typename TextureLoader, typename... Args>
+        static std::pair<std::shared_ptr<Texture>, std::unique_ptr<WorkItem>> LoadTexture(Engine* engine, const std::string& texturename, Args... args)
         {
             if (auto found = texture_map.find(texturename); found != texture_map.end())
             {
                 return { found->second.lock(), nullptr };
             }
             auto new_texture = std::shared_ptr<Texture>(new Texture());
-            TextureLoader loader{};
+            TextureLoader loader{args...};
             loader.setEngine(engine);
             auto work_item = loader.LoadTexture(new_texture);
             return { texture_map.emplace(texturename, new_texture).first->second.lock(), std::move(work_item) };

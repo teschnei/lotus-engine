@@ -3,15 +3,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include "component/camera_component.h"
-#include <iostream>
 
 namespace lotus
 {
     Camera::Camera(Input* input)
     {
-        //camera_rot.x = cos(rot_x) * cos(rot_z);
-        //camera_rot.y = cos(rot_x) * sin(rot_z);
-        //camera_rot.z = sin(rot_x);
         camera_rot.x = cos(rot_x) * cos(rot_z);
         camera_rot.y = sin(rot_x);
         camera_rot.z = cos(rot_x) * sin(rot_z);
@@ -25,9 +21,9 @@ namespace lotus
         proj[1][1] *= -1;
     }
 
-    void Camera::setPos(float x, float y, float z)
+    void Camera::setPos(glm::vec3 pos)
     {
-        Entity::setPos(x, y, z);
+        Entity::setPos(pos);
         view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
     }
 
@@ -36,7 +32,6 @@ namespace lotus
         pos += forward_offset * camera_rot;
         pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, -1.f, 0.f)));
         view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
-        std::cout << "camera pos: x " << pos.x << " y " << pos.y << " z " << pos.z << std::endl;
     }
 
     void Camera::look(float rot_x_offset, float rot_z_offset)

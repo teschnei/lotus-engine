@@ -27,9 +27,11 @@ namespace lotus
             components.push_back(std::make_unique<T>(this, args...));
         };
 
-        void setPos(float x, float y, float z);
+        void setPos(glm::vec3);
         void setRot(float rot);
         void setRot(glm::quat rot);
+
+        glm::vec3 getPos();
 
     protected:
 

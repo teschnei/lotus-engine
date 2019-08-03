@@ -16,7 +16,11 @@ namespace lotus
 
     void RenderableEntity::render(Engine* engine, std::shared_ptr<RenderableEntity>& sp)
     {
-        engine->worker_pool.addWork(std::make_unique<lotus::EntityRenderTask>(sp));
+        //TODO: check bounding box
+        //if (glm::dot(engine->camera.getPos() - pos, engine->camera.getRotationVector()) > 0)
+        {
+            engine->worker_pool.addWork(std::make_unique<lotus::EntityRenderTask>(sp));
+        }
     }
 
     glm::mat4 RenderableEntity::getModelMatrix()

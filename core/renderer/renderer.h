@@ -4,6 +4,7 @@
 #include <optional>
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
 #include <SDL.h>
 #include "memory.h"
 
@@ -39,7 +40,8 @@ namespace lotus
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> descriptor_set_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
-        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> graphics_pipeline;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> main_graphics_pipeline;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_graphics_pipeline;
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
         std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
@@ -78,6 +80,7 @@ namespace lotus
         swapChainInfo getSwapChainInfo(vk::PhysicalDevice device) const;
 
         vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index, std::vector<vk::CommandBuffer>& secondary_buffers);
+        vk::CommandBuffer getBlendedCommandbuffer(uint32_t image_index, std::vector<std::pair<glm::vec3, vk::CommandBuffer>>& secondary_buffers);
 
         Engine* engine;
         VkDebugUtilsMessengerEXT debug_messenger {nullptr};
