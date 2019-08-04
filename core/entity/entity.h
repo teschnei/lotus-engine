@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "component/component.h"
+#include "../types.h"
 
 namespace lotus
 {
@@ -19,7 +20,7 @@ namespace lotus
         Entity& operator=(Entity&&) = default;
         virtual ~Entity() = default;
 
-        virtual void tick();
+        virtual void tick(time_point time, duration delta);
 
         template <typename T, typename... Args>
         void addComponent(Args... args)

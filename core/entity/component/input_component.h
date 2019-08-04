@@ -14,7 +14,7 @@ namespace lotus
 
         virtual bool handleInput(const SDL_Event&) = 0;
 
-    private:
+    protected:
         Input* input;
     };
 }

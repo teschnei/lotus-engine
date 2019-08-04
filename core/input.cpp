@@ -5,14 +5,8 @@
 
 namespace lotus
 {
-    Input::Input(Engine* _engine, SDL_Window* window) : engine(_engine)
+    Input::Input(Engine* _engine, SDL_Window* _window) : engine(_engine), window(_window)
     {
-        if (window)
-        {
-            SDL_ShowCursor(SDL_FALSE);
-            SDL_SetWindowGrab(window, SDL_TRUE);
-            SDL_SetRelativeMouseMode(SDL_TRUE);
-        }
     }
 
     void Input::GetInput()
@@ -29,12 +23,8 @@ namespace lotus
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED)
                     engine->renderer.resized();
                 break;
-            case SDL_MOUSEMOTION:
-            case SDL_KEYUP:
-            case SDL_KEYDOWN:
-                HandleInputEvent(event);
-                break;
             default:
+                HandleInputEvent(event);
                 break;
             }
         }
@@ -52,13 +42,18 @@ namespace lotus
         return false;
     }
 
-    void Input::registerComponent(InputComponent* component)
+    void Input::RegisterComponent(InputComponent* component)
     {
         components.insert(component);
     }
 
-    void Input::deregisterComponent(InputComponent* component)
+    void Input::DeregisterComponent(InputComponent* component)
     {
         components.erase(component);
+    }
+
+    SDL_Window* Input::GetWindow()
+    {
+        return window;
     }
 }

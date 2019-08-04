@@ -21,6 +21,7 @@ namespace lotus
             simulation_time = new_sim_time;
             input.GetInput();
             game->tick(simulation_time, sim_delta);
+            camera.tick(simulation_time, sim_delta);
             renderer.drawFrame();
         }
     }

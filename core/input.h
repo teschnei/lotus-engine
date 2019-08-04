@@ -13,11 +13,17 @@ namespace lotus
     public:
         Input(Engine* engine, SDL_Window*);
         void GetInput();
-        void registerComponent(InputComponent*);
-        void deregisterComponent(InputComponent*);
+        void RegisterComponent(InputComponent*);
+        void DeregisterComponent(InputComponent*);
+        SDL_Window* GetWindow();
     private:
         bool HandleInputEvent(const SDL_Event&);
         Engine* engine;
         std::set<InputComponent*> components;
+        SDL_Window* window;
+        bool look{ false };
+        //x/y of mouse when mouselook started
+        int look_x{ 0 };
+        int look_y{ 0 };
     };
 }

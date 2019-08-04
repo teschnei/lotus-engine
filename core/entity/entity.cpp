@@ -6,11 +6,11 @@ namespace lotus
     {
     }
 
-    void Entity::tick()
+    void Entity::tick(time_point time, duration delta)
     {
         for (auto& component : components)
         {
-            component->tick();
+            component->tick(time, delta);
         }
     }
 

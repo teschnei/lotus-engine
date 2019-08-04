@@ -1,4 +1,5 @@
 #pragma once
+#include "../../types.h"
 
 namespace lotus {
     class Entity;
@@ -12,7 +13,7 @@ namespace lotus {
         Component& operator=(const Component&) = delete;
         Component& operator=(Component&&) = default;
         virtual ~Component() = default;
-        virtual void tick() = 0;
+        virtual void tick(time_point time, duration delta) = 0;
     protected:
         Entity* entity;
     };
