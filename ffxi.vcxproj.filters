@@ -45,5 +45,7 @@
     <CustomBuild Include="shaders\shader.frag" />
     <CustomBuild Include="shaders\shader.vert" />
     <CustomBuild Include="shaders\shader_blend.frag" />
+    <CustomBuild Include="shaders\shader_shadow.vert" />
+    <CustomBuild Include="shaders\shader_shadow.frag" />
   </ItemGroup>
 </Project>

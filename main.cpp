@@ -14,15 +14,20 @@ class Game : public lotus::Game
 public:
     Game(const std::string appname, uint32_t appversion) : lotus::Game(appname, appversion)
     {
+        cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_data) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        cascade_matrices_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_matrices) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
         FFXILoadLandTest test(this);
         auto entity = test.getLand();
         scene = std::make_unique<lotus::Scene>();
         scene->entities.push_back(std::shared_ptr<lotus::RenderableEntity>(entity));
-        engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .01f, 1000.f);
+        engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .5f, 400.f);
         engine->camera.setPos(glm::vec3(259.f, -90.f, 82.f));
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {
+
     }
 };
 

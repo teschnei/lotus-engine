@@ -59,6 +59,7 @@ namespace lotus
         void workFinished(std::unique_ptr<WorkItem>*);
         std::vector<vk::CommandBuffer> getPrimaryCommandBuffers(int image);
         std::vector<vk::CommandBuffer> getSecondaryCommandBuffers(int image);
+        std::vector<vk::CommandBuffer> getShadowmapCommandBuffers(int image);
 
         void clearProcessed(int image);
         void deleteFinished();

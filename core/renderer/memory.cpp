@@ -62,7 +62,7 @@ namespace lotus
     }
 
     std::unique_ptr<Image> MemoryManager::GetImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
-        vk::MemoryPropertyFlags memoryflags)
+        vk::MemoryPropertyFlags memoryflags, vk::DeviceSize arrayLayers)
     {
         vk::ImageCreateInfo image_info = {};
         image_info.imageType = vk::ImageType::e2D;
@@ -70,7 +70,7 @@ namespace lotus
         image_info.extent.height = height;
         image_info.extent.depth = 1;
         image_info.mipLevels = 1;
-        image_info.arrayLayers = 1;
+        image_info.arrayLayers = arrayLayers;
         image_info.format = format;
         image_info.tiling = tiling;
         image_info.initialLayout = vk::ImageLayout::eUndefined;;

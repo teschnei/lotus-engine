@@ -63,6 +63,17 @@ namespace lotus
         return buffers;
     }
 
+    std::vector<vk::CommandBuffer> WorkerPool::getShadowmapCommandBuffers(int image)
+    {
+        std::vector<vk::CommandBuffer> buffers;
+        for (const auto& thread : threads)
+        {
+            buffers.insert(buffers.end(), thread->shadow_buffers[image].begin(), thread->shadow_buffers[image].end());
+            thread->shadow_buffers[image].clear();
+        }
+        return buffers;
+    }
+
     void WorkerPool::clearProcessed(int image)
     {
         //a mutex is not needed here because the fence already assures us that we have nothing being posted to this queue yet

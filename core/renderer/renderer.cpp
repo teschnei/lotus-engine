@@ -9,8 +9,8 @@
 #include "task/entity_render.h"
 #include "../../ffxi/mmb.h"
 
-#define WIDTH 500
-#define HEIGHT 500
+#define WIDTH 1900
+#define HEIGHT 1000
 
 namespace lotus
 {
@@ -71,13 +71,14 @@ namespace lotus
         memory_manager = std::make_unique<MemoryManager>(physical_device, *device, dispatch);
 
         createSwapchain();
-        createRenderpass();
+        createRenderpasses();
         createDescriptorSetLayout();
         createGraphicsPipeline();
         createDepthImage();
         createFramebuffers();
         createSyncs();
         createCommandPool();
+        createShadowmapResources();
 
         render_commandbuffers.resize(getImageCount());
     }
@@ -171,6 +172,7 @@ namespace lotus
 
         vk::PhysicalDeviceFeatures physical_device_features;
         physical_device_features.samplerAnisotropy = VK_TRUE;
+        physical_device_features.depthClamp = VK_TRUE;
 
         vk::DeviceCreateInfo device_create_info;
         device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
@@ -320,7 +322,7 @@ namespace lotus
         }
     }
 
-    void Renderer::createRenderpass()
+    void Renderer::createRenderpasses()
     {
         vk::AttachmentDescription color_attachment;
         color_attachment.format = swapchain_image_format;
@@ -373,6 +375,40 @@ namespace lotus
         render_pass_info.pDependencies = &dependency;
 
         render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
+
+        depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+        depth_attachment_ref.attachment = 0;
+
+        std::array<vk::AttachmentDescription, 1> shadow_attachments = {depth_attachment};
+        subpass.colorAttachmentCount = 0;
+        subpass.pColorAttachments = nullptr;
+        render_pass_info.attachmentCount = static_cast<uint32_t>(shadow_attachments.size());
+        render_pass_info.pAttachments = shadow_attachments.data();
+
+        vk::SubpassDependency shadowmap_dep1;
+        shadowmap_dep1.srcSubpass = VK_SUBPASS_EXTERNAL;
+        shadowmap_dep1.dstSubpass = 0;
+        shadowmap_dep1.srcStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+        shadowmap_dep1.dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+        shadowmap_dep1.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+        shadowmap_dep1.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+        shadowmap_dep1.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+
+        vk::SubpassDependency shadowmap_dep2;
+        shadowmap_dep2.srcSubpass = 0;
+        shadowmap_dep2.dstSubpass = VK_SUBPASS_EXTERNAL;
+        shadowmap_dep2.srcStageMask = vk::PipelineStageFlagBits::eLateFragmentTests;
+        shadowmap_dep2.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+        shadowmap_dep2.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+        shadowmap_dep2.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+        shadowmap_dep2.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+
+        std::array<vk::SubpassDependency, 2> shadowmap_subpass_deps = { shadowmap_dep1, shadowmap_dep2 };
+
+        render_pass_info.dependencyCount = 2;
+        render_pass_info.pDependencies = shadowmap_subpass_deps.data();
+
+        shadowmap_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
     }
 
     void Renderer::createDescriptorSetLayout()
@@ -384,20 +420,56 @@ namespace lotus
         ubo_layout_binding.pImmutableSamplers = nullptr;
         ubo_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
+        vk::DescriptorSetLayoutBinding shadowmap_layout_binding;
+        shadowmap_layout_binding.binding = 1;
+        shadowmap_layout_binding.descriptorCount = 1;
+        shadowmap_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        shadowmap_layout_binding.pImmutableSamplers = nullptr;
+        shadowmap_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
         vk::DescriptorSetLayoutBinding sample_layout_binding;
-        sample_layout_binding.binding = 1;
+        sample_layout_binding.binding = 2;
         sample_layout_binding.descriptorCount = 1;
         sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         sample_layout_binding.pImmutableSamplers = nullptr;
         sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {ubo_layout_binding, sample_layout_binding};
+        vk::DescriptorSetLayoutBinding lightsource_layout_binding;
+        lightsource_layout_binding.binding = 3;
+        lightsource_layout_binding.descriptorCount = 1;
+        lightsource_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        lightsource_layout_binding.pImmutableSamplers = nullptr;
+        lightsource_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        std::array<vk::DescriptorSetLayoutBinding, 4> static_bindings = { ubo_layout_binding, shadowmap_layout_binding, sample_layout_binding, lightsource_layout_binding };
+
         vk::DescriptorSetLayoutCreateInfo layout_info = {};
         layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
-        layout_info.bindingCount = static_cast<uint32_t>(bindings.size());
-        layout_info.pBindings = bindings.data();
+        layout_info.bindingCount = static_cast<uint32_t>(static_bindings.size());
+        layout_info.pBindings = static_bindings.data();
 
-        descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+        static_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+
+
+        //std::array<vk::DescriptorSetLayoutBinding, 1> material_bindings = {sample_layout_binding};
+        //layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
+        //layout_info.pBindings = material_bindings.data();
+
+        //material_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+
+        vk::DescriptorSetLayoutBinding cascade_matrices;
+        cascade_matrices.binding = 1;
+        cascade_matrices.descriptorCount = 1;
+        cascade_matrices.descriptorType = vk::DescriptorType::eUniformBuffer;
+        cascade_matrices.pImmutableSamplers = nullptr;
+        cascade_matrices.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+        std::array<vk::DescriptorSetLayoutBinding, 3> shadowmap_bindings = {ubo_layout_binding, cascade_matrices, sample_layout_binding};
+
+        layout_info.bindingCount = static_cast<uint32_t>(shadowmap_bindings.size());
+        layout_info.pBindings = shadowmap_bindings.data();
+
+        shadowmap_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
     }
 
     void Renderer::createGraphicsPipeline()
@@ -415,7 +487,7 @@ namespace lotus
         frag_shader_stage_info.module = *fragment_module;
         frag_shader_stage_info.pName = "main";
 
-        vk::PipelineShaderStageCreateInfo shaderStages[] = {vert_shader_stage_info, frag_shader_stage_info};
+        std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
 
         vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
@@ -489,15 +561,17 @@ namespace lotus
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
 
+        std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *static_descriptor_set_layout };
+
         vk::PipelineLayoutCreateInfo pipeline_layout_info;
-        pipeline_layout_info.setLayoutCount = 1;
-        pipeline_layout_info.pSetLayouts = &*descriptor_set_layout;
+        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
+        pipeline_layout_info.pSetLayouts = descriptor_layouts.data();
 
         pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
 
         vk::GraphicsPipelineCreateInfo pipeline_info;
-        pipeline_info.stageCount = 2;
-        pipeline_info.pStages = shaderStages;
+        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+        pipeline_info.pStages = shaderStages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
         pipeline_info.pInputAssemblyState = &input_assembly;
         pipeline_info.pViewportState = &viewport_state;
@@ -519,6 +593,49 @@ namespace lotus
         shaderStages[1] = frag_shader_stage_info;
 
         blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+
+        vk::PushConstantRange push_constant_range;
+        push_constant_range.stageFlags = vk::ShaderStageFlagBits::eVertex;
+        push_constant_range.size = 4;
+        push_constant_range.offset = 0;
+
+        color_blending.attachmentCount = 0;
+
+        std::array<vk::DescriptorSetLayout, 1> shadowmap_descriptor_layouts = { *shadowmap_descriptor_set_layout };
+
+        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(shadowmap_descriptor_layouts.size());
+        pipeline_layout_info.pSetLayouts = shadowmap_descriptor_layouts.data();
+        pipeline_layout_info.pushConstantRangeCount = 1;
+        pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+
+        shadowmap_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+
+        pipeline_info.layout = *shadowmap_pipeline_layout;
+
+        pipeline_info.renderPass = *shadowmap_render_pass;
+        vertex_module = getShader("shaders/vert_shadow.spv");
+        fragment_module = getShader("shaders/frag_shadow.spv");
+
+        vert_shader_stage_info.module = *vertex_module;
+        frag_shader_stage_info.module = *fragment_module;
+
+        shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
+
+        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+        pipeline_info.pStages = shaderStages.data();
+
+        viewport.width = 4096;
+        viewport.height = 4096;
+        scissor.extent.width = 4096;
+        scissor.extent.height = 4096;
+
+        rasterizer.depthClampEnable = true;
+
+        blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+
+        pipeline_info.stageCount = 1;
+        pipeline_info.pStages = &vert_shader_stage_info;
+        shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
     }
 
     void Renderer::createDepthImage()
@@ -582,6 +699,64 @@ namespace lotus
         command_pool = device->createCommandPoolUnique(pool_info);
     }
 
+    void Renderer::createShadowmapResources()
+    {
+        auto format = getDepthFormat();
+
+        shadowmap_image = memory_manager->GetImage(4096, 4096, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, shadowmap_cascades);
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.image = *shadowmap_image->image;
+        image_view_info.viewType = vk::ImageViewType::e2DArray;
+        image_view_info.format = format;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = shadowmap_cascades;
+        shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+
+        for (size_t i = 0; i < shadowmap_cascades; ++i)
+        {
+            ShadowmapCascade& cascade = cascades[i];
+            image_view_info.subresourceRange.baseArrayLayer = i;
+            image_view_info.subresourceRange.layerCount = 1;
+            
+            cascade.shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+
+            std::array<vk::ImageView, 1> attachments = {
+                *cascade.shadowmap_image_view
+            };
+
+            vk::FramebufferCreateInfo framebuffer_info = {};
+            framebuffer_info.renderPass = *shadowmap_render_pass;
+            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebuffer_info.pAttachments = attachments.data();
+            framebuffer_info.width = 4096;
+            framebuffer_info.height = 4096;
+            framebuffer_info.layers = 1;
+
+            cascade.shadowmap_frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr, dispatch);
+        }
+
+        vk::SamplerCreateInfo sampler_info = {};
+        sampler_info.magFilter = vk::Filter::eLinear;
+        sampler_info.minFilter = vk::Filter::eLinear;
+        sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+        sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+        sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+        sampler_info.anisotropyEnable = false;
+        sampler_info.maxAnisotropy = 1.f;
+        sampler_info.borderColor = vk::BorderColor::eFloatOpaqueBlack;
+        sampler_info.unnormalizedCoordinates = false;
+        sampler_info.compareEnable = false;
+        sampler_info.compareOp = vk::CompareOp::eAlways;
+        sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+
+        shadowmap_sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
+
+    }
+
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)
     {
         std::ifstream file(file_name, std::ios::ate | std::ios::binary);
@@ -625,7 +800,7 @@ namespace lotus
         };
     }
 
-    vk::CommandBuffer Renderer::getRenderCommandbuffer(uint32_t image_index, std::vector<vk::CommandBuffer>& secondary_buffers)
+    vk::CommandBuffer Renderer::getRenderCommandbuffer(uint32_t image_index)
     {
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.commandPool = *command_pool;
@@ -640,22 +815,42 @@ namespace lotus
         buffer[0]->begin(begin_info, dispatch);
 
         vk::RenderPassBeginInfo renderpass_info = {};
+        renderpass_info.renderPass = *shadowmap_render_pass;
+        renderpass_info.renderArea.offset = { 0, 0 };
+        renderpass_info.renderArea.extent = { 4096, 4096 };
+
+        std::array<vk::ClearValue, 1> clearValue = {};
+        clearValue[0].depthStencil = { 1.0f, 0 };
+
+        renderpass_info.clearValueCount = static_cast<uint32_t>(clearValue.size());
+        renderpass_info.pClearValues = clearValue.data();
+
+        auto shadowmap_buffers = engine->worker_pool.getShadowmapCommandBuffers(image_index);
+
+        for (size_t i = 0; i < shadowmap_cascades; ++i)
+        {
+            renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
+            buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
+            buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
+            buffer[0]->executeCommands(shadowmap_buffers, dispatch);
+            buffer[0]->endRenderPass(dispatch);
+        }
+
         renderpass_info.renderPass = *render_pass;
         renderpass_info.framebuffer = *frame_buffers[image_index];
-        renderpass_info.renderArea.offset = { 0, 0 };
-        renderpass_info.renderArea.extent = swapchain_extent;
-
         std::array<vk::ClearValue, 2> clearValues = {};
         clearValues[0].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
         clearValues[1].depthStencil = { 1.0f, 0 };
 
         renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderpass_info.pClearValues = clearValues.data();
+        renderpass_info.renderArea.extent = swapchain_extent;
 
         buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-
+        auto secondary_buffers = engine->worker_pool.getSecondaryCommandBuffers(image_index);
         buffer[0]->executeCommands(secondary_buffers, dispatch);
         buffer[0]->endRenderPass(dispatch);
+
         buffer[0]->end(dispatch);
 
         render_commandbuffers[image_index] = std::move(buffer[0]);
@@ -744,6 +939,7 @@ namespace lotus
         }
         engine->worker_pool.clearProcessed(current_image);
         engine->game->scene->render(engine);
+
         engine->worker_pool.waitIdle();
         engine->worker_pool.startProcessing(current_image);
 
@@ -756,8 +952,7 @@ namespace lotus
         submitInfo.pWaitDstStageMask = waitStages;
 
         auto buffers = engine->worker_pool.getPrimaryCommandBuffers(current_image);
-        auto secondary_buffers = engine->worker_pool.getSecondaryCommandBuffers(current_image);
-        buffers.push_back(getRenderCommandbuffer(current_image, secondary_buffers));
+        buffers.push_back(getRenderCommandbuffer(current_image));
 
         submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
         submitInfo.pCommandBuffers = buffers.data();

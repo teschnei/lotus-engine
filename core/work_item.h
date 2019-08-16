@@ -22,10 +22,10 @@ namespace lotus
     class LambdaWorkItem : public WorkItem
     {
     public:
-        LambdaWorkItem(int image, std::function<void()> _function) : WorkItem(), function(std::move(_function)){}
-        virtual void Process(WorkerThread*) override { function(); }
+        LambdaWorkItem(std::function<void(WorkerThread*)> _function) : WorkItem(), function(std::move(_function)){}
+        virtual void Process(WorkerThread* thread) override { function(thread); }
     private:
-        std::function<void()> function;
+        std::function<void(WorkerThread*)> function;
     };
 
 }

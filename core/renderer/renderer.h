@@ -38,10 +38,16 @@ namespace lotus
         std::vector<vk::Image> swapchain_images;
         std::vector<vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic>> swapchain_image_views;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> descriptor_set_layout;
+        vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
+        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> static_descriptor_set_layout;
+        //vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> material_descriptor_set_layout;
+        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> shadowmap_descriptor_set_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
+        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> shadowmap_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> main_graphics_pipeline;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_graphics_pipeline;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> shadowmap_pipeline;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_shadowmap_pipeline;
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
         std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
@@ -49,19 +55,36 @@ namespace lotus
         vk::SurfaceKHR surface;
         std::unique_ptr<MemoryManager> memory_manager;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
+        static constexpr size_t shadowmap_cascades {4};
+
+        struct ShadowmapCascade
+        {
+            vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> shadowmap_frame_buffer;
+            vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
+
+            float split_depth;
+            glm::mat4 view_proj_matrix;
+        };
+
+        std::array<ShadowmapCascade, shadowmap_cascades> cascades;
+
+        vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> shadowmap_sampler;
+        std::unique_ptr<Image> shadowmap_image;
+        vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
         vk::DispatchLoaderDynamic dispatch;
     private:
         void createInstance(const std::string& app_name, uint32_t app_version);
         void createPhysicalDevice();
         void createDevice();
         void createSwapchain();
-        void createRenderpass();
+        void createRenderpasses();
         void createDescriptorSetLayout();
         void createGraphicsPipeline();
         void createDepthImage();
         void createFramebuffers();
         void createSyncs();
         void createCommandPool();
+        void createShadowmapResources();
 
         vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
 
@@ -79,8 +102,7 @@ namespace lotus
 
         swapChainInfo getSwapChainInfo(vk::PhysicalDevice device) const;
 
-        vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index, std::vector<vk::CommandBuffer>& secondary_buffers);
-        vk::CommandBuffer getBlendedCommandbuffer(uint32_t image_index, std::vector<std::pair<glm::vec3, vk::CommandBuffer>>& secondary_buffers);
+        vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index);
 
         Engine* engine;
         VkDebugUtilsMessengerEXT debug_messenger {nullptr};

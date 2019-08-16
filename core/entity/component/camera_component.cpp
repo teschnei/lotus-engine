@@ -1,6 +1,7 @@
 #include "camera_component.h"
 #include "../camera.h"
 #include "input.h"
+#include <iostream>
 
 namespace lotus
 {
@@ -97,6 +98,8 @@ namespace lotus
             static float speed = .00005f;
             auto ms = std::chrono::duration_cast<std::chrono::microseconds>(delta).count();
             camera->move(norm.x * ms * speed, norm.z * ms * speed);
+            auto pos = camera->getPos();
+            std::cout << "x: " << pos[0] << " y: " << pos[1] << " z: " << pos[2] << std::endl;
         }
     }
 }

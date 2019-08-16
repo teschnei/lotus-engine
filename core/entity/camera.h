@@ -17,6 +17,8 @@ namespace lotus
 
         void setPos(glm::vec3);
         void setPerspective(float radians, float aspect, float near, float far);
+        float getNearClip() { return near_clip; }
+        float getFarClip() { return far_clip; }
         void move(float forward_offset, float right_offset);
         void look(float rot_x_offset, float rot_y_offset);
 
@@ -26,6 +28,8 @@ namespace lotus
 
         float rot_x{0};
         float rot_z{ -glm::pi<float>()  };
+        float near_clip{ 0.f };
+        float far_clip{ 0.f };
         glm::vec3 camera_rot{};
 
         glm::mat4 view{};

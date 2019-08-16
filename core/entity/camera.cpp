@@ -17,6 +17,8 @@ namespace lotus
 
     void Camera::setPerspective(float radians, float aspect, float near, float far)
     {
+        near_clip = near;
+        far_clip = far;
         proj = glm::perspective(radians, aspect, near, far);
         proj[1][1] *= -1;
     }
