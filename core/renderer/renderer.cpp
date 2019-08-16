@@ -9,8 +9,10 @@
 #include "task/entity_render.h"
 #include "../../ffxi/mmb.h"
 
-#define WIDTH 1900
-#define HEIGHT 1000
+constexpr size_t WIDTH = 1900;
+constexpr size_t HEIGHT = 1000;
+
+constexpr size_t shadowmap_dimension = 4096;
 
 namespace lotus
 {
@@ -624,10 +626,10 @@ namespace lotus
         pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
         pipeline_info.pStages = shaderStages.data();
 
-        viewport.width = 4096;
-        viewport.height = 4096;
-        scissor.extent.width = 4096;
-        scissor.extent.height = 4096;
+        viewport.width = shadowmap_dimension;
+        viewport.height = shadowmap_dimension;
+        scissor.extent.width = shadowmap_dimension;
+        scissor.extent.height = shadowmap_dimension;
 
         rasterizer.depthClampEnable = true;
 
@@ -703,7 +705,7 @@ namespace lotus
     {
         auto format = getDepthFormat();
 
-        shadowmap_image = memory_manager->GetImage(4096, 4096, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, shadowmap_cascades);
+        shadowmap_image = memory_manager->GetImage(shadowmap_dimension, shadowmap_dimension, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, shadowmap_cascades);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = *shadowmap_image->image;
@@ -732,8 +734,8 @@ namespace lotus
             framebuffer_info.renderPass = *shadowmap_render_pass;
             framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
             framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = 4096;
-            framebuffer_info.height = 4096;
+            framebuffer_info.width = shadowmap_dimension;
+            framebuffer_info.height = shadowmap_dimension;
             framebuffer_info.layers = 1;
 
             cascade.shadowmap_frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr, dispatch);
@@ -817,7 +819,7 @@ namespace lotus
         vk::RenderPassBeginInfo renderpass_info = {};
         renderpass_info.renderPass = *shadowmap_render_pass;
         renderpass_info.renderArea.offset = { 0, 0 };
-        renderpass_info.renderArea.extent = { 4096, 4096 };
+        renderpass_info.renderArea.extent = { shadowmap_dimension, shadowmap_dimension };
 
         std::array<vk::ClearValue, 1> clearValue = {};
         clearValue[0].depthStencil = { 1.0f, 0 };
