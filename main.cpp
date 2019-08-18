@@ -14,10 +14,6 @@ class Game : public lotus::Game
 public:
     Game(const std::string appname, uint32_t appversion) : lotus::Game(appname, appversion)
     {
-        cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_data) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-
-        cascade_matrices_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_matrices) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-
         FFXILoadLandTest test(this);
         auto entity = test.getLand();
         scene = std::make_unique<lotus::Scene>();

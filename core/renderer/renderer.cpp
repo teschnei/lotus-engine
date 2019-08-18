@@ -12,7 +12,7 @@
 constexpr size_t WIDTH = 1900;
 constexpr size_t HEIGHT = 1000;
 
-constexpr size_t shadowmap_dimension = 4096;
+constexpr size_t shadowmap_dimension = 2048;
 
 namespace lotus
 {
@@ -81,6 +81,8 @@ namespace lotus
         createSyncs();
         createCommandPool();
         createShadowmapResources();
+        createGBufferResources();
+        createQuad();
 
         render_commandbuffers.resize(getImageCount());
     }
@@ -88,6 +90,11 @@ namespace lotus
     Renderer::~Renderer()
     {
         device->waitIdle(dispatch);
+    }
+
+    void Renderer::generateCommandBuffers()
+    {
+        createDeferredCommandBuffer();
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -411,6 +418,75 @@ namespace lotus
         render_pass_info.pDependencies = shadowmap_subpass_deps.data();
 
         shadowmap_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
+
+        shadowmap_subpass_deps[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+        shadowmap_subpass_deps[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        shadowmap_subpass_deps[0].srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+        shadowmap_subpass_deps[0].dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+
+        shadowmap_subpass_deps[1].srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        shadowmap_subpass_deps[1].dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+        shadowmap_subpass_deps[1].srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+        shadowmap_subpass_deps[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+
+        vk::AttachmentDescription desc_pos;
+        desc_pos.format = vk::Format::eR16G16B16A16Sfloat;
+        desc_pos.samples = vk::SampleCountFlagBits::e1;
+        desc_pos.loadOp = vk::AttachmentLoadOp::eClear;
+        desc_pos.storeOp = vk::AttachmentStoreOp::eStore;
+        desc_pos.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        desc_pos.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        desc_pos.initialLayout = vk::ImageLayout::eUndefined;
+        desc_pos.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        vk::AttachmentDescription desc_normal;
+        desc_normal.format = vk::Format::eR16G16B16A16Sfloat;
+        desc_normal.samples = vk::SampleCountFlagBits::e1;
+        desc_normal.loadOp = vk::AttachmentLoadOp::eClear;
+        desc_normal.storeOp = vk::AttachmentStoreOp::eStore;
+        desc_normal.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        desc_normal.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        desc_normal.initialLayout = vk::ImageLayout::eUndefined;
+        desc_normal.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        vk::AttachmentDescription desc_albedo;
+        desc_albedo.format = vk::Format::eR8G8B8A8Unorm;
+        desc_albedo.samples = vk::SampleCountFlagBits::e1;
+        desc_albedo.loadOp = vk::AttachmentLoadOp::eClear;
+        desc_albedo.storeOp = vk::AttachmentStoreOp::eStore;
+        desc_albedo.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        desc_albedo.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        desc_albedo.initialLayout = vk::ImageLayout::eUndefined;
+        desc_albedo.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_albedo, depth_attachment };
+
+        render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
+        render_pass_info.pAttachments = gbuffer_attachments.data();
+
+        vk::AttachmentReference gbuffer_pos_attachment_ref;
+        gbuffer_pos_attachment_ref.attachment = 0;
+        gbuffer_pos_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+        vk::AttachmentReference gbuffer_normal_attachment_ref;
+        gbuffer_normal_attachment_ref.attachment = 1;
+        gbuffer_normal_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+        vk::AttachmentReference gbuffer_albedo_attachment_ref;
+        gbuffer_albedo_attachment_ref.attachment = 2;
+        gbuffer_albedo_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+        vk::AttachmentReference gbuffer_depth_attachment_ref;
+        gbuffer_depth_attachment_ref.attachment = 3;
+        gbuffer_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+        std::vector<vk::AttachmentReference> gbuffer_color_attachment_refs = { gbuffer_pos_attachment_ref, gbuffer_normal_attachment_ref, gbuffer_albedo_attachment_ref };
+
+        subpass.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_refs.size());
+        subpass.pColorAttachments = gbuffer_color_attachment_refs.data();
+        subpass.pDepthStencilAttachment = &gbuffer_depth_attachment_ref;
+
+        gbuffer_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
     }
 
     void Renderer::createDescriptorSetLayout()
@@ -472,6 +548,62 @@ namespace lotus
         layout_info.pBindings = shadowmap_bindings.data();
 
         shadowmap_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+
+        vk::DescriptorSetLayoutBinding pos_sample_layout_binding;
+        pos_sample_layout_binding.binding = 0;
+        pos_sample_layout_binding.descriptorCount = 1;
+        pos_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        pos_sample_layout_binding.pImmutableSamplers = nullptr;
+        pos_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding normal_sample_layout_binding;
+        normal_sample_layout_binding.binding = 1;
+        normal_sample_layout_binding.descriptorCount = 1;
+        normal_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        normal_sample_layout_binding.pImmutableSamplers = nullptr;
+        normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding albedo_sample_layout_binding;
+        albedo_sample_layout_binding.binding = 2;
+        albedo_sample_layout_binding.descriptorCount = 1;
+        albedo_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        albedo_sample_layout_binding.pImmutableSamplers = nullptr;
+        albedo_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding lightsource_deferred_layout_binding;
+        lightsource_deferred_layout_binding.binding = 3;
+        lightsource_deferred_layout_binding.descriptorCount = 1;
+        lightsource_deferred_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        lightsource_deferred_layout_binding.pImmutableSamplers = nullptr;
+        lightsource_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding shadowmap_deferred_layout_binding;
+        shadowmap_deferred_layout_binding.binding = 4;
+        shadowmap_deferred_layout_binding.descriptorCount = 1;
+        shadowmap_deferred_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        shadowmap_deferred_layout_binding.pImmutableSamplers = nullptr;
+        shadowmap_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding camera_deferred_layout_binding;
+        camera_deferred_layout_binding.binding = 5;
+        camera_deferred_layout_binding.descriptorCount = 1;
+        camera_deferred_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        camera_deferred_layout_binding.pImmutableSamplers = nullptr;
+        camera_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        std::vector<vk::DescriptorSetLayoutBinding> deferred_bindings = {
+            pos_sample_layout_binding, 
+            normal_sample_layout_binding, 
+            albedo_sample_layout_binding,
+            lightsource_deferred_layout_binding, 
+            shadowmap_deferred_layout_binding, 
+            camera_deferred_layout_binding
+        };
+
+        layout_info.bindingCount = static_cast<uint32_t>(deferred_bindings.size());
+        layout_info.pBindings = deferred_bindings.data();
+
+        deferred_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
     }
 
     void Renderer::createGraphicsPipeline()
@@ -553,11 +685,13 @@ namespace lotus
         color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
+        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(3, color_blend_attachment);
+
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;
         color_blending.logicOp = vk::LogicOp::eCopy;
-        color_blending.attachmentCount = 1;
-        color_blending.pAttachments = &color_blend_attachment;
+        color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
+        color_blending.pAttachments = color_blend_attachment_states.data();
         color_blending.blendConstants[0] = 0.0f;
         color_blending.blendConstants[1] = 0.0f;
         color_blending.blendConstants[2] = 0.0f;
@@ -582,7 +716,7 @@ namespace lotus
         pipeline_info.pDepthStencilState = &depth_stencil;
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.layout = *pipeline_layout;
-        pipeline_info.renderPass = *render_pass;
+        pipeline_info.renderPass = *gbuffer_render_pass;
         pipeline_info.subpass = 0;
         pipeline_info.basePipelineHandle = nullptr;
 
@@ -596,6 +730,36 @@ namespace lotus
 
         blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
 
+        vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
+        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
+
+        vertex_module = getShader("shaders/vert_deferred.spv");
+        vert_shader_stage_info.module = *vertex_module;
+
+        fragment_module = getShader("shaders/frag_deferred.spv");
+        frag_shader_stage_info.module = *fragment_module;
+
+        shaderStages[0] = vert_shader_stage_info;
+        shaderStages[1] = frag_shader_stage_info;
+
+        pipeline_info.renderPass = *render_pass;
+        color_blend_attachment_states = std::vector<vk::PipelineColorBlendAttachmentState>(1, color_blend_attachment);
+        color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
+        color_blending.pAttachments = color_blend_attachment_states.data();
+
+        std::array<vk::DescriptorSetLayout, 1> deferred_descriptor_layouts = { *deferred_descriptor_set_layout };
+
+        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(deferred_descriptor_layouts.size());
+        pipeline_layout_info.pSetLayouts = deferred_descriptor_layouts.data();
+
+        deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+
+        pipeline_info.layout = *deferred_pipeline_layout;
+
+        deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+
+        vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(binding_descriptions.size());
+        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
         vk::PushConstantRange push_constant_range;
         push_constant_range.stageFlags = vk::ShaderStageFlagBits::eVertex;
         push_constant_range.size = 4;
@@ -632,7 +796,13 @@ namespace lotus
         scissor.extent.height = shadowmap_dimension;
 
         rasterizer.depthClampEnable = true;
+        rasterizer.depthBiasEnable = true;
 
+        std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
+        vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
+        dynamic_state_ci.dynamicStateCount = dynamic_states.size();
+        dynamic_state_ci.pDynamicStates = dynamic_states.data();
+        pipeline_info.pDynamicState = &dynamic_state_ci;
         blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
 
         pipeline_info.stageCount = 1;
@@ -689,6 +859,7 @@ namespace lotus
             image_ready_sem.push_back(device->createSemaphoreUnique({}, nullptr, dispatch));
             frame_finish_sem.push_back(device->createSemaphoreUnique({}, nullptr, dispatch));
         }
+        gbuffer_sem = device->createSemaphoreUnique({}, nullptr, dispatch);
     }
 
     void Renderer::createCommandPool()
@@ -757,6 +928,224 @@ namespace lotus
 
         shadowmap_sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
 
+        //TODO: move me to a proper light handling class
+        cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_data) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        cascade_matrices_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_matrices) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    }
+
+    void Renderer::createGBufferResources()
+    {
+        gbuffer.position.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.normal.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.albedo.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.depth.image = memory_manager->GetImage(WIDTH, HEIGHT, getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.image = *gbuffer.position.image->image;
+        image_view_info.viewType = vk::ImageViewType::e2D;
+        image_view_info.format = vk::Format::eR16G16B16A16Sfloat;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = 1;
+        gbuffer.position.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        image_view_info.image = *gbuffer.normal.image->image;
+        gbuffer.normal.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        image_view_info.image = *gbuffer.albedo.image->image;
+        image_view_info.format = vk::Format::eR8G8B8A8Unorm;
+        gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        image_view_info.image = *gbuffer.depth.image->image;
+        image_view_info.format = getDepthFormat();
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+        gbuffer.depth.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+
+        std::vector<vk::ImageView> attachments = { *gbuffer.position.image_view, *gbuffer.normal.image_view, *gbuffer.albedo.image_view, *gbuffer.depth.image_view };
+
+        vk::FramebufferCreateInfo framebuffer_info = {};
+        framebuffer_info.renderPass = *gbuffer_render_pass;
+        framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebuffer_info.pAttachments = attachments.data();
+        framebuffer_info.width = WIDTH;
+        framebuffer_info.height = HEIGHT;
+        framebuffer_info.layers = 1;
+
+        gbuffer.frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr, dispatch);
+
+        vk::SamplerCreateInfo sampler_info = {};
+        sampler_info.magFilter = vk::Filter::eNearest;
+        sampler_info.minFilter = vk::Filter::eNearest;
+        sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+        sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+        sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+        sampler_info.anisotropyEnable = false;
+        sampler_info.maxAnisotropy = 1.f;
+        sampler_info.borderColor = vk::BorderColor::eFloatOpaqueBlack;
+        sampler_info.unnormalizedCoordinates = false;
+        sampler_info.compareEnable = false;
+        sampler_info.compareOp = vk::CompareOp::eAlways;
+        sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+
+        gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
+    }
+
+    void Renderer::createDeferredCommandBuffer()
+    {
+        vk::CommandBufferAllocateInfo alloc_info = {};
+        alloc_info.commandPool = *command_pool;
+        alloc_info.level = vk::CommandBufferLevel::ePrimary;
+        alloc_info.commandBufferCount = getImageCount();
+
+        deferred_command_buffers = engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, dispatch);
+
+        for (int i = 0; i < deferred_command_buffers.size(); ++i)
+        {
+            vk::CommandBuffer buffer = *deferred_command_buffers[i];
+            vk::CommandBufferBeginInfo begin_info = {};
+            begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+            buffer.begin(begin_info, dispatch);
+
+            std::array<vk::ClearValue, 2> clearValues;
+            clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+            clearValues[1].depthStencil = { 1.f, 0 };
+
+            vk::RenderPassBeginInfo renderpass_info;
+            renderpass_info.renderPass = *render_pass;
+            renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+            renderpass_info.pClearValues = clearValues.data();
+            renderpass_info.renderArea.offset = { 0, 0 };
+            renderpass_info.renderArea.extent = swapchain_extent;
+            renderpass_info.framebuffer = *frame_buffers[i];
+            buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+
+            vk::DescriptorImageInfo pos_info;
+            pos_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            pos_info.imageView = *gbuffer.position.image_view;
+            pos_info.sampler = *gbuffer.sampler;
+
+            vk::DescriptorImageInfo normal_info;
+            normal_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            normal_info.imageView = *gbuffer.normal.image_view;
+            normal_info.sampler = *gbuffer.sampler;
+
+            vk::DescriptorImageInfo albedo_info;
+            albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            albedo_info.imageView = *gbuffer.albedo.image_view;
+            albedo_info.sampler = *gbuffer.sampler;
+
+            vk::DescriptorBufferInfo light_buffer_info;
+            light_buffer_info.buffer = *cascade_data_ubo->buffer;
+            light_buffer_info.offset = i * sizeof(cascade_data);
+            light_buffer_info.range = sizeof(cascade_data);
+
+            vk::DescriptorImageInfo shadowmap_image_info;
+            shadowmap_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            shadowmap_image_info.imageView = *shadowmap_image_view;
+            shadowmap_image_info.sampler = *shadowmap_sampler;
+
+            vk::DescriptorBufferInfo camera_buffer_info;
+            camera_buffer_info.buffer = *engine->camera.view_proj_ubo->buffer;
+            camera_buffer_info.offset = i * (sizeof(glm::mat4)*2);
+            camera_buffer_info.range = sizeof(glm::mat4)*2;
+
+            std::array<vk::WriteDescriptorSet, 6> descriptorWrites = {};
+
+            descriptorWrites[0].dstSet = nullptr;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pImageInfo = &pos_info;
+
+            descriptorWrites[1].dstSet = nullptr;
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pImageInfo = &normal_info;
+
+            descriptorWrites[2].dstSet = nullptr;
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &albedo_info;
+
+            descriptorWrites[3].dstSet = nullptr;
+            descriptorWrites[3].dstBinding = 3;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pBufferInfo = &light_buffer_info;
+
+            descriptorWrites[4].dstSet = nullptr;
+            descriptorWrites[4].dstBinding = 4;
+            descriptorWrites[4].dstArrayElement = 0;
+            descriptorWrites[4].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            descriptorWrites[4].descriptorCount = 1;
+            descriptorWrites[4].pImageInfo = &shadowmap_image_info;
+
+            descriptorWrites[5].dstSet = nullptr;
+            descriptorWrites[5].dstBinding = 5;
+            descriptorWrites[5].dstArrayElement = 0;
+            descriptorWrites[5].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[5].descriptorCount = 1;
+            descriptorWrites[5].pBufferInfo = &camera_buffer_info;
+
+            buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites, dispatch);
+
+            buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
+
+            vk::DeviceSize offsets = 0;
+            buffer.bindVertexBuffers(0, *quad.vertex_buffer->buffer, offsets, dispatch);
+            buffer.bindIndexBuffer(*quad.index_buffer->buffer, offsets, vk::IndexType::eUint32, dispatch);
+            buffer.drawIndexed(6, 1, 0, 0, 0, dispatch);
+
+            buffer.endRenderPass(dispatch);
+            buffer.end(dispatch);
+        }
+    }
+
+    void Renderer::createQuad()
+    {
+        struct Vertex
+        {
+            float pos[3];
+            float normal[3];
+            float color[3];
+            float uv[2];
+        };
+
+        std::vector<Vertex> vertex_buffer {
+            {{1.f, 1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 1.f}},
+            {{-1.f, 1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 1.f}},
+            {{-1.f, -1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 0.f}},
+            {{1.f, -1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 0.f}}
+        };
+
+        quad.vertex_buffer = memory_manager->GetBuffer(vertex_buffer.size() * sizeof(Vertex), vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        void* buf_mem = device->mapMemory(quad.vertex_buffer->memory, quad.vertex_buffer->memory_offset, vertex_buffer.size() * sizeof(Vertex), {}, dispatch);
+        memcpy(buf_mem, vertex_buffer.data(), vertex_buffer.size() * sizeof(Vertex));
+        device->unmapMemory(quad.vertex_buffer->memory, dispatch);
+
+        std::vector<uint32_t> index_buffer = { 0,1,2,2,3,0 };
+		for (uint32_t i = 0; i < 3; ++i)
+		{
+			uint32_t indices[6] = { 0,1,2, 2,3,0 };
+			for (auto index : indices)
+			{
+				index_buffer.push_back(i * 4 + index);
+			}
+		}
+		quad.index_count = static_cast<uint32_t>(index_buffer.size());
+
+        quad.index_buffer = memory_manager->GetBuffer(index_buffer.size() * sizeof(uint32_t), vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        buf_mem = device->mapMemory(quad.index_buffer->memory, quad.index_buffer->memory_offset, index_buffer.size() * sizeof(uint32_t), {}, dispatch);
+        memcpy(buf_mem, index_buffer.data(), index_buffer.size() * sizeof(uint32_t));
+        device->unmapMemory(quad.index_buffer->memory, dispatch);
     }
 
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)
@@ -838,15 +1227,17 @@ namespace lotus
             buffer[0]->endRenderPass(dispatch);
         }
 
-        renderpass_info.renderPass = *render_pass;
-        renderpass_info.framebuffer = *frame_buffers[image_index];
-        std::array<vk::ClearValue, 2> clearValues = {};
-        clearValues[0].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
-        clearValues[1].depthStencil = { 1.0f, 0 };
+        renderpass_info.renderPass = *gbuffer_render_pass;
+        renderpass_info.framebuffer = *gbuffer.frame_buffer;
+        std::array<vk::ClearValue, 4> clearValues = {};
+        clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+        clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+        clearValues[2].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
+        clearValues[3].depthStencil = { 1.0f, 0 };
 
         renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderpass_info.pClearValues = clearValues.data();
-        renderpass_info.renderArea.extent = swapchain_extent;
+        renderpass_info.renderArea.extent = {WIDTH, HEIGHT};
 
         buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
         auto secondary_buffers = engine->worker_pool.getSecondaryCommandBuffers(image_index);
@@ -930,11 +1321,10 @@ namespace lotus
         engine->worker_pool.deleteFinished();
         device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max(), dispatch);
 
-        try
-        {
-            current_image = device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr, dispatch).value;
-        }
-        catch (const vk::OutOfDateKHRError&)
+        auto [result, value] = device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr, dispatch);
+        current_image = value;
+
+        if (result == vk::Result::eErrorOutOfDateKHR)
         {
             createSwapchain();
             return;
@@ -953,15 +1343,25 @@ namespace lotus
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
 
+        vk::Semaphore gbuffer_semaphores[] = { *gbuffer_sem };
+        submitInfo.pSignalSemaphores = gbuffer_semaphores;
+        submitInfo.signalSemaphoreCount = 1;
+
         auto buffers = engine->worker_pool.getPrimaryCommandBuffers(current_image);
         buffers.push_back(getRenderCommandbuffer(current_image));
 
         submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
         submitInfo.pCommandBuffers = buffers.data();
 
+        graphics_queue.submit(submitInfo, nullptr, dispatch);
+
         vk::Semaphore signalSemaphores[] = {*frame_finish_sem[current_frame]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = gbuffer_semaphores;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
 
         device->resetFences(*frame_fences[current_frame]);
 
@@ -978,11 +1378,7 @@ namespace lotus
 
         presentInfo.pImageIndices = &current_image;
 
-        try
-        {
-            present_queue.presentKHR(presentInfo);
-        }
-        catch (const vk::OutOfDateKHRError&)
+        if (present_queue.presentKHR(presentInfo) == vk::Result::eErrorOutOfDateKHR)
         {
             resize = false;
             createSwapchain();

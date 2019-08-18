@@ -17,12 +17,12 @@ namespace lotus
         void run();
         void close() { closing = true; }
 
+        Game* game;
         Renderer renderer;
         Input input;
         Camera camera;
         WorkerPool worker_pool {this};
         Config config;
-        Game* game;
         time_point simulation_time;
 
     private:

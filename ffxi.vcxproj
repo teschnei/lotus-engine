@@ -160,6 +160,28 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_shadow.spv;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_shadow.spv;%(Outputs)</Outputs>
     </CustomBuild>
+    <CustomBuild Include="shaders\shader_deferred.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred.frag -o $(ProjectDir)shaders\frag_deferred.spv</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred.frag -o $(ProjectDir)shaders\frag_deferred.spv</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_deferred.frag...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_deferred.frag...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_deferred.spv;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_deferred.spv;%(Outputs)</Outputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="shaders\shader_deferred.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred.vert -o $(ProjectDir)shaders\vert_deferred.spv</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred.vert -o $(ProjectDir)shaders\vert_deferred.spv</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_deferred.vert...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_deferred.vert...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\vert_deferred.spv;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\vert_deferred.spv;%(Outputs)</Outputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

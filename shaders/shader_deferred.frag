@@ -1,0 +1,69 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+layout(binding = 0) uniform sampler2D posSampler;
+layout(binding = 1) uniform sampler2D normalSampler;
+layout(binding = 2) uniform sampler2D albedoSampler;
+
+layout(binding = 3) uniform LightUBO
+{
+    vec4 cascade_splits;
+    mat4 cascade_view_proj[4];
+    mat4 inverse_view;
+    vec3 light_dir;
+} light_ubo;
+
+layout(binding = 4) uniform sampler2DArray shadowSampler;
+
+layout(binding = 5) uniform CameraUBO
+{
+    mat4 proj;
+    mat4 view;
+} camera_ubo;
+
+layout(location = 0) in vec2 fragTexCoord;
+
+layout(location = 0) out vec4 outColor;
+
+const mat4 bias = mat4(
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.5, 0.5, 0.0, 1.0);
+
+void main() {
+
+    vec3 fragPos = texture(posSampler, fragTexCoord).xyz;
+    vec3 normal = texture(normalSampler, fragTexCoord).xyz;
+    vec4 albedo = texture(albedoSampler, fragTexCoord);
+
+    vec3 fragViewPos = (camera_ubo.view * vec4(fragPos, 1.0)).xyz;
+
+    uint cascade_index = 0;
+    for (uint i = 0; i < 4 - 1; ++i)
+    {
+        if(fragViewPos.z < light_ubo.cascade_splits[i]) {
+            cascade_index = i + 1;
+        }
+    }
+
+    vec4 shadow_coord = (bias * light_ubo.cascade_view_proj[cascade_index]) * vec4(fragPos, 1.0);
+
+    float shadow = 1.0;
+    vec4 shadowCoord = shadow_coord / shadow_coord.w;
+
+    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0)
+    {
+        float distance = texture(shadowSampler, vec3(shadowCoord.st, cascade_index)).r;
+        if (shadowCoord.w > 0 && distance < shadowCoord.z - 0.005) {
+            shadow = 0.5;
+        }
+    }
+
+    outColor = albedo;
+    vec3 norm = normalize(normal);
+    float theta = clamp(dot(norm, -light_ubo.light_dir), 0.5, 1);
+    outColor.rgb = outColor.rgb * theta;
+    outColor = outColor * shadow;
+}
+

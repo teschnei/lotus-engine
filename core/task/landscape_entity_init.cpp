@@ -3,7 +3,6 @@
 #include "worker_thread.h"
 #include "core.h"
 #include "renderer/renderer.h"
-#include "game.h"
 
 namespace lotus
 {
@@ -30,8 +29,8 @@ namespace lotus
         {
             auto& command_buffer = entity->command_buffers[i];
             vk::CommandBufferInheritanceInfo inheritInfo = {};
-            inheritInfo.renderPass = *thread->engine->renderer.render_pass;
-            inheritInfo.framebuffer = *thread->engine->renderer.frame_buffers[i];
+            inheritInfo.renderPass = *thread->engine->renderer.gbuffer_render_pass;
+            inheritInfo.framebuffer = *thread->engine->renderer.gbuffer.frame_buffer;
 
             vk::CommandBufferBeginInfo beginInfo = {};
             beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -52,9 +51,9 @@ namespace lotus
             shadowmap_image_info.sampler = *thread->engine->renderer.shadowmap_sampler;
 
             vk::DescriptorBufferInfo light_buffer_info;
-            light_buffer_info.buffer = *thread->engine->game->cascade_data_ubo->buffer;
-            light_buffer_info.offset = i * sizeof(thread->engine->game->cascade_data);
-            light_buffer_info.range = sizeof(thread->engine->game->cascade_data);
+            light_buffer_info.buffer = *thread->engine->renderer.cascade_data_ubo->buffer;
+            light_buffer_info.offset = i * sizeof(thread->engine->renderer.cascade_data);
+            light_buffer_info.range = sizeof(thread->engine->renderer.cascade_data);
 
             std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
@@ -112,9 +111,9 @@ namespace lotus
             buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
             vk::DescriptorBufferInfo cascade_buffer_info;
-            cascade_buffer_info.buffer = *thread->engine->game->cascade_matrices_ubo->buffer;
-            cascade_buffer_info.offset = i * sizeof(thread->engine->game->cascade_matrices);
-            cascade_buffer_info.range = sizeof(thread->engine->game->cascade_matrices);
+            cascade_buffer_info.buffer = *thread->engine->renderer.cascade_matrices_ubo->buffer;
+            cascade_buffer_info.offset = i * sizeof(thread->engine->renderer.cascade_matrices);
+            cascade_buffer_info.range = sizeof(thread->engine->renderer.cascade_matrices);
 
             std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
@@ -134,7 +133,7 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
-            //command_buffer->setDepthBias(1.25f, 0, 1.75f);
+            command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
             drawModel(thread, *command_buffer, false, *thread->engine->renderer.shadowmap_pipeline_layout);
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);

@@ -3,8 +3,9 @@
 
 namespace lotus
 {
-    Engine::Engine(const std::string& appname, uint32_t appVersion, Game* _game) : renderer(this, appname, appVersion), input(this, renderer.window), camera(&input), game(_game)
+    Engine::Engine(const std::string& appname, uint32_t appVersion, Game* _game) : game(_game), renderer(this, appname, appVersion), input(this, renderer.window), camera(this, &input)
     {
+        renderer.generateCommandBuffers();
     }
 
     void Engine::run()
@@ -21,7 +22,7 @@ namespace lotus
             simulation_time = new_sim_time;
             input.GetInput();
             game->tick(simulation_time, sim_delta);
-            camera.tick(simulation_time, sim_delta);
+            camera.tick_all(simulation_time, sim_delta);
             renderer.drawFrame();
         }
     }

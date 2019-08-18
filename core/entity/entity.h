@@ -20,7 +20,7 @@ namespace lotus
         Entity& operator=(Entity&&) = default;
         virtual ~Entity() = default;
 
-        virtual void tick(time_point time, duration delta);
+        void tick_all(time_point time, duration delta);
 
         template <typename T, typename... Args>
         void addComponent(Args... args)
@@ -35,6 +35,7 @@ namespace lotus
         glm::vec3 getPos();
 
     protected:
+        virtual void tick(time_point time, duration delta){}
 
         glm::vec3 pos{};
         float rot{};

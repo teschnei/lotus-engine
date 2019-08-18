@@ -3,20 +3,22 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "entity.h"
+#include "renderer/memory.h"
 
 namespace lotus
 {
+    class Engine;
     class Input;
 
     class Camera : public Entity
     {
     public:
-        explicit Camera(Input* input);
+        Camera(Engine* engine, Input* input);
         glm::mat4& getViewMatrix() { return view; }
         glm::mat4& getProjMatrix() { return proj; }
 
         void setPos(glm::vec3);
-        void setPerspective(float radians, float aspect, float near, float far);
+        void setPerspective(float radians, float aspect, float near_clip, float far_clip);
         float getNearClip() { return near_clip; }
         float getFarClip() { return far_clip; }
         void move(float forward_offset, float right_offset);
@@ -24,7 +26,10 @@ namespace lotus
 
         glm::vec3 getRotationVector() { return camera_rot; }
 
+        std::unique_ptr<Buffer> view_proj_ubo;
+
     private:
+        virtual void tick(time_point time, duration delta) override;
 
         float rot_x{0};
         float rot_z{ -glm::pi<float>()  };
@@ -34,5 +39,8 @@ namespace lotus
 
         glm::mat4 view{};
         glm::mat4 proj{};
+
+        bool update_ubo{ false };
+        Engine* engine{ nullptr };
     };
 }

@@ -6,8 +6,9 @@ namespace lotus
     {
     }
 
-    void Entity::tick(time_point time, duration delta)
+    void Entity::tick_all(time_point time, duration delta)
     {
+        tick(time, delta);
         for (auto& component : components)
         {
             component->tick(time, delta);

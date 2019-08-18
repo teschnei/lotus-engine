@@ -1,14 +1,14 @@
 #include "scene.h"
 #include "entity/renderable_entity.h"
 #include "core.h"
-#include "game.h"
+#include "renderer/renderer.h"
 
 namespace lotus
 {
 void Scene::render(Engine* engine)
 {
         engine->worker_pool.addWork(std::make_unique<lotus::LambdaWorkItem>([](lotus::WorkerThread* thread) {
-            glm::vec3 lightDir = glm::normalize(-glm::vec3{ 2.f, -50.f, -50.f });
+            glm::vec3 lightDir = glm::normalize(-glm::vec3{ 2.f, -100.f, -50.f });
             float cascade_splits[lotus::Renderer::shadowmap_cascades];
 
             float near_clip = thread->engine->camera.getNearClip();
@@ -82,22 +82,22 @@ void Scene::render(Engine* engine)
                 thread->engine->renderer.cascades[i].split_depth = (near_clip + split_dist * range) * -1.f;
                 thread->engine->renderer.cascades[i].view_proj_matrix = light_ortho * light_view;
 
-                thread->engine->game->cascade_matrices[i] = thread->engine->renderer.cascades[i].view_proj_matrix;
-                thread->engine->game->cascade_data.cascade_splits[i] = thread->engine->renderer.cascades[i].split_depth;
-                thread->engine->game->cascade_data.cascade_view_proj[i] = thread->engine->renderer.cascades[i].view_proj_matrix;
+                thread->engine->renderer.cascade_matrices[i] = thread->engine->renderer.cascades[i].view_proj_matrix;
+                thread->engine->renderer.cascade_data.cascade_splits[i] = thread->engine->renderer.cascades[i].split_depth;
+                thread->engine->renderer.cascade_data.cascade_view_proj[i] = thread->engine->renderer.cascades[i].view_proj_matrix;
 
                 last_split = cascade_splits[i];
             }
 
-            auto data = thread->engine->renderer.device->mapMemory(thread->engine->game->cascade_matrices_ubo->memory, thread->engine->game->cascade_matrices_ubo->memory_offset, sizeof(thread->engine->game->cascade_matrices), {}, thread->engine->renderer.dispatch);
-                memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(thread->engine->game->cascade_matrices)), &thread->engine->game->cascade_matrices, sizeof(thread->engine->game->cascade_matrices));
-            thread->engine->renderer.device->unmapMemory(thread->engine->game->cascade_matrices_ubo->memory, thread->engine->renderer.dispatch);
+            auto data = thread->engine->renderer.device->mapMemory(thread->engine->renderer.cascade_matrices_ubo->memory, thread->engine->renderer.cascade_matrices_ubo->memory_offset, sizeof(thread->engine->renderer.cascade_matrices), {}, thread->engine->renderer.dispatch);
+                memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(thread->engine->renderer.cascade_matrices)), &thread->engine->renderer.cascade_matrices, sizeof(thread->engine->renderer.cascade_matrices));
+            thread->engine->renderer.device->unmapMemory(thread->engine->renderer.cascade_matrices_ubo->memory, thread->engine->renderer.dispatch);
 
-            thread->engine->game->cascade_data.inverse_view = glm::inverse(thread->engine->camera.getViewMatrix());
-            thread->engine->game->cascade_data.light_dir = lightDir;
-            data = thread->engine->renderer.device->mapMemory(thread->engine->game->cascade_data_ubo->memory, thread->engine->game->cascade_data_ubo->memory_offset, sizeof(thread->engine->game->cascade_data), {}, thread->engine->renderer.dispatch);
-                memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(thread->engine->game->cascade_data)), &thread->engine->game->cascade_data, sizeof(thread->engine->game->cascade_data));
-            thread->engine->renderer.device->unmapMemory(thread->engine->game->cascade_data_ubo->memory, thread->engine->renderer.dispatch);
+            thread->engine->renderer.cascade_data.inverse_view = glm::inverse(thread->engine->camera.getViewMatrix());
+            thread->engine->renderer.cascade_data.light_dir = lightDir;
+            data = thread->engine->renderer.device->mapMemory(thread->engine->renderer.cascade_data_ubo->memory, thread->engine->renderer.cascade_data_ubo->memory_offset, sizeof(thread->engine->renderer.cascade_data), {}, thread->engine->renderer.dispatch);
+                memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(thread->engine->renderer.cascade_data)), &thread->engine->renderer.cascade_data, sizeof(thread->engine->renderer.cascade_data));
+            thread->engine->renderer.device->unmapMemory(thread->engine->renderer.cascade_data_ubo->memory, thread->engine->renderer.dispatch);
             }));
     for (const auto& entity : entities)
     {
