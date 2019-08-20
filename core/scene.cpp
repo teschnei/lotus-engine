@@ -8,7 +8,7 @@ namespace lotus
 void Scene::render(Engine* engine)
 {
         engine->worker_pool.addWork(std::make_unique<lotus::LambdaWorkItem>([](lotus::WorkerThread* thread) {
-            glm::vec3 lightDir = glm::normalize(-glm::vec3{ 2.f, -100.f, -50.f });
+            glm::vec3 lightDir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
             float cascade_splits[lotus::Renderer::shadowmap_cascades];
 
             float near_clip = thread->engine->camera.getNearClip();

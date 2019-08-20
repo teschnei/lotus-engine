@@ -55,7 +55,7 @@ void main() {
     if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0)
     {
         float distance = texture(shadowSampler, vec3(shadowCoord.st, cascade_index)).r;
-        if (shadowCoord.w > 0 && distance < shadowCoord.z - 0.005) {
+        if (shadowCoord.w > 0 && distance < shadowCoord.z - 0.0005) {
             shadow = 0.5;
         }
     }

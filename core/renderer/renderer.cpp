@@ -430,7 +430,7 @@ namespace lotus
         shadowmap_subpass_deps[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
 
         vk::AttachmentDescription desc_pos;
-        desc_pos.format = vk::Format::eR16G16B16A16Sfloat;
+        desc_pos.format = vk::Format::eR32G32B32A32Sfloat;
         desc_pos.samples = vk::SampleCountFlagBits::e1;
         desc_pos.loadOp = vk::AttachmentLoadOp::eClear;
         desc_pos.storeOp = vk::AttachmentStoreOp::eStore;
@@ -440,7 +440,7 @@ namespace lotus
         desc_pos.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
         vk::AttachmentDescription desc_normal;
-        desc_normal.format = vk::Format::eR16G16B16A16Sfloat;
+        desc_normal.format = vk::Format::eR32G32B32A32Sfloat;
         desc_normal.samples = vk::SampleCountFlagBits::e1;
         desc_normal.loadOp = vk::AttachmentLoadOp::eClear;
         desc_normal.storeOp = vk::AttachmentStoreOp::eStore;
@@ -937,15 +937,15 @@ namespace lotus
 
     void Renderer::createGBufferResources()
     {
-        gbuffer.position.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.normal.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.position.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.normal.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.albedo.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.depth.image = memory_manager->GetImage(WIDTH, HEIGHT, getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = *gbuffer.position.image->image;
         image_view_info.viewType = vk::ImageViewType::e2D;
-        image_view_info.format = vk::Format::eR16G16B16A16Sfloat;
+        image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         image_view_info.subresourceRange.baseMipLevel = 0;
         image_view_info.subresourceRange.levelCount = 1;
