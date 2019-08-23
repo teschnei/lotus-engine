@@ -5,6 +5,7 @@
 #include "entity/camera.h"
 #include "input.h"
 #include "types.h"
+#include "light_manager.h"
 
 namespace lotus
 {
@@ -21,8 +22,9 @@ namespace lotus
         Renderer renderer;
         Input input;
         Camera camera;
-        WorkerPool worker_pool {this};
+        WorkerPool worker_pool{ this };
         Config config;
+        LightManager lights{ this };
         time_point simulation_time;
 
     private:

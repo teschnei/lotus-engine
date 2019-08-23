@@ -16,6 +16,11 @@ namespace lotus
         addComponent<CameraComponent>(input);
 
         view_proj_ubo = engine->renderer.memory_manager->GetBuffer((sizeof(view) + sizeof(proj)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        if (engine->renderer.render_mode == RenderMode::Rasterization)
+        {
+            cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_data) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        }
     }
 
     void Camera::setPerspective(float radians, float aspect, float _near_clip, float _far_clip)
@@ -67,6 +72,90 @@ namespace lotus
                 memcpy(buf, &proj, sizeof(proj));
                 memcpy(static_cast<uint8_t*>(buf) + sizeof(proj), &view, sizeof(view));
                 thread->engine->renderer.device->unmapMemory(view_proj_ubo->memory, thread->engine->renderer.dispatch);
+
+                if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
+                {
+                    glm::vec3 lightDir = thread->engine->lights.directional_light.direction;
+                    float cascade_splits[lotus::Renderer::shadowmap_cascades];
+
+                    float near_clip = thread->engine->camera.getNearClip();
+                    float far_clip = thread->engine->camera.getFarClip();
+                    float range = far_clip - near_clip;
+                    float ratio = far_clip / near_clip;
+
+                    for (size_t i = 0; i < lotus::Renderer::shadowmap_cascades; ++i)
+                    {
+                        float p = (i + 1) / static_cast<float>(lotus::Renderer::shadowmap_cascades);
+                        float log = near_clip * std::pow(ratio, p);
+                        float uniform = near_clip + range * p;
+                        float d = 0.95f * (log - uniform) + uniform;
+                        cascade_splits[i] = (d - near_clip) / range;
+                    }
+
+                    float last_split = 0.0f;
+
+                    for (size_t i = 0; i < lotus::Renderer::shadowmap_cascades; ++i)
+                    {
+                        float split_dist = cascade_splits[i];
+                        std::array<glm::vec3, 8> frustum_corners = {
+                            glm::vec3{-1.f, 1.f, -1.f},
+                            glm::vec3{1.f, 1.f, -1.f},
+                            glm::vec3{1.f, -1.f, -1.f},
+                            glm::vec3{-1.f, -1.f, -1.f},
+                            glm::vec3{-1.f, 1.f, 1.f},
+                            glm::vec3{1.f, 1.f, 1.f},
+                            glm::vec3{1.f, -1.f, 1.f},
+                            glm::vec3{-1.f, -1.f, 1.f}
+                        };
+
+                        glm::mat4 inverse_camera = glm::inverse(thread->engine->camera.getProjMatrix() * thread->engine->camera.getViewMatrix());
+
+                        for (auto& corner : frustum_corners)
+                        {
+                            glm::vec4 inverse_corner = inverse_camera * glm::vec4{ corner, 1.f };
+                            corner = inverse_corner / inverse_corner.w;
+                        }
+
+                        for (size_t i = 0; i < 4; ++i)
+                        {
+                            glm::vec3 distance = frustum_corners[i + 4] - frustum_corners[i];
+                            frustum_corners[i + 4] = frustum_corners[i] + (distance * split_dist);
+                            frustum_corners[i] = frustum_corners[i] + (distance * last_split);
+                        }
+
+                        glm::vec3 center = glm::vec3{ 0.f };
+                        for (auto& corner : frustum_corners)
+                        {
+                            center += corner;
+                        }
+                        center /= 8.f;
+
+                        float radius = 0.f;
+
+                        for (auto& corner : frustum_corners)
+                        {
+                            float distance = glm::length(corner - center);
+                            radius = glm::max(radius, distance);
+                        }
+                        radius = std::ceil(radius * 16.f) / 16.f;
+
+                        glm::vec3 max_extents = glm::vec3(radius);
+                        glm::vec3 min_extents = -max_extents;
+
+                        glm::mat4 light_view = glm::lookAt(center - lightDir * -min_extents.z, center, glm::vec3{ 0.f, -1.f, 0.f });
+                        glm::mat4 light_ortho = glm::ortho(min_extents.x, max_extents.x, min_extents.y, max_extents.y, min_extents.z * 2, max_extents.z * 2);
+                        light_ortho[1][1] *= -1;
+
+                        cascade_data.cascade_splits[i] =  (near_clip + split_dist * range) * -1.f;
+                        cascade_data.cascade_view_proj[i] = light_ortho * light_view;
+
+                        last_split = cascade_splits[i];
+                    }
+                    cascade_data.inverse_view = glm::inverse(thread->engine->camera.getViewMatrix());
+                    auto data = thread->engine->renderer.device->mapMemory(cascade_data_ubo->memory, cascade_data_ubo->memory_offset, sizeof(cascade_data) * engine->renderer.getImageCount(), {}, thread->engine->renderer.dispatch);
+                    memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(cascade_data)), &cascade_data, sizeof(cascade_data));
+                    thread->engine->renderer.device->unmapMemory(cascade_data_ubo->memory, thread->engine->renderer.dispatch);
+                }
             }));
         }
     }

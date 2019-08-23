@@ -12,6 +12,13 @@ namespace lotus
 {
     class Engine;
 
+    enum class RenderMode
+    {
+        Rasterization,
+        Hybrid,
+        Raytrace
+    };
+
     class Renderer
     {
     public:
@@ -67,9 +74,6 @@ namespace lotus
         {
             vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> shadowmap_frame_buffer;
             vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
-
-            float split_depth {0.f};
-            glm::mat4 view_proj_matrix {};
         };
 
         std::array<ShadowmapCascade, shadowmap_cascades> cascades;
@@ -103,22 +107,7 @@ namespace lotus
         vk::DispatchLoaderDynamic dispatch;
 
 
-        //TODO: put me somewhere proper
-        glm::mat4 cascade_matrices[Renderer::shadowmap_cascades];
-        std::unique_ptr<Buffer> cascade_matrices_ubo;
-
-        struct UBOFS
-        {
-            glm::vec4 cascade_splits;
-            glm::mat4 cascade_view_proj[Renderer::shadowmap_cascades];
-            glm::mat4 inverse_view;
-            glm::vec3 light_dir;
-            float _pad;
-        } cascade_data;
-
-        std::unique_ptr<Buffer> cascade_data_ubo;
-
-
+        RenderMode render_mode{ RenderMode::Rasterization };
 
     private:
         void createInstance(const std::string& app_name, uint32_t app_version);

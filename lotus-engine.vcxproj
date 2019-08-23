@@ -99,6 +99,7 @@
     <ClCompile Include="core\entity\landscape_entity.cpp" />
     <ClCompile Include="core\entity\renderable_entity.cpp" />
     <ClCompile Include="core\input.cpp" />
+    <ClCompile Include="core\light_manager.cpp" />
     <ClCompile Include="core\renderer\memory.cpp" />
     <ClCompile Include="core\renderer\mesh.cpp" />
     <ClCompile Include="core\renderer\model.cpp" />
@@ -127,6 +128,7 @@
     <ClInclude Include="core\entity\renderable_entity.h" />
     <ClInclude Include="core\game.h" />
     <ClInclude Include="core\input.h" />
+    <ClInclude Include="core\light_manager.h" />
     <ClInclude Include="core\renderer\memory.h" />
     <ClInclude Include="core\renderer\mesh.h" />
     <ClInclude Include="core\renderer\model.h" />

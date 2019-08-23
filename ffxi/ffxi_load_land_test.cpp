@@ -225,7 +225,9 @@ std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
         auto rot_mat = glm::toMat4(glm::quat{ glm::vec3{mzb_piece.fRotX, mzb_piece.fRotY, mzb_piece.fRotZ} });
         auto scale_mat = glm::scale(glm::mat4{ 1.f }, glm::vec3{ mzb_piece.fScaleX, mzb_piece.fScaleY, mzb_piece.fScaleZ });
 
-        lotus::LandscapeEntity::InstanceInfo info{ pos_mat * rot_mat * scale_mat };
+        glm::mat4 model = pos_mat * rot_mat * scale_mat;
+        glm::mat3 model_it = glm::transpose(glm::inverse(glm::mat3(model)));
+        lotus::LandscapeEntity::InstanceInfo info{model, model_it};
         temp_map[name].push_back(info);
     }
 

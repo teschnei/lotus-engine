@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "entity.h"
 #include "renderer/memory.h"
+#include "renderer/renderer.h"
 
 namespace lotus
 {
@@ -27,6 +28,16 @@ namespace lotus
         glm::vec3 getRotationVector() { return camera_rot; }
 
         std::unique_ptr<Buffer> view_proj_ubo;
+
+        struct UBOFS
+        {
+            glm::vec4 cascade_splits;
+            glm::mat4 cascade_view_proj[Renderer::shadowmap_cascades];
+            glm::mat4 inverse_view;
+        } cascade_data;
+
+        std::unique_ptr<Buffer> cascade_data_ubo;
+
 
     private:
         virtual void tick(time_point time, duration delta) override;

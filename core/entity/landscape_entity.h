@@ -8,7 +8,8 @@ namespace lotus
     public:
         struct InstanceInfo
         {
-            glm::mat4 matrix;
+            glm::mat4 model;
+            glm::mat3 model_it;
         };
 
         std::unique_ptr<Buffer> instance_buffer;

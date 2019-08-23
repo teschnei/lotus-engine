@@ -93,6 +93,9 @@
     <ClCompile Include="core\renderer\model.cpp">
       <Filter>core\renderer</Filter>
     </ClCompile>
+    <ClCompile Include="core\light_manager.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\renderer\texture.h">
@@ -175,6 +178,9 @@
     </ClInclude>
     <ClInclude Include="core\renderer\model.h">
       <Filter>core\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="core\light_manager.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

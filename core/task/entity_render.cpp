@@ -24,8 +24,6 @@ namespace lotus
     {
         RenderableEntity::UniformBufferObject ubo = {};
         ubo.model = entity->getModelMatrix();
-        ubo.view = thread->engine->camera.getViewMatrix();
-        ubo.proj = thread->engine->camera.getProjMatrix();
 
         auto& uniform_buffer = entity->uniform_buffer;
         auto data = thread->engine->renderer.device->mapMemory(uniform_buffer->memory, uniform_buffer->memory_offset, sizeof(ubo), {}, thread->engine->renderer.dispatch);

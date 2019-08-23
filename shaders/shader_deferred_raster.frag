@@ -5,21 +5,26 @@ layout(binding = 0) uniform sampler2D posSampler;
 layout(binding = 1) uniform sampler2D normalSampler;
 layout(binding = 2) uniform sampler2D albedoSampler;
 
-layout(binding = 3) uniform LightUBO
-{
-    vec4 cascade_splits;
-    mat4 cascade_view_proj[4];
-    mat4 inverse_view;
-    vec3 light_dir;
-} light_ubo;
-
-layout(binding = 4) uniform sampler2DArray shadowSampler;
-
-layout(binding = 5) uniform CameraUBO
+layout(binding = 3) uniform CameraUBO
 {
     mat4 proj;
     mat4 view;
 } camera_ubo;
+
+layout(binding = 4) uniform LightUBO
+{
+    vec3 light_dir;
+    float pad;
+} light_ubo;
+
+layout(binding = 5) uniform CascadeUBO
+{
+    vec4 cascade_splits;
+    mat4 cascade_view_proj[4];
+    mat4 inverse_view;
+} cascade_ubo;
+
+layout(binding = 6) uniform sampler2DArray shadowSampler;
 
 layout(location = 0) in vec2 fragTexCoord;
 
@@ -42,12 +47,12 @@ void main() {
     uint cascade_index = 0;
     for (uint i = 0; i < 4 - 1; ++i)
     {
-        if(fragViewPos.z < light_ubo.cascade_splits[i]) {
+        if(fragViewPos.z < cascade_ubo.cascade_splits[i]) {
             cascade_index = i + 1;
         }
     }
 
-    vec4 shadow_coord = (bias * light_ubo.cascade_view_proj[cascade_index]) * vec4(fragPos, 1.0);
+    vec4 shadow_coord = (bias * cascade_ubo.cascade_view_proj[cascade_index]) * vec4(fragPos, 1.0);
 
     float shadow = 1.0;
     vec4 shadowCoord = shadow_coord / shadow_coord.w;

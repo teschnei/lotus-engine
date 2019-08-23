@@ -18,6 +18,8 @@ public:
         auto entity = test.getLand();
         scene = std::make_unique<lotus::Scene>();
         scene->entities.push_back(std::shared_ptr<lotus::RenderableEntity>(entity));
+        engine->lights.directional_light.direction = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
+        engine->lights.UpdateLightBuffer();
         engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .5f, 400.f);
         engine->camera.setPos(glm::vec3(259.f, -90.f, 82.f));
     }

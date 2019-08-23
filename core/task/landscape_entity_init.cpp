@@ -3,6 +3,7 @@
 #include "worker_thread.h"
 #include "core.h"
 #include "renderer/renderer.h"
+#include "entity/camera.h"
 
 namespace lotus
 {
@@ -41,21 +42,11 @@ namespace lotus
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_graphics_pipeline, thread->engine->renderer.dispatch);
 
             vk::DescriptorBufferInfo buffer_info;
-            buffer_info.buffer = *entity->uniform_buffer->buffer;
-            buffer_info.offset = i * sizeof(RenderableEntity::UniformBufferObject);
-            buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
+            buffer_info.buffer = *thread->engine->camera.view_proj_ubo->buffer;
+            buffer_info.offset = i * (sizeof(glm::mat4)*2);
+            buffer_info.range = sizeof(glm::mat4)*2;
 
-            vk::DescriptorImageInfo shadowmap_image_info;
-            shadowmap_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            shadowmap_image_info.imageView = *thread->engine->renderer.shadowmap_image_view;
-            shadowmap_image_info.sampler = *thread->engine->renderer.shadowmap_sampler;
-
-            vk::DescriptorBufferInfo light_buffer_info;
-            light_buffer_info.buffer = *thread->engine->renderer.cascade_data_ubo->buffer;
-            light_buffer_info.offset = i * sizeof(thread->engine->renderer.cascade_data);
-            light_buffer_info.range = sizeof(thread->engine->renderer.cascade_data);
-
-            std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
+            std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
 
             descriptorWrites[0].dstSet = nullptr;
             descriptorWrites[0].dstBinding = 0;
@@ -63,20 +54,6 @@ namespace lotus
             descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &buffer_info;
-
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &shadowmap_image_info;
-
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 3;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &light_buffer_info;
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
@@ -89,57 +66,60 @@ namespace lotus
             command_buffer->end(thread->engine->renderer.dispatch);
         }
 
-        for (size_t i = 0; i < entity->shadowmap_buffers.size(); ++i)
+        if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
         {
-            auto& command_buffer = entity->shadowmap_buffers[i];
-            vk::CommandBufferInheritanceInfo inheritInfo = {};
-            inheritInfo.renderPass = *thread->engine->renderer.shadowmap_render_pass;
-            //used in multiple framebuffers so we can't give the hint
-            //inheritInfo.framebuffer = *thread->engine->renderer.shadowmap_frame_buffer;
+            for (size_t i = 0; i < entity->shadowmap_buffers.size(); ++i)
+            {
+                auto& command_buffer = entity->shadowmap_buffers[i];
+                vk::CommandBufferInheritanceInfo inheritInfo = {};
+                inheritInfo.renderPass = *thread->engine->renderer.shadowmap_render_pass;
+                //used in multiple framebuffers so we can't give the hint
+                //inheritInfo.framebuffer = *thread->engine->renderer.shadowmap_frame_buffer;
 
-            vk::CommandBufferBeginInfo beginInfo = {};
-            beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
-            beginInfo.pInheritanceInfo = &inheritInfo;
+                vk::CommandBufferBeginInfo beginInfo = {};
+                beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
+                beginInfo.pInheritanceInfo = &inheritInfo;
 
-            command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
+                command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline, thread->engine->renderer.dispatch);
 
-            vk::DescriptorBufferInfo buffer_info;
-            buffer_info.buffer = *entity->uniform_buffer->buffer;
-            buffer_info.offset = i * sizeof(RenderableEntity::UniformBufferObject);
-            buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
+                vk::DescriptorBufferInfo buffer_info;
+                buffer_info.buffer = *entity->uniform_buffer->buffer;
+                buffer_info.offset = i * sizeof(RenderableEntity::UniformBufferObject);
+                buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-            vk::DescriptorBufferInfo cascade_buffer_info;
-            cascade_buffer_info.buffer = *thread->engine->renderer.cascade_matrices_ubo->buffer;
-            cascade_buffer_info.offset = i * sizeof(thread->engine->renderer.cascade_matrices);
-            cascade_buffer_info.range = sizeof(thread->engine->renderer.cascade_matrices);
+                vk::DescriptorBufferInfo cascade_buffer_info;
+                cascade_buffer_info.buffer = *thread->engine->camera.cascade_data_ubo->buffer;
+                cascade_buffer_info.offset = i * sizeof(thread->engine->camera.cascade_data);
+                cascade_buffer_info.range = sizeof(thread->engine->camera.cascade_data);
 
-            std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
+                std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &buffer_info;
+                descriptorWrites[0].dstSet = nullptr;
+                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].dstArrayElement = 0;
+                descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pBufferInfo = &buffer_info;
 
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &cascade_buffer_info;
+                descriptorWrites[1].dstSet = nullptr;
+                descriptorWrites[1].dstBinding = 2;
+                descriptorWrites[1].dstArrayElement = 0;
+                descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[1].descriptorCount = 1;
+                descriptorWrites[1].pBufferInfo = &cascade_buffer_info;
 
-            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
-            command_buffer->setDepthBias(1.25f, 0, 1.75f);
+                command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
-            drawModel(thread, *command_buffer, false, *thread->engine->renderer.shadowmap_pipeline_layout);
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);
-            drawModel(thread, *command_buffer, true, *thread->engine->renderer.shadowmap_pipeline_layout);
+                drawModel(thread, *command_buffer, false, *thread->engine->renderer.shadowmap_pipeline_layout);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);
+                drawModel(thread, *command_buffer, true, *thread->engine->renderer.shadowmap_pipeline_layout);
 
-            command_buffer->end(thread->engine->renderer.dispatch);
+                command_buffer->end(thread->engine->renderer.dispatch);
+            }
         }
     }
 
@@ -177,7 +157,7 @@ namespace lotus
         std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
 
         descriptorWrites[0].dstSet = nullptr;
-        descriptorWrites[0].dstBinding = 2;
+        descriptorWrites[0].dstBinding = 1;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[0].descriptorCount = 1;

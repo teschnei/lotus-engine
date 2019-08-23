@@ -89,7 +89,7 @@ namespace FFXI
     }
 
     std::vector<vk::VertexInputAttributeDescription> MMB::Vertex::getAttributeDescriptions() {
-        std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(8);
+        std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(11);
 
         attribute_descriptions[0].binding = 0;
         attribute_descriptions[0].location = 0;
@@ -130,6 +130,21 @@ namespace FFXI
         attribute_descriptions[7].location = 7;
         attribute_descriptions[7].format = vk::Format::eR32G32B32A32Sfloat;
         attribute_descriptions[7].offset = sizeof(float)*12;
+
+        attribute_descriptions[8].binding = 1;
+        attribute_descriptions[8].location = 8;
+        attribute_descriptions[8].format = vk::Format::eR32G32B32A32Sfloat;
+        attribute_descriptions[8].offset = sizeof(float)*16;
+
+        attribute_descriptions[9].binding = 1;
+        attribute_descriptions[9].location = 9;
+        attribute_descriptions[9].format = vk::Format::eR32G32B32A32Sfloat;
+        attribute_descriptions[9].offset = sizeof(float)*20;
+
+        attribute_descriptions[10].binding = 1;
+        attribute_descriptions[10].location = 10;
+        attribute_descriptions[10].format = vk::Format::eR32G32B32A32Sfloat;
+        attribute_descriptions[10].offset = sizeof(float)*24;
 
         return attribute_descriptions;
     }

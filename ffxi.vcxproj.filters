@@ -47,7 +47,8 @@
     <CustomBuild Include="shaders\shader_blend.frag" />
     <CustomBuild Include="shaders\shader_shadow.vert" />
     <CustomBuild Include="shaders\shader_shadow.frag" />
-    <CustomBuild Include="shaders\shader_deferred.frag" />
     <CustomBuild Include="shaders\shader_deferred.vert" />
+    <CustomBuild Include="shaders\shader_deferred_raster.frag" />
+    <CustomBuild Include="shaders\shader_deferred_raytrace.frag" />
   </ItemGroup>
 </Project>
