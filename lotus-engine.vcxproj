@@ -107,6 +107,7 @@
     <ClCompile Include="core\renderer\renderer.cpp" />
     <ClCompile Include="core\renderer\texture.cpp" />
     <ClCompile Include="core\scene.cpp" />
+    <ClCompile Include="core\task\acceleration_build.cpp" />
     <ClCompile Include="core\task\dependency_dummy.cpp" />
     <ClCompile Include="core\task\landscape_entity_init.cpp" />
     <ClCompile Include="core\task\renderable_entity_init.cpp" />
@@ -137,6 +138,7 @@
     <ClInclude Include="core\renderer\renderer.h" />
     <ClInclude Include="core\renderer\texture.h" />
     <ClInclude Include="core\scene.h" />
+    <ClInclude Include="core\task\acceleration_build.h" />
     <ClInclude Include="core\task\dependency_dummy.h" />
     <ClInclude Include="core\task\landscape_entity_init.h" />
     <ClInclude Include="core\task\renderable_entity_init.h" />

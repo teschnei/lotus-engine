@@ -78,7 +78,7 @@ namespace lotus
                 copy_region.srcOffset = vertex_buffer.size() + staging_buffer_offset;
                 command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
 
-                if (thread->engine->renderer.render_mode == RenderMode::Hybrid || thread->engine->renderer.render_mode == RenderMode::Raytrace)
+                if (thread->engine->renderer.RTXEnabled())
                 {
                     auto& geo = raytrace_geometry.emplace_back();
                     geo.geometryType = vk::GeometryTypeNV::eTriangles;
@@ -106,7 +106,7 @@ namespace lotus
             }
             thread->engine->renderer.device->unmapMemory(staging_buffer->memory, thread->engine->renderer.dispatch);
 
-            if (thread->engine->renderer.render_mode == RenderMode::Hybrid || thread->engine->renderer.render_mode == RenderMode::Raytrace)
+            if (thread->engine->renderer.RTXEnabled())
             {
                 model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, true);
             }

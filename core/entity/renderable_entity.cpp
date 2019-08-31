@@ -23,6 +23,24 @@ namespace lotus
         }
     }
 
+    void RenderableEntity::populate_AS(TopLevelAccelerationStructure* as)
+    {
+        for (const auto& model : models)
+        {
+            if (model->bottom_level_as)
+            {
+                VkGeometryInstance instance{};
+                instance.transform = glm::mat3x4{ getModelMatrix() };
+                instance.accelerationStructureHandle = model->bottom_level_as->handle;
+                instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+                instance.mask = 0xFF;
+                instance.instanceOffset = 0;
+                instance.instanceId = 0; //TODO
+                as->AddInstance(instance);
+            }
+        }
+    }
+
     glm::mat4 RenderableEntity::getModelMatrix()
     {
         return this->pos_mat * this->rot_mat * this->scale_mat;

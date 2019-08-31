@@ -21,6 +21,7 @@ namespace lotus
         void setScale(float x, float y, float z);
 
         virtual void render(Engine* engine, std::shared_ptr<RenderableEntity>& sp);
+        virtual void populate_AS(TopLevelAccelerationStructure* as);
 
         std::vector<std::shared_ptr<Model>> models;
 

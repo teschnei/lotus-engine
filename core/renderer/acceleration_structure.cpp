@@ -16,6 +16,7 @@ void lotus::AccelerationStructure::PopulateAccelerationStructure(vk::DeviceSize 
     create_info.info = info;
     create_info.compactedSize = 0;
     acceleration_structure = engine->renderer.device->createAccelerationStructureNVUnique(create_info, nullptr, engine->renderer.dispatch);
+    engine->renderer.device->getAccelerationStructureHandleNV(*acceleration_structure, sizeof(handle), &handle, engine->renderer.dispatch);
 }
 
 void lotus::AccelerationStructure::PopulateBuffers()
@@ -69,9 +70,9 @@ lotus::TopLevelAccelerationStructure::TopLevelAccelerationStructure(Engine* _eng
     info.type = vk::AccelerationStructureTypeNV::eTopLevel;
 }
 
-void lotus::TopLevelAccelerationStructure::AddInstance(VkGeometryInstance&& instance)
+void lotus::TopLevelAccelerationStructure::AddInstance(VkGeometryInstance instance)
 {
-    instances.push_back(std::move(instance));
+    instances.push_back(instance);
     dirty = true;
 }
 
@@ -103,6 +104,6 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
 
 void lotus::TopLevelAccelerationStructure::UpdateInstance(uint32_t instance_id, float transform[12])
 {
-    memcpy(instances[instance_id].transform, transform, sizeof(float) * 12);
+    memcpy(&instances[instance_id].transform, transform, sizeof(float) * 12);
     dirty = true;
 }

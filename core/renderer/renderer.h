@@ -7,7 +7,6 @@
 #include <glm/glm.hpp>
 #include <SDL.h>
 #include "memory.h"
-#include "acceleration_structure.h"
 
 namespace lotus
 {
@@ -110,9 +109,8 @@ namespace lotus
         RenderMode render_mode{ RenderMode::Hybrid };
 
         /* Ray tracing */
+        bool RTXEnabled();
         vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;
-
-        std::unique_ptr<TopLevelAccelerationStructure> top_level_as;
 
     private:
         void createRayTracingResources();

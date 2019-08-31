@@ -1,5 +1,6 @@
 #pragma once
 #include "memory.h"
+#include <glm/glm.hpp>
 
 namespace lotus
 {
@@ -21,6 +22,7 @@ namespace lotus
         vk::UniqueHandle<vk::AccelerationStructureNV, vk::DispatchLoaderDynamic> acceleration_structure;
         std::unique_ptr<Buffer> scratch_memory;
         std::unique_ptr<Memory> object_memory;
+        uint64_t handle;
     };
 
     class BottomLevelAccelerationStructure : public AccelerationStructure
@@ -32,7 +34,7 @@ namespace lotus
     struct VkGeometryInstance
     {
         /// Transform matrix, containing only the top 3 rows
-        float transform[12];
+        glm::mat3x4 transform;
         /// Instance index
         uint32_t instanceId : 24;
         /// Visibility mask
@@ -52,7 +54,7 @@ namespace lotus
     public:
         TopLevelAccelerationStructure(Engine* _engine, bool updateable);
 
-        void AddInstance(VkGeometryInstance&& instance);
+        void AddInstance(VkGeometryInstance instance);
         void Build(vk::CommandBuffer command_buffer);
         void UpdateInstance(uint32_t instance_id, float transform[12]);
     private:

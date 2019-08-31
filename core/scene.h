@@ -2,6 +2,7 @@
 #include "entity/entity.h"
 #include <memory>
 #include <vector>
+#include "renderer/acceleration_structure.h"
 
 namespace lotus
 {
@@ -10,7 +11,13 @@ namespace lotus
     class Scene
     {
     public:
-        void render(Engine* engine);
+        Scene(Engine* _engine) : engine(_engine) {}
+        void render();
+        void AddEntity(std::shared_ptr<Entity>&& entity);
+    protected:
+        Engine* engine;
+        std::shared_ptr<TopLevelAccelerationStructure> top_level_as;
+        bool rebuild_as{ false };
         std::vector<std::shared_ptr<Entity>> entities;
     };
 }

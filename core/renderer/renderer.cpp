@@ -98,12 +98,13 @@ namespace lotus
         createDeferredCommandBuffer();
     }
 
+    bool Renderer::RTXEnabled()
+    {
+        return render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace;
+    }
+
     void Renderer::createRayTracingResources()
     {
-        if (render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace)
-        {
-            top_level_as = std::make_unique<TopLevelAccelerationStructure>(engine, true);
-        }
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -199,7 +200,7 @@ namespace lotus
         physical_device_features.depthClamp = VK_TRUE;
 
         std::vector<const char*> device_extensions2 = device_extensions;
-        if (render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace)
+        if (RTXEnabled())
         {
             device_extensions2.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
@@ -1376,7 +1377,7 @@ namespace lotus
             return;
         }
         engine->worker_pool.clearProcessed(current_image);
-        engine->game->scene->render(engine);
+        engine->game->scene->render();
 
         engine->worker_pool.waitIdle();
         engine->worker_pool.startProcessing(current_image);

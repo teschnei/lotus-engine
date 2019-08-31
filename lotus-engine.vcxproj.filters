@@ -99,6 +99,9 @@
     <ClCompile Include="core\task\model_init.cpp">
       <Filter>core\task</Filter>
     </ClCompile>
+    <ClCompile Include="core\task\acceleration_build.cpp">
+      <Filter>core\task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\renderer\texture.h">
@@ -186,6 +189,9 @@
       <Filter>core\renderer</Filter>
     </ClInclude>
     <ClInclude Include="core\task\model_init.h">
+      <Filter>core\task</Filter>
+    </ClInclude>
+    <ClInclude Include="core\task\acceleration_build.h">
       <Filter>core\task</Filter>
     </ClInclude>
   </ItemGroup>
