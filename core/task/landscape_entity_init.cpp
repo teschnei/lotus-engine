@@ -142,7 +142,7 @@ namespace lotus
         }
     }
 
-    void LandscapeEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::DeviceSize count, vk::PipelineLayout layout)
+    void LandscapeEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout)
     {
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;

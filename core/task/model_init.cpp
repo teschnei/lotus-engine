@@ -84,13 +84,13 @@ namespace lotus
                     geo.geometryType = vk::GeometryTypeNV::eTriangles;
                     geo.geometry.triangles.vertexData = mesh->vertex_buffer->buffer;
                     geo.geometry.triangles.vertexOffset = 0;
-                    geo.geometry.triangles.vertexCount = vertex_buffer.size() / sizeof(FFXI::MMB::Vertex);
+                    geo.geometry.triangles.vertexCount = static_cast<uint32_t>(vertex_buffer.size() / sizeof(FFXI::MMB::Vertex));
                     geo.geometry.triangles.vertexStride = sizeof(FFXI::MMB::Vertex);
                     geo.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
 
                     geo.geometry.triangles.indexData = mesh->index_buffer->buffer;
                     geo.geometry.triangles.indexOffset = 0;
-                    geo.geometry.triangles.indexCount = index_buffer.size() / sizeof(uint16_t);
+                    geo.geometry.triangles.indexCount = static_cast<uint32_t>(index_buffer.size() / sizeof(uint16_t));
                     geo.geometry.triangles.indexType = vk::IndexType::eUint16;
                     if (!mesh->has_transparency)
                     {

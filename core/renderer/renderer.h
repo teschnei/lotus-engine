@@ -27,7 +27,7 @@ namespace lotus
 
         void generateCommandBuffers();
 
-        size_t getImageCount() const { return swapchain_images.size(); }
+        uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain_images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
         void setCurrentImage(int _current_image) { current_image = _current_image; }
         std::pair<std::optional<uint32_t>, std::optional<std::uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
@@ -68,7 +68,7 @@ namespace lotus
         vk::SurfaceKHR surface;
         std::unique_ptr<MemoryManager> memory_manager;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
-        static constexpr size_t shadowmap_cascades {4};
+        static constexpr uint32_t shadowmap_cascades {4};
 
         struct ShadowmapCascade
         {

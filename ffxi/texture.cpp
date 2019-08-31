@@ -62,13 +62,13 @@ namespace FFXI
                 height = infob1->imgy;
                 format = vk::Format::eR8G8B8A8Unorm;
                 uint32_t size = width * height;
-                pixels.resize(size * 4);
+                pixels.resize(static_cast<uint64_t>(size) * 4);
                 uint8_t* buf_p = buffer + sizeof(IMGINFOB1);
                 for (int i = height-1; i>=0; --i)
                 {
-                    for (int j = 0; j < width; ++j)
+                    for (uint32_t j = 0; j < width; ++j)
                     {
-                        memcpy(pixels.data() + ((i * width + j) * 4), &infob1->palet[(size_t)(*buf_p)], 4);
+                        memcpy(pixels.data() + ((i * static_cast<uint64_t>(width) + j) * 4), &infob1->palet[(size_t)(*buf_p)], 4);
                         ++buf_p;
                     }
                 }

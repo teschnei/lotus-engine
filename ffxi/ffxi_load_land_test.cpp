@@ -34,7 +34,7 @@ public:
         uint32_t stride = 4;
         if (format == vk::Format::eBc2UnormBlock)
             stride = 1;
-        VkDeviceSize imageSize = width * height * stride;
+        VkDeviceSize imageSize = static_cast<uint64_t>(width) * static_cast<uint64_t>(height) * stride;
 
         texture->setWidth(width);
         texture->setHeight(height);
@@ -195,7 +195,7 @@ std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
 
     for (auto& [name, info_vec] : temp_map)
     {
-        entity->instance_offsets[name] = std::make_pair(instance_info.size(), info_vec.size());
+        entity->instance_offsets[name] = std::make_pair(instance_info.size(), static_cast<uint32_t>(info_vec.size()));
         instance_info.insert(instance_info.end(), std::make_move_iterator(info_vec.begin()), std::make_move_iterator(info_vec.end()));
     }
 

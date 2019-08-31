@@ -52,7 +52,7 @@ namespace lotus
     }
 
     std::unique_ptr<Image> MemoryManager::GetImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
-        vk::MemoryPropertyFlags memoryflags, vk::DeviceSize arrayLayers)
+        vk::MemoryPropertyFlags memoryflags, uint32_t arrayLayers)
     {
         VkImageCreateInfo image_info = {};
         image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

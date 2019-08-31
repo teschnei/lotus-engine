@@ -827,7 +827,7 @@ namespace lotus
 
             std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
             vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
-            dynamic_state_ci.dynamicStateCount = dynamic_states.size();
+            dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
             dynamic_state_ci.pDynamicStates = dynamic_states.data();
             pipeline_info.pDynamicState = &dynamic_state_ci;
             blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
@@ -920,7 +920,7 @@ namespace lotus
             image_view_info.subresourceRange.layerCount = shadowmap_cascades;
             shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
 
-            for (size_t i = 0; i < shadowmap_cascades; ++i)
+            for (uint32_t i = 0; i < shadowmap_cascades; ++i)
             {
                 ShadowmapCascade& cascade = cascades[i];
                 image_view_info.subresourceRange.baseArrayLayer = i;
@@ -1264,7 +1264,7 @@ namespace lotus
 
             auto shadowmap_buffers = engine->worker_pool.getShadowmapCommandBuffers(image_index);
 
-            for (size_t i = 0; i < shadowmap_cascades; ++i)
+            for (uint32_t i = 0; i < shadowmap_cascades; ++i)
             {
                 renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
                 buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);

@@ -11,7 +11,7 @@ namespace lotus
     protected:
         AccelerationStructure(Engine* _engine) : engine(_engine) {}
 
-        void PopulateAccelerationStructure(vk::DeviceSize instanceCount, vk::DeviceSize geometryCount, const vk::GeometryNV* pGeometry, bool updateable);
+        void PopulateAccelerationStructure(uint32_t instanceCount, uint32_t geometryCount, const vk::GeometryNV* pGeometry, bool updateable);
         void PopulateBuffers();
         void BuildAccelerationStructure(vk::CommandBuffer command_buffer, vk::Buffer instance_buffer, vk::DeviceSize instance_offset, bool update);
 
@@ -22,7 +22,7 @@ namespace lotus
         vk::UniqueHandle<vk::AccelerationStructureNV, vk::DispatchLoaderDynamic> acceleration_structure;
         std::unique_ptr<Buffer> scratch_memory;
         std::unique_ptr<Memory> object_memory;
-        uint64_t handle;
+        uint64_t handle {0};
     };
 
     class BottomLevelAccelerationStructure : public AccelerationStructure

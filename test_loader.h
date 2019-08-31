@@ -16,7 +16,7 @@ public:
     {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load("textures/texture.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        VkDeviceSize imageSize = texWidth * texHeight * 4;
+        VkDeviceSize imageSize = static_cast<uint64_t>(texWidth) * static_cast<uint64_t>(texHeight) * 4;
 
         texture->setWidth(texWidth);
         texture->setHeight(texHeight);

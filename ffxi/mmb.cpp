@@ -174,7 +174,7 @@ namespace FFXI
 
         offset += sizeof(SMMBHeader);
 
-        std::list<uint32_t> offset_list;
+        std::list<size_t> offset_list;
         uint32_t piece_offset;
         if (header->offsetBlockHeader == 0)
         {
@@ -198,7 +198,7 @@ namespace FFXI
         else
         {
             offset_list.push_back(header->offsetBlockHeader);
-            uint32_t max = header->offsetBlockHeader - offset;
+            uint32_t max = static_cast<uint32_t>(header->offsetBlockHeader - offset);
             if (max > 0)
             {
                 for (size_t i=0; i < max; i+=sizeof(uint32_t))

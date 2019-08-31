@@ -13,6 +13,6 @@ namespace lotus
         };
 
         std::unique_ptr<Buffer> instance_buffer;
-        std::unordered_map<std::string, std::pair<vk::DeviceSize, vk::DeviceSize>> instance_offsets; //pair of offset/count
+        std::unordered_map<std::string, std::pair<vk::DeviceSize, uint32_t>> instance_offsets; //pair of offset/count
     };
 }

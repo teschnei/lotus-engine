@@ -1,8 +1,8 @@
 #include "acceleration_structure.h"
 #include "core.h"
 
-void lotus::AccelerationStructure::PopulateAccelerationStructure(vk::DeviceSize instanceCount,
-    vk::DeviceSize geometryCount, const vk::GeometryNV* pGeometry, bool updateable)
+void lotus::AccelerationStructure::PopulateAccelerationStructure(uint32_t instanceCount,
+    uint32_t geometryCount, const vk::GeometryNV* pGeometry, bool updateable)
 {
     info.instanceCount = instanceCount;
     info.geometryCount = geometryCount;
@@ -60,7 +60,7 @@ void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer 
 lotus::BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable) : AccelerationStructure(_engine)
 {
     info.type = vk::AccelerationStructureTypeNV::eBottomLevel;
-    PopulateAccelerationStructure(0, geometry.size(), geometry.data(), updateable);
+    PopulateAccelerationStructure(0, static_cast<uint32_t>(geometry.size()), geometry.data(), updateable);
     PopulateBuffers();
     BuildAccelerationStructure(command_buffer, nullptr, 0, false);
 }
@@ -84,7 +84,7 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
         if (!instance_memory)
         {
             instance_memory = engine->renderer.memory_manager->GetBuffer(instances.size() * sizeof(VkGeometryInstance), vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            PopulateAccelerationStructure(instances.size(), 0, nullptr, updateable);
+            PopulateAccelerationStructure(static_cast<uint32_t>(instances.size()), 0, nullptr, updateable);
             PopulateBuffers();
             update = false;
         }

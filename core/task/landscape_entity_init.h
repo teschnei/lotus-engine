@@ -11,7 +11,7 @@ namespace lotus
         virtual void Process(WorkerThread*) override;
     private:
         void drawModel(WorkerThread* thread, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout);
-        void drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, vk::DeviceSize count, vk::PipelineLayout);
+        void drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout);
         void populateInstanceBuffer(WorkerThread* thread);
         std::shared_ptr<LandscapeEntity> entity;
         std::vector<LandscapeEntity::InstanceInfo> instance_info;

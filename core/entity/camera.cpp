@@ -94,7 +94,7 @@ namespace lotus
 
                     float last_split = 0.0f;
 
-                    for (size_t i = 0; i < lotus::Renderer::shadowmap_cascades; ++i)
+                    for (uint32_t i = 0; i < lotus::Renderer::shadowmap_cascades; ++i)
                     {
                         float split_dist = cascade_splits[i];
                         std::array<glm::vec3, 8> frustum_corners = {
