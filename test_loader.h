@@ -9,84 +9,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-class TestLoader : public lotus::MeshLoader
-{
-struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 texCoord;
-
-    static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions() {
-        std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
-
-        binding_descriptions[0].binding = 0;
-        binding_descriptions[0].stride = sizeof(Vertex);
-        binding_descriptions[0].inputRate = vk::VertexInputRate::eVertex;
-
-        return binding_descriptions;
-    }
-
-    static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions() {
-        std::vector<vk::VertexInputAttributeDescription> attributeDescriptions(3);
-
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
-        attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
-        attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = vk::Format::eR32G32Sfloat;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-        return attributeDescriptions;
-    }
-};
-
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-        {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-    };
-
-    const std::vector<uint16_t> indices = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4
-    };
-
-public:
-    virtual std::unique_ptr<lotus::WorkItem> LoadMesh(std::shared_ptr<lotus::Mesh>& model) override
-    {
-        model->setVertexInputAttributeDescription(Vertex::getAttributeDescriptions());
-        model->setVertexInputBindingDescription(Vertex::getBindingDescriptions());
-        model->setIndexCount(static_cast<int>(indices.size()));
-
-        std::vector<uint8_t> vertices_uint8;
-        vertices_uint8.resize(vertices.size() * sizeof(Vertex));
-        memcpy(vertices_uint8.data(), vertices.data(), vertices_uint8.size());
-
-        std::vector<uint8_t> indices_uint8;
-        indices_uint8.resize(indices.size() * sizeof(uint16_t));
-        memcpy(indices_uint8.data(), indices.data(), indices_uint8.size());
-
-        model->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        model->index_buffer = engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        return std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices_uint8), std::move(indices_uint8));
-    }
-};
-
 class TestTextureLoader : public lotus::TextureLoader
 {
 public:
@@ -111,7 +33,7 @@ public:
         texture->image = engine->renderer.memory_manager->GetImage(texture->getWidth(), texture->getHeight(), vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
-        image_view_info.image = *texture->image->image;
+        image_view_info.image = texture->image->image;
         image_view_info.viewType = vk::ImageViewType::e2D;
         image_view_info.format = vk::Format::eR8G8B8A8Unorm;
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;

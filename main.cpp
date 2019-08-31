@@ -33,12 +33,7 @@ int main(int argc, char* argv[]) {
 
     Game game{ "core-test", VK_MAKE_VERSION(1, 0, 0) };
 
-    try {
-        game.run();
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
+    game.run();
 
     return EXIT_SUCCESS;
 }

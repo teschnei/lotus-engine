@@ -83,6 +83,7 @@ namespace lotus
         createShadowmapResources();
         createGBufferResources();
         createQuad();
+        createRayTracingResources();
 
         render_commandbuffers.resize(getImageCount());
     }
@@ -95,6 +96,14 @@ namespace lotus
     void Renderer::generateCommandBuffers()
     {
         createDeferredCommandBuffer();
+    }
+
+    void Renderer::createRayTracingResources()
+    {
+        if (render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace)
+        {
+            top_level_as = std::make_unique<TopLevelAccelerationStructure>(engine, true);
+        }
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -159,6 +168,12 @@ namespace lotus
         {
             throw std::runtime_error("Unable to find a suitable Vulkan GPU");
         }
+
+        ray_tracing_properties.maxRecursionDepth = 0;
+        ray_tracing_properties.shaderGroupHandleSize = 0;
+        vk::PhysicalDeviceProperties2 properties;
+        properties.pNext = &ray_tracing_properties;
+        physical_device.getProperties2(&properties);
     }
 
     void Renderer::createDevice()
@@ -183,12 +198,19 @@ namespace lotus
         physical_device_features.samplerAnisotropy = VK_TRUE;
         physical_device_features.depthClamp = VK_TRUE;
 
+        std::vector<const char*> device_extensions2 = device_extensions;
+        if (render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace)
+        {
+            device_extensions2.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+        }
+
         vk::DeviceCreateInfo device_create_info;
         device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
         device_create_info.pEnabledFeatures = &physical_device_features;
-        device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
-        device_create_info.ppEnabledExtensionNames = device_extensions.data();
+        device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size());
+        device_create_info.ppEnabledExtensionNames = device_extensions2.data();
 
         if (enableValidationLayers) {
             device_create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
@@ -824,7 +846,7 @@ namespace lotus
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.viewType = vk::ImageViewType::e2D;
         image_view_info.format = format;
-        image_view_info.image = *depth_image->image;
+        image_view_info.image = depth_image->image;
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
         image_view_info.subresourceRange.baseMipLevel = 0;
         image_view_info.subresourceRange.levelCount = 1;
@@ -887,7 +909,7 @@ namespace lotus
             shadowmap_image = memory_manager->GetImage(shadowmap_dimension, shadowmap_dimension, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, shadowmap_cascades);
 
             vk::ImageViewCreateInfo image_view_info;
-            image_view_info.image = *shadowmap_image->image;
+            image_view_info.image = shadowmap_image->image;
             image_view_info.viewType = vk::ImageViewType::e2DArray;
             image_view_info.format = format;
             image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
@@ -946,7 +968,7 @@ namespace lotus
         gbuffer.depth.image = memory_manager->GetImage(WIDTH, HEIGHT, getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
-        image_view_info.image = *gbuffer.position.image->image;
+        image_view_info.image = gbuffer.position.image->image;
         image_view_info.viewType = vk::ImageViewType::e2D;
         image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -955,12 +977,12 @@ namespace lotus
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
         gbuffer.position.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
-        image_view_info.image = *gbuffer.normal.image->image;
+        image_view_info.image = gbuffer.normal.image->image;
         gbuffer.normal.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
-        image_view_info.image = *gbuffer.albedo.image->image;
+        image_view_info.image = gbuffer.albedo.image->image;
         image_view_info.format = vk::Format::eR8G8B8A8Unorm;
         gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
-        image_view_info.image = *gbuffer.depth.image->image;
+        image_view_info.image = gbuffer.depth.image->image;
         image_view_info.format = getDepthFormat();
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
         gbuffer.depth.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
@@ -1040,7 +1062,7 @@ namespace lotus
             albedo_info.sampler = *gbuffer.sampler;
 
             vk::DescriptorBufferInfo camera_buffer_info;
-            camera_buffer_info.buffer = *engine->camera.view_proj_ubo->buffer;
+            camera_buffer_info.buffer = engine->camera.view_proj_ubo->buffer;
             camera_buffer_info.offset = i * (sizeof(glm::mat4)*2);
             camera_buffer_info.range = sizeof(glm::mat4)*2;
 
@@ -1077,7 +1099,7 @@ namespace lotus
             if (render_mode == RenderMode::Rasterization)
             {
                 vk::DescriptorBufferInfo light_buffer_info;
-                light_buffer_info.buffer = *engine->lights.dir_buffer->buffer;
+                light_buffer_info.buffer = engine->lights.dir_buffer->buffer;
                 light_buffer_info.offset = i * sizeof(engine->lights.directional_light);
                 light_buffer_info.range = sizeof(engine->lights.directional_light);
 
@@ -1087,7 +1109,7 @@ namespace lotus
                 shadowmap_image_info.sampler = *shadowmap_sampler;
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = *engine->camera.cascade_data_ubo->buffer;
+                cascade_buffer_info.buffer = engine->camera.cascade_data_ubo->buffer;
                 cascade_buffer_info.offset = i * sizeof(engine->camera.cascade_data);
                 cascade_buffer_info.range = sizeof(engine->camera.cascade_data);
 
@@ -1120,8 +1142,8 @@ namespace lotus
             buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
 
             vk::DeviceSize offsets = 0;
-            buffer.bindVertexBuffers(0, *quad.vertex_buffer->buffer, offsets, dispatch);
-            buffer.bindIndexBuffer(*quad.index_buffer->buffer, offsets, vk::IndexType::eUint32, dispatch);
+            buffer.bindVertexBuffers(0, quad.vertex_buffer->buffer, offsets, dispatch);
+            buffer.bindIndexBuffer(quad.index_buffer->buffer, offsets, vk::IndexType::eUint32, dispatch);
             buffer.drawIndexed(6, 1, 0, 0, 0, dispatch);
 
             buffer.endRenderPass(dispatch);

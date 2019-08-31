@@ -14,6 +14,7 @@ namespace lotus
     {
     public:
         Engine(const std::string& appname, uint32_t appVersion, Game* game);
+        ~Engine();
 
         void run();
         void close() { closing = true; }

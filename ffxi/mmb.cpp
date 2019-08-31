@@ -1,8 +1,10 @@
 #include "mmb.h"
 #include "key_tables.h"
 #include <list>
+#include "core/core.h"
 #include "core/entity/landscape_entity.h"
 #include "core/renderer/model.h"
+#include "core/task/model_init.h"
 
 namespace FFXI
 {
@@ -67,11 +69,6 @@ namespace FFXI
         float hx,hy,hz;
         unsigned int color;
         float u, v;
-    };
-
-    class MMBLoader : public lotus::MeshLoader
-    {
-        
     };
 
     std::vector<vk::VertexInputBindingDescription> MMB::Vertex::getBindingDescriptions() {
@@ -245,9 +242,9 @@ namespace FFXI
                 SMMBModelHeader* model_header = (SMMBModelHeader*)(buffer + offset);
                 offset += sizeof(SMMBModelHeader);
 
-                Model model;
-                model.blending = model_header->blending;
-                memcpy(model.textureName, model_header->textureName, 16);
+                Mesh mesh;
+                mesh.blending = model_header->blending;
+                memcpy(mesh.textureName, model_header->textureName, 16);
 
                 for (int vert_index = 0; vert_index < model_header->vertexsize; ++vert_index)
                 {
@@ -270,7 +267,7 @@ namespace FFXI
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex);
                     }
-                    model.vertices.push_back(std::move(vertex));
+                    mesh.vertices.push_back(std::move(vertex));
                 }
 
                 uint16_t num_indices = *(uint16_t*)(buffer + offset);
@@ -278,21 +275,21 @@ namespace FFXI
 
                 if ((head->id[0] == 'M' && head->id[1] == 'M' && head->id[2] == 'B') || (head->id[0] != 'M' && head2->d3 == 2))
                 {
-                    model.topology = vk::PrimitiveTopology::eTriangleList;
+                    mesh.topology = vk::PrimitiveTopology::eTriangleList;
                 }
                 else
                 {
-                    model.topology = vk::PrimitiveTopology::eTriangleStrip;
+                    mesh.topology = vk::PrimitiveTopology::eTriangleStrip;
                 }
                 for (int i = 0; i < num_indices; ++i)
                 {
-                    model.indices.push_back(*(uint16_t*)(buffer + offset));
+                    mesh.indices.push_back(*(uint16_t*)(buffer + offset));
                     offset += sizeof(uint16_t);
                 }
                 if (num_indices % 2 != 0)
                     offset += sizeof(uint16_t);
 
-                models.push_back(std::move(model));
+                meshes.push_back(std::move(mesh));
             }
         }
     }
@@ -348,4 +345,38 @@ namespace FFXI
         return true;
     }
 
+    MMBLoader::MMBLoader(MMB* _mmb) : ModelLoader(), mmb(_mmb) {}
+
+    void MMBLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    {
+        std::vector<std::vector<uint8_t>> vertices;
+        std::vector<std::vector<uint8_t>> indices;
+        for (const auto& mmb_mesh : mmb->meshes)
+        {
+            auto mesh = std::make_unique<lotus::Mesh>();
+            mesh->texture = lotus::Texture::getTexture(mmb_mesh.textureName);
+
+            mesh->setVertexInputAttributeDescription(FFXI::MMB::Vertex::getAttributeDescriptions());
+            mesh->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
+            mesh->setIndexCount(static_cast<int>(mmb_mesh.indices.size()));
+            mesh->has_transparency = mmb_mesh.blending & 0x8000 || mmb->name[0] == '_';
+
+            std::vector<uint8_t> vertices_uint8;
+            vertices_uint8.resize(mmb_mesh.vertices.size() * sizeof(FFXI::MMB::Vertex));
+            memcpy(vertices_uint8.data(), mmb_mesh.vertices.data(), vertices_uint8.size());
+
+            std::vector<uint8_t> indices_uint8;
+            indices_uint8.resize(mmb_mesh.indices.size() * sizeof(uint16_t));
+            memcpy(indices_uint8.data(), mmb_mesh.indices.data(), indices_uint8.size());
+
+            mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+            vertices.push_back(std::move(vertices_uint8));
+            indices.push_back(std::move(indices_uint8));
+
+            model->meshes.push_back(std::move(mesh));
+        }
+        engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices)));
+    }
 }

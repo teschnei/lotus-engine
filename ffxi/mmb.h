@@ -4,6 +4,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
+#include "core/renderer/model.h"
 
 namespace FFXI
 {
@@ -20,7 +21,7 @@ namespace FFXI
             static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
             static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
         };
-        struct Model
+        struct Mesh
         {
             char textureName[16];
             uint16_t blending;
@@ -33,8 +34,17 @@ namespace FFXI
         static bool DecodeMMB(uint8_t* buffer, size_t max_len);
 
         char name[16];
-        std::vector<Model> models;
+        std::vector<Mesh> meshes;
     private:
         
+    };
+
+    class MMBLoader : public lotus::ModelLoader
+    {
+    public:
+        MMBLoader(MMB* mmb);
+        virtual void LoadModel(std::shared_ptr<lotus::Model>&) override;
+    private:
+        MMB* mmb;
     };
 }

@@ -5,7 +5,6 @@
 #include <fstream>
 #include "mzb.h"
 #include "mmb.h"
-#include "core/task/model_init.h"
 #include "core/entity/landscape_entity.h"
 #include <map>
 #include "core/task/landscape_entity_init.h"
@@ -51,7 +50,7 @@ public:
         texture->image = engine->renderer.memory_manager->GetImage(texture->getWidth(), texture->getHeight(), format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
-        image_view_info.image = *texture->image->image;
+        image_view_info.image = texture->image->image;
         image_view_info.viewType = vk::ImageViewType::e2D;
         image_view_info.format = format;
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -151,7 +150,7 @@ FFXILoadLandTest::FFXILoadLandTest(lotus::Game* _game) : game(_game)
 std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
 {
     auto entity = std::make_shared<lotus::LandscapeEntity>();
-    auto [default_texture, texture_task] = lotus::Texture::LoadTexture<TestTextureLoader>(game->engine.get(), "test");
+    auto [default_texture, texture_task] = lotus::Texture::LoadTexture<TestTextureLoader>(game->engine.get(), "default");
     game->engine->worker_pool.addWork(std::move(texture_task));
     std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
 
@@ -169,45 +168,8 @@ std::shared_ptr<lotus::RenderableEntity> FFXILoadLandTest::getLand()
     for (const auto& mmb : mmbs)
     {
         std::string name(mmb->name, 16);
-        auto model = std::make_unique<lotus::Model>(name);
+        auto model = lotus::Model::LoadModel<FFXI::MMBLoader>(game->engine.get(), name, mmb.get());
 
-        for (const auto& mmb_model : mmb->models)
-        {
-            auto mesh = std::make_shared<lotus::Mesh>();
-            if (auto texture = texture_map.find(std::string(mmb_model.textureName, 16)); texture != texture_map.end())
-            {
-                mesh->texture = texture->second;
-            }
-            else
-            {
-                mesh->texture = default_texture;
-            }
-
-            mesh->setVertexInputAttributeDescription(FFXI::MMB::Vertex::getAttributeDescriptions());
-            mesh->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
-            mesh->setIndexCount(static_cast<int>(mmb_model.indices.size()));
-            mesh->has_transparency = mmb_model.blending & 0x8000 || name[0] == '_';
-
-            std::vector<uint8_t> vertices_uint8;
-            vertices_uint8.resize(mmb_model.vertices.size() * sizeof(FFXI::MMB::Vertex));
-            memcpy(vertices_uint8.data(), mmb_model.vertices.data(), vertices_uint8.size());
-
-            std::vector<uint8_t> indices_uint8;
-            indices_uint8.resize(mmb_model.indices.size() * sizeof(uint16_t));
-            memcpy(indices_uint8.data(), mmb_model.indices.data(), indices_uint8.size());
-
-            mesh->vertex_buffer = game->engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-            mesh->index_buffer = game->engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-            game->engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(game->engine->renderer.getCurrentImage(), mesh, std::move(vertices_uint8), std::move(indices_uint8)));
-
-            if (!lotus::Mesh::addMesh(name, mesh))
-            {
-                //__debugbreak();
-            }
-
-            model->meshes.push_back(std::move(mesh));
-        }
         entity->models.push_back(std::move(model));
     }
 

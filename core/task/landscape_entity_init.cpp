@@ -42,7 +42,7 @@ namespace lotus
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_graphics_pipeline, thread->engine->renderer.dispatch);
 
             vk::DescriptorBufferInfo buffer_info;
-            buffer_info.buffer = *thread->engine->camera.view_proj_ubo->buffer;
+            buffer_info.buffer = thread->engine->camera.view_proj_ubo->buffer;
             buffer_info.offset = i * (sizeof(glm::mat4)*2);
             buffer_info.range = sizeof(glm::mat4)*2;
 
@@ -85,12 +85,12 @@ namespace lotus
                 command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline, thread->engine->renderer.dispatch);
 
                 vk::DescriptorBufferInfo buffer_info;
-                buffer_info.buffer = *entity->uniform_buffer->buffer;
+                buffer_info.buffer = entity->uniform_buffer->buffer;
                 buffer_info.offset = i * sizeof(RenderableEntity::UniformBufferObject);
                 buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = *thread->engine->camera.cascade_data_ubo->buffer;
+                cascade_buffer_info.buffer = thread->engine->camera.cascade_data_ubo->buffer;
                 cascade_buffer_info.offset = i * sizeof(thread->engine->camera.cascade_data);
                 cascade_buffer_info.range = sizeof(thread->engine->camera.cascade_data);
 
@@ -130,7 +130,7 @@ namespace lotus
             auto [offset, count] = entity->instance_offsets[model->name];
             if (count > 0 && !model->meshes.empty())
             {
-                command_buffer.bindVertexBuffers(1, *entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo), thread->engine->renderer.dispatch);
+                command_buffer.bindVertexBuffers(1, entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo), thread->engine->renderer.dispatch);
                 for (const auto& mesh : model->meshes)
                 {
                     if (mesh->has_transparency == transparency)
@@ -166,8 +166,8 @@ namespace lotus
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
         vk::DeviceSize offsets = 0;
-        command_buffer.bindVertexBuffers(0, *mesh.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
-        command_buffer.bindIndexBuffer(*mesh.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
+        command_buffer.bindVertexBuffers(0, mesh.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
+        command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
 
         command_buffer.drawIndexed(mesh.getIndexCount(), count, 0, 0, 0, thread->engine->renderer.dispatch);
     }
@@ -198,7 +198,7 @@ namespace lotus
         vk::BufferMemoryBarrier barrier;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.buffer = *entity->instance_buffer->buffer;
+        barrier.buffer = entity->instance_buffer->buffer;
         barrier.size = VK_WHOLE_SIZE;
         barrier.srcAccessMask = {};
         barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -207,7 +207,7 @@ namespace lotus
 
         vk::BufferCopy copy_region = {};
         copy_region.size = buffer_size;
-        command_buffer->copyBuffer(*staging_buffer->buffer, *entity->instance_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+        command_buffer->copyBuffer(staging_buffer->buffer, entity->instance_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
 
         command_buffer->end(thread->engine->renderer.dispatch);
 

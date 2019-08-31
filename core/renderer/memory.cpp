@@ -1,165 +1,96 @@
 #include "memory.h"
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 namespace lotus
 {
-    uint32_t MemoryManager::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const {
-        vk::PhysicalDeviceMemoryProperties memProperties = physical_device.getMemoryProperties();
-
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-
-        throw std::runtime_error("failed to find suitable memory type!");
+    Buffer::~Buffer()
+    {
+        vmaDestroyBuffer(manager->allocator, buffer, allocation);
     }
 
-    vk::DeviceSize MemoryManager::getAllocationSize(vk::DeviceSize required)
+    Image::~Image()
     {
-        return 1024 * 1024 * 1024;
-        if (required < 65536*2)
-        {
-            return 65536*2;
-        }
-        for (int i = (sizeof(required) * 8) - 1; i > 0; --i)
-        {
-            if ((1ull << i & required) == required)
-            {
-                return required;
-            }
-            else if ((1ull << i & required) > 0 && i < (sizeof(required)*8) - 1)
-            {
-                return 1ull << (i + 1);
-            }
-        }
-        throw std::exception("requested memory block too big");
+        vmaDestroyImage(manager->allocator, image, allocation);
     }
 
-    Memory::~Memory()
+    GenericMemory::~GenericMemory()
     {
-        if (manager)
-            manager->return_memory(this);
+        vmaFreeMemory(manager->allocator, allocation);
+    }
+
+    MemoryManager::MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _device, vk::DispatchLoaderDynamic _dispatch): device(_device),
+                                 physical_device(_physical_device), dispatch(_dispatch), allocator(VK_NULL_HANDLE)
+    {
+        VmaAllocatorCreateInfo vma_ci = {};
+        vma_ci.device = device;
+        vma_ci.physicalDevice = physical_device;
+
+        vmaCreateAllocator(&vma_ci, &allocator);
     }
 
     std::unique_ptr<Buffer> MemoryManager::GetBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags memoryflags)
     {
-        vk::BufferCreateInfo buffer_create_info;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_create_info.size = size;
-        buffer_create_info.usage = usage;
-        buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
+        buffer_create_info.usage = (VkBufferUsageFlags)usage;
+        buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        auto buffer = device.createBufferUnique(buffer_create_info, nullptr, dispatch);
+        VmaAllocationCreateInfo vma_ci = {};
+        vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
 
-        auto requirements = device.getBufferMemoryRequirements(*buffer, dispatch);
-        auto memorytype = findMemoryType(requirements.memoryTypeBits, memoryflags);
-       
-        auto [memory, offset] = getMemory(requirements.size, requirements.alignment, memorytype);
-       
-        device.bindBufferMemory(*buffer, memory, offset, dispatch);
+        VkBuffer buffer;
+        VmaAllocation allocation;
+        VmaAllocationInfo alloc_info;
 
-        return std::make_unique<Buffer>(this, std::move(buffer), memory, offset, memorytype);
+        vmaCreateBuffer(allocator, &buffer_create_info, &vma_ci, &buffer, &allocation, &alloc_info);
+
+        return std::make_unique<Buffer>(this, buffer, allocation, alloc_info);
     }
 
     std::unique_ptr<Image> MemoryManager::GetImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
         vk::MemoryPropertyFlags memoryflags, vk::DeviceSize arrayLayers)
     {
-        vk::ImageCreateInfo image_info = {};
-        image_info.imageType = vk::ImageType::e2D;
+        VkImageCreateInfo image_info = {};
+        image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_info.imageType = VK_IMAGE_TYPE_2D;
         image_info.extent.width = width;
         image_info.extent.height = height;
         image_info.extent.depth = 1;
         image_info.mipLevels = 1;
         image_info.arrayLayers = arrayLayers;
-        image_info.format = format;
-        image_info.tiling = tiling;
-        image_info.initialLayout = vk::ImageLayout::eUndefined;;
-        image_info.usage = usage;
-        image_info.samples = vk::SampleCountFlagBits::e1;
-        image_info.sharingMode = vk::SharingMode::eExclusive;
+        image_info.format = (VkFormat)format;
+        image_info.tiling = (VkImageTiling)tiling;
+        image_info.initialLayout = (VkImageLayout)vk::ImageLayout::eUndefined;;
+        image_info.usage = (VkImageUsageFlags)usage;
+        image_info.samples = (VkSampleCountFlagBits)vk::SampleCountFlagBits::e1;
+        image_info.sharingMode = (VkSharingMode)vk::SharingMode::eExclusive;
 
-        auto image = device.createImageUnique(image_info, nullptr, dispatch);
+        VmaAllocationCreateInfo vma_ci = {};
+        vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
 
-        auto requirements = device.getImageMemoryRequirements(*image, dispatch);
-        auto memorytype = findMemoryType(requirements.memoryTypeBits, memoryflags);
+        VkImage image;
+        VmaAllocation allocation;
+        VmaAllocationInfo alloc_info;
 
-        auto [memory, offset] = getMemory(requirements.size, requirements.alignment, memorytype);
+        vmaCreateImage(allocator, &image_info, &vma_ci, &image, &allocation, &alloc_info);
 
-        device.bindImageMemory(*image, memory, offset, dispatch);
-
-        return std::make_unique<Image>(this, std::move(image), memory, offset, memorytype);
+        return std::make_unique<Image>(this, image, allocation, alloc_info);
     }
 
-    void MemoryManager::return_memory(Memory* mem)
+    std::unique_ptr<GenericMemory> MemoryManager::GetMemory(const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryflags)
     {
-        if (auto mem_iter = memory.find(mem->memoryType); mem_iter != memory.end())
-        {
-            //TODO: condense this into one loop iteration
-            mem_iter->second.allocations.erase(std::find_if(mem_iter->second.allocations.begin(), mem_iter->second.allocations.end(), [&mem](const auto& ele) {
-                return ele.offset == mem->memory_offset;
-                }));
-            if (mem_iter->second.allocations.empty())
-            {
-                mem_iter->second.begin_a = 0;
-                mem_iter->second.begin_b = 0;
-            }
-            //if all remaining are less than the erased one, swap a and b values to restart the circle
-            else if (std::all_of(mem_iter->second.allocations.begin(), mem_iter->second.allocations.end(), [&mem](const auto& allocation) {
-                return mem->memory_offset > allocation.offset;
-                }))
-            {
-                std::swap(mem_iter->second.begin_a, mem_iter->second.begin_b);
-            }
-        }
-        else
-        {
-            throw std::exception("could not find memory block for memory");
-        }
-    }
+        VmaAllocationCreateInfo vma_ci = {};
+        vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
 
-    std::pair<vk::DeviceMemory, vk::DeviceSize> MemoryManager::getMemory(vk::DeviceSize size, vk::DeviceSize alignment, uint32_t memorytype)
-    {
-        auto mem = memory.find(static_cast<uint32_t>(memorytype));
-        if (mem != memory.end())
-        {
-            bool bound = false;;
-            auto next_alloc = mem->second.allocations.upper_bound({ mem->second.begin_a, 0 });
-            size_t space = (next_alloc != mem->second.allocations.end() ? next_alloc->offset : mem->second.size) - mem->second.begin_a;
-            void* new_start = (void*)mem->second.begin_a;
-            if (std::align(alignment, size, new_start, space) || new_start == nullptr && size < space)
-            {
-                mem->second.begin_a = (vk::DeviceSize)new_start + size;
-                bound = true;
-            }
-            if (!bound)
-            {
-                next_alloc = mem->second.allocations.upper_bound({ mem->second.begin_b, 0 });
-                space = (next_alloc != mem->second.allocations.end() ? next_alloc->offset : mem->second.size) - mem->second.begin_b;
-                new_start = (void*)mem->second.begin_b;
-                if (std::align(alignment, size, new_start, space) || new_start == nullptr && size < space)
-                {
-                    mem->second.begin_b = (vk::DeviceSize)new_start + size;
-                    bound = true;
-                }
-            }
-            if (bound)
-            {
-                mem->second.allocations.insert(memory_allocation{ (vk::DeviceSize)new_start, size });
-                return { *mem->second.memory, (vk::DeviceSize)new_start };
-            }
-            throw std::exception("out of memory in existing buffer");
-            //TODO: not enough space in existing buffer - resize?
-        }
+        VmaAllocation allocation;
+        VmaAllocationInfo alloc_info;
 
-        vk::MemoryAllocateInfo allocInfo = {};
-        allocInfo.allocationSize = getAllocationSize(size);
-        allocInfo.memoryTypeIndex = memorytype;
+        vmaAllocateMemory(allocator, (VkMemoryRequirements*)& requirements, &vma_ci, &allocation, &alloc_info);
 
-        auto new_mem = device.allocateMemoryUnique(allocInfo, nullptr, dispatch);
-
-        mem = memory.emplace(static_cast<uint32_t>(memorytype), memory_info{ std::move(new_mem), allocInfo.allocationSize, size, 0 }).first;
-
-        mem->second.allocations.insert(memory_allocation{ 0, size });
-        return { *mem->second.memory, 0 };
+        return std::make_unique<GenericMemory>(this, allocation, alloc_info);
     }
 }

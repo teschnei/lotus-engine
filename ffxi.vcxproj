@@ -55,7 +55,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -74,7 +74,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>

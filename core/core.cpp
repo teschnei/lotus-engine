@@ -8,6 +8,11 @@ namespace lotus
         renderer.generateCommandBuffers();
     }
 
+    Engine::~Engine()
+    {
+        renderer.device->waitIdle(renderer.dispatch);
+    }
+
     void Engine::run()
     {
         mainLoop();

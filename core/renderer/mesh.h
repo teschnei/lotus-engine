@@ -15,39 +15,6 @@ namespace lotus
     class Mesh
     {
     public:
-        //TODO: figure out how to get engine out of this call
-        template<typename MeshLoader, typename... Args>
-        static std::pair<std::shared_ptr<Mesh>, std::unique_ptr<WorkItem>> LoadMesh(Engine* engine, const std::string& modelname, Args... args)
-        {
-            if (auto found = model_map.find(modelname); found != model_map.end())
-            {
-                return { found->second.lock(), nullptr };
-            }
-            auto new_model = std::make_shared<Mesh>();
-            MeshLoader loader{args...};
-            loader.setEngine(engine);
-            auto work_item = loader.LoadMesh(new_model);
-            return { model_map.emplace(modelname, new_model).first->second.lock(), std::move(work_item)};
-        }
-        //TODO: get rid of me
-        static bool addMesh(const std::string& modelname, std::shared_ptr<Mesh>& model)
-        {
-            if (auto found = model_map.find(modelname); found != model_map.end())
-            {
-                return false;
-            }
-            model_map.emplace(modelname, model);
-            return true;
-        }
-        //TODO: get rid of me
-        static std::shared_ptr<Mesh> getMesh(const std::string& modelname)
-        {
-            if (auto found = model_map.find(modelname); found != model_map.end())
-            {
-                return found->second.lock();
-            }
-            return {};
-        }
         Mesh(const Mesh&) = delete;
         Mesh& operator=(const Mesh&) = delete;
         Mesh(Mesh&&) = default;
@@ -89,21 +56,9 @@ namespace lotus
         Mesh() = default;
     protected:
 
-        inline static std::unordered_map<std::string, std::weak_ptr<Mesh>> model_map{};
-
         std::vector<vk::VertexInputBindingDescription> vertex_bindings;
         std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
         int indices{ 0 };
     };
 
-    class MeshLoader
-    {
-    public:
-        MeshLoader() {}
-        void setEngine(Engine* _engine) { engine = _engine; }
-        virtual std::unique_ptr<WorkItem> LoadMesh(std::shared_ptr<Mesh>&) = 0;
-        virtual ~MeshLoader() = default;
-    protected:
-        Engine* engine {nullptr};
-    };
 }

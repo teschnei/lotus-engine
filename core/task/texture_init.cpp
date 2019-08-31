@@ -37,7 +37,7 @@ namespace lotus
         barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = *texture->image->image;
+        barrier.image = texture->image->image;
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
@@ -62,13 +62,13 @@ namespace lotus
             texture->getHeight(),
             1
         };
-        command_buffer->copyBufferToImage(*staging_buffer->buffer, *texture->image->image, vk::ImageLayout::eTransferDstOptimal, region, thread->engine->renderer.dispatch);
+        command_buffer->copyBufferToImage(staging_buffer->buffer, texture->image->image, vk::ImageLayout::eTransferDstOptimal, region, thread->engine->renderer.dispatch);
 
         barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
         barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = *texture->image->image;
+        barrier.image = texture->image->image;
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;

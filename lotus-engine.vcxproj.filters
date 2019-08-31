@@ -45,9 +45,6 @@
     <ClCompile Include="core\config.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="core\task\model_init.cpp">
-      <Filter>core\task</Filter>
-    </ClCompile>
     <ClCompile Include="core\task\entity_render.cpp">
       <Filter>core\task</Filter>
     </ClCompile>
@@ -96,6 +93,12 @@
     <ClCompile Include="core\light_manager.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="core\renderer\acceleration_structure.cpp">
+      <Filter>core\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="core\task\model_init.cpp">
+      <Filter>core\task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\renderer\texture.h">
@@ -126,9 +129,6 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="core\task\entity_render.h">
-      <Filter>core\task</Filter>
-    </ClInclude>
-    <ClInclude Include="core\task\model_init.h">
       <Filter>core\task</Filter>
     </ClInclude>
     <ClInclude Include="core\entity\renderable_entity.h">
@@ -181,6 +181,12 @@
     </ClInclude>
     <ClInclude Include="core\light_manager.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\renderer\acceleration_structure.h">
+      <Filter>core\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="core\task\model_init.h">
+      <Filter>core\task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

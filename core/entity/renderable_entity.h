@@ -22,7 +22,7 @@ namespace lotus
 
         virtual void render(Engine* engine, std::shared_ptr<RenderableEntity>& sp);
 
-        std::vector<std::unique_ptr<Model>> models;
+        std::vector<std::shared_ptr<Model>> models;
 
         glm::mat4 getModelMatrix();
 

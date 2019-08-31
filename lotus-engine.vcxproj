@@ -57,7 +57,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)core;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)core;$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -76,7 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)core;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)core;$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -100,6 +100,7 @@
     <ClCompile Include="core\entity\renderable_entity.cpp" />
     <ClCompile Include="core\input.cpp" />
     <ClCompile Include="core\light_manager.cpp" />
+    <ClCompile Include="core\renderer\acceleration_structure.cpp" />
     <ClCompile Include="core\renderer\memory.cpp" />
     <ClCompile Include="core\renderer\mesh.cpp" />
     <ClCompile Include="core\renderer\model.cpp" />
@@ -129,6 +130,7 @@
     <ClInclude Include="core\game.h" />
     <ClInclude Include="core\input.h" />
     <ClInclude Include="core\light_manager.h" />
+    <ClInclude Include="core\renderer\acceleration_structure.h" />
     <ClInclude Include="core\renderer\memory.h" />
     <ClInclude Include="core\renderer\mesh.h" />
     <ClInclude Include="core\renderer\model.h" />

@@ -28,6 +28,16 @@ namespace lotus
             auto work_item = loader.LoadTexture(new_texture);
             return { texture_map.emplace(texturename, new_texture).first->second.lock(), std::move(work_item) };
         }
+
+        static std::shared_ptr<Texture> getTexture(const std::string& texturename)
+        {
+            if (auto found = texture_map.find(texturename); found != texture_map.end())
+            {
+                return found->second.lock();
+            }
+            return texture_map.at("default").lock();
+        }
+
         Texture(const Texture&) = delete;
         Texture& operator=(const Texture&) = delete;
         Texture(Texture&&) = default;

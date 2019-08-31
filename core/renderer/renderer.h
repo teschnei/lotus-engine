@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <SDL.h>
 #include "memory.h"
+#include "acceleration_structure.h"
 
 namespace lotus
 {
@@ -106,8 +107,16 @@ namespace lotus
 
         vk::DispatchLoaderDynamic dispatch;
 
+        RenderMode render_mode{ RenderMode::Hybrid };
 
-        RenderMode render_mode{ RenderMode::Rasterization };
+        /* Ray tracing */
+        vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;
+
+        std::unique_ptr<TopLevelAccelerationStructure> top_level_as;
+
+    private:
+        void createRayTracingResources();
+        /* Ray tracing */
 
     private:
         void createInstance(const std::string& app_name, uint32_t app_version);

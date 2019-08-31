@@ -66,11 +66,11 @@ namespace lotus
     void RenderableEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::DeviceSize uniform_buffer_offset)
     {
         vk::DeviceSize offsets = 0;
-        command_buffer.bindVertexBuffers(0, *mesh.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
-        command_buffer.bindIndexBuffer(*mesh.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
+        command_buffer.bindVertexBuffers(0, mesh.vertex_buffer->buffer, offsets, thread->engine->renderer.dispatch);
+        command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, offsets, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
 
         vk::DescriptorBufferInfo buffer_info;
-        buffer_info.buffer = *entity->uniform_buffer->buffer;
+        buffer_info.buffer = entity->uniform_buffer->buffer;
         buffer_info.offset = uniform_buffer_offset;
         buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
