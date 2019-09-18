@@ -11,6 +11,7 @@ struct Vertex
     float _pad;
 };
 
+layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
 layout(binding = 1, set = 0) buffer Vertices
 {
     vec4 v[];
@@ -23,11 +24,6 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
-layout(binding = 4, set = 0) uniform Flags
-{
-    uint flag[1024];
-} flags;
-
 layout(binding = 2, set = 1) uniform Light
 {
     vec3 light;
@@ -39,6 +35,8 @@ layout(location = 0) rayPayloadInNV HitValue
     uint max_index;
     float min_dist;
 } hitValue;
+
+layout(location = 1) rayPayloadNV bool shadow;
 
 layout(shaderRecordNV) buffer Block
 {
@@ -105,6 +103,12 @@ void main()
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
     color *= texture(textures[resource_index], uv).xyz;
+
+    vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV;
+    shadow = true;
+    traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
+    if (shadow)
+        color *= 0.5;
 
     hitValue.color = color;
 }

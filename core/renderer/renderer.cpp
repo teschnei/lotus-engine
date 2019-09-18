@@ -128,8 +128,8 @@ namespace lotus
                 rtx_render_target_views.push_back(device->createImageViewUnique(view_ci, nullptr, dispatch));
             }
 
-            constexpr uint32_t shader_nonhitcount = 2;
-            constexpr uint32_t shader_hitcount = 16;
+            constexpr uint32_t shader_nonhitcount = 3;
+            constexpr uint32_t shader_hitcount = 32;
             shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
             vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
             shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
@@ -142,12 +142,12 @@ namespace lotus
             {
                 memcpy(shader_mapped + (i * ray_tracing_properties.shaderGroupHandleSize), shader_handle_storage.data() + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
             }
-            shader_mapped += ray_tracing_properties.shaderGroupHandleSize * 2;
+            shader_mapped += ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount;
 
             for (uint32_t i = 0; i < shader_hitcount; ++i)
             {
                 memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
-                *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i;
+                *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % 16;
             }
             device->unmapMemory(shader_binding_table->memory);
 
@@ -715,7 +715,7 @@ namespace lotus
             acceleration_structure_binding.binding = 0;
             acceleration_structure_binding.descriptorCount = 1;
             acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
-            acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+            acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV | vk::ShaderStageFlagBits::eClosestHitNV;
 
             vk::DescriptorSetLayoutBinding vertex_buffer_binding;
             vertex_buffer_binding.binding = 1;
@@ -980,6 +980,7 @@ namespace lotus
         {
             auto raygen_shader_module = getShader("shaders/raygen.spv");
             auto miss_shader_module = getShader("shaders/miss.spv");
+            auto shadow_miss_shader_module = getShader("shaders/shadow_miss.spv");
             auto closest_hit_shader_module = getShader("shaders/closesthit.spv");
             auto color_hit_shader_module = getShader("shaders/color_hit.spv");
 
@@ -993,6 +994,11 @@ namespace lotus
             miss_stage_ci.module = *miss_shader_module;
             miss_stage_ci.pName = "main";
 
+            vk::PipelineShaderStageCreateInfo shadow_miss_stage_ci;
+            shadow_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissNV;
+            shadow_miss_stage_ci.module = *shadow_miss_shader_module;
+            shadow_miss_stage_ci.pName = "main";
+
             vk::PipelineShaderStageCreateInfo closest_stage_ci;
             closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
             closest_stage_ci.module = *closest_hit_shader_module;
@@ -1003,7 +1009,7 @@ namespace lotus
             color_hit_stage_ci.module = *color_hit_shader_module;
             color_hit_stage_ci.pName = "main";
 
-            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, closest_stage_ci, color_hit_stage_ci };
+            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci };
 
             std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_group_ci = {
                 {
@@ -1019,6 +1025,13 @@ namespace lotus
                 VK_SHADER_UNUSED_NV,
                 VK_SHADER_UNUSED_NV,
                 VK_SHADER_UNUSED_NV
+                },
+                {
+                vk::RayTracingShaderGroupTypeNV::eGeneral,
+                2,
+                VK_SHADER_UNUSED_NV,
+                VK_SHADER_UNUSED_NV,
+                VK_SHADER_UNUSED_NV
                 }
             };
             for (int i = 0; i < 16; ++i)
@@ -1026,8 +1039,18 @@ namespace lotus
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
                     VK_SHADER_UNUSED_NV,
-                    2,
                     3,
+                    4,
+                    VK_SHADER_UNUSED_NV
+                );
+            }
+            for (int i = 0; i < 16; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_NV,
+                    VK_SHADER_UNUSED_NV,
+                    4,
                     VK_SHADER_UNUSED_NV
                 );
             }
@@ -1581,7 +1604,7 @@ namespace lotus
 
             buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
-                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 2, shader_stride,
+                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 3, shader_stride,
                 nullptr, 0, 0, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
             //buffer[0]->endRenderPass(dispatch);
 
