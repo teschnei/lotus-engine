@@ -64,7 +64,7 @@ namespace lotus
         image_info.arrayLayers = arrayLayers;
         image_info.format = (VkFormat)format;
         image_info.tiling = (VkImageTiling)tiling;
-        image_info.initialLayout = (VkImageLayout)vk::ImageLayout::eUndefined;;
+        image_info.initialLayout = (VkImageLayout)vk::ImageLayout::eUndefined;
         image_info.usage = (VkImageUsageFlags)usage;
         image_info.samples = (VkSampleCountFlagBits)vk::SampleCountFlagBits::e1;
         image_info.sharingMode = (VkSharingMode)vk::SharingMode::eExclusive;

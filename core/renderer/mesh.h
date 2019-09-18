@@ -52,6 +52,7 @@ namespace lotus
         std::shared_ptr<Texture> texture;
 
         bool has_transparency{ false };
+        uint16_t blending{ 0 };
         //TODO: move me back to protected
         Mesh() = default;
     protected:

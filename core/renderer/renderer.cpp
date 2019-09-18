@@ -6,7 +6,6 @@
 
 #include "core.h"
 #include "game.h"
-#include "task/entity_render.h"
 #include "../../ffxi/mmb.h"
 
 constexpr size_t WIDTH = 1900;
@@ -57,7 +56,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine, const std::string& app_name, uint32_t app_version) : engine(_engine)
+    Renderer::Renderer(Engine* _engine, const std::string& app_name, uint32_t app_version) : engine(_engine), render_mode{RenderMode::RTX}
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow(app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -100,11 +99,80 @@ namespace lotus
 
     bool Renderer::RTXEnabled()
     {
-        return render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace;
+        return render_mode == RenderMode::Hybrid || render_mode == RenderMode::RTX;
+    }
+
+    bool Renderer::RasterizationEnabled()
+    {
+        return render_mode == RenderMode::Rasterization || render_mode == RenderMode::Hybrid;
     }
 
     void Renderer::createRayTracingResources()
     {
+        if (RTXEnabled())
+        {
+
+            for (int i = 0; i < swapchain_images.size(); ++i)
+            {
+                rtx_render_targets.push_back(memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, swapchain_image_format,
+                    vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal));
+                vk::ImageViewCreateInfo view_ci;
+                view_ci.viewType = vk::ImageViewType::e2D;
+                view_ci.format = swapchain_image_format;
+                view_ci.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+                view_ci.subresourceRange.baseMipLevel = 0;
+                view_ci.subresourceRange.levelCount = 1;
+                view_ci.subresourceRange.baseArrayLayer = 0;
+                view_ci.subresourceRange.layerCount = 1;
+                view_ci.image = rtx_render_targets.back()->image;
+                rtx_render_target_views.push_back(device->createImageViewUnique(view_ci, nullptr, dispatch));
+            }
+
+            constexpr uint32_t shader_nonhitcount = 2;
+            constexpr uint32_t shader_hitcount = 32;
+            shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
+            vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
+            shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
+
+            uint8_t* shader_mapped = static_cast<uint8_t*>(device->mapMemory(shader_binding_table->memory, shader_binding_table->memory_offset, sbt_size, {}, dispatch));
+
+            std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * ray_tracing_properties.shaderGroupHandleSize);
+            device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
+            for (uint32_t i = 0; i < shader_nonhitcount; ++i)
+            {
+                memcpy(shader_mapped + (i * ray_tracing_properties.shaderGroupHandleSize), shader_handle_storage.data() + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
+            }
+            shader_mapped += ray_tracing_properties.shaderGroupHandleSize * 2;
+
+            for (uint32_t i = 0; i < shader_hitcount; ++i)
+            {
+                memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
+                *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i / 2;
+            }
+            device->unmapMemory(shader_binding_table->memory);
+
+            std::vector<vk::DescriptorPoolSize> pool_sizes_const;
+            pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, 1024);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, 1024);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1024);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
+
+            vk::DescriptorPoolCreateInfo pool_ci;
+            pool_ci.maxSets = 3;
+            pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes_const.size());
+            pool_ci.pPoolSizes = pool_sizes_const.data();
+
+            rtx_descriptor_pool_const = device->createDescriptorPoolUnique(pool_ci, nullptr, dispatch);
+
+            std::array<vk::DescriptorSetLayout, 3> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
+
+            vk::DescriptorSetAllocateInfo set_ci;
+            set_ci.descriptorPool = *rtx_descriptor_pool_const;
+            set_ci.descriptorSetCount = 3;
+            set_ci.pSetLayouts = layouts.data();
+            rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, dispatch);
+        }
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -299,7 +367,7 @@ namespace lotus
         swapchain_create_info.imageColorSpace = surface_format.colorSpace;
         swapchain_create_info.imageExtent = swap_extent;
         swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
 
         if (old_swapchain)
         {
@@ -622,12 +690,92 @@ namespace lotus
         layout_info.pBindings = deferred_bindings.data();
 
         deferred_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+
+        if (RTXEnabled())
+        {
+            vk::DescriptorSetLayoutBinding raytrace_output_binding;
+            raytrace_output_binding.binding = 0;
+            raytrace_output_binding.descriptorCount = 1;
+            raytrace_output_binding.descriptorType = vk::DescriptorType::eStorageImage;
+            raytrace_output_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+
+            vk::DescriptorSetLayoutBinding camera_ubo_binding;
+            camera_ubo_binding.binding = 1;
+            camera_ubo_binding.descriptorCount = 1;
+            camera_ubo_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+            camera_ubo_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+
+            vk::DescriptorSetLayoutBinding light_binding;
+            light_binding.binding = 2;
+            light_binding.descriptorCount = 1;
+            light_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+            light_binding.pImmutableSamplers = nullptr;
+            light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV;
+
+            vk::DescriptorSetLayoutBinding acceleration_structure_binding;
+            acceleration_structure_binding.binding = 0;
+            acceleration_structure_binding.descriptorCount = 1;
+            acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
+            acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+
+            vk::DescriptorSetLayoutBinding vertex_buffer_binding;
+            vertex_buffer_binding.binding = 1;
+            vertex_buffer_binding.descriptorCount = 1024;
+            vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
+            vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+
+            vk::DescriptorSetLayoutBinding index_buffer_binding;
+            index_buffer_binding.binding = 2;
+            index_buffer_binding.descriptorCount = 1024;
+            index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
+            index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+
+            vk::DescriptorSetLayoutBinding texture_bindings;
+            texture_bindings.binding = 3;
+            texture_bindings.descriptorCount = 1024;
+            texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+
+            vk::DescriptorSetLayoutBinding flags_bindings;
+            flags_bindings.binding = 4;
+            flags_bindings.descriptorCount = 1;
+            flags_bindings.descriptorType = vk::DescriptorType::eUniformBuffer;
+            flags_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+
+            std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
+            {
+                acceleration_structure_binding,
+                vertex_buffer_binding,
+                index_buffer_binding,
+                texture_bindings,
+                flags_bindings,
+            };
+
+            std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_dynamic
+            {
+                raytrace_output_binding,
+                camera_ubo_binding,
+                light_binding
+            };
+
+            vk::DescriptorSetLayoutCreateInfo rtx_layout_info_const;
+            rtx_layout_info_const.bindingCount = static_cast<uint32_t>(rtx_bindings_const.size());
+            rtx_layout_info_const.pBindings = rtx_bindings_const.data();
+
+            vk::DescriptorSetLayoutCreateInfo rtx_layout_info_dynamic;
+            rtx_layout_info_dynamic.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+            rtx_layout_info_dynamic.bindingCount = static_cast<uint32_t>(rtx_bindings_dynamic.size());
+            rtx_layout_info_dynamic.pBindings = rtx_bindings_dynamic.data();
+
+            rtx_descriptor_layout_const = device->createDescriptorSetLayoutUnique(rtx_layout_info_const, nullptr, dispatch);
+            rtx_descriptor_layout_dynamic = device->createDescriptorSetLayoutUnique(rtx_layout_info_dynamic, nullptr, dispatch);
+        }
     }
 
     void Renderer::createGraphicsPipeline()
     {
-        auto vertex_module = getShader("shaders/vert.spv");
-        auto fragment_module = getShader("shaders/frag.spv");
+        auto vertex_module = getShader("shaders/gbuffer_vert.spv");
+        auto fragment_module = getShader("shaders/gbuffer_frag.spv");
 
         vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
         vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
@@ -652,7 +800,7 @@ namespace lotus
         vertex_input_info.pVertexAttributeDescriptions = attribute_descriptions.data();
 
         vk::PipelineInputAssemblyStateCreateInfo input_assembly = {};
-        input_assembly.topology = vk::PrimitiveTopology::eTriangleStrip;
+        input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
         input_assembly.primitiveRestartEnable = false;
 
         vk::Viewport viewport;
@@ -740,7 +888,7 @@ namespace lotus
 
         main_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
 
-        fragment_module = getShader("shaders/frag_blend.spv");
+        fragment_module = getShader("shaders/blend.spv");
 
         frag_shader_stage_info.module = *fragment_module;
 
@@ -751,16 +899,16 @@ namespace lotus
         vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
         vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
 
-        vertex_module = getShader("shaders/vert_deferred.spv");
+        vertex_module = getShader("shaders/deferred.spv");
         vert_shader_stage_info.module = *vertex_module;
 
         if (render_mode == RenderMode::Rasterization)
         {
-            fragment_module = getShader("shaders/frag_deferred_raster.spv");
+            fragment_module = getShader("shaders/deferred_raster.spv");
         }
         else
         {
-            fragment_module = getShader("shaders/frag_deferred_raytrace.spv");
+            fragment_module = getShader("shaders/deferred_raytrace.spv");
         }
         frag_shader_stage_info.module = *fragment_module;
 
@@ -806,8 +954,8 @@ namespace lotus
             pipeline_info.layout = *shadowmap_pipeline_layout;
 
             pipeline_info.renderPass = *shadowmap_render_pass;
-            vertex_module = getShader("shaders/vert_shadow.spv");
-            fragment_module = getShader("shaders/frag_shadow.spv");
+            vertex_module = getShader("shaders/shadow_vert.spv");
+            fragment_module = getShader("shaders/shadow_frag.spv");
 
             vert_shader_stage_info.module = *vertex_module;
             frag_shader_stage_info.module = *fragment_module;
@@ -835,6 +983,92 @@ namespace lotus
             pipeline_info.stageCount = 1;
             pipeline_info.pStages = &vert_shader_stage_info;
             shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+        }
+        if (RTXEnabled())
+        {
+            auto raygen_shader_module = getShader("shaders/raygen.spv");
+            auto miss_shader_module = getShader("shaders/miss.spv");
+            auto closest_hit_shader_module = getShader("shaders/closesthit.spv");
+            auto transparency_any_hit_shader_module = getShader("shaders/transparency_probe.spv");
+            auto color_hit_shader_module = getShader("shaders/color_hit.spv");
+
+            vk::PipelineShaderStageCreateInfo raygen_stage_ci;
+            raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenNV;
+            raygen_stage_ci.module = *raygen_shader_module;
+            raygen_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo miss_stage_ci;
+            miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissNV;
+            miss_stage_ci.module = *miss_shader_module;
+            miss_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo closest_stage_ci;
+            closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+            closest_stage_ci.module = *closest_hit_shader_module;
+            closest_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo transparency_stage_ci;
+            transparency_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+            transparency_stage_ci.module = *transparency_any_hit_shader_module;
+            transparency_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo color_hit_stage_ci;
+            color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+            color_hit_stage_ci.module = *color_hit_shader_module;
+            color_hit_stage_ci.pName = "main";
+
+            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, closest_stage_ci, transparency_stage_ci, color_hit_stage_ci };
+
+            std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_group_ci = {
+                {
+                vk::RayTracingShaderGroupTypeNV::eGeneral,
+                0,
+                VK_SHADER_UNUSED_NV,
+                VK_SHADER_UNUSED_NV,
+                VK_SHADER_UNUSED_NV
+                },
+                {
+                vk::RayTracingShaderGroupTypeNV::eGeneral,
+                1,
+                VK_SHADER_UNUSED_NV,
+                VK_SHADER_UNUSED_NV,
+                VK_SHADER_UNUSED_NV
+                }
+            };
+            for (int i = 0; i < 16; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_NV,
+                    2,
+                    4,
+                    VK_SHADER_UNUSED_NV
+                );
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_NV,
+                    2,
+                    3,
+                    VK_SHADER_UNUSED_NV
+                );
+            }
+
+            std::vector<vk::DescriptorSetLayout> rtx_descriptor_layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_dynamic };
+            vk::PipelineLayoutCreateInfo rtx_pipeline_layout_ci;
+            rtx_pipeline_layout_ci.pSetLayouts = rtx_descriptor_layouts.data();
+            rtx_pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(rtx_descriptor_layouts.size());
+
+            rtx_pipeline_layout = device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr, dispatch);
+
+            vk::RayTracingPipelineCreateInfoNV rtx_pipeline_ci;
+            rtx_pipeline_ci.maxRecursionDepth = 3;
+            rtx_pipeline_ci.stageCount = static_cast<uint32_t>(shaders_ci.size());
+            rtx_pipeline_ci.pStages = shaders_ci.data();
+            rtx_pipeline_ci.groupCount = static_cast<uint32_t>(shader_group_ci.size());
+            rtx_pipeline_ci.pGroups = shader_group_ci.data();
+            rtx_pipeline_ci.layout = *rtx_pipeline_layout;
+
+            rtx_pipeline = device->createRayTracingPipelineNVUnique(nullptr, rtx_pipeline_ci, nullptr, dispatch);
         }
     }
 
@@ -1064,8 +1298,8 @@ namespace lotus
 
             vk::DescriptorBufferInfo camera_buffer_info;
             camera_buffer_info.buffer = engine->camera.view_proj_ubo->buffer;
-            camera_buffer_info.offset = i * (sizeof(glm::mat4)*2);
-            camera_buffer_info.range = sizeof(glm::mat4)*2;
+            camera_buffer_info.offset = i * (sizeof(glm::mat4)*4);
+            camera_buffer_info.range = sizeof(glm::mat4)*4;
 
             std::vector<vk::WriteDescriptorSet> descriptorWrites {4};
 
@@ -1251,48 +1485,137 @@ namespace lotus
         vk::RenderPassBeginInfo renderpass_info = {};
         renderpass_info.renderArea.offset = { 0, 0 };
 
-        if (render_mode == RenderMode::Rasterization)
+        if (RasterizationEnabled())
         {
-            renderpass_info.renderPass = *shadowmap_render_pass;
-            renderpass_info.renderArea.extent = { shadowmap_dimension, shadowmap_dimension };
 
-            std::array<vk::ClearValue, 1> clearValue = {};
-            clearValue[0].depthStencil = { 1.0f, 0 };
-
-            renderpass_info.clearValueCount = static_cast<uint32_t>(clearValue.size());
-            renderpass_info.pClearValues = clearValue.data();
-
-            auto shadowmap_buffers = engine->worker_pool.getShadowmapCommandBuffers(image_index);
-
-            for (uint32_t i = 0; i < shadowmap_cascades; ++i)
+            if (render_mode == RenderMode::Rasterization)
             {
-                renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
-                buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
-                buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-                buffer[0]->executeCommands(shadowmap_buffers, dispatch);
-                buffer[0]->endRenderPass(dispatch);
+                renderpass_info.renderPass = *shadowmap_render_pass;
+                renderpass_info.renderArea.extent = { shadowmap_dimension, shadowmap_dimension };
+
+                std::array<vk::ClearValue, 1> clearValue = {};
+                clearValue[0].depthStencil = { 1.0f, 0 };
+
+                renderpass_info.clearValueCount = static_cast<uint32_t>(clearValue.size());
+                renderpass_info.pClearValues = clearValue.data();
+
+                auto shadowmap_buffers = engine->worker_pool.getShadowmapCommandBuffers(image_index);
+
+                for (uint32_t i = 0; i < shadowmap_cascades; ++i)
+                {
+                    renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
+                    buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
+                    buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
+                    buffer[0]->executeCommands(shadowmap_buffers, dispatch);
+                    buffer[0]->endRenderPass(dispatch);
+                }
             }
+
+            renderpass_info.renderPass = *gbuffer_render_pass;
+            renderpass_info.framebuffer = *gbuffer.frame_buffer;
+            std::array<vk::ClearValue, 4> clearValues = {};
+            clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+            clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+            clearValues[2].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
+            clearValues[3].depthStencil = { 1.0f, 0 };
+
+            renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+            renderpass_info.pClearValues = clearValues.data();
+            renderpass_info.renderArea.extent = { WIDTH, HEIGHT };
+
+            buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
+            auto secondary_buffers = engine->worker_pool.getSecondaryCommandBuffers(image_index);
+            buffer[0]->executeCommands(secondary_buffers, dispatch);
+            buffer[0]->endRenderPass(dispatch);
+        }
+        if (RTXEnabled())
+        {
+            std::array<vk::ClearValue, 2> clear_values;
+            clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+            //TODO: remove depth attachment from rtx renderpass
+            clear_values[1].depthStencil = { 1.f, 0 };
+
+            vk::ImageSubresourceRange subresource_range;
+            subresource_range.aspectMask = vk::ImageAspectFlagBits::eColor;
+            subresource_range.baseMipLevel = 0;
+            subresource_range.levelCount = 1;
+            subresource_range.baseArrayLayer = 0;
+            subresource_range.layerCount = 1;
+
+            vk::ImageMemoryBarrier image_barrier;
+            image_barrier.image = swapchain_images[image_index];
+            image_barrier.srcAccessMask = {};
+            image_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+            image_barrier.oldLayout = vk::ImageLayout::eUndefined;
+            image_barrier.newLayout = vk::ImageLayout::eGeneral;
+            image_barrier.subresourceRange = subresource_range;
+
+            buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, nullptr, nullptr, image_barrier, dispatch);
+
+            vk::RenderPassBeginInfo renderpass_info;
+            renderpass_info.renderPass = *render_pass;
+            renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+            renderpass_info.pClearValues = clear_values.data();
+            renderpass_info.renderArea.offset = { 0, 0 };
+            renderpass_info.renderArea.extent = swapchain_extent;
+            renderpass_info.framebuffer = *frame_buffers[image_index];
+            //buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline, dispatch);
+
+            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
+
+            vk::WriteDescriptorSet write_info_target;
+            write_info_target.descriptorCount = 1;
+            write_info_target.descriptorType = vk::DescriptorType::eStorageImage;
+            write_info_target.dstBinding = 0;
+            write_info_target.dstArrayElement = 0;
+            vk::DescriptorImageInfo target_image_info;
+            target_image_info.imageView = *engine->renderer.swapchain_image_views[engine->renderer.getCurrentImage()];
+            target_image_info.imageLayout = vk::ImageLayout::eGeneral;
+            write_info_target.pImageInfo = &target_image_info;
+
+            vk::DescriptorBufferInfo cam_buffer_info;
+            cam_buffer_info.buffer = engine->camera.view_proj_ubo->buffer;
+            cam_buffer_info.offset = (sizeof(glm::mat4) * 4) * engine->renderer.getCurrentImage();
+            cam_buffer_info.range = sizeof(glm::mat4) * 4;
+
+            vk::WriteDescriptorSet write_info_cam;
+            write_info_cam.descriptorCount = 1;
+            write_info_cam.descriptorType = vk::DescriptorType::eUniformBuffer;
+            write_info_cam.dstBinding = 1;
+            write_info_cam.dstArrayElement = 0;
+            write_info_cam.pBufferInfo = &cam_buffer_info;
+
+            vk::DescriptorBufferInfo light_buffer_info;
+            light_buffer_info.buffer = engine->lights.dir_buffer->buffer;
+            light_buffer_info.offset = engine->renderer.getCurrentImage() * sizeof(engine->lights.directional_light);
+            light_buffer_info.range = sizeof(engine->lights.directional_light);
+
+            vk::WriteDescriptorSet write_info_light;
+            write_info_light.descriptorCount = 1;
+            write_info_light.descriptorType = vk::DescriptorType::eUniformBuffer;
+            write_info_light.dstBinding = 2;
+            write_info_light.dstArrayElement = 0;
+            write_info_light.pBufferInfo = &light_buffer_info;
+
+            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 1, { write_info_target, write_info_cam, write_info_light }, dispatch);
+
+            buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
+                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
+                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 2, shader_stride,
+                nullptr, 0, 0, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
+            //buffer[0]->endRenderPass(dispatch);
+
+            image_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+            image_barrier.dstAccessMask = {};
+            image_barrier.oldLayout = vk::ImageLayout::eGeneral;
+            image_barrier.newLayout = vk::ImageLayout::ePresentSrcKHR;
+
+            //TODO: fix this barrier (render pass?)
+            buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, nullptr, nullptr, image_barrier, dispatch);
         }
 
-        renderpass_info.renderPass = *gbuffer_render_pass;
-        renderpass_info.framebuffer = *gbuffer.frame_buffer;
-        std::array<vk::ClearValue, 4> clearValues = {};
-        clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[2].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
-        clearValues[3].depthStencil = { 1.0f, 0 };
-
-        renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderpass_info.pClearValues = clearValues.data();
-        renderpass_info.renderArea.extent = {WIDTH, HEIGHT};
-
-        buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-        auto secondary_buffers = engine->worker_pool.getSecondaryCommandBuffers(image_index);
-        buffer[0]->executeCommands(secondary_buffers, dispatch);
-        buffer[0]->endRenderPass(dispatch);
-
         buffer[0]->end(dispatch);
-
         render_commandbuffers[image_index] = std::move(buffer[0]);
         return *render_commandbuffers[image_index];
     }
@@ -1390,25 +1713,32 @@ namespace lotus
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
 
-        vk::Semaphore gbuffer_semaphores[] = { *gbuffer_sem };
-        submitInfo.pSignalSemaphores = gbuffer_semaphores;
-        submitInfo.signalSemaphoreCount = 1;
-
         auto buffers = engine->worker_pool.getPrimaryCommandBuffers(current_image);
         buffers.push_back(getRenderCommandbuffer(current_image));
 
         submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
         submitInfo.pCommandBuffers = buffers.data();
 
-        graphics_queue.submit(submitInfo, nullptr, dispatch);
+        if (RasterizationEnabled())
+        {
+            vk::Semaphore gbuffer_semaphores[] = { *gbuffer_sem };
+            submitInfo.pSignalSemaphores = gbuffer_semaphores;
+            submitInfo.signalSemaphoreCount = 1;
 
-        vk::Semaphore signalSemaphores[] = {*frame_finish_sem[current_frame]};
+            graphics_queue.submit(submitInfo, nullptr, dispatch);
+
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = gbuffer_semaphores;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
+        }
+        else
+        {
+            waitStages[0] |= vk::PipelineStageFlagBits::eRayTracingShaderNV;
+        }
+        vk::Semaphore signalSemaphores[] = { *frame_finish_sem[current_frame] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = gbuffer_semaphores;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
 
         device->resetFences(*frame_fences[current_frame]);
 

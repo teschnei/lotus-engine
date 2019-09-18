@@ -16,7 +16,7 @@ namespace lotus
     {
         Rasterization,
         Hybrid,
-        Raytrace
+        RTX
     };
 
     class Renderer
@@ -50,7 +50,6 @@ namespace lotus
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> gbuffer_render_pass;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> static_descriptor_set_layout;
-        //vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> material_descriptor_set_layout;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> shadowmap_descriptor_set_layout;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> deferred_descriptor_set_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
@@ -106,11 +105,28 @@ namespace lotus
 
         vk::DispatchLoaderDynamic dispatch;
 
-        RenderMode render_mode{ RenderMode::Hybrid };
+        RenderMode render_mode{ RenderMode::RTX };
 
         /* Ray tracing */
         bool RTXEnabled();
+        bool RasterizationEnabled();
         vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;
+        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_const;
+        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
+        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_pipeline_layout;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_pipeline;
+        vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> rtx_descriptor_pool_const;
+        vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> rtx_descriptor_pool_dynamic;
+        std::vector<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>> rtx_descriptor_sets_const;
+        std::vector<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>> rtx_descriptor_sets_dynamic;
+        std::vector<std::unique_ptr<Image>> rtx_render_targets;
+        std::vector<vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic>> rtx_render_target_views;
+        vk::DeviceSize shader_stride;
+        struct shader_binding
+        {
+            uint32_t geometry_instance;
+        };
+        std::unique_ptr<Buffer> shader_binding_table;
 
     private:
         void createRayTracingResources();

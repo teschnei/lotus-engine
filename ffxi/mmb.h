@@ -17,6 +17,7 @@ namespace FFXI
             glm::vec3 normal;
             glm::vec3 color;
             glm::vec2 tex_coord;
+            float _pad;
 
             static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
             static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();

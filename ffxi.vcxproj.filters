@@ -39,16 +39,18 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\frag_common.frag" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="shaders\shader.frag" />
-    <CustomBuild Include="shaders\shader.vert" />
-    <CustomBuild Include="shaders\shader_blend.frag" />
-    <CustomBuild Include="shaders\shader_shadow.vert" />
-    <CustomBuild Include="shaders\shader_shadow.frag" />
-    <CustomBuild Include="shaders\shader_deferred.vert" />
-    <CustomBuild Include="shaders\shader_deferred_raster.frag" />
-    <CustomBuild Include="shaders\shader_deferred_raytrace.frag" />
+    <GLSLValidate Include="shaders\blend.frag" />
+    <GLSLValidate Include="shaders\closesthit.rchit" />
+    <GLSLValidate Include="shaders\color_hit.rahit" />
+    <GLSLValidate Include="shaders\deferred.vert" />
+    <GLSLValidate Include="shaders\deferred_raster.frag" />
+    <GLSLValidate Include="shaders\deferred_raytrace.frag" />
+    <GLSLValidate Include="shaders\gbuffer_frag.frag" />
+    <GLSLValidate Include="shaders\gbuffer_vert.vert" />
+    <GLSLValidate Include="shaders\miss.rmiss" />
+    <GLSLValidate Include="shaders\raygen.rgen" />
+    <GLSLValidate Include="shaders\shadow_frag.frag" />
+    <GLSLValidate Include="shaders\shadow_vert.vert" />
+    <GLSLValidate Include="shaders\transparency_probe.rahit" />
   </ItemGroup>
 </Project>

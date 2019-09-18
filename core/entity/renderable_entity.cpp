@@ -33,10 +33,28 @@ namespace lotus
                 instance.transform = glm::mat3x4{ getModelMatrix() };
                 instance.accelerationStructureHandle = model->bottom_level_as->handle;
                 instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+                if (std::none_of(model->meshes.begin(), model->meshes.end(), [](auto& mesh)
+                {
+                    return mesh->has_transparency;
+                }))
+                {
+                    //instance.flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_NV;
+                }
                 instance.mask = 0xFF;
                 instance.instanceOffset = 0;
-                instance.instanceId = 0; //TODO
-                as->AddInstance(instance);
+                instance.instanceId = model->bottom_level_as->resource_index;
+                model->acceleration_instanceid = as->AddInstance(instance);
+            }
+        }
+    }
+
+    void RenderableEntity::update_AS(TopLevelAccelerationStructure* as)
+    {
+        for (const auto& model : models)
+        {
+            if (model->bottom_level_as)
+            {
+                as->UpdateInstance(model->acceleration_instanceid, glm::mat3x4{ getModelMatrix() });
             }
         }
     }

@@ -1,9 +1,11 @@
 #pragma once
 #include "memory.h"
 #include <glm/glm.hpp>
+#include <unordered_map>
 
 namespace lotus
 {
+    class Model;
     class Engine;
 
     class AccelerationStructure
@@ -29,6 +31,8 @@ namespace lotus
     {
     public:
         BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable);
+        void Update(vk::CommandBuffer buffer);
+        uint16_t resource_index{ 0 };
     };
 
     struct VkGeometryInstance
@@ -54,12 +58,18 @@ namespace lotus
     public:
         TopLevelAccelerationStructure(Engine* _engine, bool updateable);
 
-        void AddInstance(VkGeometryInstance instance);
+        uint32_t AddInstance(VkGeometryInstance instance);
         void Build(vk::CommandBuffer command_buffer);
-        void UpdateInstance(uint32_t instance_id, float transform[12]);
+        void UpdateInstance(uint32_t instance_id, glm::mat3x4 instance);
+        void AddBLASResource(Model* model);
+        std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
+        std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
+        std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
+        std::vector<std::pair<uint64_t, uint64_t>> flags;
     private:
         std::vector<VkGeometryInstance> instances;
         std::unique_ptr<Buffer> instance_memory;
+        std::unique_ptr<Buffer> flags_memory;
         bool updateable{ false };
         bool dirty{ false };
     };

@@ -9,6 +9,8 @@ layout(binding = 3) uniform CameraUBO
 {
     mat4 proj;
     mat4 view;
+    mat4 proj_inverse;
+    mat4 view_inverse;
 } camera_ubo;
 
 layout(binding = 4) uniform LightUBO

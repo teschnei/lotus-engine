@@ -276,15 +276,23 @@ namespace FFXI
                 if ((head->id[0] == 'M' && head->id[1] == 'M' && head->id[2] == 'B') || (head->id[0] != 'M' && head2->d3 == 2))
                 {
                     mesh.topology = vk::PrimitiveTopology::eTriangleList;
+                    for (int i = 0; i < num_indices; ++i)
+                    {
+                        mesh.indices.push_back(*(uint16_t*)(buffer + offset));
+                        offset += sizeof(uint16_t);
+                    }
                 }
                 else
                 {
                     mesh.topology = vk::PrimitiveTopology::eTriangleStrip;
-                }
-                for (int i = 0; i < num_indices; ++i)
-                {
-                    mesh.indices.push_back(*(uint16_t*)(buffer + offset));
-                    offset += sizeof(uint16_t);
+                    for (int i = 0; i < num_indices - 2; ++i)
+                    {
+                        mesh.indices.push_back(*(uint16_t*)(buffer + offset));
+                        mesh.indices.push_back(*(uint16_t*)(buffer + offset + sizeof(uint16_t)));
+                        mesh.indices.push_back(*(uint16_t*)(buffer + offset + sizeof(uint16_t) * 2));
+                        offset += sizeof(uint16_t);
+                    }
+                    offset += sizeof(uint16_t) * 2;
                 }
                 if (num_indices % 2 != 0)
                     offset += sizeof(uint16_t);
@@ -360,6 +368,7 @@ namespace FFXI
             mesh->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
             mesh->setIndexCount(static_cast<int>(mmb_mesh.indices.size()));
             mesh->has_transparency = mmb_mesh.blending & 0x8000 || mmb->name[0] == '_';
+            mesh->blending = mmb_mesh.blending;
 
             std::vector<uint8_t> vertices_uint8;
             vertices_uint8.resize(mmb_mesh.vertices.size() * sizeof(FFXI::MMB::Vertex));
@@ -369,8 +378,17 @@ namespace FFXI
             indices_uint8.resize(mmb_mesh.indices.size() * sizeof(uint16_t));
             memcpy(indices_uint8.data(), mmb_mesh.indices.data(), indices_uint8.size());
 
-            mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-            mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            auto vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+            auto index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
+
+            if (engine->renderer.RTXEnabled())
+            {
+                vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+                index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+            }
+
+            mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
             vertices.push_back(std::move(vertices_uint8));
             indices.push_back(std::move(indices_uint8));

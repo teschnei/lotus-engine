@@ -15,7 +15,7 @@ namespace lotus
         camera_rot = glm::normalize(camera_rot);
         addComponent<CameraComponent>(input);
 
-        view_proj_ubo = engine->renderer.memory_manager->GetBuffer((sizeof(view) + sizeof(proj)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        view_proj_ubo = engine->renderer.memory_manager->GetBuffer((sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         if (engine->renderer.render_mode == RenderMode::Rasterization)
         {
@@ -29,6 +29,7 @@ namespace lotus
         far_clip = _far_clip;
         proj = glm::perspective(radians, aspect, near_clip, far_clip);
         proj[1][1] *= -1;
+        proj_inverse = glm::inverse(proj);
         update_ubo = true;
     }
 
@@ -36,6 +37,7 @@ namespace lotus
     {
         Entity::setPos(pos);
         view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        view_inverse = glm::inverse(view);
         update_ubo = true;
     }
 
@@ -44,6 +46,7 @@ namespace lotus
         pos += forward_offset * camera_rot;
         pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, -1.f, 0.f)));
         view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        view_inverse = glm::inverse(view);
         update_ubo = true;
     }
 
@@ -59,6 +62,7 @@ namespace lotus
         camera_rot = glm::normalize(camera_rot);
 
         view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        view_inverse = glm::inverse(view);
         update_ubo = true;
     }
 
@@ -68,9 +72,11 @@ namespace lotus
         {
             engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this](WorkerThread* thread)
             {
-                void* buf = thread->engine->renderer.device->mapMemory(view_proj_ubo->memory, view_proj_ubo->memory_offset + (sizeof(view) + sizeof(proj)) * engine->renderer.getCurrentImage(), sizeof(view) + sizeof(proj), {}, thread->engine->renderer.dispatch);
+                void* buf = thread->engine->renderer.device->mapMemory(view_proj_ubo->memory, view_proj_ubo->memory_offset + (sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getCurrentImage(), (sizeof(view) + sizeof(proj)) * 2, {}, thread->engine->renderer.dispatch);
                 memcpy(buf, &proj, sizeof(proj));
                 memcpy(static_cast<uint8_t*>(buf) + sizeof(proj), &view, sizeof(view));
+                memcpy(static_cast<uint8_t*>(buf) + sizeof(proj) * 2, &proj_inverse, sizeof(proj_inverse));
+                memcpy(static_cast<uint8_t*>(buf) + sizeof(proj) * 3, &view_inverse, sizeof(view_inverse));
                 thread->engine->renderer.device->unmapMemory(view_proj_ubo->memory, thread->engine->renderer.dispatch);
 
                 if (thread->engine->renderer.render_mode == RenderMode::Rasterization)

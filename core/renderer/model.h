@@ -8,13 +8,16 @@ namespace lotus
     class Model
     {
     public:
+        //TODO: when to clean up dead weak_ptrs?
         //TODO: figure out how to get engine out of this call
         template<typename ModelLoader, typename... Args>
         static std::shared_ptr<Model> LoadModel(Engine* engine, const std::string& modelname, Args... args)
         {
             if (auto found = model_map.find(modelname); found != model_map.end())
             {
-                return found->second.lock();
+                auto ptr = found->second.lock();
+                if (ptr)
+                    return ptr;
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));
             ModelLoader loader{args...};
@@ -32,10 +35,23 @@ namespace lotus
             return {};
         }
 
+        template<typename T>
+        static void forEachModel(T func)
+        {
+            for (const auto& [name, model] : model_map)
+            {
+                if (auto ptr = model.lock())
+                {
+                    func(ptr);
+                }
+            }
+        }
+
         std::string name;
         std::vector<std::unique_ptr<Mesh>> meshes;
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
+        uint32_t acceleration_instanceid{ 0 };
 
     protected:
         explicit Model(const std::string& name);

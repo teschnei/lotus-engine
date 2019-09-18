@@ -36,9 +36,11 @@
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="GLSLValidateVS.props" />
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="GLSLValidateVS.props" />
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -102,95 +104,19 @@
     <ClInclude Include="test_loader.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\frag_common.frag" />
-    <CustomBuild Include="shaders\shader.frag">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader.frag -o $(ProjectDir)shaders\frag.spv</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag.spv;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_common.frag;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader.frag -o $(ProjectDir)shaders\frag.spv</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag.spv;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_common.frag;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader.frag...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader.frag...</Message>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader.vert">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader.vert -o $(ProjectDir)shaders\vert.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader.vert -o $(ProjectDir)shaders\vert.spv</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\vert.spv;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\vert.spv;%(Outputs)</Outputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader.vert...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader.vert...</Message>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader_blend.frag">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_blend.frag -o $(ProjectDir)shaders\frag_blend.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_blend.frag -o $(ProjectDir)shaders\frag_blend.spv</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_blend.spv;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_blend.spv;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_common.frag;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_common.frag;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_blend.frag...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_blend.frag...</Message>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader_shadow.vert">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_shadow.vert -o $(ProjectDir)shaders\vert_shadow.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_shadow.vert -o $(ProjectDir)shaders\vert_shadow.spv</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_shadow.vert...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_shadow.vert...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\vert_shadow.spv;%(Outputs)</Outputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\vert_shadow.spv;%(Outputs)</Outputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader_shadow.frag">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_shadow.frag -o $(ProjectDir)shaders\frag_shadow.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_shadow.frag -o $(ProjectDir)shaders\frag_shadow.spv</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_shadow.frag...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_shadow.frag...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_shadow.spv;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_shadow.spv;%(Outputs)</Outputs>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader_deferred_raster.frag">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred_raster.frag -o $(ProjectDir)shaders\frag_deferred_raster.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred_raster.frag -o $(ProjectDir)shaders\frag_deferred_raster.spv</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_deferred_raster.frag...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_deferred_raster.frag...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_deferred_raster.spv;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_deferred_raster.spv;%(Outputs)</Outputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader_deferred.vert">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred.vert -o $(ProjectDir)shaders\vert_deferred.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred.vert -o $(ProjectDir)shaders\vert_deferred.spv</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_deferred.vert...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_deferred.vert...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\vert_deferred.spv;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\vert_deferred.spv;%(Outputs)</Outputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-    </CustomBuild>
-    <CustomBuild Include="shaders\shader_deferred_raytrace.frag">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred_raytrace.frag -o $(ProjectDir)shaders\frag_deferred_raytrace.spv</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">glslc.exe $(ProjectDir)shaders\shader_deferred_raytrace.frag -o $(ProjectDir)shaders\frag_deferred_raytrace.spv</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling shader_deferred_raytrace.frag...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling shader_deferred_raytrace.frag...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)shaders\frag_deferred_raytrace.spv;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)shaders\frag_deferred_raytrace.spv;%(Outputs)</Outputs>
-    </CustomBuild>
+    <GLSLValidate Include="shaders\transparency_probe.rahit" />
+    <GLSLValidate Include="shaders\blend.frag" />
+    <GLSLValidate Include="shaders\closesthit.rchit" />
+    <GLSLValidate Include="shaders\color_hit.rahit" />
+    <GLSLValidate Include="shaders\deferred.vert" />
+    <GLSLValidate Include="shaders\deferred_raster.frag" />
+    <GLSLValidate Include="shaders\deferred_raytrace.frag" />
+    <GLSLValidate Include="shaders\gbuffer_frag.frag" />
+    <GLSLValidate Include="shaders\gbuffer_vert.vert" />
+    <GLSLValidate Include="shaders\miss.rmiss" />
+    <GLSLValidate Include="shaders\raygen.rgen" />
+    <GLSLValidate Include="shaders\shadow_frag.frag" />
+    <GLSLValidate Include="shaders\shadow_vert.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

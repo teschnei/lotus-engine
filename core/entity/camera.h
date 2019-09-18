@@ -50,6 +50,8 @@ namespace lotus
 
         glm::mat4 view{};
         glm::mat4 proj{};
+        glm::mat4 view_inverse{};
+        glm::mat4 proj_inverse{};
 
         bool update_ubo{ false };
         Engine* engine{ nullptr };

@@ -16,8 +16,11 @@ namespace lotus
     {
         auto image_index = thread->engine->renderer.getCurrentImage();
         updateUniformBuffer(thread, image_index, entity.get());
-        thread->secondary_buffers[image_index].push_back(*entity->command_buffers[image_index]);
-        thread->shadow_buffers[image_index].push_back(*entity->shadowmap_buffers[image_index]);
+        if (thread->engine->renderer.RasterizationEnabled())
+        {
+            thread->secondary_buffers[image_index].push_back(*entity->command_buffers[image_index]);
+            thread->shadow_buffers[image_index].push_back(*entity->shadowmap_buffers[image_index]);
+        }
     }
 
     void EntityRenderTask::updateUniformBuffer(WorkerThread* thread, int image_index, RenderableEntity* entity)
