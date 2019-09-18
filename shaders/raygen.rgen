@@ -14,8 +14,6 @@ layout(binding = 1, set = 1) uniform Camera
 layout(location = 0) rayPayloadNV HitValue
 {
     vec3 color;
-    uint max_index;
-    float min_dist;
 } hitValue;
 
 void main() 
@@ -28,10 +26,7 @@ void main()
     vec4 target = camera.proj_inverse * vec4(d.x, d.y, 1, 1);
     vec4 dir = camera.view_inverse * vec4(normalize(target.xyz), 0);
 
-    hitValue.max_index = 0;
-    hitValue.min_dist = 500.0;
-    traceNV(topLevelAS, gl_RayFlagsSkipClosestHitShaderNV | gl_RayFlagsNoOpaqueNV, 0xFF, 1, 2, 0, origin.xyz, 0.001, dir.xyz, 500.0, 0);
-    traceNV(topLevelAS, gl_RayFlagsNoOpaqueNV, 0xFF, 0, 2, 0, origin.xyz, 0.001, dir.xyz, 500.0, 0);
+    traceNV(topLevelAS, 0, 0xFF, 0, 1, 0, origin.xyz, 0.001, dir.xyz, 500.0, 0);
 
     imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(hitValue.color, 0.0));
 }

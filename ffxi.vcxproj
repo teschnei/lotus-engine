@@ -104,7 +104,6 @@
     <ClInclude Include="test_loader.h" />
   </ItemGroup>
   <ItemGroup>
-    <GLSLValidate Include="shaders\transparency_probe.rahit" />
     <GLSLValidate Include="shaders\blend.frag" />
     <GLSLValidate Include="shaders\closesthit.rchit" />
     <GLSLValidate Include="shaders\color_hit.rahit" />

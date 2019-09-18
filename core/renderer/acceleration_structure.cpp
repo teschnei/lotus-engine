@@ -92,7 +92,6 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
         if (!instance_memory)
         {
             instance_memory = engine->renderer.memory_manager->GetBuffer(instances.size() * sizeof(VkGeometryInstance), vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            flags_memory = engine->renderer.memory_manager->GetBuffer(1024 * sizeof(flags[0]), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             PopulateAccelerationStructure(static_cast<uint32_t>(instances.size()), 0, nullptr, updateable);
             PopulateBuffers();
             update = false;
@@ -129,18 +128,6 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
             write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
             write_info_texture.pImageInfo = descriptor_texture_info.data();
 
-            vk::DescriptorBufferInfo flags_buffer_info;
-            flags_buffer_info.buffer = flags_memory->buffer;
-            flags_buffer_info.offset = 0;
-            flags_buffer_info.range = VK_WHOLE_SIZE;
-
-            vk::WriteDescriptorSet write_info_flags;
-            write_info_flags.descriptorType = vk::DescriptorType::eUniformBuffer;
-            write_info_flags.dstArrayElement = 0;
-            write_info_flags.dstBinding = 4;
-            write_info_flags.descriptorCount = 1;
-            write_info_flags.pBufferInfo = &flags_buffer_info;
-
             std::vector<vk::WriteDescriptorSet> writes;
             for(uint32_t i = 0; i < engine->renderer.getImageCount(); ++i)
             {
@@ -148,12 +135,10 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
                 write_info_index.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
                 write_info_texture.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
                 write_info_as.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
-                write_info_flags.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
                 writes.push_back(write_info_vertex);
                 writes.push_back(write_info_index);
                 writes.push_back(write_info_texture);
                 writes.push_back(write_info_as);
-                writes.push_back(write_info_flags);
             }
             engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
         }
@@ -161,9 +146,6 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
         memcpy(data, instances.data(), instances.size() * sizeof(VkGeometryInstance));
         engine->renderer.device->unmapMemory(instance_memory->memory, engine->renderer.dispatch);
 
-        data = engine->renderer.device->mapMemory(flags_memory->memory, flags_memory->memory_offset, 1024 * sizeof(flags[0]), {}, engine->renderer.dispatch);
-        memcpy(data, flags.data(), flags.size() * sizeof(flags[0]));
-        engine->renderer.device->unmapMemory(flags_memory->memory, engine->renderer.dispatch);
         vk::MemoryBarrier barrier;
 
         barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
@@ -193,7 +175,6 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(Model* model)
         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-        flags.push_back(mesh->has_transparency ? std::make_pair(1, 0) : std::make_pair(0,0));
     }
     model->bottom_level_as->resource_index = index;
 }

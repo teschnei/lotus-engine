@@ -65,11 +65,9 @@ namespace lotus
         std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
         std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
         std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
-        std::vector<std::pair<uint64_t, uint64_t>> flags;
     private:
         std::vector<VkGeometryInstance> instances;
         std::unique_ptr<Buffer> instance_memory;
-        std::unique_ptr<Buffer> flags_memory;
         bool updateable{ false };
         bool dirty{ false };
     };

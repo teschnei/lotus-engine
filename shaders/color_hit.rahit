@@ -23,11 +23,6 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
-layout(binding = 4, set = 0) uniform Flags
-{
-    uint flag[1024];
-} flags;
-
 layout(location = 0) rayPayloadInNV HitValue
 {
     vec3 color;
@@ -92,12 +87,6 @@ void main()
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
     float a = texture(textures[resource_index], uv).a;
-    bool transparent = (flags.flag[resource_index]& 1) == 1;
-    if (transparent && a == 0)
+    if (a == 0)
         ignoreIntersectionNV();
-    else if (abs(gl_HitTNV - hitValue.min_dist) < 0.005)
-    {
-        if (block.geometry_index < hitValue.max_index)
-            ignoreIntersectionNV();
-    }
 }

@@ -51,6 +51,5 @@
     <GLSLValidate Include="shaders\raygen.rgen" />
     <GLSLValidate Include="shaders\shadow_frag.frag" />
     <GLSLValidate Include="shaders\shadow_vert.vert" />
-    <GLSLValidate Include="shaders\transparency_probe.rahit" />
   </ItemGroup>
 </Project>

@@ -267,6 +267,9 @@ namespace FFXI
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex);
                     }
+                    //displace vertices slightly because RTX can't use mesh order to determine z-fighting
+                    glm::vec3 mesh_scale = glm::vec3(vertex.normal.x * 0.001 * model_index, vertex.normal.y * 0.001 * model_index, vertex.normal.z * 0.001 * model_index);
+                    vertex.pos += mesh_scale;
                     mesh.vertices.push_back(std::move(vertex));
                 }
 
