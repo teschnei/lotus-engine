@@ -27,6 +27,8 @@ layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 layout(binding = 2, set = 1) uniform Light
 {
     vec3 light;
+    float pad;
+    vec3 color;
 } light;
 
 layout(location = 0) rayPayloadInNV HitValue
@@ -107,8 +109,11 @@ void main()
     vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV;
     shadow = true;
     traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
-    if (shadow)
-        color *= 0.5;
+    vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
+    vec3 total_light = vec3(0);
+    if (!shadow)
+        total_light = light.color;
+    total_light = max(ambient, total_light);
 
-    hitValue.color = color;
+    hitValue.color = color * total_light;
 }

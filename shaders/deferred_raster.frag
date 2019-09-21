@@ -17,6 +17,8 @@ layout(binding = 4) uniform LightUBO
 {
     vec3 light_dir;
     float pad;
+    vec3 color;
+    float pad2;
 } light_ubo;
 
 layout(binding = 5) uniform CascadeUBO

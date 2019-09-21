@@ -19,6 +19,8 @@ namespace lotus
     {
         glm::vec3 direction;
         float _pad;
+        glm::vec3 color;
+        float _pad2;
     };
 
     class LightManager

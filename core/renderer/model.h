@@ -2,6 +2,7 @@
 
 #include "core/renderer/mesh.h"
 #include "acceleration_structure.h"
+#include "core/types.h"
 
 namespace lotus
 {
@@ -49,6 +50,7 @@ namespace lotus
 
         std::string name;
         std::vector<std::unique_ptr<Mesh>> meshes;
+        Lifetime lifetime {Lifetime::Short};
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
         uint32_t acceleration_instanceid{ 0 };
@@ -67,7 +69,6 @@ namespace lotus
         virtual ~ModelLoader() = default;
         virtual void LoadModel(std::shared_ptr<Model>&) = 0;
     protected:
-
         Engine* engine {nullptr};
     };
 }

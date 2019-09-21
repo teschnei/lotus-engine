@@ -2,7 +2,7 @@
 #include <utility>
 #include "../worker_thread.h"
 #include "../core.h"
-#include "ffxi/mmb.h"
+#include "ffxi/dat/mmb.h"
 
 namespace lotus
 {
@@ -96,11 +96,11 @@ namespace lotus
                     {
                         geo.flags = vk::GeometryFlagBitsNV::eOpaque;
                     }
+                    vk::MemoryBarrier barrier;
+                    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+                    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
+                    command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
                 }
-                vk::MemoryBarrier barrier;
-                barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
 
                 staging_buffer_offset += vertex_buffer.size() + index_buffer.size();
             }
@@ -108,7 +108,7 @@ namespace lotus
 
             if (thread->engine->renderer.RTXEnabled())
             {
-                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, true);
+                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, model->lifetime == Lifetime::Long);
             }
             command_buffer->end(thread->engine->renderer.dispatch);
 

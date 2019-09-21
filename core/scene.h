@@ -13,8 +13,17 @@ namespace lotus
     public:
         Scene(Engine* _engine) : engine(_engine) {}
         void render();
-        void AddEntity(std::shared_ptr<Entity>&& entity);
+        template <typename T, typename... Args>
+        std::shared_ptr<T> AddEntity(Args... args)
+        {
+            auto sp = std::static_pointer_cast<T>(entities.emplace_back(std::make_shared<T>()));
+            sp->Init(sp, engine, args...);
+            RebuildTLAS();
+            return sp;
+        }
     protected:
+        void RebuildTLAS();
+
         Engine* engine;
         std::shared_ptr<TopLevelAccelerationStructure> top_level_as;
         bool rebuild_as{ false };

@@ -398,6 +398,7 @@ namespace FFXI
 
             model->meshes.push_back(std::move(mesh));
         }
+        model->lifetime = lotus::Lifetime::Long;
         engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices)));
     }
 }

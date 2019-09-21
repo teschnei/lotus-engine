@@ -8,6 +8,10 @@ namespace lotus
 {
     void Scene::render()
     {
+        if (engine->renderer.RTXEnabled() && rebuild_as)
+        {
+            top_level_as = std::make_shared<TopLevelAccelerationStructure>(engine, true);
+        }
         for (const auto& entity : entities)
         {
             if (auto renderable_entity = std::dynamic_pointer_cast<RenderableEntity>(entity))
@@ -40,12 +44,10 @@ namespace lotus
         }
     }
 
-    void Scene::AddEntity(std::shared_ptr<Entity>&& entity)
+    void Scene::RebuildTLAS()
     {
-        entities.push_back(std::move(entity));
         if (engine->renderer.RTXEnabled())
         {
-            top_level_as = std::make_shared<TopLevelAccelerationStructure>(engine, true);
             rebuild_as = true;
         }
     }

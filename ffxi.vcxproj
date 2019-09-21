@@ -57,7 +57,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)ffxi;$(ProjectDir);$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -76,7 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)ffxi;$(ProjectDir);$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -89,18 +89,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ffxi\texture.cpp" />
-    <ClCompile Include="ffxi\ffxi_load_land_test.cpp" />
-    <ClCompile Include="ffxi\mmb.cpp" />
-    <ClCompile Include="ffxi\mzb.cpp" />
+    <ClCompile Include="ffxi\dat\dat_parser.cpp" />
+    <ClCompile Include="ffxi\dat\dxt3.cpp" />
+    <ClCompile Include="ffxi\dat\mmb.cpp" />
+    <ClCompile Include="ffxi\dat\mzb.cpp" />
+    <ClCompile Include="ffxi\entity\landscape_entity.cpp" />
+    <ClCompile Include="ffxi\task\landscape_dat_load.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ffxi\texture.h" />
-    <ClInclude Include="ffxi\ffxi_load_land_test.h" />
-    <ClInclude Include="ffxi\key_tables.h" />
-    <ClInclude Include="ffxi\mmb.h" />
-    <ClInclude Include="ffxi\mzb.h" />
+    <ClInclude Include="ffxi\dat\dat_parser.h" />
+    <ClInclude Include="ffxi\dat\dxt3.h" />
+    <ClInclude Include="ffxi\dat\key_tables.h" />
+    <ClInclude Include="ffxi\dat\mmb.h" />
+    <ClInclude Include="ffxi\dat\mzb.h" />
+    <ClInclude Include="ffxi\entity\landscape_entity.h" />
+    <ClInclude Include="ffxi\task\landscape_dat_load.h" />
     <ClInclude Include="test_loader.h" />
   </ItemGroup>
   <ItemGroup>

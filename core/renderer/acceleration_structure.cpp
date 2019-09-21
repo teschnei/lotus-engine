@@ -58,9 +58,10 @@ void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer 
     command_buffer.buildAccelerationStructureNV(info, instance_buffer, instance_offset, update, *acceleration_structure, update ? *acceleration_structure : VK_NULL_HANDLE, scratch_memory->buffer, 0, engine->renderer.dispatch);
 }
 
-lotus::BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable) : AccelerationStructure(_engine)
+lotus::BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable, bool compact) : AccelerationStructure(_engine)
 {
     info.type = vk::AccelerationStructureTypeNV::eBottomLevel;
+    //TODO: compact
     PopulateAccelerationStructure(0, static_cast<uint32_t>(geometry.size()), geometry.data(), updateable);
     PopulateBuffers();
     BuildAccelerationStructure(command_buffer, nullptr, 0, false);

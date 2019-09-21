@@ -1,5 +1,6 @@
 #pragma once
 #include "memory.h"
+#include "core/types.h"
 #include <glm/glm.hpp>
 #include <unordered_map>
 
@@ -30,7 +31,7 @@ namespace lotus
     class BottomLevelAccelerationStructure : public AccelerationStructure
     {
     public:
-        BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable);
+        BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable, bool compact);
         void Update(vk::CommandBuffer buffer);
         uint16_t resource_index{ 0 };
     };

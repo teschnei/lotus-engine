@@ -6,7 +6,7 @@
 
 #include "core.h"
 #include "game.h"
-#include "../../ffxi/mmb.h"
+#include "../../ffxi/dat/mmb.h"
 
 constexpr size_t WIDTH = 1900;
 constexpr size_t HEIGHT = 1000;
@@ -1702,6 +1702,7 @@ namespace lotus
             return;
         }
         engine->worker_pool.clearProcessed(current_image);
+        engine->worker_pool.waitIdle();
         engine->game->scene->render();
 
         engine->worker_pool.waitIdle();
