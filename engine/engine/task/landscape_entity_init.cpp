@@ -1,9 +1,9 @@
 #include "landscape_entity_init.h"
 
-#include "worker_thread.h"
-#include "core.h"
-#include "renderer/renderer.h"
-#include "entity/camera.h"
+#include "engine/worker_thread.h"
+#include "engine/core.h"
+#include "engine/renderer/renderer.h"
+#include "engine/entity/camera.h"
 
 namespace lotus
 {

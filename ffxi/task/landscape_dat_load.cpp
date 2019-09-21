@@ -1,9 +1,9 @@
 #include "landscape_dat_load.h"
 
 #include <map>
-#include "core/core.h"
-#include "core/worker_thread.h"
-#include "core/task/landscape_entity_init.h"
+#include "engine/core.h"
+#include "engine/worker_thread.h"
+#include "engine/task/landscape_entity_init.h"
 #include "dat/dat_parser.h"
 #include "test_loader.h"
 

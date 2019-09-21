@@ -1,6 +1,6 @@
 #include "renderable_entity.h"
-#include "core.h"
-#include "task/entity_render.h"
+#include "engine/core.h"
+#include "engine/task/entity_render.h"
 
 namespace lotus
 {

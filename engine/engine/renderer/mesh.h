@@ -1,11 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <string>
-#include <unordered_map>
 #include <vulkan/vulkan.hpp>
 #include "memory.h"
-#include "core/work_item.h"
 #include "texture.h"
 
 namespace lotus

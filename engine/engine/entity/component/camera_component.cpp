@@ -1,6 +1,6 @@
 #include "camera_component.h"
-#include "../camera.h"
-#include "input.h"
+#include "engine/entity/camera.h"
+#include "engine/input.h"
 #include <iostream>
 
 namespace lotus

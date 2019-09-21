@@ -1,6 +1,6 @@
 #include "acceleration_build.h"
-#include "../worker_thread.h"
-#include "../core.h"
+#include "engine/worker_thread.h"
+#include "engine/core.h"
 
 namespace lotus
 {

@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="entity">
+      <UniqueIdentifier>{eec6da1c-c80a-4bad-b743-3ad34ad3702a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="entity\component">
+      <UniqueIdentifier>{3fee57d7-588c-42e1-be18-db1a3cf6c94c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="renderer">
+      <UniqueIdentifier>{1909b0f2-71dc-47b7-9326-05d4afbfeb63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="task">
+      <UniqueIdentifier>{5cac1752-39f6-413f-a485-d0dcd8fd569e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="engine\task\acceleration_build.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\dependency_dummy.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\entity_render.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\landscape_entity_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\model_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\renderable_entity_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\texture_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\acceleration_structure.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\memory.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\mesh.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\model.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\renderer.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\texture.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\camera_component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\input_component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\camera.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\entity.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\landscape_entity.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\renderable_entity.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\config.cpp" />
+    <ClCompile Include="engine\core.cpp" />
+    <ClCompile Include="engine\input.cpp" />
+    <ClCompile Include="engine\light_manager.cpp" />
+    <ClCompile Include="engine\scene.cpp" />
+    <ClCompile Include="engine\work_item.cpp" />
+    <ClCompile Include="engine\worker_pool.cpp" />
+    <ClCompile Include="engine\worker_thread.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="engine\task\acceleration_build.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\dependency_dummy.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\entity_render.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\landscape_entity_init.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\model_init.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\renderable_entity_init.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\texture_init.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\acceleration_structure.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\memory.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\mesh.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\model.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\renderer.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\texture.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\camera_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\input_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\camera.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\entity.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\landscape_entity.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\renderable_entity.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\config.h" />
+    <ClInclude Include="engine\core.h" />
+    <ClInclude Include="engine\game.h" />
+    <ClInclude Include="engine\input.h" />
+    <ClInclude Include="engine\light_manager.h" />
+    <ClInclude Include="engine\scene.h" />
+    <ClInclude Include="engine\types.h" />
+    <ClInclude Include="engine\work_item.h" />
+    <ClInclude Include="engine\worker_pool.h" />
+    <ClInclude Include="engine\worker_thread.h" />
+  </ItemGroup>
+</Project>

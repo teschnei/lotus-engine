@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../work_item.h"
-#include "renderer/acceleration_structure.h"
+#include "engine/renderer/acceleration_structure.h"
 
 namespace lotus
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include "core/renderer/texture.h"
+#include "engine/types.h"
+#include "engine/renderer/texture.h"
 
 namespace FFXI
 {

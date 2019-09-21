@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{3f01893c-e1ee-4882-a8ad-c16d7f137774}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="task">
+      <UniqueIdentifier>{be034aa0-999c-4e72-b7de-d5aa9b27c922}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dat">
+      <UniqueIdentifier>{637f9896-4ed0-4e35-bf8d-b49dc33ea9d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="entity">
+      <UniqueIdentifier>{9a7d429e-819c-42ac-a7a3-4b269687d358}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dat\dat_parser.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\dxt3.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\mmb.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\mzb.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="entity\landscape_entity.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="task\landscape_dat_load.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dat\dat_parser.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\dxt3.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\key_tables.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\mmb.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\mzb.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="entity\landscape_entity.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="task\landscape_dat_load.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="test_loader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <GLSLValidate Include="..\shaders\blend.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\closesthit.rchit">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\color_hit.rahit">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\deferred.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\deferred_raster.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\deferred_raytrace.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\gbuffer_frag.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\gbuffer_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\miss.rmiss">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\raygen.rgen">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\shadow_frag.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\shadow_miss.rmiss">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\shadow_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+  </ItemGroup>
+</Project>

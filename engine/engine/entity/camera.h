@@ -3,8 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "entity.h"
-#include "renderer/memory.h"
-#include "renderer/renderer.h"
+#include "engine/renderer/memory.h"
+#include "engine/renderer/renderer.h"
 
 namespace lotus
 {

@@ -1,9 +1,9 @@
 #pragma once
-#include "core/core.h"
-#include "core/renderer/mesh.h"
-#include "core/renderer/texture.h"
-#include "core/task/model_init.h"
-#include "core/task/texture_init.h"
+#include "engine/core.h"
+#include "engine/renderer/mesh.h"
+#include "engine/renderer/texture.h"
+#include "engine/task/model_init.h"
+#include "engine/task/texture_init.h"
 #include <glm/glm.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION

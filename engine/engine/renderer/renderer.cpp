@@ -4,9 +4,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "core.h"
-#include "game.h"
-#include "../../ffxi/dat/mmb.h"
+#include "engine/core.h"
+#include "engine/game.h"
+#include "../../../ffxi/dat/mmb.h"
 
 constexpr size_t WIDTH = 1900;
 constexpr size_t HEIGHT = 1000;

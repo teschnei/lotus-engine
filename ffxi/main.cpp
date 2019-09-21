@@ -1,12 +1,11 @@
 #include <SDL.h>
 
-#include "core/core.h"
-#include "core/game.h"
-#include "core/entity/renderable_entity.h"
-#include "core/task/renderable_entity_init.h"
-#include "core/scene.h"
+#include "engine/core.h"
+#include "engine/game.h"
+#include "engine/entity/renderable_entity.h"
+#include "engine/task/renderable_entity_init.h"
+#include "engine/scene.h"
 #include "entity/landscape_entity.h"
-#include "task/landscape_dat_load.h"
 
 class Game : public lotus::Game
 {

@@ -10,6 +10,68 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="engine\config.cpp" />
+    <ClCompile Include="engine\core.cpp" />
+    <ClCompile Include="engine\entity\camera.cpp" />
+    <ClCompile Include="engine\entity\component\camera_component.cpp" />
+    <ClCompile Include="engine\entity\component\component.cpp" />
+    <ClCompile Include="engine\entity\component\input_component.cpp" />
+    <ClCompile Include="engine\entity\entity.cpp" />
+    <ClCompile Include="engine\entity\landscape_entity.cpp" />
+    <ClCompile Include="engine\entity\renderable_entity.cpp" />
+    <ClCompile Include="engine\input.cpp" />
+    <ClCompile Include="engine\light_manager.cpp" />
+    <ClCompile Include="engine\renderer\acceleration_structure.cpp" />
+    <ClCompile Include="engine\renderer\memory.cpp" />
+    <ClCompile Include="engine\renderer\mesh.cpp" />
+    <ClCompile Include="engine\renderer\model.cpp" />
+    <ClCompile Include="engine\renderer\renderer.cpp" />
+    <ClCompile Include="engine\renderer\texture.cpp" />
+    <ClCompile Include="engine\scene.cpp" />
+    <ClCompile Include="engine\task\acceleration_build.cpp" />
+    <ClCompile Include="engine\task\dependency_dummy.cpp" />
+    <ClCompile Include="engine\task\entity_render.cpp" />
+    <ClCompile Include="engine\task\landscape_entity_init.cpp" />
+    <ClCompile Include="engine\task\model_init.cpp" />
+    <ClCompile Include="engine\task\renderable_entity_init.cpp" />
+    <ClCompile Include="engine\task\texture_init.cpp" />
+    <ClCompile Include="engine\worker_pool.cpp" />
+    <ClCompile Include="engine\worker_thread.cpp" />
+    <ClCompile Include="engine\work_item.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="engine\config.h" />
+    <ClInclude Include="engine\core.h" />
+    <ClInclude Include="engine\entity\camera.h" />
+    <ClInclude Include="engine\entity\component\camera_component.h" />
+    <ClInclude Include="engine\entity\component\component.h" />
+    <ClInclude Include="engine\entity\component\input_component.h" />
+    <ClInclude Include="engine\entity\entity.h" />
+    <ClInclude Include="engine\entity\landscape_entity.h" />
+    <ClInclude Include="engine\entity\renderable_entity.h" />
+    <ClInclude Include="engine\game.h" />
+    <ClInclude Include="engine\input.h" />
+    <ClInclude Include="engine\light_manager.h" />
+    <ClInclude Include="engine\renderer\acceleration_structure.h" />
+    <ClInclude Include="engine\renderer\memory.h" />
+    <ClInclude Include="engine\renderer\mesh.h" />
+    <ClInclude Include="engine\renderer\model.h" />
+    <ClInclude Include="engine\renderer\renderer.h" />
+    <ClInclude Include="engine\renderer\texture.h" />
+    <ClInclude Include="engine\scene.h" />
+    <ClInclude Include="engine\task\acceleration_build.h" />
+    <ClInclude Include="engine\task\dependency_dummy.h" />
+    <ClInclude Include="engine\task\entity_render.h" />
+    <ClInclude Include="engine\task\landscape_entity_init.h" />
+    <ClInclude Include="engine\task\model_init.h" />
+    <ClInclude Include="engine\task\renderable_entity_init.h" />
+    <ClInclude Include="engine\task\texture_init.h" />
+    <ClInclude Include="engine\types.h" />
+    <ClInclude Include="engine\worker_pool.h" />
+    <ClInclude Include="engine\worker_thread.h" />
+    <ClInclude Include="engine\work_item.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{DC121A9E-84DD-494C-9F43-682423459483}</ProjectGuid>
@@ -57,7 +119,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)core;$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -76,7 +138,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)core;$(ProjectDir)external\vma;$(ProjectDir)external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -88,68 +150,6 @@
       <AdditionalDependencies>vulkan-1.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="core\config.cpp" />
-    <ClCompile Include="core\core.cpp" />
-    <ClCompile Include="core\entity\camera.cpp" />
-    <ClCompile Include="core\entity\component\camera_component.cpp" />
-    <ClCompile Include="core\entity\component\component.cpp" />
-    <ClCompile Include="core\entity\component\input_component.cpp" />
-    <ClCompile Include="core\entity\entity.cpp" />
-    <ClCompile Include="core\entity\landscape_entity.cpp" />
-    <ClCompile Include="core\entity\renderable_entity.cpp" />
-    <ClCompile Include="core\input.cpp" />
-    <ClCompile Include="core\light_manager.cpp" />
-    <ClCompile Include="core\renderer\acceleration_structure.cpp" />
-    <ClCompile Include="core\renderer\memory.cpp" />
-    <ClCompile Include="core\renderer\mesh.cpp" />
-    <ClCompile Include="core\renderer\model.cpp" />
-    <ClCompile Include="core\renderer\renderer.cpp" />
-    <ClCompile Include="core\renderer\texture.cpp" />
-    <ClCompile Include="core\scene.cpp" />
-    <ClCompile Include="core\task\acceleration_build.cpp" />
-    <ClCompile Include="core\task\dependency_dummy.cpp" />
-    <ClCompile Include="core\task\landscape_entity_init.cpp" />
-    <ClCompile Include="core\task\renderable_entity_init.cpp" />
-    <ClCompile Include="core\task\entity_render.cpp" />
-    <ClCompile Include="core\task\model_init.cpp" />
-    <ClCompile Include="core\task\texture_init.cpp" />
-    <ClCompile Include="core\worker_pool.cpp" />
-    <ClCompile Include="core\worker_thread.cpp" />
-    <ClCompile Include="core\work_item.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="core\config.h" />
-    <ClInclude Include="core\core.h" />
-    <ClInclude Include="core\entity\camera.h" />
-    <ClInclude Include="core\entity\component\camera_component.h" />
-    <ClInclude Include="core\entity\component\component.h" />
-    <ClInclude Include="core\entity\component\input_component.h" />
-    <ClInclude Include="core\entity\entity.h" />
-    <ClInclude Include="core\entity\landscape_entity.h" />
-    <ClInclude Include="core\entity\renderable_entity.h" />
-    <ClInclude Include="core\game.h" />
-    <ClInclude Include="core\input.h" />
-    <ClInclude Include="core\light_manager.h" />
-    <ClInclude Include="core\renderer\acceleration_structure.h" />
-    <ClInclude Include="core\renderer\memory.h" />
-    <ClInclude Include="core\renderer\mesh.h" />
-    <ClInclude Include="core\renderer\model.h" />
-    <ClInclude Include="core\renderer\renderer.h" />
-    <ClInclude Include="core\renderer\texture.h" />
-    <ClInclude Include="core\scene.h" />
-    <ClInclude Include="core\task\acceleration_build.h" />
-    <ClInclude Include="core\task\dependency_dummy.h" />
-    <ClInclude Include="core\task\landscape_entity_init.h" />
-    <ClInclude Include="core\task\renderable_entity_init.h" />
-    <ClInclude Include="core\task\entity_render.h" />
-    <ClInclude Include="core\task\model_init.h" />
-    <ClInclude Include="core\task\texture_init.h" />
-    <ClInclude Include="core\types.h" />
-    <ClInclude Include="core\worker_pool.h" />
-    <ClInclude Include="core\worker_thread.h" />
-    <ClInclude Include="core\work_item.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/work_item.h"
-#include "core/entity/landscape_entity.h"
+#include "engine/work_item.h"
+#include "engine/entity/landscape_entity.h"
 
 class LandscapeDatLoad : public lotus::WorkItem
 {

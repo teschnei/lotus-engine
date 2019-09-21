@@ -1,5 +1,5 @@
 #pragma once
-#include "core/entity/landscape_entity.h"
+#include "engine/entity/landscape_entity.h"
 
 class FFXILandscapeEntity : public lotus::LandscapeEntity
 {

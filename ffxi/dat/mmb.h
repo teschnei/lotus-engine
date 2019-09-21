@@ -4,7 +4,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
-#include "core/renderer/model.h"
+#include "engine/renderer/model.h"
 
 namespace FFXI
 {

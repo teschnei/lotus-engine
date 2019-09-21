@@ -3,7 +3,7 @@
 #include "entity.h"
 
 #include <memory>
-#include "core/renderer/model.h"
+#include "engine/renderer/model.h"
 
 namespace lotus
 {

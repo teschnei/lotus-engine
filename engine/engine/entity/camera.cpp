@@ -3,7 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include "component/camera_component.h"
-#include "core.h"
+#include "engine/core.h"
 
 namespace lotus
 {

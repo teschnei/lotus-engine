@@ -1,6 +1,6 @@
 #include "dxt3.h"
-#include "core/core.h"
-#include "core/task/texture_init.h"
+#include "engine/core.h"
+#include "engine/task/texture_init.h"
 
 namespace FFXI
 {

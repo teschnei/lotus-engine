@@ -1,7 +1,7 @@
 #include "landscape_entity.h"
 
 #include "task/landscape_dat_load.h"
-#include "core/core.h"
+#include "engine/core.h"
 
 void FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, lotus::Engine* engine, const std::string& dat)
 {

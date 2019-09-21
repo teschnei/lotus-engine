@@ -1,10 +1,10 @@
 #include "mmb.h"
 #include "key_tables.h"
 #include <list>
-#include "core/core.h"
-#include "core/entity/landscape_entity.h"
-#include "core/renderer/model.h"
-#include "core/task/model_init.h"
+#include "engine/core.h"
+#include "engine/entity/landscape_entity.h"
+#include "engine/renderer/model.h"
+#include "engine/task/model_init.h"
 
 namespace FFXI
 {

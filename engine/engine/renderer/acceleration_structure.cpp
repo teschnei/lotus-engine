@@ -1,6 +1,6 @@
 #include "acceleration_structure.h"
-#include "core.h"
-#include "renderer/model.h"
+#include "engine/core.h"
+#include "engine/renderer/model.h"
 
 void lotus::AccelerationStructure::PopulateAccelerationStructure(uint32_t instanceCount,
     uint32_t geometryCount, const vk::GeometryNV* pGeometry, bool updateable)

@@ -2,7 +2,7 @@
 #include <utility>
 #include "../worker_thread.h"
 #include "../core.h"
-#include "ffxi/dat/mmb.h"
+#include "../../../ffxi/dat/mmb.h"
 
 namespace lotus
 {

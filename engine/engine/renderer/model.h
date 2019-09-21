@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/renderer/mesh.h"
+#include "engine/renderer/mesh.h"
 #include "acceleration_structure.h"
-#include "core/types.h"
+#include "engine/types.h"
 
 namespace lotus
 {

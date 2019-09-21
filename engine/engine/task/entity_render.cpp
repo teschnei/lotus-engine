@@ -1,9 +1,9 @@
 #include "entity_render.h"
 #include "../worker_thread.h"
-#include "core.h"
-#include "entity/renderable_entity.h"
+#include "engine/core.h"
+#include "engine/entity/renderable_entity.h"
 
-#include "game.h"
+#include "engine/game.h"
 
 namespace lotus
 {

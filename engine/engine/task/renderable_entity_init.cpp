@@ -1,7 +1,7 @@
 #include "renderable_entity_init.h"
-#include "worker_thread.h"
-#include "core.h"
-#include "renderer/renderer.h"
+#include "engine/worker_thread.h"
+#include "engine/core.h"
+#include "engine/renderer/renderer.h"
 
 namespace lotus
 {
