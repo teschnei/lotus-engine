@@ -56,7 +56,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine, const std::string& app_name, uint32_t app_version) : engine(_engine), render_mode{RenderMode::RTX}
+    Renderer::Renderer(Engine* _engine, const std::string& app_name, uint32_t app_version) : engine(_engine), render_mode{RenderMode::Rasterization}
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow(app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -366,7 +366,11 @@ namespace lotus
         swapchain_create_info.imageColorSpace = surface_format.colorSpace;
         swapchain_create_info.imageExtent = swap_extent;
         swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
+        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+        if (RTXEnabled())
+        {
+            swapchain_create_info.imageUsage |= vk::ImageUsageFlagBits::eStorage;
+        }
 
         if (old_swapchain)
         {
@@ -1396,13 +1400,14 @@ namespace lotus
             float normal[3];
             float color[3];
             float uv[2];
+            float _pad32;
         };
 
         std::vector<Vertex> vertex_buffer {
-            {{1.f, 1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 1.f}},
-            {{-1.f, 1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 1.f}},
-            {{-1.f, -1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 0.f}},
-            {{1.f, -1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 0.f}}
+            {{1.f, 1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 1.f}, 0.f},
+            {{-1.f, 1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 1.f}, 0.f},
+            {{-1.f, -1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 0.f}, 0.f},
+            {{1.f, -1.f, 0.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 0.f}, 0.f}
         };
 
         quad.vertex_buffer = memory_manager->GetBuffer(vertex_buffer.size() * sizeof(Vertex), vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -1489,7 +1494,6 @@ namespace lotus
 
         if (RasterizationEnabled())
         {
-
             if (render_mode == RenderMode::Rasterization)
             {
                 renderpass_info.renderPass = *shadowmap_render_pass;
