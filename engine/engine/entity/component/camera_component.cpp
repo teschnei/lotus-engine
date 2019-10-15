@@ -95,7 +95,7 @@ namespace lotus
         if (moving.x != 0 || moving.z != 0)
         {
             auto norm = glm::normalize(moving);
-            static float speed = .00005f;
+            static float speed = .000005f;
             auto ms = std::chrono::duration_cast<std::chrono::microseconds>(delta).count();
             camera->move(norm.x * ms * speed, norm.z * ms * speed);
             auto pos = camera->getPos();

@@ -4,15 +4,15 @@
 #pragma pack(push,1)
 typedef struct 
 {
-  unsigned int  id;
-  long   type:7;
-  long   next:19;
-  long   is_shadow:1;
-  long   is_extracted:1;
-  long   ver_num:3;
-  long   is_virtual:1;
-  unsigned int 	parent;
-  unsigned int  child;
+  char id[4];
+  unsigned long type:7;
+  unsigned long next:19;
+  unsigned long is_shadow:1;
+  unsigned long is_extracted:1;
+  unsigned long ver_num:3;
+  unsigned long is_virtual:1;
+  unsigned int parent;
+  unsigned int child;
 } DATHEAD;
 #pragma pack(pop)
 
@@ -260,12 +260,15 @@ DatParser::DatParser(const std::string& filepath)
             break;
         case 0x29:
             sk2++;
+            sk2s.push_back(std::make_unique<FFXI::SK2>(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)));
             break;
         case 0x2A:
             os2++;
+            os2s.push_back(std::make_unique<FFXI::OS2>(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)));
             break;
         case 0x2B:
             mo2++;
+            mo2s.push_back(std::make_unique<FFXI::MO2>(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD), dathead->id));
             break;
         case 0x2C:
             psw++;

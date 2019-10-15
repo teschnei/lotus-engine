@@ -1,11 +1,17 @@
 #include "renderable_entity.h"
 #include "engine/core.h"
 #include "engine/task/entity_render.h"
+#include "component/animation_component.h"
 
 namespace lotus
 {
-    RenderableEntity::RenderableEntity() : Entity()
+    RenderableEntity::RenderableEntity(std::unique_ptr<Skeleton> skeleton) : Entity()
     {
+        if (skeleton)
+        {
+            addComponent<AnimationComponent>(std::move(skeleton));
+            animation_component = getComponent<AnimationComponent>();
+        }
     }
 
     void RenderableEntity::setScale(float x, float y, float z)
@@ -30,7 +36,7 @@ namespace lotus
             if (model->bottom_level_as)
             {
                 VkGeometryInstance instance{};
-                instance.transform = glm::mat3x4{ getModelMatrix() };
+                instance.transform = glm::mat3x4{ glm::transpose(getModelMatrix()) };
                 instance.accelerationStructureHandle = model->bottom_level_as->handle;
                 instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                 if (std::none_of(model->meshes.begin(), model->meshes.end(), [](auto& mesh)

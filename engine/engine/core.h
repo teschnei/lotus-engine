@@ -13,13 +13,20 @@ namespace lotus
     class Engine
     {
     public:
-        Engine(const std::string& appname, uint32_t appVersion, Game* game);
+        struct Settings
+        {
+            std::string app_name;
+            uint32_t app_version;
+            Renderer::Settings renderer_settings;
+        };
+        Engine(Game* game, Settings settings);
         ~Engine();
 
         void run();
         void close() { closing = true; }
 
         Game* game;
+        Settings settings;
         Renderer renderer;
         Input input;
         Camera camera;

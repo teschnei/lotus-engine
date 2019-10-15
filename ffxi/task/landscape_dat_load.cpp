@@ -5,9 +5,8 @@
 #include "engine/worker_thread.h"
 #include "engine/task/landscape_entity_init.h"
 #include "dat/dat_parser.h"
-#include "test_loader.h"
 
-LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<lotus::LandscapeEntity>& _entity, const std::string& _dat) : entity(_entity), dat(_dat)
+LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _entity, const std::string& _dat) : entity(_entity), dat(_dat)
 {
 }
 
@@ -21,17 +20,13 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
     {
         const auto& mzb = mzbs[0];
 
-        auto [default_texture, texture_task] = lotus::Texture::LoadTexture<TestTextureLoader>(thread->engine, "default");
-        thread->engine->worker_pool.addWork(std::move(texture_task));
         std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
 
         for (const auto& texture_data : parser.getDXT3s())
         {
             if (texture_data->width > 0)
             {
-                auto [texture, texture_task] = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, texture_data->name, texture_data.get());
-                if (texture_task)
-                    thread->engine->worker_pool.addWork(std::move(texture_task));
+                auto texture = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, texture_data->name, texture_data.get());
                 texture_map[texture_data->name] = std::move(texture);
             }
         }
@@ -39,9 +34,8 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
         for (const auto& mmb : parser.getMMBs())
         {
             std::string name(mmb->name, 16);
-            auto model = lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb.get());
 
-            entity->models.push_back(std::move(model));
+            entity->models.push_back(lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb.get()));
         }
 
         entity->instance_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),

@@ -34,6 +34,21 @@
       <Filter>task</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="entity\actor.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="task\actor_dat_load.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\sk2.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\os2.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\mo2.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dat\dat_parser.h">
@@ -58,6 +73,21 @@
       <Filter>task</Filter>
     </ClInclude>
     <ClInclude Include="test_loader.h" />
+    <ClInclude Include="entity\actor.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="task\actor_dat_load.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\sk2.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\mo2.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\os2.h">
+      <Filter>dat</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <GLSLValidate Include="..\shaders\blend.frag">

@@ -83,6 +83,12 @@
     <ClCompile Include="engine\work_item.cpp" />
     <ClCompile Include="engine\worker_pool.cpp" />
     <ClCompile Include="engine\worker_thread.cpp" />
+    <ClCompile Include="engine\renderer\skeleton.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\animation_component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\task\acceleration_build.h">
@@ -155,5 +161,11 @@
     <ClInclude Include="engine\work_item.h" />
     <ClInclude Include="engine\worker_pool.h" />
     <ClInclude Include="engine\worker_thread.h" />
+    <ClInclude Include="engine\renderer\skeleton.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\animation_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -4,9 +4,11 @@
 
 #include <memory>
 #include "engine/renderer/model.h"
+#include "engine/renderer/skeleton.h"
 
 namespace lotus
 {
+    class AnimationComponent;
     class RenderableEntity : public Entity
     {
     public:
@@ -15,7 +17,7 @@ namespace lotus
             alignas(16) glm::mat4 model;
         };
 
-        RenderableEntity();
+        RenderableEntity(std::unique_ptr<Skeleton> skeleton = {});
         virtual ~RenderableEntity() = default;
 
         void setScale(float x, float y, float z);
@@ -31,6 +33,7 @@ namespace lotus
         std::unique_ptr<Buffer> uniform_buffer;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
+        AnimationComponent* animation_component;
         
     protected:
         glm::vec3 scale{ 1.f, 1.f, 1.f };

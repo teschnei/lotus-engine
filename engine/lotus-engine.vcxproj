@@ -14,6 +14,7 @@
     <ClCompile Include="engine\config.cpp" />
     <ClCompile Include="engine\core.cpp" />
     <ClCompile Include="engine\entity\camera.cpp" />
+    <ClCompile Include="engine\entity\component\animation_component.cpp" />
     <ClCompile Include="engine\entity\component\camera_component.cpp" />
     <ClCompile Include="engine\entity\component\component.cpp" />
     <ClCompile Include="engine\entity\component\input_component.cpp" />
@@ -27,6 +28,7 @@
     <ClCompile Include="engine\renderer\mesh.cpp" />
     <ClCompile Include="engine\renderer\model.cpp" />
     <ClCompile Include="engine\renderer\renderer.cpp" />
+    <ClCompile Include="engine\renderer\skeleton.cpp" />
     <ClCompile Include="engine\renderer\texture.cpp" />
     <ClCompile Include="engine\scene.cpp" />
     <ClCompile Include="engine\task\acceleration_build.cpp" />
@@ -44,6 +46,7 @@
     <ClInclude Include="engine\config.h" />
     <ClInclude Include="engine\core.h" />
     <ClInclude Include="engine\entity\camera.h" />
+    <ClInclude Include="engine\entity\component\animation_component.h" />
     <ClInclude Include="engine\entity\component\camera_component.h" />
     <ClInclude Include="engine\entity\component\component.h" />
     <ClInclude Include="engine\entity\component\input_component.h" />
@@ -58,6 +61,7 @@
     <ClInclude Include="engine\renderer\mesh.h" />
     <ClInclude Include="engine\renderer\model.h" />
     <ClInclude Include="engine\renderer\renderer.h" />
+    <ClInclude Include="engine\renderer\skeleton.h" />
     <ClInclude Include="engine\renderer\texture.h" />
     <ClInclude Include="engine\scene.h" />
     <ClInclude Include="engine\task\acceleration_build.h" />

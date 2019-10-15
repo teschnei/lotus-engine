@@ -6,7 +6,6 @@
 
 #include "engine/core.h"
 #include "engine/game.h"
-#include "../../../ffxi/dat/mmb.h"
 
 constexpr size_t WIDTH = 1900;
 constexpr size_t HEIGHT = 1000;
@@ -56,12 +55,12 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine, const std::string& app_name, uint32_t app_version) : engine(_engine), render_mode{RenderMode::RTX}
+    Renderer::Renderer(Engine* _engine) : engine(_engine), render_mode{RenderMode::RTX}
     {
         SDL_Init(SDL_INIT_VIDEO);
-        window = SDL_CreateWindow(app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+        window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
-        createInstance(app_name, app_version);
+        createInstance(engine->settings.app_name, engine->settings.app_version);
         if (!SDL_Vulkan_CreateSurface(window, *instance, reinterpret_cast<VkSurfaceKHR*>(&surface)))
         {
             throw std::runtime_error("Unable to create SDL Vulkan surface");
@@ -787,8 +786,8 @@ namespace lotus
 
         vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
-        auto binding_descriptions = FFXI::MMB::Vertex::getBindingDescriptions();
-        auto attribute_descriptions = FFXI::MMB::Vertex::getAttributeDescriptions();
+        auto binding_descriptions = engine->settings.renderer_settings.landscape_vertex_input_binding_descriptions;
+        auto attribute_descriptions = engine->settings.renderer_settings.landscape_vertex_input_attribute_descriptions;
 
         vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(binding_descriptions.size());
         vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
@@ -882,7 +881,7 @@ namespace lotus
         pipeline_info.subpass = 0;
         pipeline_info.basePipelineHandle = nullptr;
 
-        main_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+        landscape_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
 
         fragment_module = getShader("shaders/blend.spv");
 

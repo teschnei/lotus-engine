@@ -22,7 +22,14 @@ namespace lotus
     class Renderer
     {
     public:
-        Renderer(Engine* engine, const std::string& app_name, uint32_t app_version);
+        struct Settings
+        {
+            std::vector<vk::VertexInputBindingDescription> landscape_vertex_input_binding_descriptions;
+            std::vector<vk::VertexInputAttributeDescription> landscape_vertex_input_attribute_descriptions;
+            std::vector<vk::VertexInputBindingDescription> model_vertex_input_binding_descriptions;
+            std::vector<vk::VertexInputAttributeDescription> model_vertex_input_attribute_descriptions;
+        };
+        Renderer(Engine* engine);
         ~Renderer();
 
         void generateCommandBuffers();
@@ -55,7 +62,7 @@ namespace lotus
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> shadowmap_pipeline_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> deferred_pipeline_layout;
-        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> main_graphics_pipeline;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> landscape_graphics_pipeline;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_graphics_pipeline;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> shadowmap_pipeline;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_shadowmap_pipeline;

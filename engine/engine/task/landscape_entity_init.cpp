@@ -41,7 +41,7 @@ namespace lotus
 
                 command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_graphics_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_graphics_pipeline, thread->engine->renderer.dispatch);
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = thread->engine->camera.view_proj_ubo->buffer;

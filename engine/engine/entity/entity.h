@@ -22,11 +22,24 @@ namespace lotus
 
         void tick_all(time_point time, duration delta);
 
-        template <typename T, typename... Args>
+        template<typename T, typename... Args>
         void addComponent(Args... args)
         {
             components.push_back(std::make_unique<T>(this, args...));
         };
+
+        template<typename T>
+        T* getComponent()
+        {
+            for (auto component : components)
+            {
+                if (auto cast = std::dynamic_pointer_cast<T>(component))
+                {
+                    return cast;
+                }
+            }
+            return nullptr;
+        }
 
         void setPos(glm::vec3);
         void setRot(float rot);

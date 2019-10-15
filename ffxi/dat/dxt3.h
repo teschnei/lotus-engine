@@ -21,7 +21,7 @@ namespace FFXI
     {
     public:
         DXT3Loader(DXT3* _dxt3) : lotus::TextureLoader(), dxt3(_dxt3) {}
-        virtual std::unique_ptr<lotus::WorkItem> LoadTexture(std::shared_ptr<lotus::Texture>& texture) override;
+        virtual void LoadTexture(std::shared_ptr<lotus::Texture>& texture) override;
         
         DXT3* dxt3;
     };

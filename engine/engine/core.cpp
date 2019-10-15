@@ -3,7 +3,7 @@
 
 namespace lotus
 {
-    Engine::Engine(const std::string& appname, uint32_t appVersion, Game* _game) : game(_game), renderer(this, appname, appVersion), input(this, renderer.window), camera(this, &input)
+    Engine::Engine(Game* _game, Settings settings) : game(_game), settings(settings), renderer(this), input(this, renderer.window), camera(this, &input)
     {
         renderer.generateCommandBuffers();
     }

@@ -11,6 +11,13 @@ namespace lotus
         if (engine->renderer.RTXEnabled() && rebuild_as)
         {
             top_level_as = std::make_shared<TopLevelAccelerationStructure>(engine, true);
+            Model::forEachModel([this](const std::shared_ptr<Model>& model)
+            {
+                if (model->bottom_level_as)
+                {
+                    top_level_as->AddBLASResource(model.get());
+                }
+            });
         }
         for (const auto& entity : entities)
         {
@@ -21,13 +28,6 @@ namespace lotus
                 {
                     if (rebuild_as)
                     {
-                        Model::forEachModel([this](const std::shared_ptr<Model>& model)
-                        {
-                            if (model->bottom_level_as)
-                            {
-                                top_level_as->AddBLASResource(model.get());
-                            }
-                        });
                         renderable_entity->populate_AS(top_level_as.get());
                     }
                     else
