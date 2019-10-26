@@ -20,7 +20,7 @@ namespace lotus
 
         if (bone_index != 0)
         {
-            BoneTransform local_transform = { transform.rot * bone.local_rot, bone.local_trans + (transform.trans), transform.scale };
+            BoneTransform local_transform = { transform.rot * bone.local_rot, bone.local_trans + transform.trans,  transform.scale };
             const BoneTransform& parent_transform = transforms[frame][bone.parent_bone];
             new_transform = { parent_transform.rot * local_transform.rot, parent_transform.trans + (parent_transform.rot * local_transform.trans), local_transform.scale * parent_transform.scale };
         }

@@ -24,14 +24,15 @@ namespace lotus
         {
             //engine->worker_pool.addWork(std::make_unique<SkinMeshTask>(static_cast<RenderableEntity*>(entity)));
             duration animation_delta = time - animation_start;
+            float frame_f = static_cast<float>((animation_delta % current_animation->frame_duration).count()) / static_cast<float>(current_animation->frame_duration.count());
             int frame = (animation_delta / current_animation->frame_duration) % current_animation->transforms.size();
             int next_frame = (frame + 1) % current_animation->transforms.size();
             for (size_t i = 0; i < skeleton->bones.size(); ++i)
             {
                 auto& bone = skeleton->bones[i];
-                bone.rot = current_animation->transforms[frame][i].rot;
-                bone.trans = current_animation->transforms[frame][i].trans;
-                bone.scale = current_animation->transforms[frame][i].scale;
+                bone.rot = glm::slerp(current_animation->transforms[frame][i].rot, current_animation->transforms[next_frame][i].rot, frame_f);
+                bone.trans = glm::mix(current_animation->transforms[frame][i].trans, current_animation->transforms[next_frame][i].trans, frame_f);
+                bone.scale = glm::mix(current_animation->transforms[frame][i].scale, current_animation->transforms[next_frame][i].scale, frame_f);
             }
         }
     }

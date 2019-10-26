@@ -96,8 +96,7 @@ namespace lotus
                     if (vertex2.weight == 0.f)
                     {
                         Skeleton::Bone& bone = skeleton->bones[vertex1.bone_index];
-                        os2_vertex.pos = bone.rot * mirrorVec(vertex1.pos, vertex1.mirror_axis) + bone.trans;
-                        os2_vertex.pos *= bone.scale;
+                        os2_vertex.pos = bone.rot * mirrorVec(vertex1.pos * bone.scale, vertex1.mirror_axis) + bone.trans;
                         os2_vertex.norm = (bone.rot * vertex1.norm);
                         os2_vertex.norm = glm::normalize(os2_vertex.norm);
                     }
@@ -106,13 +105,11 @@ namespace lotus
                         Skeleton::Bone& bone1 = skeleton->bones[vertex1.bone_index];
                         Skeleton::Bone& bone2 = skeleton->bones[vertex2.bone_index];
 
-                        glm::vec3 pos1 = bone1.rot * mirrorVec(vertex1.pos, vertex1.mirror_axis) + (bone1.trans * vertex1.weight);
-                        pos1 *= bone1.scale;
+                        glm::vec3 pos1 = bone1.rot * mirrorVec(vertex1.pos * bone1.scale, vertex1.mirror_axis) + (bone1.trans * vertex1.weight);
                         glm::vec3 norm1 = bone1.rot * vertex1.norm * vertex1.weight;
                         norm1 = glm::normalize(norm1);
 
-                        glm::vec3 pos2 = (bone2.rot * mirrorVec(vertex2.pos, vertex2.mirror_axis)) + (bone2.trans * vertex2.weight);
-                        pos2 *= bone2.scale;
+                        glm::vec3 pos2 = (bone2.rot * mirrorVec(vertex2.pos * bone1.scale, vertex2.mirror_axis)) + (bone2.trans * vertex2.weight);
                         glm::vec3 norm2 = (bone2.rot * vertex2.norm) * vertex2.weight;
                         norm2 = glm::normalize(norm2);
 
