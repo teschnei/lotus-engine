@@ -29,11 +29,13 @@ namespace lotus
         Settings settings;
         Renderer renderer;
         Input input;
-        Camera camera;
+        Camera* camera {nullptr};
         WorkerPool worker_pool{ this };
         Config config;
         LightManager lights{ this };
         time_point simulation_time;
+
+        void set_camera(Camera* _camera) { camera = _camera; }
 
     private:
         void mainLoop();

@@ -15,6 +15,15 @@ namespace lotus
         }
     }
 
+    void Entity::render_all(Engine* engine, std::shared_ptr<Entity>& sp)
+    {
+        for (auto& component : components)
+        {
+            component->render(engine);
+        }
+        render(engine, sp);
+    }
+
     void Entity::setPos(glm::vec3 pos)
     {
         this->pos = pos;

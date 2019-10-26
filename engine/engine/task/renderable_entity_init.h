@@ -13,6 +13,10 @@ namespace lotus
     private:
         void drawModel(WorkerThread* thread, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout);
         void drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout);
+        void generateVertexBuffers(WorkerThread* thread, vk::CommandBuffer buffer, const Model& mesh, std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
+        glm::vec3 mirrorVec(glm::vec3 pos, uint8_t mirror_axis);
         std::shared_ptr<RenderableEntity> entity;
+        std::vector<std::unique_ptr<Buffer>> staging_buffers;
+        vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic> command_buffer;
     };
 }

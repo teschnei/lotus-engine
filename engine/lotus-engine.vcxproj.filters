@@ -89,6 +89,12 @@
     <ClCompile Include="engine\entity\component\animation_component.cpp">
       <Filter>entity\component</Filter>
     </ClCompile>
+    <ClCompile Include="engine\task\skin_mesh.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\renderer\animation.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\task\acceleration_build.h">
@@ -166,6 +172,12 @@
     </ClInclude>
     <ClInclude Include="engine\entity\component\animation_component.h">
       <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\skin_mesh.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\animation.h">
+      <Filter>renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

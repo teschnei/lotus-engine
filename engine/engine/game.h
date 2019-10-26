@@ -13,9 +13,15 @@ namespace lotus
         virtual ~Game() = default;
 
         virtual void run() { engine->run(); }
-        virtual void tick(time_point time, duration delta) = 0;
-
+        void tick_all(time_point time, duration delta)
+        {
+            tick(time, delta);
+            scene->tick_all(time, delta);
+        }
         std::unique_ptr<Scene> scene;
         std::unique_ptr<Engine> engine;
+
+    protected:
+        virtual void tick(time_point time, duration delta) {}
     };
 }

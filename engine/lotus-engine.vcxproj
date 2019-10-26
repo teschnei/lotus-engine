@@ -24,6 +24,7 @@
     <ClCompile Include="engine\input.cpp" />
     <ClCompile Include="engine\light_manager.cpp" />
     <ClCompile Include="engine\renderer\acceleration_structure.cpp" />
+    <ClCompile Include="engine\renderer\animation.cpp" />
     <ClCompile Include="engine\renderer\memory.cpp" />
     <ClCompile Include="engine\renderer\mesh.cpp" />
     <ClCompile Include="engine\renderer\model.cpp" />
@@ -37,6 +38,7 @@
     <ClCompile Include="engine\task\landscape_entity_init.cpp" />
     <ClCompile Include="engine\task\model_init.cpp" />
     <ClCompile Include="engine\task\renderable_entity_init.cpp" />
+    <ClCompile Include="engine\task\skin_mesh.cpp" />
     <ClCompile Include="engine\task\texture_init.cpp" />
     <ClCompile Include="engine\worker_pool.cpp" />
     <ClCompile Include="engine\worker_thread.cpp" />
@@ -57,6 +59,7 @@
     <ClInclude Include="engine\input.h" />
     <ClInclude Include="engine\light_manager.h" />
     <ClInclude Include="engine\renderer\acceleration_structure.h" />
+    <ClInclude Include="engine\renderer\animation.h" />
     <ClInclude Include="engine\renderer\memory.h" />
     <ClInclude Include="engine\renderer\mesh.h" />
     <ClInclude Include="engine\renderer\model.h" />
@@ -70,6 +73,7 @@
     <ClInclude Include="engine\task\landscape_entity_init.h" />
     <ClInclude Include="engine\task\model_init.h" />
     <ClInclude Include="engine\task\renderable_entity_init.h" />
+    <ClInclude Include="engine\task\skin_mesh.h" />
     <ClInclude Include="engine\task\texture_init.h" />
     <ClInclude Include="engine\types.h" />
     <ClInclude Include="engine\worker_pool.h" />

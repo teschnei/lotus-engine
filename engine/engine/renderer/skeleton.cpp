@@ -4,7 +4,7 @@ namespace lotus
 {
     void Skeleton::addBone(uint8_t parent_bone, glm::quat rot, glm::vec3 trans)
     {
-        Bone bone{ parent_bone, rot, rot * trans };
+        Bone bone{ parent_bone, rot, trans };
 
         if (!bones.empty())
         {
@@ -19,5 +19,4 @@ namespace lotus
         }
         bones.push_back(std::move(bone));
     }
-
 }

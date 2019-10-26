@@ -14,7 +14,8 @@ namespace lotus
     class Camera : public Entity
     {
     public:
-        Camera(Engine* engine, Input* input);
+        Camera();
+        void Init(const std::shared_ptr<Camera>& sp, Engine* engine);
         glm::mat4& getViewMatrix() { return view; }
         glm::mat4& getProjMatrix() { return proj; }
 
@@ -41,6 +42,7 @@ namespace lotus
 
     private:
         virtual void tick(time_point time, duration delta) override;
+        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
 
         float rot_x{0};
         float rot_z{ -glm::pi<float>()  };
@@ -54,6 +56,5 @@ namespace lotus
         glm::mat4 proj_inverse{};
 
         bool update_ubo{ false };
-        Engine* engine{ nullptr };
     };
 }

@@ -128,7 +128,7 @@ namespace lotus
             }
 
             constexpr uint32_t shader_nonhitcount = 3;
-            constexpr uint32_t shader_hitcount = 32;
+            constexpr uint32_t shader_hitcount = 64;
             shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
             vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
             shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
@@ -986,6 +986,8 @@ namespace lotus
             auto shadow_miss_shader_module = getShader("shaders/shadow_miss.spv");
             auto closest_hit_shader_module = getShader("shaders/closesthit.spv");
             auto color_hit_shader_module = getShader("shaders/color_hit.spv");
+            auto landscape_closest_hit_shader_module = getShader("shaders/landscape_closest_hit.spv");
+            auto landscape_color_hit_shader_module = getShader("shaders/landscape_color_hit.spv");
 
             vk::PipelineShaderStageCreateInfo raygen_stage_ci;
             raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenNV;
@@ -1012,7 +1014,17 @@ namespace lotus
             color_hit_stage_ci.module = *color_hit_shader_module;
             color_hit_stage_ci.pName = "main";
 
-            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci };
+            vk::PipelineShaderStageCreateInfo landscape_closest_stage_ci;
+            landscape_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+            landscape_closest_stage_ci.module = *landscape_closest_hit_shader_module;
+            landscape_closest_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo landscape_color_hit_stage_ci;
+            landscape_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+            landscape_color_hit_stage_ci.module = *landscape_color_hit_shader_module;
+            landscape_color_hit_stage_ci.pName = "main";
+
+            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci, landscape_closest_stage_ci, landscape_color_hit_stage_ci };
 
             std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_group_ci = {
                 {
@@ -1054,6 +1066,26 @@ namespace lotus
                     VK_SHADER_UNUSED_NV,
                     VK_SHADER_UNUSED_NV,
                     4,
+                    VK_SHADER_UNUSED_NV
+                );
+            }
+            for (int i = 0; i < 16; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_NV,
+                    5,
+                    6,
+                    VK_SHADER_UNUSED_NV
+                );
+            }
+            for (int i = 0; i < 16; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_NV,
+                    VK_SHADER_UNUSED_NV,
+                    6,
                     VK_SHADER_UNUSED_NV
                 );
             }
@@ -1302,7 +1334,7 @@ namespace lotus
             albedo_info.sampler = *gbuffer.sampler;
 
             vk::DescriptorBufferInfo camera_buffer_info;
-            camera_buffer_info.buffer = engine->camera.view_proj_ubo->buffer;
+            camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
             camera_buffer_info.offset = i * (sizeof(glm::mat4)*4);
             camera_buffer_info.range = sizeof(glm::mat4)*4;
 
@@ -1349,9 +1381,9 @@ namespace lotus
                 shadowmap_image_info.sampler = *shadowmap_sampler;
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = engine->camera.cascade_data_ubo->buffer;
-                cascade_buffer_info.offset = i * sizeof(engine->camera.cascade_data);
-                cascade_buffer_info.range = sizeof(engine->camera.cascade_data);
+                cascade_buffer_info.buffer = engine->camera->cascade_data_ubo->buffer;
+                cascade_buffer_info.offset = i * sizeof(engine->camera->cascade_data);
+                cascade_buffer_info.range = sizeof(engine->camera->cascade_data);
 
                 descriptorWrites.resize(7);
 
@@ -1580,7 +1612,7 @@ namespace lotus
             write_info_target.pImageInfo = &target_image_info;
 
             vk::DescriptorBufferInfo cam_buffer_info;
-            cam_buffer_info.buffer = engine->camera.view_proj_ubo->buffer;
+            cam_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
             cam_buffer_info.offset = (sizeof(glm::mat4) * 4) * engine->renderer.getCurrentImage();
             cam_buffer_info.range = sizeof(glm::mat4) * 4;
 
@@ -1604,6 +1636,14 @@ namespace lotus
             write_info_light.pBufferInfo = &light_buffer_info;
 
             buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 1, { write_info_target, write_info_cam, write_info_light }, dispatch);
+
+            vk::MemoryBarrier barrier;
+
+            barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV;
+            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eAccelerationStructureReadNV;
+
+            buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eRayTracingShaderNV,
+                {}, barrier, nullptr, nullptr, engine->renderer.dispatch);
 
             buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,

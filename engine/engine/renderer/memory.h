@@ -14,6 +14,7 @@ namespace lotus
             allocation(_allocation),
             memory_offset(_alloc_info.offset),
             memory(_alloc_info.deviceMemory),
+            size(_alloc_info.size),
             manager(_manager) {}
         Memory(const Memory&) = delete;
         Memory(Memory&&) = default;
@@ -23,6 +24,7 @@ namespace lotus
         VmaAllocation allocation;
         vk::DeviceSize memory_offset;
         vk::DeviceMemory memory;
+        vk::DeviceSize size;
     protected:
         MemoryManager* manager{ nullptr };
     };

@@ -6,6 +6,7 @@
 
 namespace lotus
 {
+    class RenderableEntity;
     class Model;
     class Engine;
 
@@ -14,9 +15,10 @@ namespace lotus
     protected:
         AccelerationStructure(Engine* _engine) : engine(_engine) {}
 
-        void PopulateAccelerationStructure(uint32_t instanceCount, uint32_t geometryCount, const vk::GeometryNV* pGeometry, bool updateable);
+        void PopulateAccelerationStructure(uint32_t instanceCount, std::vector<vk::GeometryNV>* geometries, bool updateable);
         void PopulateBuffers();
         void BuildAccelerationStructure(vk::CommandBuffer command_buffer, vk::Buffer instance_buffer, vk::DeviceSize instance_offset, bool update);
+        void Copy(vk::CommandBuffer command_buffer, AccelerationStructure& target);
 
         Engine* engine;
         vk::AccelerationStructureInfoNV info;
@@ -31,9 +33,17 @@ namespace lotus
     class BottomLevelAccelerationStructure : public AccelerationStructure
     {
     public:
-        BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable, bool compact);
+        enum class Performance
+        {
+            FastTrace,
+            FastBuild
+        };
+        BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable, bool compact, Performance performance);
         void Update(vk::CommandBuffer buffer);
         uint16_t resource_index{ 0 };
+        uint32_t instanceid{ 0 };
+    private:
+        std::vector<vk::GeometryNV> geometries;
     };
 
     struct VkGeometryInstance
@@ -63,6 +73,7 @@ namespace lotus
         void Build(vk::CommandBuffer command_buffer);
         void UpdateInstance(uint32_t instance_id, glm::mat3x4 instance);
         void AddBLASResource(Model* model);
+        void AddBLASResource(RenderableEntity* entity);
         std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
         std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
         std::vector<vk::DescriptorImageInfo> descriptor_texture_info;

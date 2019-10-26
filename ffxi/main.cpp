@@ -10,6 +10,7 @@
 #include "test_loader.h"
 #include "dat/mmb.h"
 #include "dat/os2.h"
+#include "engine/entity/component/animation_component.h"
 
 class Game : public lotus::Game
 {
@@ -18,15 +19,20 @@ public:
     {
         scene = std::make_unique<lotus::Scene>(engine.get());
         default_texture = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
+        auto camera = scene->AddEntity<lotus::Camera>();
+        engine->set_camera(camera.get());
         //scene->AddEntity<FFXILandscapeEntity>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\342\73.dat)");
         auto iroha = scene->AddEntity<Actor>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\310\3.dat)");
+        //iroha->animation_component->playAnimation("idl0");
         //iroha->setPos(glm::vec3(259.f, -99.f, 99.f));
+        //TODO: move this back to core.cpp after camera is figured out
+        engine->renderer.generateCommandBuffers();
         engine->lights.directional_light.direction = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
         engine->lights.directional_light.color = glm::vec3{ 1.f, 1.f, 1.f };
         engine->lights.UpdateLightBuffer();
-        engine->camera.setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .5f, 400.f);
+        engine->camera->setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .5f, 400.f);
         //engine->camera.setPos(glm::vec3(259.f, -90.f, 82.f));
-        engine->camera.setPos(glm::vec3(5.f, -0.f, 0.f));
+        engine->camera->setPos(glm::vec3(5.f, -0.f, 0.f));
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {

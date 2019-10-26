@@ -18,6 +18,16 @@ namespace FFXI
             glm::vec3 norm;
             float weight;
             uint8_t bone_index;
+            uint8_t mirror_axis;
+            glm::vec2 uv;
+        };
+
+        struct WeightingVertexMirror
+        {
+            glm::vec3 pos;
+            glm::vec3 norm;
+            float weight;
+            uint8_t bone_index;
             uint8_t bone_index_mirror;
             uint8_t mirror_axis;
         };
@@ -27,7 +37,6 @@ namespace FFXI
             glm::vec3 pos;
             glm::vec3 norm;
             glm::vec2 uv;
-            float _pad;
 
             static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
             static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
@@ -41,7 +50,7 @@ namespace FFXI
 
         OS2(uint8_t* buffer, size_t max_len);
         std::vector<Mesh> meshes;
-        std::vector<std::pair<WeightingVertex, WeightingVertex>> vertices;
+        std::vector<std::pair<WeightingVertexMirror, WeightingVertexMirror>> vertices;
         bool mirror;
     };
 }

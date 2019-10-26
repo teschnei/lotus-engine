@@ -5,13 +5,8 @@
 
 namespace lotus
 {
-    RenderableEntity::RenderableEntity(std::unique_ptr<Skeleton> skeleton) : Entity()
+    RenderableEntity::RenderableEntity() : Entity()
     {
-        if (skeleton)
-        {
-            addComponent<AnimationComponent>(std::move(skeleton));
-            animation_component = getComponent<AnimationComponent>();
-        }
     }
 
     void RenderableEntity::setScale(float x, float y, float z)
@@ -20,24 +15,41 @@ namespace lotus
         this->scale_mat = glm::scale(glm::mat4{ 1.f }, glm::vec3{ x, y, z });
     }
 
-    void RenderableEntity::render(Engine* engine, std::shared_ptr<RenderableEntity>& sp)
+    void RenderableEntity::addSkeleton(std::unique_ptr<Skeleton>&& skeleton, Engine* engine, size_t vertex_stride)
+    {
+        addComponent<AnimationComponent>(engine, std::move(skeleton), vertex_stride);
+        animation_component = getComponent<AnimationComponent>();
+    }
+
+    void RenderableEntity::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
         //TODO: check bounding box
         //if (glm::dot(engine->camera.getPos() - pos, engine->camera.getRotationVector()) > 0)
         {
-            engine->worker_pool.addWork(std::make_unique<lotus::EntityRenderTask>(sp));
+            auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
+            engine->worker_pool.addWork(std::make_unique<EntityRenderTask>(re_sp));
         }
     }
 
-    void RenderableEntity::populate_AS(TopLevelAccelerationStructure* as)
+    void RenderableEntity::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
-        for (const auto& model : models)
+        for (size_t i = 0; i < models.size(); ++i)
         {
-            if (model->bottom_level_as)
+            const auto& model = models[i];
+            BottomLevelAccelerationStructure* blas = nullptr;
+            if (model->weighted)
+            {
+                blas = animation_component->acceleration_structures[i].bottom_level_as[image_index].get();
+            }
+            else if (model->bottom_level_as)
+            {
+                blas = model->bottom_level_as.get();
+            }
+            if (blas)
             {
                 VkGeometryInstance instance{};
                 instance.transform = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                instance.accelerationStructureHandle = model->bottom_level_as->handle;
+                instance.accelerationStructureHandle = blas->handle;
                 instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                 if (std::none_of(model->meshes.begin(), model->meshes.end(), [](auto& mesh)
                 {
@@ -48,19 +60,29 @@ namespace lotus
                 }
                 instance.mask = 0xFF;
                 instance.instanceOffset = 0;
-                instance.instanceId = model->bottom_level_as->resource_index;
-                model->acceleration_instanceid = as->AddInstance(instance);
+                instance.instanceId = blas->resource_index;
+                blas->instanceid = as->AddInstance(instance);
             }
         }
     }
 
-    void RenderableEntity::update_AS(TopLevelAccelerationStructure* as)
+    void RenderableEntity::update_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
-        for (const auto& model : models)
+        for (size_t i = 0; i < models.size(); ++i)
         {
-            if (model->bottom_level_as)
+            const auto& model = models[i];
+            BottomLevelAccelerationStructure* blas = nullptr;
+            if (model->weighted)
             {
-                as->UpdateInstance(model->acceleration_instanceid, glm::mat3x4{ getModelMatrix() });
+                blas = animation_component->acceleration_structures[i].bottom_level_as[image_index].get();
+            }
+            else if (model->bottom_level_as)
+            {
+                blas = model->bottom_level_as.get();
+            }
+            if (blas)
+            {
+                as->UpdateInstance(blas->instanceid, glm::mat3x4{ getModelMatrix() });
             }
         }
     }

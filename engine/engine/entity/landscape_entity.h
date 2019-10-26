@@ -12,8 +12,8 @@ namespace lotus
             glm::mat3 model_it;
         };
 
-        virtual void populate_AS(TopLevelAccelerationStructure* as) override;
-        virtual void update_AS(TopLevelAccelerationStructure* as) override;
+        virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
+        virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
 
         std::unique_ptr<Buffer> instance_buffer;
         std::vector<InstanceInfo> instance_info;

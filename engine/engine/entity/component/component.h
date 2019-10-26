@@ -3,6 +3,7 @@
 
 namespace lotus {
     class Entity;
+    class Engine;
 
     class Component
     {
@@ -13,7 +14,8 @@ namespace lotus {
         Component& operator=(const Component&) = delete;
         Component& operator=(Component&&) = default;
         virtual ~Component() = default;
-        virtual void tick(time_point time, duration delta) = 0;
+        virtual void tick(time_point time, duration delta) {};
+        virtual void render(Engine* engine) {};
     protected:
         Entity* entity;
     };

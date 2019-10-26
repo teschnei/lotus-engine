@@ -6,7 +6,9 @@ struct Vertex
 {
     vec3 pos;
     vec3 norm;
+    vec3 color;
     vec2 uv;
+    float _pad;
 };
 
 layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
@@ -32,6 +34,8 @@ layout(binding = 2, set = 1) uniform Light
 layout(location = 0) rayPayloadInNV HitValue
 {
     vec3 color;
+    uint max_index;
+    float min_dist;
 } hitValue;
 
 layout(location = 1) rayPayloadNV bool shadow;
@@ -63,7 +67,7 @@ ivec3 getIndex(uint primitive_id)
     return ret;
 }
 
-uint vertexSize = 2;
+uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
@@ -72,10 +76,12 @@ Vertex unpackVertex(uint index)
 
     vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
     vec4 d1 = vertices[resource_index].v[vertexSize * index + 1];
+    vec4 d2 = vertices[resource_index].v[vertexSize * index + 2];
 
     v.pos = d0.xyz;
     v.norm = vec3(d0.w, d1.x, d1.y);
-    v.uv = vec2(d1.z, d1.w);
+    v.color = vec3(d1.z, d1.w, d2.x);
+    v.uv = vec2(d2.y, d2.z);
     return v;
 }
 
@@ -94,13 +100,15 @@ void main()
 
     float dot_product = max(dot(-light.light, normalized_normal), 0.5);
 
+    vec3 color = dot_product * (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
+
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
-    vec3 color = texture(textures[resource_index], uv).xyz;
+    color *= texture(textures[resource_index], uv).xyz;
 
     vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV;
     shadow = true;
-    //traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
+    traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
     vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
     vec3 total_light = vec3(0);
     if (!shadow)

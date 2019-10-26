@@ -21,19 +21,20 @@ namespace lotus
         virtual ~Entity() = default;
 
         void tick_all(time_point time, duration delta);
+        void render_all(Engine* engine, std::shared_ptr<Entity>& sp);
 
         template<typename T, typename... Args>
-        void addComponent(Args... args)
+        void addComponent(Args&&... args)
         {
-            components.push_back(std::make_unique<T>(this, args...));
+            components.push_back(std::make_unique<T>(this, std::forward<Args>(args)...));
         };
 
         template<typename T>
         T* getComponent()
         {
-            for (auto component : components)
+            for (const auto& component : components)
             {
-                if (auto cast = std::dynamic_pointer_cast<T>(component))
+                if (auto cast = dynamic_cast<T*>(component.get()))
                 {
                     return cast;
                 }
@@ -49,6 +50,7 @@ namespace lotus
 
     protected:
         virtual void tick(time_point time, duration delta){}
+        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp){}
 
         glm::vec3 pos{};
         float rot{};

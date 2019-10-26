@@ -7,8 +7,14 @@
 
 namespace lotus
 {
-    Camera::Camera(Engine* _engine, Input* input) : engine(_engine)
+    Camera::Camera()
     {
+        
+    }
+
+    void Camera::Init(const std::shared_ptr<Camera>& sp, Engine* engine)
+    {
+        Input* input = &engine->input;
         camera_rot.x = cos(rot_x) * cos(rot_z);
         camera_rot.y = sin(rot_x);
         camera_rot.z = cos(rot_x) * sin(rot_z);
@@ -68,9 +74,13 @@ namespace lotus
 
     void Camera::tick(time_point time, duration delta)
     {
+    }
+
+    void Camera::render(Engine* engine, std::shared_ptr<Entity>& sp)
+    {
         if (update_ubo)
         {
-            engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this](WorkerThread* thread)
+            engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this, engine](WorkerThread* thread)
             {
                 void* buf = thread->engine->renderer.device->mapMemory(view_proj_ubo->memory, view_proj_ubo->memory_offset + (sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getCurrentImage(), (sizeof(view) + sizeof(proj)) * 2, {}, thread->engine->renderer.dispatch);
                 memcpy(buf, &proj, sizeof(proj));
@@ -84,8 +94,8 @@ namespace lotus
                     glm::vec3 lightDir = thread->engine->lights.directional_light.direction;
                     float cascade_splits[lotus::Renderer::shadowmap_cascades];
 
-                    float near_clip = thread->engine->camera.getNearClip();
-                    float far_clip = thread->engine->camera.getFarClip();
+                    float near_clip = this->getNearClip();
+                    float far_clip = this->getFarClip();
                     float range = far_clip - near_clip;
                     float ratio = far_clip / near_clip;
 
@@ -114,7 +124,7 @@ namespace lotus
                             glm::vec3{-1.f, -1.f, 1.f}
                         };
 
-                        glm::mat4 inverse_camera = glm::inverse(thread->engine->camera.getProjMatrix() * thread->engine->camera.getViewMatrix());
+                        glm::mat4 inverse_camera = glm::inverse(getProjMatrix() * getViewMatrix());
 
                         for (auto& corner : frustum_corners)
                         {
@@ -157,7 +167,7 @@ namespace lotus
 
                         last_split = cascade_splits[i];
                     }
-                    cascade_data.inverse_view = glm::inverse(thread->engine->camera.getViewMatrix());
+                    cascade_data.inverse_view = glm::inverse(getViewMatrix());
                     auto data = thread->engine->renderer.device->mapMemory(cascade_data_ubo->memory, cascade_data_ubo->memory_offset, sizeof(cascade_data) * engine->renderer.getImageCount(), {}, thread->engine->renderer.dispatch);
                     memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(cascade_data)), &cascade_data, sizeof(cascade_data));
                     thread->engine->renderer.device->unmapMemory(cascade_data_ubo->memory, thread->engine->renderer.dispatch);

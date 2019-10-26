@@ -50,10 +50,10 @@ namespace lotus
 
         std::string name;
         std::vector<std::unique_ptr<Mesh>> meshes;
+        bool weighted{ false };
         Lifetime lifetime {Lifetime::Short};
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
-        uint32_t acceleration_instanceid{ 0 };
 
     protected:
         explicit Model(const std::string& name);

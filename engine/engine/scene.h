@@ -11,8 +11,16 @@ namespace lotus
     class Scene
     {
     public:
-        Scene(Engine* _engine) : engine(_engine) {}
+        explicit Scene(Engine* _engine);
         void render();
+        void tick_all(time_point time, duration delta)
+        {
+            tick(time, delta);
+            for (const auto& entity : entities)
+            {
+                entity->tick_all(time, delta);
+            }
+        }
         template <typename T, typename... Args>
         std::shared_ptr<T> AddEntity(Args... args)
         {
@@ -22,10 +30,11 @@ namespace lotus
             return sp;
         }
     protected:
+        virtual void tick(time_point time, duration delta) {}
         void RebuildTLAS();
 
         Engine* engine;
-        std::shared_ptr<TopLevelAccelerationStructure> top_level_as;
+        std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
         bool rebuild_as{ false };
         std::vector<std::shared_ptr<Entity>> entities;
     };

@@ -17,14 +17,15 @@ namespace lotus
             alignas(16) glm::mat4 model;
         };
 
-        RenderableEntity(std::unique_ptr<Skeleton> skeleton = {});
+        RenderableEntity();
         virtual ~RenderableEntity() = default;
 
         void setScale(float x, float y, float z);
 
-        virtual void render(Engine* engine, std::shared_ptr<RenderableEntity>& sp);
-        virtual void populate_AS(TopLevelAccelerationStructure* as);
-        virtual void update_AS(TopLevelAccelerationStructure* as);
+        void addSkeleton(std::unique_ptr<Skeleton>&& skeleton, Engine* engine, size_t vertex_stride);
+
+        virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
+        virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
 
         std::vector<std::shared_ptr<Model>> models;
 
@@ -33,9 +34,10 @@ namespace lotus
         std::unique_ptr<Buffer> uniform_buffer;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
-        AnimationComponent* animation_component;
-        
+        AnimationComponent* animation_component {nullptr};
+
     protected:
+        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
         glm::vec3 scale{ 1.f, 1.f, 1.f };
         glm::mat4 scale_mat{ 1.f };
     };

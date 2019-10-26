@@ -2,7 +2,7 @@
 
 namespace lotus
 {
-    void LandscapeEntity::populate_AS(TopLevelAccelerationStructure* as)
+    void LandscapeEntity::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
         for (const auto& model : models)
         {
@@ -17,15 +17,15 @@ namespace lotus
                     instance.accelerationStructureHandle = model->bottom_level_as->handle;
                     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                     instance.mask = 0xFF;
-                    instance.instanceOffset = 0;
+                    instance.instanceOffset = 32;
                     instance.instanceId = model->bottom_level_as->resource_index;
-                    model->acceleration_instanceid = as->AddInstance(instance);
+                    model->bottom_level_as->instanceid = as->AddInstance(instance);
                 }
             }
         }
     }
 
-    void LandscapeEntity::update_AS(TopLevelAccelerationStructure* as)
+    void LandscapeEntity::update_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
         //landscape can't move so no need to update
     }

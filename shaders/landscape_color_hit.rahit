@@ -6,10 +6,11 @@ struct Vertex
 {
     vec3 pos;
     vec3 norm;
+    vec3 color;
     vec2 uv;
+    float _pad;
 };
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
 layout(binding = 1, set = 0) buffer Vertices
 {
     vec4 v[];
@@ -22,19 +23,12 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
-layout(binding = 2, set = 1) uniform Light
-{
-    vec3 light;
-    float pad;
-    vec3 color;
-} light;
-
 layout(location = 0) rayPayloadInNV HitValue
 {
     vec3 color;
+    uint max_index;
+    float min_dist;
 } hitValue;
-
-layout(location = 1) rayPayloadNV bool shadow;
 
 layout(shaderRecordNV) buffer Block
 {
@@ -63,7 +57,7 @@ ivec3 getIndex(uint primitive_id)
     return ret;
 }
 
-uint vertexSize = 2;
+uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
@@ -72,10 +66,12 @@ Vertex unpackVertex(uint index)
 
     vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
     vec4 d1 = vertices[resource_index].v[vertexSize * index + 1];
+    vec4 d2 = vertices[resource_index].v[vertexSize * index + 2];
 
     v.pos = d0.xyz;
     v.norm = vec3(d0.w, d1.x, d1.y);
-    v.uv = vec2(d1.z, d1.w);
+    v.color = vec3(d1.z, d1.w, d2.x);
+    v.uv = vec2(d2.y, d2.z);
     return v;
 }
 
@@ -88,24 +84,9 @@ void main()
 
     const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
-    vec3 normal = v0.norm * barycentrics.x + v1.norm * barycentrics.y + v2.norm * barycentrics.z;
-    vec3 transformed_normal = mat3(gl_ObjectToWorldNV) * normal;
-    vec3 normalized_normal = normalize(transformed_normal);
-
-    float dot_product = max(dot(-light.light, normalized_normal), 0.5);
-
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
-    vec3 color = texture(textures[resource_index], uv).xyz;
-
-    vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV;
-    shadow = true;
-    //traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
-    vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
-    vec3 total_light = vec3(0);
-    if (!shadow)
-        total_light = light.color;
-    total_light = max(ambient, total_light);
-
-    hitValue.color = color * total_light;
+    float a = texture(textures[resource_index], uv).a;
+    if (a == 0)
+        ignoreIntersectionNV();
 }

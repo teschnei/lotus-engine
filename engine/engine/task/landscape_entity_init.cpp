@@ -44,7 +44,7 @@ namespace lotus
                 command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_graphics_pipeline, thread->engine->renderer.dispatch);
 
                 vk::DescriptorBufferInfo buffer_info;
-                buffer_info.buffer = thread->engine->camera.view_proj_ubo->buffer;
+                buffer_info.buffer = thread->engine->camera->view_proj_ubo->buffer;
                 buffer_info.offset = i * (sizeof(glm::mat4) * 4);
                 buffer_info.range = sizeof(glm::mat4) * 4;
 
@@ -93,9 +93,9 @@ namespace lotus
                 buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = thread->engine->camera.cascade_data_ubo->buffer;
-                cascade_buffer_info.offset = i * sizeof(thread->engine->camera.cascade_data);
-                cascade_buffer_info.range = sizeof(thread->engine->camera.cascade_data);
+                cascade_buffer_info.buffer = thread->engine->camera->cascade_data_ubo->buffer;
+                cascade_buffer_info.offset = i * sizeof(thread->engine->camera->cascade_data);
+                cascade_buffer_info.range = sizeof(thread->engine->camera->cascade_data);
 
                 std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 

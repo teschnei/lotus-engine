@@ -268,7 +268,8 @@ namespace FFXI
                         offset += sizeof(SMMBBlockVertex);
                     }
                     //displace vertices slightly because RTX can't use mesh order to determine z-fighting
-                    glm::vec3 mesh_scale = glm::vec3(vertex.normal.x * 0.001 * model_index, vertex.normal.y * 0.001 * model_index, vertex.normal.z * 0.001 * model_index);
+                    float mesh_offset = 0.00001f;
+                    glm::vec3 mesh_scale = glm::vec3(vertex.normal.x * mesh_offset * model_index, vertex.normal.y * mesh_offset * model_index, vertex.normal.z * mesh_offset * model_index);
                     vertex.pos += mesh_scale;
                     mesh.vertices.push_back(std::move(vertex));
                 }

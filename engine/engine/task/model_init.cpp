@@ -53,32 +53,53 @@ namespace lotus
                 memcpy(staging_buffer_data + staging_buffer_offset, vertex_buffer.data(), vertex_buffer.size());
                 memcpy(staging_buffer_data + staging_buffer_offset + vertex_buffer.size(), index_buffer.data(), index_buffer.size());
 
-                std::array<vk::BufferMemoryBarrier, 2> barriers;
-                barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[0].buffer = mesh->vertex_buffer->buffer;
-                barriers[0].size = VK_WHOLE_SIZE;
-                barriers[0].srcAccessMask = {};
-                barriers[0].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+                if(!model->weighted)
+                {
+                    std::array<vk::BufferMemoryBarrier, 2> barriers;
+                    barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barriers[0].buffer = mesh->vertex_buffer->buffer;
+                    barriers[0].size = VK_WHOLE_SIZE;
+                    barriers[0].srcAccessMask = {};
+                    barriers[0].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
-                barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[1].buffer = mesh->index_buffer->buffer;
-                barriers[1].size = VK_WHOLE_SIZE;
-                barriers[1].srcAccessMask = {};
-                barriers[1].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+                    barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barriers[1].buffer = mesh->index_buffer->buffer;
+                    barriers[1].size = VK_WHOLE_SIZE;
+                    barriers[1].srcAccessMask = {};
+                    barriers[1].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barriers, nullptr, thread->engine->renderer.dispatch);
+                    command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barriers, nullptr, thread->engine->renderer.dispatch);
 
-                vk::BufferCopy copy_region;
-                copy_region.srcOffset = staging_buffer_offset;
-                copy_region.size = vertex_buffer.size();
-                command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
-                copy_region.size = index_buffer.size();
-                copy_region.srcOffset = vertex_buffer.size() + staging_buffer_offset;
-                command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+                    vk::BufferCopy copy_region;
+                    copy_region.srcOffset = staging_buffer_offset;
+                    copy_region.size = vertex_buffer.size();
+                    command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+                    copy_region.size = index_buffer.size();
+                    copy_region.srcOffset = vertex_buffer.size() + staging_buffer_offset;
+                    command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+                }
+                else
+                {
+                    vk::BufferMemoryBarrier barrier;
 
-                if (thread->engine->renderer.RTXEnabled())
+                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    barrier.buffer = mesh->index_buffer->buffer;
+                    barrier.size = VK_WHOLE_SIZE;
+                    barrier.srcAccessMask = {};
+                    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+
+                    command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
+
+                    vk::BufferCopy copy_region;
+                    copy_region.size = index_buffer.size();
+                    copy_region.srcOffset = vertex_buffer.size() + staging_buffer_offset;
+                    command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+                }
+
+                if (thread->engine->renderer.RTXEnabled() && !model->weighted)
                 {
                     auto& geo = raytrace_geometry.emplace_back();
                     geo.geometryType = vk::GeometryTypeNV::eTriangles;
@@ -96,19 +117,30 @@ namespace lotus
                     {
                         geo.flags = vk::GeometryFlagBitsNV::eOpaque;
                     }
-                    vk::MemoryBarrier barrier;
-                    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-                    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-                    command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
                 }
 
                 staging_buffer_offset += vertex_buffer.size() + index_buffer.size();
             }
             thread->engine->renderer.device->unmapMemory(staging_buffer->memory, thread->engine->renderer.dispatch);
-
-            if (thread->engine->renderer.RTXEnabled())
+            for (int i = 0; i < vertex_buffers.size(); ++i)
             {
-                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, model->lifetime == Lifetime::Long);
+                if (model->weighted)
+                {
+                    auto& vertex_buffer = vertex_buffers[i];
+                    auto& mesh = model->meshes[i];
+                    auto weighted_vertex_buffer = thread->engine->renderer.device->mapMemory(mesh->vertex_buffer->memory, mesh->vertex_buffer->memory_offset, VK_WHOLE_SIZE, {}, thread->engine->renderer.dispatch);
+                    memcpy(weighted_vertex_buffer, vertex_buffer.data(), vertex_buffer.size());
+                    thread->engine->renderer.device->unmapMemory(mesh->vertex_buffer->memory);
+                }
+            }
+
+            if (thread->engine->renderer.RTXEnabled() && !model->weighted)
+            {
+                vk::MemoryBarrier barrier;
+                barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
+                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, model->lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
             }
             command_buffer->end(thread->engine->renderer.dispatch);
 

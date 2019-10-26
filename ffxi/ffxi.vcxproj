@@ -48,6 +48,8 @@
     <GLSLValidate Include="..\shaders\deferred_raytrace.frag" />
     <GLSLValidate Include="..\shaders\gbuffer_frag.frag" />
     <GLSLValidate Include="..\shaders\gbuffer_vert.vert" />
+    <GLSLValidate Include="..\shaders\landscape_closest_hit.rchit" />
+    <GLSLValidate Include="..\shaders\landscape_color_hit.rahit" />
     <GLSLValidate Include="..\shaders\miss.rmiss" />
     <GLSLValidate Include="..\shaders\raygen.rgen" />
     <GLSLValidate Include="..\shaders\shadow_frag.frag" />

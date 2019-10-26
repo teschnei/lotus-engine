@@ -229,7 +229,7 @@ FFXI::OS2::OS2(uint8_t* buffer, size_t max_len)
 
     for (size_t i = 0; i < one_weight_count; ++i)
     {
-        WeightingVertex vertex{};
+        WeightingVertexMirror vertex{};
         vertex.pos = { vertex_buffer[0], vertex_buffer[1], vertex_buffer[2] };
         vertex_buffer += 3;
         if (normals)
@@ -250,12 +250,12 @@ FFXI::OS2::OS2(uint8_t* buffer, size_t max_len)
         vertex.mirror_axis = bone_indices->mirror_axis;
         vertex.weight = 1.f;
         bone_indices += 2;
-        vertices.emplace_back(vertex, WeightingVertex{});
+        vertices.emplace_back(vertex, WeightingVertexMirror{});
     }
     for (size_t i = 0; i < two_weight_count; ++i)
     {
-        WeightingVertex vertex1{};
-        WeightingVertex vertex2{};
+        WeightingVertexMirror vertex1{};
+        WeightingVertexMirror vertex2{};
         vertex1.pos = { vertex_buffer[0], vertex_buffer[2], vertex_buffer[4] };
         vertex2.pos = { vertex_buffer[1], vertex_buffer[3], vertex_buffer[5] };
         vertex_buffer += 6;

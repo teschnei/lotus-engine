@@ -39,7 +39,9 @@ namespace lotus
         }
 
         int getIndexCount() const { return indices; }
+        int getVertexCount() const { return vertices; }
         void setIndexCount(int _indices) { indices = _indices; }
+        void setVertexCount(int _vertices) { vertices = _vertices; }
 
         void setVertexBuffer(uint8_t* buffer, size_t len);
 
@@ -57,6 +59,7 @@ namespace lotus
         std::vector<vk::VertexInputBindingDescription> vertex_bindings;
         std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
         int indices{ 0 };
+        int vertices{ 0 };
     };
 
 }
