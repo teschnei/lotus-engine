@@ -2,14 +2,18 @@
 #include "engine/core.h"
 #include "engine/entity/renderable_entity.h"
 #include "engine/renderer/skeleton.h"
-#include "engine/task/skin_mesh.h"
+#include "engine/task/transform_skeleton.h"
 
 namespace lotus
 {
     AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton, size_t _vertex_stride) : Component(_entity), skeleton(std::move(_skeleton)), vertex_stride(_vertex_stride), engine(_engine)
     {
+        skeleton_bone_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+
+        //TODO: remove me
         playAnimation("idl0");
-        for (size_t i = 0; i < skeleton->bones.size(); ++i)
+        for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
         {
             auto& bone = skeleton->bones[i];
             bone.rot = skeleton->animations["idl0"]->transforms[0][i].rot;
@@ -22,12 +26,11 @@ namespace lotus
     {
         if (current_animation)
         {
-            //engine->worker_pool.addWork(std::make_unique<SkinMeshTask>(static_cast<RenderableEntity*>(entity)));
             duration animation_delta = time - animation_start;
             float frame_f = static_cast<float>((animation_delta % current_animation->frame_duration).count()) / static_cast<float>(current_animation->frame_duration.count());
-            int frame = (animation_delta / current_animation->frame_duration) % current_animation->transforms.size();
-            int next_frame = (frame + 1) % current_animation->transforms.size();
-            for (size_t i = 0; i < skeleton->bones.size(); ++i)
+            uint32_t frame = (animation_delta / current_animation->frame_duration) % current_animation->transforms.size();
+            uint32_t next_frame = (frame + 1) % current_animation->transforms.size();
+            for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
             {
                 auto& bone = skeleton->bones[i];
                 bone.rot = glm::slerp(current_animation->transforms[frame][i].rot, current_animation->transforms[next_frame][i].rot, frame_f);
@@ -35,6 +38,11 @@ namespace lotus
                 bone.scale = glm::mix(current_animation->transforms[frame][i].scale, current_animation->transforms[next_frame][i].scale, frame_f);
             }
         }
+    }
+
+    void AnimationComponent::render(Engine* engine)
+    {
+        engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<RenderableEntity*>(entity)));
     }
 
     void AnimationComponent::playAnimation(std::string name)

@@ -38,7 +38,7 @@
     <ClCompile Include="engine\task\landscape_entity_init.cpp" />
     <ClCompile Include="engine\task\model_init.cpp" />
     <ClCompile Include="engine\task\renderable_entity_init.cpp" />
-    <ClCompile Include="engine\task\skin_mesh.cpp" />
+    <ClCompile Include="engine\task\transform_skeleton.cpp" />
     <ClCompile Include="engine\task\texture_init.cpp" />
     <ClCompile Include="engine\worker_pool.cpp" />
     <ClCompile Include="engine\worker_thread.cpp" />
@@ -73,7 +73,7 @@
     <ClInclude Include="engine\task\landscape_entity_init.h" />
     <ClInclude Include="engine\task\model_init.h" />
     <ClInclude Include="engine\task\renderable_entity_init.h" />
-    <ClInclude Include="engine\task\skin_mesh.h" />
+    <ClInclude Include="engine\task\transform_skeleton.h" />
     <ClInclude Include="engine\task\texture_init.h" />
     <ClInclude Include="engine\types.h" />
     <ClInclude Include="engine\worker_pool.h" />

@@ -23,6 +23,7 @@ namespace lotus
         virtual ~AnimationComponent() override = default;
 
         virtual void tick(time_point time, duration delta) override;
+        virtual void render(Engine* engine) override;
         void playAnimation(std::string name);
 
         //acceleration structures (per model)
@@ -31,6 +32,15 @@ namespace lotus
         size_t vertex_stride;
         Animation* current_animation{ nullptr };
         time_point animation_start;
+        struct BufferBone
+        {
+            glm::vec4 rot;
+            glm::vec3 trans;
+            float _pad1;
+            glm::vec3 scale;
+            float _pad2;
+        };
+        std::unique_ptr<Buffer> skeleton_bone_buffer;
 
     protected:
         Engine* engine;

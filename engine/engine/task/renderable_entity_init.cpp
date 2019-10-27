@@ -130,7 +130,7 @@ namespace lotus
         {
             vk::CommandBufferAllocateInfo alloc_info;
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
-            alloc_info.commandPool = *thread->command_pool;
+            alloc_info.commandPool = *thread->graphics.command_pool;
             alloc_info.commandBufferCount = 1;
 
             auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
@@ -149,7 +149,7 @@ namespace lotus
                 }
             }
             command_buffer->end(thread->engine->renderer.dispatch);
-            thread->primary_buffers[thread->engine->renderer.getCurrentImage()].push_back(*command_buffer);
+            thread->graphics.primary_buffers[thread->engine->renderer.getCurrentImage()].push_back(*command_buffer);
         }
     }
 
@@ -205,76 +205,17 @@ namespace lotus
         std::vector<std::vector<vk::GeometryNV>> raytrace_geometry;
         raytrace_geometry.resize(thread->engine->renderer.getImageCount());
         const auto& animation_component = entity->animation_component;
-        const auto& skeleton = animation_component->skeleton;
         vertex_buffer.resize(model.meshes.size());
         for (size_t i = 0; i < model.meshes.size(); ++i)
         {
             const auto& mesh = model.meshes[i];
 
-            auto weighted_vertex_buffer = static_cast<FFXI::OS2::WeightingVertex*>(thread->engine->renderer.device->mapMemory(mesh->vertex_buffer->memory, mesh->vertex_buffer->memory_offset, VK_WHOLE_SIZE, {}, thread->engine->renderer.dispatch));
             std::vector<FFXI::OS2::Vertex> vertices;
-
-            for (size_t w = 0; w < mesh->getVertexCount(); w += 2)
-            {
-                auto vertex1 = weighted_vertex_buffer[w];
-                auto vertex2 = weighted_vertex_buffer[w+1];
-
-                FFXI::OS2::Vertex os2_vertex;
-
-                //TODO: move this to compute shader
-                if (vertex2.weight == 0.f)
-                {
-                    Skeleton::Bone& bone = skeleton->bones[vertex1.bone_index];
-                    os2_vertex.pos = bone.rot * mirrorVec(vertex1.pos, vertex1.mirror_axis);
-                    os2_vertex.pos += bone.trans;
-                    os2_vertex.norm = (bone.rot * vertex1.norm);
-                    os2_vertex.norm = glm::normalize(os2_vertex.norm);
-                }
-                else
-                {
-                    Skeleton::Bone& bone1 = skeleton->bones[vertex1.bone_index];
-                    Skeleton::Bone& bone2 = skeleton->bones[vertex2.bone_index];
-
-                    glm::vec3 pos1 = bone1.rot * mirrorVec(vertex1.pos, vertex1.mirror_axis) + (bone1.trans * vertex1.weight);
-                    glm::vec3 norm1 = bone1.rot * vertex1.norm * vertex1.weight;
-                    norm1 = glm::normalize(norm1);
-
-                    glm::vec3 pos2 = (bone2.rot * mirrorVec(vertex2.pos, vertex2.mirror_axis)) + (bone2.trans * vertex2.weight);
-                    glm::vec3 norm2 = (bone2.rot * vertex2.norm) * vertex2.weight;
-                    norm2 = glm::normalize(norm2);
-
-                    os2_vertex.pos = pos1 + pos2;
-                    os2_vertex.norm = glm::normalize(norm1 + norm2);
-                }
-                os2_vertex.uv = vertex1.uv;
-                vertices.push_back(os2_vertex);
-            }
-            thread->engine->renderer.device->unmapMemory(mesh->vertex_buffer->memory);
 
             for (uint32_t image = 0; image < thread->engine->renderer.getImageCount(); ++image)
             {
-                vertex_buffer[i].push_back(thread->engine->renderer.memory_manager->GetBuffer(vertices.size() * sizeof(FFXI::OS2::Vertex),
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal));
-
-                staging_buffers.push_back(thread->engine->renderer.memory_manager->GetBuffer(vertices.size() * sizeof(FFXI::OS2::Vertex), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
-                uint8_t* staging_buffer_data = static_cast<uint8_t*>(thread->engine->renderer.device->mapMemory(staging_buffers.back()->memory, staging_buffers.back()->memory_offset, vertices.size() * sizeof(FFXI::OS2::Vertex), {}, thread->engine->renderer.dispatch));
-                memcpy(staging_buffer_data, vertices.data(), vertices.size() * sizeof(FFXI::OS2::Vertex));
-                thread->engine->renderer.device->unmapMemory(staging_buffers.back()->memory);
-
-                vk::BufferMemoryBarrier barrier;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.buffer = vertex_buffer[i].back()->buffer;
-                barrier.size = VK_WHOLE_SIZE;
-                barrier.srcAccessMask = {};
-                barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-                command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
-
-                vk::BufferCopy copy_region;
-                copy_region.srcOffset = 0;
-                copy_region.size = vertices.size() * sizeof(FFXI::OS2::Vertex);
-                command_buffer.copyBuffer(staging_buffers.back()->buffer, vertex_buffer[i].back()->buffer, copy_region, thread->engine->renderer.dispatch);
+                vertex_buffer[i].push_back(thread->engine->renderer.memory_manager->GetBuffer(mesh->getVertexCount() * sizeof(FFXI::OS2::Vertex),
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
                 if (thread->engine->renderer.RTXEnabled())
                 {
@@ -308,23 +249,5 @@ namespace lotus
                 animation_component->acceleration_structures.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(thread->engine, command_buffer, raytrace_geometry[i], true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
             }
         }
-    }
-
-    glm::vec3 RenderableEntityInitTask::mirrorVec(glm::vec3 pos, uint8_t mirror_axis)
-    {
-        glm::vec3 ret = pos;
-        if (mirror_axis == 1)
-        {
-            ret.x = -ret.x;
-        }
-        if (mirror_axis == 2)
-        {
-            ret.y = -ret.y;
-        }
-        if (mirror_axis == 3)
-        {
-            ret.z = -ret.z;
-        }
-        return ret;
     }
 }

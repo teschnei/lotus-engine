@@ -12,7 +12,7 @@ struct Vertex
 layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
 layout(binding = 1, set = 0) buffer Vertices
 {
-    vec4 v[];
+    Vertex v[];
 } vertices[1024];
 
 layout(binding = 2, set = 0) buffer Indices
@@ -63,19 +63,13 @@ ivec3 getIndex(uint primitive_id)
     return ret;
 }
 
-uint vertexSize = 2;
+uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
     uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
-    Vertex v;
+    Vertex v = vertices[resource_index].v[index];
 
-    vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
-    vec4 d1 = vertices[resource_index].v[vertexSize * index + 1];
-
-    v.pos = d0.xyz;
-    v.norm = vec3(d0.w, d1.x, d1.y);
-    v.uv = vec2(d1.z, d1.w);
     return v;
 }
 

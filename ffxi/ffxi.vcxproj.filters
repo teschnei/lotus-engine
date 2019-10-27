@@ -135,5 +135,8 @@
     <GLSLValidate Include="..\shaders\shadow_vert.vert">
       <Filter>shaders</Filter>
     </GLSLValidate>
+    <GLSLValidate Include="..\shaders\animation_skin.comp">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
   </ItemGroup>
 </Project>

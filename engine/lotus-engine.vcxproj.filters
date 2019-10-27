@@ -89,11 +89,11 @@
     <ClCompile Include="engine\entity\component\animation_component.cpp">
       <Filter>entity\component</Filter>
     </ClCompile>
-    <ClCompile Include="engine\task\skin_mesh.cpp">
-      <Filter>task</Filter>
-    </ClCompile>
     <ClCompile Include="engine\renderer\animation.cpp">
       <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\transform_skeleton.cpp">
+      <Filter>task</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -173,11 +173,11 @@
     <ClInclude Include="engine\entity\component\animation_component.h">
       <Filter>entity\component</Filter>
     </ClInclude>
-    <ClInclude Include="engine\task\skin_mesh.h">
-      <Filter>task</Filter>
-    </ClInclude>
     <ClInclude Include="engine\renderer\animation.h">
       <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\transform_skeleton.h">
+      <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

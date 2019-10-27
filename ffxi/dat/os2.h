@@ -15,10 +15,11 @@ namespace FFXI
         struct WeightingVertex
         {
             glm::vec3 pos;
+            float _pad1;
             glm::vec3 norm;
             float weight;
-            uint8_t bone_index;
-            uint8_t mirror_axis;
+            uint32_t bone_index;
+            uint32_t mirror_axis;
             glm::vec2 uv;
         };
 
@@ -35,8 +36,11 @@ namespace FFXI
         struct Vertex
         {
             glm::vec3 pos;
+            float _pad;
             glm::vec3 norm;
+            float _pad2;
             glm::vec2 uv;
+            glm::vec2 _pad3;
 
             static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
             static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();

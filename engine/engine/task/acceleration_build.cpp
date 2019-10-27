@@ -12,9 +12,11 @@ namespace lotus
 
     void AccelerationBuildTask::Process(WorkerThread* thread)
     {
+        vk::EventCreateInfo build_event_ci;
+
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *thread->command_pool;
+        alloc_info.commandPool = *thread->compute.command_pool;
         alloc_info.commandBufferCount = 1;
 
         auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
@@ -29,6 +31,6 @@ namespace lotus
 
         command_buffer->end(thread->engine->renderer.dispatch);
 
-        thread->primary_buffers[image_index].push_back(*command_buffer);
+        thread->compute.primary_buffers[image_index].push_back(*command_buffer);
     }
 }

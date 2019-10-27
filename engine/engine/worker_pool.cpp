@@ -41,35 +41,57 @@ namespace lotus
         idle_cv.notify_all();
     }
 
-    std::vector<vk::CommandBuffer> WorkerPool::getPrimaryCommandBuffers(int image)
+    std::vector<vk::CommandBuffer> WorkerPool::getPrimaryGraphicsBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
         for (const auto& thread : threads)
         {
-            buffers.insert(buffers.end(), thread->primary_buffers[image].begin(), thread->primary_buffers[image].end());
-            thread->primary_buffers[image].clear();
+            buffers.insert(buffers.end(), thread->graphics.primary_buffers[image].begin(), thread->graphics.primary_buffers[image].end());
+            thread->graphics.primary_buffers[image].clear();
         }
         return buffers;
     }
 
-    std::vector<vk::CommandBuffer> WorkerPool::getSecondaryCommandBuffers(int image)
+    std::vector<vk::CommandBuffer> WorkerPool::getSecondaryGraphicsBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
         for (const auto& thread : threads)
         {
-            buffers.insert(buffers.end(), thread->secondary_buffers[image].begin(), thread->secondary_buffers[image].end());
-            thread->secondary_buffers[image].clear();
+            buffers.insert(buffers.end(), thread->graphics.secondary_buffers[image].begin(), thread->graphics.secondary_buffers[image].end());
+            thread->graphics.secondary_buffers[image].clear();
         }
         return buffers;
     }
 
-    std::vector<vk::CommandBuffer> WorkerPool::getShadowmapCommandBuffers(int image)
+    std::vector<vk::CommandBuffer> WorkerPool::getShadowmapGraphicsBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
         for (const auto& thread : threads)
         {
-            buffers.insert(buffers.end(), thread->shadow_buffers[image].begin(), thread->shadow_buffers[image].end());
-            thread->shadow_buffers[image].clear();
+            buffers.insert(buffers.end(), thread->graphics.shadow_buffers[image].begin(), thread->graphics.shadow_buffers[image].end());
+            thread->graphics.shadow_buffers[image].clear();
+        }
+        return buffers;
+    }
+
+    std::vector<vk::CommandBuffer> WorkerPool::getPrimaryComputeBuffers(int image)
+    {
+        std::vector<vk::CommandBuffer> buffers;
+        for (const auto& thread : threads)
+        {
+            buffers.insert(buffers.end(), thread->compute.primary_buffers[image].begin(), thread->compute.primary_buffers[image].end());
+            thread->compute.primary_buffers[image].clear();
+        }
+        return buffers;
+    }
+
+    std::vector<vk::Event> WorkerPool::getComputeEvents(int image)
+    {
+        std::vector<vk::Event> buffers;
+        for (const auto& thread : threads)
+        {
+            buffers.insert(buffers.end(), thread->compute.events[image].begin(), thread->compute.events[image].end());
+            thread->compute.events[image].clear();
         }
         return buffers;
     }

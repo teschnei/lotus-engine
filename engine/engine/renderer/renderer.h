@@ -37,7 +37,7 @@ namespace lotus
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain_images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
         void setCurrentImage(int _current_image) { current_image = _current_image; }
-        std::pair<std::optional<uint32_t>, std::optional<std::uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
+        std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
 
         void drawFrame();
         void resized() { resize = true; }
@@ -47,6 +47,7 @@ namespace lotus
         vk::UniqueHandle<vk::Device, vk::DispatchLoaderStatic> device;
         vk::Queue graphics_queue;
         vk::Queue present_queue;
+        vk::Queue compute_queue;
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> swapchain;
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> old_swapchain;
         vk::Extent2D swapchain_extent{};
@@ -114,6 +115,12 @@ namespace lotus
 
         RenderMode render_mode{ RenderMode::RTX };
 
+        /* Animation pipeline */
+        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> animation_descriptor_set_layout;
+        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> animation_pipeline_layout;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> animation_pipeline;
+        /* Animatino pipeline */
+
         /* Ray tracing */
         bool RTXEnabled();
         bool RasterizationEnabled();
@@ -155,6 +162,7 @@ namespace lotus
         void createGBufferResources();
         void createDeferredCommandBuffer();
         void createQuad();
+        void createAnimationResources();
 
         vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
 
@@ -179,6 +187,7 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::Fence, vk::DispatchLoaderDynamic>> frame_fences;
         std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> image_ready_sem;
         std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> frame_finish_sem;
+        vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> compute_sem;
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
         uint32_t current_image{ 0 };
         uint32_t max_pending_frames{ 2 };

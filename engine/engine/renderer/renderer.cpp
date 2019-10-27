@@ -82,6 +82,7 @@ namespace lotus
         createGBufferResources();
         createQuad();
         createRayTracingResources();
+        createAnimationResources();
 
         render_commandbuffers.resize(getImageCount());
     }
@@ -224,11 +225,11 @@ namespace lotus
         auto physical_devices = instance->enumeratePhysicalDevices();
 
         physical_device = *std::find_if(physical_devices.begin(), physical_devices.end(), [this](auto& device) {
-            auto [graphics, present] = getQueueFamilies(device);
+            auto [graphics, present, compute] = getQueueFamilies(device);
             auto extensions_supported = extensionsSupported(device);
             auto swap_chain_info = getSwapChainInfo(device);
             auto supported_features = device.getFeatures();
-            return graphics && present && extensions_supported && !swap_chain_info.formats.empty() && !swap_chain_info.present_modes.empty() && supported_features.samplerAnisotropy;
+            return graphics && present && compute && extensions_supported && !swap_chain_info.formats.empty() && !swap_chain_info.present_modes.empty() && supported_features.samplerAnisotropy;
         });
 
         if (!physical_device)
@@ -245,9 +246,9 @@ namespace lotus
 
     void Renderer::createDevice()
     {
-        auto [graphics_queue_idx, present_queue_idx] = getQueueFamilies(physical_device);
+        auto [graphics_queue_idx, present_queue_idx, compute_queue_idx] = getQueueFamilies(physical_device);
         //deduplicate queues
-        std::set<uint32_t> queues = { graphics_queue_idx.value(), present_queue_idx.value() };
+        std::set<uint32_t> queues = { graphics_queue_idx.value(), present_queue_idx.value(), compute_queue_idx.value() };
 
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
         float queue_priority = 1.f;
@@ -289,6 +290,7 @@ namespace lotus
 
         graphics_queue = device->getQueue(graphics_queue_idx.value(), 0);
         present_queue = device->getQueue(present_queue_idx.value(), 0);
+        compute_queue = device->getQueue(compute_queue_idx.value(), 0);
 
         dispatch = vk::DispatchLoaderDynamic(*instance, *device);
     }
@@ -376,7 +378,7 @@ namespace lotus
             swapchain_create_info.oldSwapchain = *old_swapchain;
         }
 
-        auto [graphics, present] = getQueueFamilies(physical_device);
+        auto [graphics, present, compute] = getQueueFamilies(physical_device);
         uint32_t queueIndices[] = { graphics.value(), present.value() };
         if (graphics.value() != present.value())
         {
@@ -1159,11 +1161,12 @@ namespace lotus
             frame_finish_sem.push_back(device->createSemaphoreUnique({}, nullptr, dispatch));
         }
         gbuffer_sem = device->createSemaphoreUnique({}, nullptr, dispatch);
+        compute_sem = device->createSemaphoreUnique({}, nullptr, dispatch);
     }
 
     void Renderer::createCommandPool()
     {
-        auto graphics_queue = getQueueFamilies(engine->renderer.physical_device).first;
+        auto graphics_queue = std::get<0>(getQueueFamilies(engine->renderer.physical_device));
 
         vk::CommandPoolCreateInfo pool_info = {};
         pool_info.queueFamilyIndex = graphics_queue.value();
@@ -1463,6 +1466,71 @@ namespace lotus
         device->unmapMemory(quad.index_buffer->memory, dispatch);
     }
 
+    void Renderer::createAnimationResources()
+    {
+        //descriptor set layout
+        vk::DescriptorSetLayoutBinding vertex_info_buffer;
+        vertex_info_buffer.binding = 0;
+        vertex_info_buffer.descriptorCount = 1;
+        vertex_info_buffer.descriptorType = vk::DescriptorType::eStorageBuffer;
+        vertex_info_buffer.pImmutableSamplers = nullptr;
+        vertex_info_buffer.stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+        vk::DescriptorSetLayoutBinding skeleton_info_buffer;
+        skeleton_info_buffer.binding = 1;
+        skeleton_info_buffer.descriptorCount = 1;
+        skeleton_info_buffer.descriptorType = vk::DescriptorType::eStorageBuffer;
+        skeleton_info_buffer.pImmutableSamplers = nullptr;
+        skeleton_info_buffer.stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+        vk::DescriptorSetLayoutBinding vertex_out_buffer;
+        vertex_out_buffer.binding = 2;
+        vertex_out_buffer.descriptorCount = 1;
+        vertex_out_buffer.descriptorType = vk::DescriptorType::eStorageBuffer;
+        vertex_out_buffer.pImmutableSamplers = nullptr;
+        vertex_out_buffer.stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+        std::vector<vk::DescriptorSetLayoutBinding> descriptor_bindings = { vertex_info_buffer, skeleton_info_buffer, vertex_out_buffer };
+
+        vk::DescriptorSetLayoutCreateInfo layout_info = {};
+        layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+        layout_info.bindingCount = static_cast<uint32_t>(descriptor_bindings.size());
+        layout_info.pBindings = descriptor_bindings.data();
+
+        animation_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+
+        //pipeline layout
+        vk::PipelineLayoutCreateInfo pipeline_layout_ci;
+        std::vector<vk::DescriptorSetLayout> layouts = { *animation_descriptor_set_layout };
+        pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(layouts.size());
+        pipeline_layout_ci.pSetLayouts = layouts.data();
+
+        vk::PushConstantRange push_constants;
+        push_constants.size = sizeof(uint32_t);
+        push_constants.offset = 0;
+        push_constants.stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+        pipeline_layout_ci.pPushConstantRanges = &push_constants;
+        pipeline_layout_ci.pushConstantRangeCount = 1;
+
+        animation_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_ci, nullptr, dispatch);
+
+        //pipeline
+        vk::ComputePipelineCreateInfo pipeline_ci;
+        pipeline_ci.layout = *animation_pipeline_layout;
+
+        auto animation_module = getShader("shaders/animation_skin.spv");
+
+        vk::PipelineShaderStageCreateInfo animation_shader_stage_info;
+        animation_shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
+        animation_shader_stage_info.module = *animation_module;
+        animation_shader_stage_info.pName = "main";
+
+        pipeline_ci.stage = animation_shader_stage_info;
+
+        animation_pipeline = device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr, dispatch);
+    }
+
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)
     {
         std::ifstream file(file_name, std::ios::ate | std::ios::binary);
@@ -1536,7 +1604,7 @@ namespace lotus
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clearValue.size());
                 renderpass_info.pClearValues = clearValue.data();
 
-                auto shadowmap_buffers = engine->worker_pool.getShadowmapCommandBuffers(image_index);
+                auto shadowmap_buffers = engine->worker_pool.getShadowmapGraphicsBuffers(image_index);
 
                 for (uint32_t i = 0; i < shadowmap_cascades; ++i)
                 {
@@ -1561,7 +1629,7 @@ namespace lotus
             renderpass_info.renderArea.extent = { WIDTH, HEIGHT };
 
             buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-            auto secondary_buffers = engine->worker_pool.getSecondaryCommandBuffers(image_index);
+            auto secondary_buffers = engine->worker_pool.getSecondaryGraphicsBuffers(image_index);
             buffer[0]->executeCommands(secondary_buffers, dispatch);
             buffer[0]->endRenderPass(dispatch);
         }
@@ -1639,11 +1707,18 @@ namespace lotus
 
             vk::MemoryBarrier barrier;
 
-            barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV;
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eAccelerationStructureReadNV;
+            //barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV;
+            //barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eAccelerationStructureReadNV;
 
-            buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eRayTracingShaderNV,
-                {}, barrier, nullptr, nullptr, engine->renderer.dispatch);
+            //buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eRayTracingShaderNV,
+            //    {}, barrier, nullptr, nullptr, engine->renderer.dispatch);
+
+            auto events = engine->worker_pool.getComputeEvents(image_index);
+
+            if (!events.empty())
+            {
+                //buffer[0]->waitEvents(events, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eRayTracingShaderNV, {}, {}, {}, dispatch);
+            }
 
             buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
@@ -1705,11 +1780,13 @@ namespace lotus
         return extensions;
     }
 
-    std::pair<std::optional<uint32_t>, std::optional<std::uint32_t>> Renderer::getQueueFamilies(vk::PhysicalDevice device) const
+    std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<std::uint32_t>> Renderer::getQueueFamilies(vk::PhysicalDevice device) const
     {
         auto queue_families = device.getQueueFamilyProperties();
         std::optional<uint32_t> graphics;
         std::optional<uint32_t> present;
+        std::optional<uint32_t> compute;
+        std::optional<uint32_t> compute_dedicated;
 
         for (size_t i = 0; i < queue_families.size(); ++i)
         {
@@ -1719,13 +1796,24 @@ namespace lotus
                 graphics = static_cast<uint32_t>(i);
             }
 
-            if (device.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface) && family.queueCount > 0)
+            if (family.queueFlags & vk::QueueFlagBits::eCompute && family.queueCount > 0)
+            {
+                compute = static_cast<uint32_t>(i);
+            }
+
+            if (family.queueFlags & vk::QueueFlagBits::eCompute && (family.queueFlags & vk::QueueFlagBits::eGraphics) == vk::QueueFlags{} && family.queueCount > 0)
+            {
+                compute_dedicated = static_cast<uint32_t>(i);
+            }
+
+            if (device.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface) && family.queueCount > 0 && !present)
             {
                 present = static_cast<uint32_t>(i);
             }
-            if (graphics && present) break;
         }
-        return { graphics, present };
+        if (compute_dedicated)
+            compute = compute_dedicated;
+        return { graphics, present, compute };
     }
 
     void Renderer::drawFrame()
@@ -1753,13 +1841,23 @@ namespace lotus
 
         vk::SubmitInfo submitInfo = {};
 
-        vk::Semaphore waitSemaphores[] = { *image_ready_sem[current_frame] };
-        vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-        submitInfo.waitSemaphoreCount = 1;
+        auto buffers = engine->worker_pool.getPrimaryComputeBuffers(current_image);
+        submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
+        submitInfo.pCommandBuffers = buffers.data();
+        //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
+        vk::Semaphore compute_signal_sems[] = { *compute_sem };
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = compute_signal_sems;
+
+        compute_queue.submit(submitInfo, nullptr, dispatch);
+
+        vk::Semaphore waitSemaphores[] = { *image_ready_sem[current_frame], *compute_sem };
+        vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV };
+        submitInfo.waitSemaphoreCount = 2;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
 
-        auto buffers = engine->worker_pool.getPrimaryCommandBuffers(current_image);
+        buffers = engine->worker_pool.getPrimaryGraphicsBuffers(current_image);
         buffers.push_back(getRenderCommandbuffer(current_image));
 
         submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());

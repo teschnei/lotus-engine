@@ -55,6 +55,7 @@
     <GLSLValidate Include="..\shaders\shadow_frag.frag" />
     <GLSLValidate Include="..\shaders\shadow_miss.rmiss" />
     <GLSLValidate Include="..\shaders\shadow_vert.vert" />
+    <GLSLValidate Include="..\shaders\animation_skin.comp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

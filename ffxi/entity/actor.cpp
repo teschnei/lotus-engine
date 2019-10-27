@@ -93,7 +93,7 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
             index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
         }
 
-        mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(mesh_indices.size());
         mesh->setVertexCount(os2_vertices.size());

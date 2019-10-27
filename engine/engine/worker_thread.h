@@ -21,10 +21,21 @@ namespace lotus
         void WorkLoop();
         bool Busy() const { return work != nullptr; }
 
-        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
-        std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
-        std::vector<std::vector<vk::CommandBuffer>> secondary_buffers;
-        std::vector<std::vector<vk::CommandBuffer>> shadow_buffers;
+        struct QueueResourcesGraphics
+        {
+            vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
+            std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
+            std::vector<std::vector<vk::CommandBuffer>> secondary_buffers;
+            std::vector<std::vector<vk::CommandBuffer>> shadow_buffers;
+        } graphics;
+
+        struct QueueResourcesCompute
+        {
+            vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
+            std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
+            std::vector<std::vector<vk::Event>> events;
+        } compute;
+
         vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderStatic> desc_pool;
 
         WorkerPool* pool{ nullptr };
