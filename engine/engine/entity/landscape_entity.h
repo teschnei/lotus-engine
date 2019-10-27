@@ -9,6 +9,7 @@ namespace lotus
         struct InstanceInfo
         {
             glm::mat4 model;
+            glm::mat4 model_t;
             glm::mat3 model_it;
         };
 

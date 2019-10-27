@@ -19,7 +19,7 @@ namespace lotus
             top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(engine, true);
             Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
             {
-                if (model->bottom_level_as)
+                if (model->bottom_level_as && model->lifetime != Lifetime::Long)
                 {
                     top_level_as[image_index]->AddBLASResource(model.get());
                 }

@@ -134,21 +134,21 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
 
             vk::WriteDescriptorSet write_info_vertex;
             write_info_vertex.descriptorType = vk::DescriptorType::eStorageBuffer;
-            write_info_vertex.dstArrayElement = 0;
+            write_info_vertex.dstArrayElement = engine->renderer.static_acceleration_bindings_offset;
             write_info_vertex.dstBinding = 1;
             write_info_vertex.descriptorCount = static_cast<uint32_t>(descriptor_vertex_info.size());
             write_info_vertex.pBufferInfo = descriptor_vertex_info.data();
 
             vk::WriteDescriptorSet write_info_index;
             write_info_index.descriptorType = vk::DescriptorType::eStorageBuffer;
-            write_info_index.dstArrayElement = 0;
+            write_info_index.dstArrayElement = engine->renderer.static_acceleration_bindings_offset;
             write_info_index.dstBinding = 2;
             write_info_index.descriptorCount = static_cast<uint32_t>(descriptor_index_info.size());
             write_info_index.pBufferInfo = descriptor_index_info.data();
 
             vk::WriteDescriptorSet write_info_texture;
             write_info_texture.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            write_info_texture.dstArrayElement = 0;
+            write_info_texture.dstArrayElement = engine->renderer.static_acceleration_bindings_offset;
             write_info_texture.dstBinding = 3;
             write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
             write_info_texture.pImageInfo = descriptor_texture_info.data();
@@ -159,9 +159,12 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
             write_info_index.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
             write_info_texture.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
             write_info_as.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
-            writes.push_back(write_info_vertex);
-            writes.push_back(write_info_index);
-            writes.push_back(write_info_texture);
+            if (write_info_vertex.descriptorCount > 0)
+                writes.push_back(write_info_vertex);
+            if (write_info_index.descriptorCount > 0)
+                writes.push_back(write_info_index);
+            if (write_info_texture.descriptorCount > 0)
+                writes.push_back(write_info_texture);
             writes.push_back(write_info_as);
             engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
         }
@@ -192,7 +195,7 @@ void lotus::TopLevelAccelerationStructure::UpdateInstance(uint32_t instance_id, 
 
 void lotus::TopLevelAccelerationStructure::AddBLASResource(Model* model)
 {
-    uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size());
+    uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size()) + engine->renderer.static_acceleration_bindings_offset;
     for (const auto& mesh : model->meshes)
     {
         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
@@ -209,7 +212,7 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(RenderableEntity* ent
         uint32_t image = engine->renderer.getCurrentImage();
         for (size_t i = 0; i < entity->models.size(); ++i)
         {
-            uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size());
+            uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size()) + engine->renderer.static_acceleration_bindings_offset;
             for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
             {
                 const auto& mesh = entity->models[i]->meshes[j];

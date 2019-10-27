@@ -141,6 +141,7 @@ namespace lotus
             uint32_t geometry_instance;
         };
         std::unique_ptr<Buffer> shader_binding_table;
+        uint16_t static_acceleration_bindings_offset {0};
 
     private:
         void createRayTracingResources();

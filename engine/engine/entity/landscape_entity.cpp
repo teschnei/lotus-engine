@@ -13,7 +13,7 @@ namespace lotus
                 {
                     VkGeometryInstance instance{};
                     //glm is column-major so we have to transpose the model matrix for RTX
-                    instance.transform = glm::mat3x4{ glm::transpose(instance_info[offset+i].model) };
+                    instance.transform = glm::mat3x4{ instance_info[offset+i].model_t };
                     instance.accelerationStructureHandle = model->bottom_level_as->handle;
                     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                     instance.mask = 0xFF;

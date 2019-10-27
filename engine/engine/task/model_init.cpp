@@ -109,6 +109,55 @@ namespace lotus
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
                 model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, model->lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
+
+                if (model->lifetime == Lifetime::Long)
+                {
+                    std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
+                    std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
+                    std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
+                    uint16_t index = thread->engine->renderer.static_acceleration_bindings_offset;
+                    for (const auto& mesh : model->meshes)
+                    {
+                        descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
+                        descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
+                        descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                    }
+                    model->bottom_level_as->resource_index = index;
+
+                    thread->engine->renderer.static_acceleration_bindings_offset = index + model->meshes.size();
+                    vk::WriteDescriptorSet write_info_vertex;
+                    write_info_vertex.descriptorType = vk::DescriptorType::eStorageBuffer;
+                    write_info_vertex.dstArrayElement = index;
+                    write_info_vertex.dstBinding = 1;
+                    write_info_vertex.descriptorCount = static_cast<uint32_t>(descriptor_vertex_info.size());
+                    write_info_vertex.pBufferInfo = descriptor_vertex_info.data();
+
+                    vk::WriteDescriptorSet write_info_index;
+                    write_info_index.descriptorType = vk::DescriptorType::eStorageBuffer;
+                    write_info_index.dstArrayElement = index;
+                    write_info_index.dstBinding = 2;
+                    write_info_index.descriptorCount = static_cast<uint32_t>(descriptor_index_info.size());
+                    write_info_index.pBufferInfo = descriptor_index_info.data();
+
+                    vk::WriteDescriptorSet write_info_texture;
+                    write_info_texture.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                    write_info_texture.dstArrayElement = index;
+                    write_info_texture.dstBinding = 3;
+                    write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
+                    write_info_texture.pImageInfo = descriptor_texture_info.data();
+
+                    std::vector<vk::WriteDescriptorSet> writes;
+                    for (size_t i = 0; i < thread->engine->renderer.getImageCount(); ++i)
+                    {
+                        write_info_vertex.dstSet = *thread->engine->renderer.rtx_descriptor_sets_const[i];
+                        write_info_index.dstSet = *thread->engine->renderer.rtx_descriptor_sets_const[i];
+                        write_info_texture.dstSet = *thread->engine->renderer.rtx_descriptor_sets_const[i];
+                        writes.push_back(write_info_vertex);
+                        writes.push_back(write_info_index);
+                        writes.push_back(write_info_texture);
+                    }
+                    thread->engine->renderer.device->updateDescriptorSets(writes, nullptr, thread->engine->renderer.dispatch);
+                }
             }
             command_buffer->end(thread->engine->renderer.dispatch);
 

@@ -53,8 +53,9 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
             auto scale_mat = glm::scale(glm::mat4{ 1.f }, glm::vec3{ mzb_piece.fScaleX, mzb_piece.fScaleY, mzb_piece.fScaleZ });
 
             glm::mat4 model = pos_mat * rot_mat * scale_mat;
+            glm::mat4 model_t = glm::transpose(model);
             glm::mat3 model_it = glm::transpose(glm::inverse(glm::mat3(model)));
-            lotus::LandscapeEntity::InstanceInfo info{ model, model_it };
+            lotus::LandscapeEntity::InstanceInfo info{ model, model_t, model_it };
             temp_map[name].push_back(info);
         }
 
