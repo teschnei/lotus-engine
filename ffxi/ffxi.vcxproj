@@ -19,7 +19,13 @@
     <ClCompile Include="dat\os2.cpp" />
     <ClCompile Include="dat\sk2.cpp" />
     <ClCompile Include="entity\actor.cpp" />
+    <ClCompile Include="entity\component\third_person_ffxiv_camera_component.cpp" />
+    <ClCompile Include="entity\component\third_person_ffxiv_entity_input.cpp" />
+    <ClCompile Include="entity\component\third_person_ffxi_camera_component.cpp" />
+    <ClCompile Include="entity\component\third_person_ffxi_entity_input.cpp" />
     <ClCompile Include="entity\landscape_entity.cpp" />
+    <ClCompile Include="entity\third_person_ffxiv_camera.cpp" />
+    <ClCompile Include="entity\third_person_ffxi_camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="task\actor_dat_load.cpp" />
     <ClCompile Include="task\landscape_dat_load.cpp" />
@@ -34,7 +40,13 @@
     <ClInclude Include="dat\os2.h" />
     <ClInclude Include="dat\sk2.h" />
     <ClInclude Include="entity\actor.h" />
+    <ClInclude Include="entity\component\third_person_ffxiv_camera_component.h" />
+    <ClInclude Include="entity\component\third_person_ffxiv_entity_input.h" />
+    <ClInclude Include="entity\component\third_person_ffxi_camera_component.h" />
+    <ClInclude Include="entity\component\third_person_ffxi_entity_input.h" />
     <ClInclude Include="entity\landscape_entity.h" />
+    <ClInclude Include="entity\third_person_ffxiv_camera.h" />
+    <ClInclude Include="entity\third_person_ffxi_camera.h" />
     <ClInclude Include="task\actor_dat_load.h" />
     <ClInclude Include="task\landscape_dat_load.h" />
     <ClInclude Include="test_loader.h" />

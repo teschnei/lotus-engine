@@ -54,9 +54,6 @@
     <ClCompile Include="engine\renderer\texture.cpp">
       <Filter>renderer</Filter>
     </ClCompile>
-    <ClCompile Include="engine\entity\component\camera_component.cpp">
-      <Filter>entity\component</Filter>
-    </ClCompile>
     <ClCompile Include="engine\entity\component\component.cpp">
       <Filter>entity\component</Filter>
     </ClCompile>
@@ -94,6 +91,21 @@
     </ClCompile>
     <ClCompile Include="engine\task\transform_skeleton.cpp">
       <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\free_flying_camera.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\free_flying_camera_component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\third_person_camera_component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\component\third_person_entity_input_component.cpp">
+      <Filter>entity\component</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\entity\third_person_boom_camera.cpp">
+      <Filter>entity</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -136,9 +148,6 @@
     <ClInclude Include="engine\renderer\texture.h">
       <Filter>renderer</Filter>
     </ClInclude>
-    <ClInclude Include="engine\entity\component\camera_component.h">
-      <Filter>entity\component</Filter>
-    </ClInclude>
     <ClInclude Include="engine\entity\component\component.h">
       <Filter>entity\component</Filter>
     </ClInclude>
@@ -178,6 +187,21 @@
     </ClInclude>
     <ClInclude Include="engine\task\transform_skeleton.h">
       <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\free_flying_camera.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\free_flying_camera_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\third_person_camera_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\component\third_person_entity_input_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\third_person_boom_camera.h">
+      <Filter>entity</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

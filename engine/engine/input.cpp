@@ -36,7 +36,7 @@ namespace lotus
         {
             if (component->handleInput(event))
             {
-                return true;
+                //return true;
             }
         }
         return false;

@@ -2,7 +2,6 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
-#include "component/camera_component.h"
 #include "engine/core.h"
 
 namespace lotus
@@ -14,12 +13,10 @@ namespace lotus
 
     void Camera::Init(const std::shared_ptr<Camera>& sp, Engine* engine)
     {
-        Input* input = &engine->input;
-        camera_rot.x = cos(rot_x) * cos(rot_z);
+        camera_rot.x = cos(rot_x) * cos(rot_y);
         camera_rot.y = sin(rot_x);
-        camera_rot.z = cos(rot_x) * sin(rot_z);
+        camera_rot.z = cos(rot_x) * sin(rot_y);
         camera_rot = glm::normalize(camera_rot);
-        addComponent<CameraComponent>(input);
 
         view_proj_ubo = engine->renderer.memory_manager->GetBuffer((sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
@@ -56,14 +53,14 @@ namespace lotus
         update_ubo = true;
     }
 
-    void Camera::look(float rot_x_offset, float rot_z_offset)
+    void Camera::look(float rot_x_offset, float rot_y_offset)
     {
-        rot_z += rot_z_offset;
-        glm::mod(rot_z, glm::pi<float>());
+        rot_y += rot_y_offset;
+        glm::mod(rot_y, glm::pi<float>());
         rot_x = std::clamp(rot_x += rot_x_offset, -glm::pi<float>() / 2, glm::pi<float>() / 2);
 
-        camera_rot.x = cos(rot_x) * cos(rot_z);
-        camera_rot.z = cos(rot_x) * sin(rot_z);
+        camera_rot.x = cos(rot_x) * cos(rot_y);
+        camera_rot.z = cos(rot_x) * sin(rot_y);
         camera_rot.y = sin(rot_x);
         camera_rot = glm::normalize(camera_rot);
 

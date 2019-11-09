@@ -26,16 +26,13 @@ namespace lotus
         {
             auto sp = std::static_pointer_cast<T>(entities.emplace_back(std::make_shared<T>()));
             sp->Init(sp, engine, args...);
-            RebuildTLAS();
             return sp;
         }
     protected:
         virtual void tick(time_point time, duration delta) {}
-        void RebuildTLAS();
 
         Engine* engine;
         std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
-        bool rebuild_as{ false };
         std::vector<std::shared_ptr<Entity>> entities;
     };
 }

@@ -14,7 +14,7 @@ namespace lotus
     void Scene::render()
     {
         uint32_t image_index = engine->renderer.getCurrentImage();
-        if (engine->renderer.RTXEnabled() && rebuild_as)
+        if (engine->renderer.RTXEnabled())
         {
             top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(engine, true);
             Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
@@ -42,29 +42,13 @@ namespace lotus
             {
                 if (engine->renderer.RTXEnabled())
                 {
-                    if (rebuild_as)
-                    {
-                        renderable_entity->populate_AS(top_level_as[image_index].get(), image_index);
-                    }
-                    else
-                    {
-                        renderable_entity->update_AS(top_level_as[image_index].get(), image_index);
-                    }
+                    renderable_entity->populate_AS(top_level_as[image_index].get(), image_index);
                 }
             }
         }
         if (engine->renderer.RTXEnabled())
         {
             engine->worker_pool.addWork(std::make_unique<AccelerationBuildTask>(engine->renderer.getCurrentImage(), top_level_as[image_index]));
-            //rebuild_as = false;
-        }
-    }
-
-    void Scene::RebuildTLAS()
-    {
-        if (engine->renderer.RTXEnabled())
-        {
-            rebuild_as = true;
         }
     }
 }

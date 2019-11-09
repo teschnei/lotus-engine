@@ -153,9 +153,9 @@ namespace lotus
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
             pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, 1024);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, 1024);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1024);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, max_acceleration_binding_index);
 
             vk::DescriptorPoolCreateInfo pool_ci;
             pool_ci.maxSets = 3;
@@ -724,19 +724,19 @@ namespace lotus
 
             vk::DescriptorSetLayoutBinding vertex_buffer_binding;
             vertex_buffer_binding.binding = 1;
-            vertex_buffer_binding.descriptorCount = 1024;
+            vertex_buffer_binding.descriptorCount = max_acceleration_binding_index;
             vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
             vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
 
             vk::DescriptorSetLayoutBinding index_buffer_binding;
             index_buffer_binding.binding = 2;
-            index_buffer_binding.descriptorCount = 1024;
+            index_buffer_binding.descriptorCount = max_acceleration_binding_index;
             index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
             index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
 
             vk::DescriptorSetLayoutBinding texture_bindings;
             texture_bindings.binding = 3;
-            texture_bindings.descriptorCount = 1024;
+            texture_bindings.descriptorCount = max_acceleration_binding_index;
             texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
             texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
 

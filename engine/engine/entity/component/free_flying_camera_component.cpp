@@ -1,15 +1,15 @@
-#include "camera_component.h"
+#include "free_flying_camera_component.h"
 #include "engine/entity/camera.h"
 #include "engine/input.h"
 #include <iostream>
 
 namespace lotus
 {
-    CameraComponent::CameraComponent(Entity* _entity, Input* _input) : InputComponent(_entity, _input)
+    FreeFlyingCameraComponent::FreeFlyingCameraComponent(Entity* _entity, Input* _input) : InputComponent(_entity, _input)
     {
     }
 
-    bool CameraComponent::handleInput(const SDL_Event& event)
+    bool FreeFlyingCameraComponent::handleInput(const SDL_Event& event)
     {
         auto camera = static_cast<Camera*>(entity);
         if (event.type == SDL_MOUSEMOTION)
@@ -89,7 +89,7 @@ namespace lotus
         return false;
     }
 
-    void CameraComponent::tick(time_point time, duration delta)
+    void FreeFlyingCameraComponent::tick(time_point time, duration delta)
     {
         auto camera = static_cast<Camera*>(entity);
         if (moving.x != 0 || moving.z != 0)

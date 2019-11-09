@@ -99,6 +99,7 @@ void lotus::BottomLevelAccelerationStructure::Update(vk::CommandBuffer buffer)
 lotus::TopLevelAccelerationStructure::TopLevelAccelerationStructure(Engine* _engine, bool _updateable) : AccelerationStructure(_engine), updateable(_updateable)
 {
     info.type = vk::AccelerationStructureTypeNV::eTopLevel;
+    instances.reserve(Renderer::max_acceleration_binding_index);
 }
 
 uint32_t lotus::TopLevelAccelerationStructure::AddInstance(VkGeometryInstance instance)

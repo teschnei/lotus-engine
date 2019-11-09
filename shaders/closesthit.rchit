@@ -94,7 +94,7 @@ void main()
 
     vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV;
     shadow = true;
-    //traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
+    traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.001, -light.light, 500, 1);
     vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
     vec3 total_light = vec3(0);
     if (!shadow)

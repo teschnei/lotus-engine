@@ -39,11 +39,7 @@ FFXI::MO2::MO2(uint8_t* buffer, size_t max_len, char _name[4]) : name(_name, 4)
     {
         Element* ele = elements + e;
 
-        if (ele->quat.x < 0 || ele->quat.y < 0 || ele->quat.z < 0 || ele->quat.w < 0)
-        {
-            //todo: no change
-        }
-        else
+        if (!(ele->quat.x < 0 || ele->quat.y < 0 || ele->quat.z < 0 || ele->quat.w < 0))
         {
             for (uint16_t f = 0; f < header->frames; ++f)
             {
@@ -63,5 +59,11 @@ FFXI::MO2::MO2(uint8_t* buffer, size_t max_len, char _name[4]) : name(_name, 4)
                 animation_data[ele->bone].push_back({ rot, trans, scale });
             }
         }
+    }
+    //animations don't use frame 0 (FFXI thing?)
+    frames = header->frames - 1;
+    for (auto& [frame, frame_data] : animation_data)
+    {
+        frame_data.erase(frame_data.begin());
     }
 }

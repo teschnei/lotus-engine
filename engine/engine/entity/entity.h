@@ -43,17 +43,17 @@ namespace lotus
         }
 
         void setPos(glm::vec3);
-        void setRot(float rot);
         void setRot(glm::quat rot);
 
         glm::vec3 getPos();
+        glm::quat getRot();
 
     protected:
         virtual void tick(time_point time, duration delta){}
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp){}
 
         glm::vec3 pos{};
-        float rot{};
+        glm::quat rot{1.f, 0.f, 0.f, 0.f};
         glm::mat4 pos_mat{ 1.f };
         glm::mat4 rot_mat{ 1.f };
         //glm::mat4 model_matrix {1.f};

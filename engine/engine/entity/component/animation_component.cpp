@@ -3,6 +3,7 @@
 #include "engine/entity/renderable_entity.h"
 #include "engine/renderer/skeleton.h"
 #include "engine/task/transform_skeleton.h"
+#include <iostream>
 
 namespace lotus
 {

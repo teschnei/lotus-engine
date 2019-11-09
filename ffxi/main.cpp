@@ -10,7 +10,9 @@
 #include "test_loader.h"
 #include "dat/mmb.h"
 #include "dat/os2.h"
-#include "engine/entity/component/animation_component.h"
+#include "engine/entity/free_flying_camera.h"
+#include "entity/component/third_person_ffxi_entity_input.h"
+#include "entity/third_person_ffxi_camera.h"
 
 class Game : public lotus::Game
 {
@@ -19,10 +21,11 @@ public:
     {
         scene = std::make_unique<lotus::Scene>(engine.get());
         default_texture = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
-        auto camera = scene->AddEntity<lotus::Camera>();
-        engine->set_camera(camera.get());
         scene->AddEntity<FFXILandscapeEntity>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\342\73.dat)");
         auto iroha = scene->AddEntity<Actor>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\310\3.dat)");
+        auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(iroha));
+        engine->set_camera(camera.get());
+        iroha->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input, engine.get());
         //iroha->animation_component->playAnimation("idl0");
         iroha->setPos(glm::vec3(259.f, -87.f, 99.f));
         //TODO: move this back to core.cpp after camera is figured out

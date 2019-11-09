@@ -40,12 +40,12 @@ namespace lotus
         std::unique_ptr<Buffer> cascade_data_ubo;
 
 
-    private:
+    protected:
         virtual void tick(time_point time, duration delta) override;
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
 
-        float rot_x{0};
-        float rot_z{ -glm::pi<float>()  };
+        float rot_x{ -glm::pi<float>() };
+        float rot_y{ 0.f };
         float near_clip{ 0.f };
         float far_clip{ 0.f };
         glm::vec3 camera_rot{};

@@ -5,7 +5,6 @@
 #include "task/actor_dat_load.h"
 #include "dat/os2.h"
 #include "dat/sk2.h"
-#include "engine/renderer/skeleton.h"
 
 Actor::Actor() : RenderableEntity()
 {
