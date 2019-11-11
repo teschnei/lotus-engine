@@ -26,15 +26,31 @@ namespace lotus
         if (current_animation)
         {
             duration animation_delta = time - animation_start;
-            float frame_f = static_cast<float>((animation_delta % current_animation->frame_duration).count()) / static_cast<float>(current_animation->frame_duration.count());
-            uint32_t frame = (animation_delta / current_animation->frame_duration) % current_animation->transforms.size();
-            uint32_t next_frame = (frame + 1) % current_animation->transforms.size();
-            for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
+            if (animation_delta < 0ms) animation_delta = 0ms;
+            if (animation_delta < interpolation_time)
             {
-                auto& bone = skeleton->bones[i];
-                bone.rot = glm::slerp(current_animation->transforms[frame][i].rot, current_animation->transforms[next_frame][i].rot, frame_f);
-                bone.trans = glm::mix(current_animation->transforms[frame][i].trans, current_animation->transforms[next_frame][i].trans, frame_f);
-                bone.scale = glm::mix(current_animation->transforms[frame][i].scale, current_animation->transforms[next_frame][i].scale, frame_f);
+                float frame_f = static_cast<float>(animation_delta.count()) / static_cast<float>(interpolation_time.count());
+                uint32_t frame = (interpolation_time / current_animation->frame_duration) % current_animation->transforms.size();
+                for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
+                {
+                    auto& bone = skeleton->bones[i];
+                    bone.rot = glm::slerp(bones_interpolate[i].rot, current_animation->transforms[frame][i].rot, frame_f);
+                    bone.trans = glm::mix(bones_interpolate[i].trans, current_animation->transforms[frame][i].trans, frame_f);
+                    bone.scale = glm::mix(bones_interpolate[i].scale, current_animation->transforms[frame][i].scale, frame_f);
+                }
+            }
+            else
+            {
+                float frame_f = static_cast<float>((animation_delta % current_animation->frame_duration).count()) / static_cast<float>(current_animation->frame_duration.count());
+                uint32_t frame = (animation_delta / current_animation->frame_duration) % current_animation->transforms.size();
+                uint32_t next_frame = (frame + 1) % current_animation->transforms.size();
+                for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
+                {
+                    auto& bone = skeleton->bones[i];
+                    bone.rot = glm::slerp(current_animation->transforms[frame][i].rot, current_animation->transforms[next_frame][i].rot, frame_f);
+                    bone.trans = glm::mix(current_animation->transforms[frame][i].trans, current_animation->transforms[next_frame][i].trans, frame_f);
+                    bone.scale = glm::mix(current_animation->transforms[frame][i].scale, current_animation->transforms[next_frame][i].scale, frame_f);
+                }
             }
         }
     }
@@ -61,5 +77,12 @@ namespace lotus
     {
         current_animation = skeleton->animations[name].get();
         animation_start = sim_clock::now();
+        //copy current bones so that we can interpolate off them to the new animation
+        //bones_interpolate = skeleton->bones;
+        bones_interpolate.clear();
+        for (const auto& bone : skeleton->bones)
+        {
+            bones_interpolate.emplace_back(bone);
+        }
     }
 }

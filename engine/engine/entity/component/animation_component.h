@@ -6,6 +6,7 @@
 #include "engine/renderer/memory.h"
 #include "engine/renderer/acceleration_structure.h"
 #include "engine/renderer/animation.h"
+#include "engine/renderer/skeleton.h"
 
 namespace lotus
 {
@@ -46,9 +47,11 @@ namespace lotus
 
     protected:
         void changeAnimation(std::string name);
+        static constexpr duration interpolation_time{ 100ms };
 
         Engine* engine;
         std::optional<std::string> next_anim;
+        std::vector<Skeleton::Bone> bones_interpolate;
         bool loop{ true };
     };
 }
