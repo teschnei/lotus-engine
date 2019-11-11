@@ -7,13 +7,11 @@ namespace lotus
     AccelerationBuildTask::AccelerationBuildTask(int _image_index, const std::shared_ptr<TopLevelAccelerationStructure>& _as)
         : WorkItem(), image_index(_image_index), as(_as)
     {
-        priority = -1;
+        priority = 2;
     }
 
     void AccelerationBuildTask::Process(WorkerThread* thread)
     {
-        vk::EventCreateInfo build_event_ci;
-
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandPool = *thread->compute.command_pool;

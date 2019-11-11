@@ -9,24 +9,6 @@
 
 namespace lotus
 {
-    glm::vec3 EntityRenderTask::mirrorVec(glm::vec3 pos, uint8_t mirror_axis)
-    {
-        glm::vec3 ret = pos;
-        if (mirror_axis == 1)
-        {
-            ret.x = -ret.x;
-        }
-        if (mirror_axis == 2)
-        {
-            ret.y = -ret.y;
-        }
-        if (mirror_axis == 3)
-        {
-            ret.z = -ret.z;
-        }
-        return ret;
-    }
-
     EntityRenderTask::EntityRenderTask(std::shared_ptr<RenderableEntity>& _entity) : WorkItem(), entity(_entity)
     {
         priority = 1;
@@ -80,8 +62,8 @@ namespace lotus
 
         vk::DescriptorBufferInfo skeleton_buffer_info;
         skeleton_buffer_info.buffer = entity->animation_component->skeleton_bone_buffer->buffer;
-        skeleton_buffer_info.offset = 0;
-        skeleton_buffer_info.range = VK_WHOLE_SIZE;
+        skeleton_buffer_info.offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * image_index;
+        skeleton_buffer_info.range = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size();
 
         vk::WriteDescriptorSet skeleton_descriptor_set = {};
 
@@ -111,7 +93,6 @@ namespace lotus
                 vertex_output_buffer_info.buffer = vertex_buffer->buffer;
                 vertex_output_buffer_info.offset = 0;
                 vertex_output_buffer_info.range = VK_WHOLE_SIZE;
-
 
                 vk::WriteDescriptorSet weight_descriptor_set {};
                 weight_descriptor_set.dstSet = nullptr;

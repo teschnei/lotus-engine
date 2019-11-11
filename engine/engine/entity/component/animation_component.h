@@ -2,6 +2,7 @@
 #include "component.h"
 #include <memory>
 #include <string>
+#include <optional>
 #include "engine/renderer/memory.h"
 #include "engine/renderer/acceleration_structure.h"
 #include "engine/renderer/animation.h"
@@ -24,7 +25,8 @@ namespace lotus
 
         virtual void tick(time_point time, duration delta) override;
         virtual void render(Engine* engine) override;
-        void playAnimation(std::string name);
+        void playAnimation(std::string name, std::optional<std::string> next_anim = {});
+        void playAnimationLoop(std::string name);
 
         //acceleration structures (per model)
         std::vector<ModelAccelerationStructure> acceleration_structures;
@@ -43,6 +45,10 @@ namespace lotus
         std::unique_ptr<Buffer> skeleton_bone_buffer;
 
     protected:
+        void changeAnimation(std::string name);
+
         Engine* engine;
+        std::optional<std::string> next_anim;
+        bool loop{ true };
     };
 }

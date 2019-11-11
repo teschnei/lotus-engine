@@ -3,14 +3,12 @@
 #include "engine/entity/renderable_entity.h"
 #include "engine/renderer/skeleton.h"
 #include "engine/task/transform_skeleton.h"
-#include <iostream>
 
 namespace lotus
 {
     AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton, size_t _vertex_stride) : Component(_entity), skeleton(std::move(_skeleton)), vertex_stride(_vertex_stride), engine(_engine)
     {
         skeleton_bone_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
 
         //TODO: remove me
         playAnimation("idl0");
@@ -46,7 +44,20 @@ namespace lotus
         engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<RenderableEntity*>(entity)));
     }
 
-    void AnimationComponent::playAnimation(std::string name)
+    void AnimationComponent::playAnimation(std::string name, std::optional<std::string> _next_anim)
+    {
+        loop = false;
+        next_anim = _next_anim;
+        changeAnimation(name);
+    }
+
+    void AnimationComponent::playAnimationLoop(std::string name)
+    {
+        loop = true;
+        changeAnimation(name);
+    }
+
+    void AnimationComponent::changeAnimation(std::string name)
     {
         current_animation = skeleton->animations[name].get();
         animation_start = sim_clock::now();

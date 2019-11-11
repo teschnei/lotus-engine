@@ -16,14 +16,14 @@ void ThirdPersonEntityFFXIVInputComponent::tick(lotus::time_point time, lotus::d
     {
         if (auto animation_component = static_cast<lotus::RenderableEntity*>(entity)->animation_component)
         {
-            animation_component->playAnimation("run0");
+            animation_component->playAnimationLoop("run0");
         }
     }
     else if (moving_prev && !now_moving)
     {
         if (auto animation_component = static_cast<lotus::RenderableEntity*>(entity)->animation_component)
         {
-            animation_component->playAnimation("idl0");
+            animation_component->playAnimationLoop("idl0");
         }
     }
     moving_prev = now_moving;
