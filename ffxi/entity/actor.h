@@ -6,11 +6,14 @@ namespace FFXI {
     class OS2;
 }
 
+//main FFXI entity class
 class Actor : public lotus::RenderableEntity
 {
 public:
     Actor();
     void Init(const std::shared_ptr<Actor>& sp, lotus::Engine* engine, const std::string& dat);
+
+    float speed{ 4.f };
 };
 
 class FFXIActorLoader : public lotus::ModelLoader

@@ -26,8 +26,8 @@ namespace lotus
 
         virtual void tick(time_point time, duration delta) override;
         virtual void render(Engine* engine) override;
-        void playAnimation(std::string name, std::optional<std::string> next_anim = {});
-        void playAnimationLoop(std::string name);
+        void playAnimation(std::string name, float speed = 1.f, std::optional<std::string> next_anim = {});
+        void playAnimationLoop(std::string name, float speed = 1.f );
 
         //acceleration structures (per model)
         std::vector<ModelAccelerationStructure> acceleration_structures;
@@ -46,12 +46,13 @@ namespace lotus
         std::unique_ptr<Buffer> skeleton_bone_buffer;
 
     protected:
-        void changeAnimation(std::string name);
+        void changeAnimation(std::string name, float speed);
         static constexpr duration interpolation_time{ 100ms };
 
         Engine* engine;
         std::optional<std::string> next_anim;
         std::vector<Skeleton::Bone> bones_interpolate;
+        float anim_speed{ 1.f };
         bool loop{ true };
     };
 }

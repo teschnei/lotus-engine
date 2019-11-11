@@ -27,10 +27,12 @@ namespace lotus
         {
             duration animation_delta = time - animation_start;
             if (animation_delta < 0ms) animation_delta = 0ms;
+            //all this just to floor the duration's rep and cast it back to a uint64_t
+            auto frame_duration = duration(std::chrono::nanoseconds(static_cast<uint64_t>((current_animation->frame_duration / anim_speed).count())));
             if (animation_delta < interpolation_time)
             {
                 float frame_f = static_cast<float>(animation_delta.count()) / static_cast<float>(interpolation_time.count());
-                uint32_t frame = (interpolation_time / current_animation->frame_duration) % current_animation->transforms.size();
+                uint32_t frame = (interpolation_time / frame_duration) % current_animation->transforms.size();
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
                     auto& bone = skeleton->bones[i];
@@ -41,8 +43,8 @@ namespace lotus
             }
             else
             {
-                float frame_f = static_cast<float>((animation_delta % current_animation->frame_duration).count()) / static_cast<float>(current_animation->frame_duration.count());
-                uint32_t frame = (animation_delta / current_animation->frame_duration) % current_animation->transforms.size();
+                float frame_f = static_cast<float>((animation_delta % frame_duration).count()) / static_cast<float>(frame_duration.count());
+                uint32_t frame = (animation_delta / frame_duration) % current_animation->transforms.size();
                 uint32_t next_frame = (frame + 1) % current_animation->transforms.size();
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
@@ -60,21 +62,22 @@ namespace lotus
         engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<RenderableEntity*>(entity)));
     }
 
-    void AnimationComponent::playAnimation(std::string name, std::optional<std::string> _next_anim)
+    void AnimationComponent::playAnimation(std::string name, float speed, std::optional<std::string> _next_anim)
     {
         loop = false;
         next_anim = _next_anim;
-        changeAnimation(name);
+        changeAnimation(name, speed);
     }
 
-    void AnimationComponent::playAnimationLoop(std::string name)
+    void AnimationComponent::playAnimationLoop(std::string name, float speed)
     {
         loop = true;
-        changeAnimation(name);
+        changeAnimation(name, speed);
     }
 
-    void AnimationComponent::changeAnimation(std::string name)
+    void AnimationComponent::changeAnimation(std::string name, float speed)
     {
+        anim_speed = speed;
         current_animation = skeleton->animations[name].get();
         animation_start = sim_clock::now();
         //copy current bones so that we can interpolate off them to the new animation

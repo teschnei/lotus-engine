@@ -1,4 +1,5 @@
 #include "third_person_ffxi_entity_input.h"
+#include "entity/actor.h"
 #include "engine/core.h"
 #include "engine/input.h"
 #include "engine/entity/renderable_entity.h"
@@ -14,7 +15,8 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
     if (moving.x != 0 || moving.z != 0)
     {
         auto norm = glm::normalize(moving);
-        static float speed = .000005f;
+        //float speed = .000005f;
+        float speed = static_cast<Actor*>(entity)->speed / std::chrono::duration_cast<std::chrono::microseconds>(1s).count();
         auto ms = std::chrono::duration_cast<std::chrono::microseconds>(delta).count();
         float forward_offset = norm.x * ms * speed;
         float right_offset = norm.z * ms * speed;
@@ -48,9 +50,11 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
     bool now_moving = moving.x != 0.f || moving.z != 0.f;
     if (!moving_prev && now_moving)
     {
+        //the movement animations appear to sync at 6 units/s
+        float speed = static_cast<Actor*>(entity)->speed / 6.f;
         if (auto animation_component = static_cast<lotus::RenderableEntity*>(entity)->animation_component)
         {
-            animation_component->playAnimationLoop("run0");
+            animation_component->playAnimationLoop("run0", speed);
         }
     }
     else if (moving_prev && !now_moving)
