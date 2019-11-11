@@ -10,41 +10,57 @@ namespace lotus
 
     bool ThirdPersonEntityInputComponent::handleInput(const SDL_Event& event)
     {
-        if (event.type == SDL_KEYDOWN)
+        if (event.type == SDL_KEYDOWN && event.key.repeat == 0)
         {
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_W:
-                moving.x = 1;
+                if (moving.x == 0)
+                    moving.x = 1;
+                else moving.x = 0;
                 return true;
             case SDL_SCANCODE_S:
-                moving.x = -1;
+                if (moving.x == 0)
+                    moving.x = -1;
+                else moving.x = 0;
                 return true;
             case SDL_SCANCODE_A:
-                moving.z = 1;
+                if (moving.z == 0)
+                    moving.z = 1;
+                else moving.z = 0;
                 return true;
             case SDL_SCANCODE_D:
-                moving.z = -1;
+                if (moving.z == 0)
+                    moving.z = -1;
+                else moving.z = 0;
                 return true;
             default:
                 break;
             }
         }
-        else if (event.type == SDL_KEYUP)
+        else if (event.type == SDL_KEYUP && event.key.repeat == 0)
         {
             switch (event.key.keysym.scancode)
             {
             case SDL_SCANCODE_W:
-                moving.x = 0;
+                if (moving.x == 0)
+                    moving.x = -1;
+                else moving.x = 0;
                 return true;
             case SDL_SCANCODE_S:
-                moving.x = 0;
+                if (moving.x == 0)
+                    moving.x = 1;
+                else moving.x = 0;
                 return true;
             case SDL_SCANCODE_A:
-                moving.z = 0;
+                if (moving.z == 0)
+                    moving.z = -1;
+                else moving.z = 0;
                 return true;
             case SDL_SCANCODE_D:
-                moving.z = 0;
+                if (moving.z == 0)
+                    moving.z = 1;
+                else moving.z = 0;
                 return true;
             default:
                 break;
