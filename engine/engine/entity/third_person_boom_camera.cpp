@@ -32,7 +32,9 @@ namespace lotus
     void ThirdPersonBoomCamera::look(glm::vec3 eye_focus)
     {
         updatePos();
-        view = glm::lookAt(pos, eye_focus, glm::vec3(0.f, -1.f, 0.f));
+        //TODO: base this value off a portion of height/bounding box
+        glm::vec3 eye_focus_midpoint = eye_focus + glm::vec3{ 0.f, -0.5f, 0.f };
+        view = glm::lookAt(pos, eye_focus_midpoint, glm::vec3(0.f, -1.f, 0.f));
         view_inverse = glm::inverse(view);
         update_ubo = true;
     }
@@ -64,7 +66,7 @@ namespace lotus
     {
         glm::vec3 boom{ distance, 0.f, 0.f };
         glm::vec3 new_pos = boom * rot;
-        Entity::setPos(new_pos + focus.lock()->getPos());
+        Entity::setPos(new_pos + focus.lock()->getPos() + glm::vec3{0.f, -0.5f, 0.f});
         update_ubo = true;
     }
 }
