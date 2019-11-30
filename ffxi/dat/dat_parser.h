@@ -11,7 +11,7 @@
 class DatParser
 {
 public:
-    DatParser(const std::string& filepath);
+    DatParser(const std::string& filepath, bool rtx);
 
     const std::vector<std::unique_ptr<FFXI::MZB>>& getMZBs() const { return mzbs; }
     const std::vector<std::unique_ptr<FFXI::MMB>>& getMMBs() const { return mmbs; }
@@ -21,6 +21,7 @@ public:
     const std::vector<std::unique_ptr<FFXI::OS2>>& getOS2s() const { return os2s; };
 
 private:
+    bool rtx;
     std::vector<std::unique_ptr<FFXI::MZB>> mzbs;
     std::vector<std::unique_ptr<FFXI::MMB>> mmbs;
     std::vector<std::unique_ptr<FFXI::DXT3>> dxt3s;

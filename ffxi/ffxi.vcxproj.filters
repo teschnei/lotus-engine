@@ -159,6 +159,12 @@
     <GLSLValidate Include="..\shaders\landscape_color_hit.rahit">
       <Filter>shaders</Filter>
     </GLSLValidate>
+    <GLSLValidate Include="..\shaders\landscape_gbuffer_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\landscape_shadow_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
     <GLSLValidate Include="..\shaders\miss.rmiss">
       <Filter>shaders</Filter>
     </GLSLValidate>

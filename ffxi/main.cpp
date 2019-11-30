@@ -35,7 +35,6 @@ public:
         engine->lights.UpdateLightBuffer();
         engine->camera->setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, .5f, 400.f);
         engine->camera->setPos(glm::vec3(259.f, -90.f, 82.f));
-        //engine->camera->setPos(glm::vec3(5.f, -0.f, 0.f));
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {

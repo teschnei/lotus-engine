@@ -146,7 +146,7 @@ namespace FFXI
         return attribute_descriptions;
     }
 
-    MMB::MMB(uint8_t* buffer, size_t max_len)
+    MMB::MMB(uint8_t* buffer, size_t max_len, bool offset_vertices)
     {
         size_t offset = 0;
         SMMBHEAD* head = (SMMBHEAD*)buffer;
@@ -268,7 +268,9 @@ namespace FFXI
                         offset += sizeof(SMMBBlockVertex);
                     }
                     //displace vertices slightly because RTX can't use mesh order to determine z-fighting
-                    float mesh_offset = 0.00001f;
+                    float mesh_offset = 0.00000f;
+                    if (offset_vertices)
+                        mesh_offset = 0.00001f;
                     glm::vec3 mesh_scale = glm::vec3(vertex.normal.x * mesh_offset * model_index, vertex.normal.y * mesh_offset * model_index, vertex.normal.z * mesh_offset * model_index);
                     vertex.pos += mesh_scale;
                     mesh.vertices.push_back(std::move(vertex));

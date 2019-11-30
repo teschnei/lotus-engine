@@ -12,7 +12,7 @@ LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _
 
 void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 {
-    DatParser parser{dat};
+    DatParser parser{dat, thread->engine->renderer.RTXEnabled()};
 
     const auto& mzbs = parser.getMZBs();
 

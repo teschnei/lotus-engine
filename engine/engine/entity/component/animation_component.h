@@ -14,7 +14,7 @@ namespace lotus
     class AnimationComponent : public Component
     {
     public:
-        struct ModelAccelerationStructure
+        struct ModelTransformedGeometry
         {
             //transformed vertex buffers (per mesh, per render target)
             std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
@@ -30,7 +30,7 @@ namespace lotus
         void playAnimationLoop(std::string name, float speed = 1.f );
 
         //acceleration structures (per model)
-        std::vector<ModelAccelerationStructure> acceleration_structures;
+        std::vector<ModelTransformedGeometry> transformed_geometries;
         std::unique_ptr<Skeleton> skeleton;
         size_t vertex_stride;
         Animation* current_animation{ nullptr };

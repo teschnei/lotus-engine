@@ -11,7 +11,7 @@ ActorDatLoad::ActorDatLoad(const std::shared_ptr<Actor>& _entity, const std::str
 
 void ActorDatLoad::Process(lotus::WorkerThread* thread)
 {
-    DatParser parser{ dat };
+    DatParser parser{ dat, thread->engine->renderer.RTXEnabled() };
 
     std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
 

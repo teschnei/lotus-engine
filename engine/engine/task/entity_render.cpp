@@ -25,7 +25,8 @@ namespace lotus
         if (thread->engine->renderer.RasterizationEnabled())
         {
             thread->graphics.secondary_buffers[image_index].push_back(*entity->command_buffers[image_index]);
-            thread->graphics.shadow_buffers[image_index].push_back(*entity->shadowmap_buffers[image_index]);
+            if (!entity->animation_component)
+                thread->graphics.shadow_buffers[image_index].push_back(*entity->shadowmap_buffers[image_index]);
         }
     }
 
@@ -33,9 +34,10 @@ namespace lotus
     {
         RenderableEntity::UniformBufferObject ubo = {};
         ubo.model = entity->getModelMatrix();
+        ubo.modelIT = glm::transpose(glm::inverse(glm::mat3(ubo.model)));
 
         auto& uniform_buffer = entity->uniform_buffer;
-        auto data = thread->engine->renderer.device->mapMemory(uniform_buffer->memory, uniform_buffer->memory_offset, sizeof(ubo), {}, thread->engine->renderer.dispatch);
+        auto data = thread->engine->renderer.device->mapMemory(uniform_buffer->memory, uniform_buffer->memory_offset, sizeof(ubo) * thread->engine->renderer.getImageCount(), {}, thread->engine->renderer.dispatch);
             memcpy(static_cast<uint8_t*>(data)+(image_index*sizeof(ubo)), &ubo, sizeof(ubo));
         thread->engine->renderer.device->unmapMemory(uniform_buffer->memory, thread->engine->renderer.dispatch);
     }
@@ -82,7 +84,7 @@ namespace lotus
             for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
             {
                 auto& mesh = entity->models[i]->meshes[j];
-                auto& vertex_buffer = component->acceleration_structures[i].vertex_buffers[j][image_index];
+                auto& vertex_buffer = component->transformed_geometries[i].vertex_buffers[j][image_index];
 
                 vk::DescriptorBufferInfo vertex_weights_buffer_info;
                 vertex_weights_buffer_info.buffer = mesh->vertex_buffer->buffer;
@@ -126,7 +128,7 @@ namespace lotus
             }
             if (thread->engine->renderer.RTXEnabled())
             {
-                component->acceleration_structures[i].bottom_level_as[image_index]->Update(*command_buffer);
+                component->transformed_geometries[i].bottom_level_as[image_index]->Update(*command_buffer);
             }
         }
         command_buffer->end(thread->engine->renderer.dispatch);

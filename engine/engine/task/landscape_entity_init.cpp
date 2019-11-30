@@ -41,7 +41,7 @@ namespace lotus
 
                 command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_graphics_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.graphics_pipeline, thread->engine->renderer.dispatch);
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = thread->engine->camera->view_proj_ubo->buffer;
@@ -61,7 +61,7 @@ namespace lotus
 
                 drawModel(thread, *command_buffer, false, *thread->engine->renderer.pipeline_layout);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.blended_graphics_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.blended_graphics_pipeline, thread->engine->renderer.dispatch);
 
                 drawModel(thread, *command_buffer, true, *thread->engine->renderer.pipeline_layout);
 
@@ -85,7 +85,7 @@ namespace lotus
 
                 command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.shadowmap_pipeline, thread->engine->renderer.dispatch);
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = entity->uniform_buffer->buffer;
@@ -118,7 +118,7 @@ namespace lotus
                 command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
                 drawModel(thread, *command_buffer, false, *thread->engine->renderer.shadowmap_pipeline_layout);
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);
                 drawModel(thread, *command_buffer, true, *thread->engine->renderer.shadowmap_pipeline_layout);
 
                 command_buffer->end(thread->engine->renderer.dispatch);

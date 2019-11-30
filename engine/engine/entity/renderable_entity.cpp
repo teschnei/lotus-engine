@@ -39,7 +39,7 @@ namespace lotus
             BottomLevelAccelerationStructure* blas = nullptr;
             if (model->weighted)
             {
-                blas = animation_component->acceleration_structures[i].bottom_level_as[image_index].get();
+                blas = animation_component->transformed_geometries[i].bottom_level_as[image_index].get();
             }
             else if (model->bottom_level_as)
             {
@@ -74,7 +74,7 @@ namespace lotus
             BottomLevelAccelerationStructure* blas = nullptr;
             if (model->weighted)
             {
-                blas = animation_component->acceleration_structures[i].bottom_level_as[image_index].get();
+                blas = animation_component->transformed_geometries[i].bottom_level_as[image_index].get();
             }
             else if (model->bottom_level_as)
             {

@@ -16,7 +16,7 @@ typedef struct
 } DATHEAD;
 #pragma pack(pop)
 
-DatParser::DatParser(const std::string& filepath)
+DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
 {
     std::ifstream dat{filepath, std::ios::ate | std::ios::binary };
 
@@ -280,7 +280,7 @@ DatParser::DatParser(const std::string& filepath)
             mmb++;
             if (FFXI::MMB::DecodeMMB(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)))
             {
-                mmbs.push_back(std::make_unique<FFXI::MMB>(&buffer[offset + sizeof(DATHEAD)], len - (sizeof(DATHEAD))));
+                mmbs.push_back(std::make_unique<FFXI::MMB>(&buffer[offset + sizeof(DATHEAD)], len - (sizeof(DATHEAD)), rtx));
             }
             break;
         case 0x2F:

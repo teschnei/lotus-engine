@@ -55,7 +55,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine) : engine(_engine), render_mode{RenderMode::RTX}
+    Renderer::Renderer(Engine* _engine) : engine(_engine), render_mode{RenderMode::Rasterization}
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -588,12 +588,19 @@ namespace lotus
 
     void Renderer::createDescriptorSetLayout()
     {
-        vk::DescriptorSetLayoutBinding ubo_layout_binding;
-        ubo_layout_binding.binding = 0;
-        ubo_layout_binding.descriptorCount = 1;
-        ubo_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        ubo_layout_binding.pImmutableSamplers = nullptr;
-        ubo_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+        vk::DescriptorSetLayoutBinding camera_layout_binding;
+        camera_layout_binding.binding = 0;
+        camera_layout_binding.descriptorCount = 1;
+        camera_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        camera_layout_binding.pImmutableSamplers = nullptr;
+        camera_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+        vk::DescriptorSetLayoutBinding model_layout_binding;
+        model_layout_binding.binding = 2;
+        model_layout_binding.descriptorCount = 1;
+        model_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        model_layout_binding.pImmutableSamplers = nullptr;
+        model_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
         vk::DescriptorSetLayoutBinding sample_layout_binding;
         sample_layout_binding.binding = 1;
@@ -602,7 +609,7 @@ namespace lotus
         sample_layout_binding.pImmutableSamplers = nullptr;
         sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        std::array<vk::DescriptorSetLayoutBinding, 2> static_bindings = { ubo_layout_binding, sample_layout_binding };
+        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding };
 
         vk::DescriptorSetLayoutCreateInfo layout_info = {};
         layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
@@ -614,13 +621,13 @@ namespace lotus
         if (render_mode == RenderMode::Rasterization)
         {
             vk::DescriptorSetLayoutBinding cascade_matrices;
-            cascade_matrices.binding = 2;
+            cascade_matrices.binding = 3;
             cascade_matrices.descriptorCount = 1;
             cascade_matrices.descriptorType = vk::DescriptorType::eUniformBuffer;
             cascade_matrices.pImmutableSamplers = nullptr;
             cascade_matrices.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
-            std::array<vk::DescriptorSetLayoutBinding, 3> shadowmap_bindings = { ubo_layout_binding, cascade_matrices, sample_layout_binding };
+            std::vector<vk::DescriptorSetLayoutBinding> shadowmap_bindings = { camera_layout_binding, model_layout_binding, cascade_matrices, sample_layout_binding };
 
             layout_info.bindingCount = static_cast<uint32_t>(shadowmap_bindings.size());
             layout_info.pBindings = shadowmap_bindings.data();
@@ -772,6 +779,7 @@ namespace lotus
     void Renderer::createGraphicsPipeline()
     {
         auto vertex_module = getShader("shaders/gbuffer_vert.spv");
+        auto landscape_vertex_module = getShader("shaders/landscape_gbuffer_vert.spv");
         auto fragment_module = getShader("shaders/gbuffer_frag.spv");
 
         vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
@@ -779,22 +787,38 @@ namespace lotus
         vert_shader_stage_info.module = *vertex_module;
         vert_shader_stage_info.pName = "main";
 
+        vk::PipelineShaderStageCreateInfo landscape_vert_shader_stage_info;
+        landscape_vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
+        landscape_vert_shader_stage_info.module = *landscape_vertex_module;
+        landscape_vert_shader_stage_info.pName = "main";
+
         vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
         frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
         frag_shader_stage_info.module = *fragment_module;
         frag_shader_stage_info.pName = "main";
 
         std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
+        std::array<vk::PipelineShaderStageCreateInfo, 2> landscape_shaderStages = {landscape_vert_shader_stage_info, frag_shader_stage_info};
 
-        vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+        vk::PipelineVertexInputStateCreateInfo main_vertex_input_info;
 
-        auto binding_descriptions = engine->settings.renderer_settings.landscape_vertex_input_binding_descriptions;
-        auto attribute_descriptions = engine->settings.renderer_settings.landscape_vertex_input_attribute_descriptions;
+        auto main_binding_descriptions = engine->settings.renderer_settings.model_vertex_input_binding_descriptions;
+        auto main_attribute_descriptions = engine->settings.renderer_settings.model_vertex_input_attribute_descriptions;
 
-        vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(binding_descriptions.size());
-        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
-        vertex_input_info.pVertexBindingDescriptions = binding_descriptions.data();
-        vertex_input_info.pVertexAttributeDescriptions = attribute_descriptions.data();
+        main_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(main_binding_descriptions.size());
+        main_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(main_attribute_descriptions.size());
+        main_vertex_input_info.pVertexBindingDescriptions = main_binding_descriptions.data();
+        main_vertex_input_info.pVertexAttributeDescriptions = main_attribute_descriptions.data();
+
+        vk::PipelineVertexInputStateCreateInfo landscape_vertex_input_info;
+
+        auto landscape_binding_descriptions = engine->settings.renderer_settings.landscape_vertex_input_binding_descriptions;
+        auto landscape_attribute_descriptions = engine->settings.renderer_settings.landscape_vertex_input_attribute_descriptions;
+
+        landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(landscape_binding_descriptions.size());
+        landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
+        landscape_vertex_input_info.pVertexBindingDescriptions = landscape_binding_descriptions.data();
+        landscape_vertex_input_info.pVertexAttributeDescriptions = landscape_attribute_descriptions.data();
 
         vk::PipelineInputAssemblyStateCreateInfo input_assembly = {};
         input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
@@ -868,33 +892,41 @@ namespace lotus
 
         pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
 
-        vk::GraphicsPipelineCreateInfo pipeline_info;
-        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipeline_info.pStages = shaderStages.data();
-        pipeline_info.pVertexInputState = &vertex_input_info;
-        pipeline_info.pInputAssemblyState = &input_assembly;
-        pipeline_info.pViewportState = &viewport_state;
-        pipeline_info.pRasterizationState = &rasterizer;
-        pipeline_info.pMultisampleState = &multisampling;
-        pipeline_info.pDepthStencilState = &depth_stencil;
-        pipeline_info.pColorBlendState = &color_blending;
-        pipeline_info.layout = *pipeline_layout;
-        pipeline_info.renderPass = *gbuffer_render_pass;
-        pipeline_info.subpass = 0;
-        pipeline_info.basePipelineHandle = nullptr;
+        vk::GraphicsPipelineCreateInfo landscape_pipeline_info;
+        landscape_pipeline_info.stageCount = static_cast<uint32_t>(landscape_shaderStages.size());
+        landscape_pipeline_info.pStages = landscape_shaderStages.data();
+        landscape_pipeline_info.pVertexInputState = &landscape_vertex_input_info;
+        landscape_pipeline_info.pInputAssemblyState = &input_assembly;
+        landscape_pipeline_info.pViewportState = &viewport_state;
+        landscape_pipeline_info.pRasterizationState = &rasterizer;
+        landscape_pipeline_info.pMultisampleState = &multisampling;
+        landscape_pipeline_info.pDepthStencilState = &depth_stencil;
+        landscape_pipeline_info.pColorBlendState = &color_blending;
+        landscape_pipeline_info.layout = *pipeline_layout;
+        landscape_pipeline_info.renderPass = *gbuffer_render_pass;
+        landscape_pipeline_info.subpass = 0;
+        landscape_pipeline_info.basePipelineHandle = nullptr;
 
-        landscape_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+        vk::GraphicsPipelineCreateInfo main_pipeline_info = landscape_pipeline_info;
+        main_pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+        main_pipeline_info.pStages = shaderStages.data();
+        main_pipeline_info.pVertexInputState = &main_vertex_input_info;
+
+        main_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
+        landscape_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
 
         fragment_module = getShader("shaders/blend.spv");
 
         frag_shader_stage_info.module = *fragment_module;
 
         shaderStages[1] = frag_shader_stage_info;
+        landscape_shaderStages[1] = frag_shader_stage_info;
 
-        blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+        main_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
+        landscape_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
 
-        vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
-        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
+        landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
+        landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
 
         vertex_module = getShader("shaders/deferred.spv");
         vert_shader_stage_info.module = *vertex_module;
@@ -909,10 +941,11 @@ namespace lotus
         }
         frag_shader_stage_info.module = *fragment_module;
 
-        shaderStages[0] = vert_shader_stage_info;
-        shaderStages[1] = frag_shader_stage_info;
+        landscape_shaderStages[0] = vert_shader_stage_info;
+        landscape_shaderStages[1] = frag_shader_stage_info;
+        vk::GraphicsPipelineCreateInfo deferred_pipeline_info = landscape_pipeline_info;
 
-        pipeline_info.renderPass = *render_pass;
+        deferred_pipeline_info.renderPass = *render_pass;
         color_blend_attachment_states = std::vector<vk::PipelineColorBlendAttachmentState>(1, color_blend_attachment);
         color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
         color_blending.pAttachments = color_blend_attachment_states.data();
@@ -924,14 +957,14 @@ namespace lotus
 
         deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
 
-        pipeline_info.layout = *deferred_pipeline_layout;
+        deferred_pipeline_info.layout = *deferred_pipeline_layout;
 
-        deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+        deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, deferred_pipeline_info, nullptr, dispatch);
 
         if (render_mode == RenderMode::Rasterization)
         {
-            vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(binding_descriptions.size());
-            vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
+            landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(landscape_binding_descriptions.size());
+            landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
             vk::PushConstantRange push_constant_range;
             push_constant_range.stageFlags = vk::ShaderStageFlagBits::eVertex;
             push_constant_range.size = 4;
@@ -948,19 +981,26 @@ namespace lotus
 
             shadowmap_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
 
-            pipeline_info.layout = *shadowmap_pipeline_layout;
+            main_pipeline_info.layout = *shadowmap_pipeline_layout;
+            landscape_pipeline_info.layout = *shadowmap_pipeline_layout;
 
-            pipeline_info.renderPass = *shadowmap_render_pass;
+            main_pipeline_info.renderPass = *shadowmap_render_pass;
+            landscape_pipeline_info.renderPass = *shadowmap_render_pass;
             vertex_module = getShader("shaders/shadow_vert.spv");
+            landscape_vertex_module = getShader("shaders/landscape_shadow_vert.spv");
             fragment_module = getShader("shaders/shadow_frag.spv");
 
             vert_shader_stage_info.module = *vertex_module;
+            landscape_vert_shader_stage_info.module = *landscape_vertex_module;
             frag_shader_stage_info.module = *fragment_module;
 
             shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
+            landscape_shaderStages = { landscape_vert_shader_stage_info, frag_shader_stage_info };
 
-            pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-            pipeline_info.pStages = shaderStages.data();
+            main_pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+            main_pipeline_info.pStages = shaderStages.data();
+            landscape_pipeline_info.stageCount = static_cast<uint32_t>(landscape_shaderStages.size());
+            landscape_pipeline_info.pStages = landscape_shaderStages.data();
 
             viewport.width = shadowmap_dimension;
             viewport.height = shadowmap_dimension;
@@ -974,12 +1014,17 @@ namespace lotus
             vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
             dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
             dynamic_state_ci.pDynamicStates = dynamic_states.data();
-            pipeline_info.pDynamicState = &dynamic_state_ci;
-            blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+            main_pipeline_info.pDynamicState = &dynamic_state_ci;
+            landscape_pipeline_info.pDynamicState = &dynamic_state_ci;
+            main_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
+            landscape_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
 
-            pipeline_info.stageCount = 1;
-            pipeline_info.pStages = &vert_shader_stage_info;
-            shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+            main_pipeline_info.stageCount = 1;
+            main_pipeline_info.pStages = &vert_shader_stage_info;
+            landscape_pipeline_info.stageCount = 1;
+            landscape_pipeline_info.pStages = &landscape_vert_shader_stage_info;
+            main_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
+            landscape_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
         }
         if (RTXEnabled())
         {
@@ -1608,11 +1653,11 @@ namespace lotus
 
                 for (uint32_t i = 0; i < shadowmap_cascades; ++i)
                 {
-                    renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
-                    buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
-                    buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-                    buffer[0]->executeCommands(shadowmap_buffers, dispatch);
-                    buffer[0]->endRenderPass(dispatch);
+                    //renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
+                    //buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
+                    //buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
+                    //buffer[0]->executeCommands(shadowmap_buffers, dispatch);
+                    //buffer[0]->endRenderPass(dispatch);
                 }
             }
 

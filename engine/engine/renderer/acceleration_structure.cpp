@@ -217,11 +217,11 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(RenderableEntity* ent
             for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
             {
                 const auto& mesh = entity->models[i]->meshes[j];
-                descriptor_vertex_info.emplace_back(entity->animation_component->acceleration_structures[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
+                descriptor_vertex_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
                 descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
                 descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
             }
-            entity->animation_component->acceleration_structures[i].bottom_level_as[image]->resource_index = index;
+            entity->animation_component->transformed_geometries[i].bottom_level_as[image]->resource_index = index;
         }
     }
 }

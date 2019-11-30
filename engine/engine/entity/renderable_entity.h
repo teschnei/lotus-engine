@@ -14,7 +14,8 @@ namespace lotus
     public:
 
         struct UniformBufferObject {
-            alignas(16) glm::mat4 model;
+            glm::mat4 model;
+            glm::mat4 modelIT;
         };
 
         RenderableEntity();
