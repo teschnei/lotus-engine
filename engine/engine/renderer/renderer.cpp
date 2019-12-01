@@ -1653,11 +1653,11 @@ namespace lotus
 
                 for (uint32_t i = 0; i < shadowmap_cascades; ++i)
                 {
-                    //renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
-                    //buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
-                    //buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-                    //buffer[0]->executeCommands(shadowmap_buffers, dispatch);
-                    //buffer[0]->endRenderPass(dispatch);
+                    renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
+                    buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, i, dispatch);
+                    buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
+                    buffer[0]->executeCommands(shadowmap_buffers, dispatch);
+                    buffer[0]->endRenderPass(dispatch);
                 }
             }
 

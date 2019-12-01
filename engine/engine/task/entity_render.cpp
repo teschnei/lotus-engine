@@ -25,8 +25,7 @@ namespace lotus
         if (thread->engine->renderer.RasterizationEnabled())
         {
             thread->graphics.secondary_buffers[image_index].push_back(*entity->command_buffers[image_index]);
-            if (!entity->animation_component)
-                thread->graphics.shadow_buffers[image_index].push_back(*entity->shadowmap_buffers[image_index]);
+            thread->graphics.shadow_buffers[image_index].push_back(*entity->shadowmap_buffers[image_index]);
         }
     }
 

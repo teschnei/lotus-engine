@@ -121,8 +121,6 @@ namespace lotus
 
                 command_buffer->begin(beginInfo, thread->engine->renderer.dispatch);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.shadowmap_pipeline, thread->engine->renderer.dispatch);
-
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = entity->uniform_buffer->buffer;
                 buffer_info.offset = i * sizeof(RenderableEntity::UniformBufferObject);
@@ -136,14 +134,14 @@ namespace lotus
                 std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
                 descriptorWrites[0].dstSet = nullptr;
-                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].dstBinding = 2;
                 descriptorWrites[0].dstArrayElement = 0;
                 descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
                 descriptorWrites[0].descriptorCount = 1;
                 descriptorWrites[0].pBufferInfo = &buffer_info;
 
                 descriptorWrites[1].dstSet = nullptr;
-                descriptorWrites[1].dstBinding = 2;
+                descriptorWrites[1].dstBinding = 3;
                 descriptorWrites[1].dstArrayElement = 0;
                 descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
                 descriptorWrites[1].descriptorCount = 1;
@@ -153,9 +151,10 @@ namespace lotus
 
                 command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.shadowmap_pipeline, thread->engine->renderer.dispatch);
                 drawModel(thread, *command_buffer, false, *thread->engine->renderer.shadowmap_pipeline_layout, i);
-                //command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);
-                //drawModel(thread, *command_buffer, true, *thread->engine->renderer.shadowmap_pipeline_layout, i);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.blended_shadowmap_pipeline, thread->engine->renderer.dispatch);
+                drawModel(thread, *command_buffer, true, *thread->engine->renderer.shadowmap_pipeline_layout, i);
 
                 command_buffer->end(thread->engine->renderer.dispatch);
             }
@@ -212,7 +211,7 @@ namespace lotus
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
-        command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, {0}, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
+        command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, 0, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
 
         command_buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0, thread->engine->renderer.dispatch);
     }
