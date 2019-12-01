@@ -55,7 +55,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine) : engine(_engine), render_mode{RenderMode::Rasterization}
+    Renderer::Renderer(Engine* _engine) : engine(_engine), render_mode{RenderMode::RTX}
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
