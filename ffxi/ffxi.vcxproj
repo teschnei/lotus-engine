@@ -70,6 +70,9 @@
     <GLSLValidate Include="..\shaders\shadow_miss.rmiss" />
     <GLSLValidate Include="..\shaders\shadow_vert.vert" />
     <GLSLValidate Include="..\shaders\animation_skin.comp" />
+    <GLSLValidate Include="..\shaders\query_closest_hit.rchit" />
+    <GLSLValidate Include="..\shaders\query_miss.rmiss" />
+    <GLSLValidate Include="..\shaders\rayquery.rgen" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

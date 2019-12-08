@@ -6,6 +6,6 @@
 class ThirdPersonFFXIVCamera : public lotus::ThirdPersonBoomCamera
 {
 public:
-    ThirdPersonFFXIVCamera();
-    void Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, lotus::Engine* engine, std::weak_ptr<Entity>& focus);
+    explicit ThirdPersonFFXIVCamera(lotus::Engine*);
+    void Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, std::weak_ptr<Entity>& focus);
 };

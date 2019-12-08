@@ -18,12 +18,12 @@ namespace lotus
             glm::mat4 modelIT;
         };
 
-        RenderableEntity();
+        explicit RenderableEntity(Engine*);
         virtual ~RenderableEntity() = default;
 
         void setScale(float x, float y, float z);
 
-        void addSkeleton(std::unique_ptr<Skeleton>&& skeleton, Engine* engine, size_t vertex_stride);
+        void addSkeleton(std::unique_ptr<Skeleton>&& skeleton, size_t vertex_stride);
 
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
         virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);

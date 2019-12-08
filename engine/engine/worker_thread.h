@@ -33,7 +33,6 @@ namespace lotus
         {
             vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
             std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
-            std::vector<std::vector<vk::Event>> events;
         } compute;
 
         vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderStatic> desc_pool;

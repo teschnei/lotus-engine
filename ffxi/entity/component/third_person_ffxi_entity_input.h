@@ -4,9 +4,8 @@
 class ThirdPersonEntityFFXIInputComponent : public lotus::ThirdPersonEntityInputComponent
 {
 public:
-    explicit ThirdPersonEntityFFXIInputComponent(lotus::Entity*, lotus::Input*, lotus::Engine*);
+    explicit ThirdPersonEntityFFXIInputComponent(lotus::Entity*, lotus::Engine*, lotus::Input*);
     virtual void tick(lotus::time_point time, lotus::duration delta) override;
 protected:
     bool moving_prev {false};
-    lotus::Engine* engine{ nullptr };
 };

@@ -1,4 +1,5 @@
 #include "landscape_entity.h"
+#include "engine/renderer/raytrace_query.h"
 
 namespace lotus
 {
@@ -16,7 +17,7 @@ namespace lotus
                     instance.transform = glm::mat3x4{ instance_info[offset+i].model_t };
                     instance.accelerationStructureHandle = model->bottom_level_as->handle;
                     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
-                    instance.mask = 0xFF;
+                    instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry);
                     instance.instanceOffset = 32;
                     instance.instanceId = model->bottom_level_as->resource_index;
                     model->bottom_level_as->instanceid = as->AddInstance(instance);

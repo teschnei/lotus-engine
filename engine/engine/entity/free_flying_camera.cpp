@@ -5,14 +5,14 @@
 
 namespace lotus
 {
-    FreeFlyingCamera::FreeFlyingCamera() : Camera()
+    FreeFlyingCamera::FreeFlyingCamera(Engine* engine) : Camera(engine)
     {
         
     }
 
-    void FreeFlyingCamera::Init(const std::shared_ptr<FreeFlyingCamera>& sp, Engine* engine)
+    void FreeFlyingCamera::Init(const std::shared_ptr<FreeFlyingCamera>& sp)
     {
-        Camera::Init(sp, engine);
+        Camera::Init(sp);
         Input* input = &engine->input;
         addComponent<FreeFlyingCameraComponent>(input);
     }

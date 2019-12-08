@@ -13,6 +13,7 @@ namespace lotus
             glm::mat3 model_it;
         };
 
+        explicit LandscapeEntity(Engine* _engine) : RenderableEntity(_engine) {}
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
         virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
 

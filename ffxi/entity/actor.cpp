@@ -6,11 +6,11 @@
 #include "dat/os2.h"
 #include "dat/sk2.h"
 
-Actor::Actor() : RenderableEntity()
+Actor::Actor(lotus::Engine* engine) : RenderableEntity(engine)
 {
 }
 
-void Actor::Init(const std::shared_ptr<Actor>& sp, lotus::Engine* engine, const std::string& dat)
+void Actor::Init(const std::shared_ptr<Actor>& sp, const std::string& dat)
 {
     engine->worker_pool.addWork(std::make_unique<ActorDatLoad>(sp, dat));
 }

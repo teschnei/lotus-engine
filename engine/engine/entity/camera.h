@@ -14,8 +14,8 @@ namespace lotus
     class Camera : public Entity
     {
     public:
-        Camera();
-        void Init(const std::shared_ptr<Camera>& sp, Engine* engine);
+        explicit Camera(Engine*);
+        void Init(const std::shared_ptr<Camera>& sp);
         glm::mat4& getViewMatrix() { return view; }
         glm::mat4& getProjMatrix() { return proj; }
 

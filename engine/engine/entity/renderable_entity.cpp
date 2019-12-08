@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    RenderableEntity::RenderableEntity() : Entity()
+    RenderableEntity::RenderableEntity(Engine* engine) : Entity(engine)
     {
     }
 
@@ -15,9 +15,9 @@ namespace lotus
         this->scale_mat = glm::scale(glm::mat4{ 1.f }, glm::vec3{ x, y, z });
     }
 
-    void RenderableEntity::addSkeleton(std::unique_ptr<Skeleton>&& skeleton, Engine* engine, size_t vertex_stride)
+    void RenderableEntity::addSkeleton(std::unique_ptr<Skeleton>&& skeleton, size_t vertex_stride)
     {
-        addComponent<AnimationComponent>(engine, std::move(skeleton), vertex_stride);
+        addComponent<AnimationComponent>(std::move(skeleton), vertex_stride);
         animation_component = getComponent<AnimationComponent>();
     }
 
@@ -58,7 +58,7 @@ namespace lotus
                 {
                     //instance.flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_NV;
                 }
-                instance.mask = 0xFF;
+                instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities);
                 instance.instanceOffset = 0;
                 instance.instanceId = blas->resource_index;
                 blas->instanceid = as->AddInstance(instance);

@@ -183,5 +183,14 @@
     <GLSLValidate Include="..\shaders\animation_skin.comp">
       <Filter>shaders</Filter>
     </GLSLValidate>
+    <GLSLValidate Include="..\shaders\query_closest_hit.rchit">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\query_miss.rmiss">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\rayquery.rgen">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
   </ItemGroup>
 </Project>

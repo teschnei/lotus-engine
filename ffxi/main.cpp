@@ -13,6 +13,7 @@
 #include "engine/entity/free_flying_camera.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
 #include "entity/third_person_ffxi_camera.h"
+#include <iostream>
 
 class Game : public lotus::Game
 {
@@ -25,7 +26,7 @@ public:
         auto iroha = scene->AddEntity<Actor>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\310\3.dat)");
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(iroha));
         engine->set_camera(camera.get());
-        iroha->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input, engine.get());
+        iroha->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input);
         //iroha->animation_component->playAnimation("idl0");
         iroha->setPos(glm::vec3(259.f, -87.f, 99.f));
         //TODO: move this back to core.cpp after camera is figured out
@@ -38,7 +39,6 @@ public:
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {
-
     }
     std::shared_ptr<lotus::Texture> default_texture;
 };

@@ -6,7 +6,7 @@
 
 namespace lotus
 {
-    AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton, size_t _vertex_stride) : Component(_entity), skeleton(std::move(_skeleton)), vertex_stride(_vertex_stride), engine(_engine)
+    AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton, size_t _vertex_stride) : Component(_entity, _engine), skeleton(std::move(_skeleton)), vertex_stride(_vertex_stride)
     {
         skeleton_bone_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
@@ -57,7 +57,7 @@ namespace lotus
         }
     }
 
-    void AnimationComponent::render(Engine* engine)
+    void AnimationComponent::render()
     {
         engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<RenderableEntity*>(entity)));
     }

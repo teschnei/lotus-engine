@@ -10,10 +10,11 @@
 
 namespace lotus
 {
+    class Engine;
     class Entity
     {
     public:
-        Entity();
+        explicit Entity(Engine*);
         Entity(const Entity&) = delete;
         Entity& operator=(const Entity&) = delete;
         Entity(Entity&&) = default;
@@ -26,7 +27,7 @@ namespace lotus
         template<typename T, typename... Args>
         void addComponent(Args&&... args)
         {
-            components.push_back(std::make_unique<T>(this, std::forward<Args>(args)...));
+            components.push_back(std::make_unique<T>(this, engine, std::forward<Args>(args)...));
         };
 
         template<typename T>
@@ -52,6 +53,7 @@ namespace lotus
         virtual void tick(time_point time, duration delta){}
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp){}
 
+        Engine* engine;
         glm::vec3 pos{};
         glm::quat rot{1.f, 0.f, 0.f, 0.f};
         glm::mat4 pos_mat{ 1.f };

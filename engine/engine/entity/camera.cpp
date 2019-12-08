@@ -6,12 +6,12 @@
 
 namespace lotus
 {
-    Camera::Camera()
+    Camera::Camera(Engine* engine) : Entity(engine)
     {
         
     }
 
-    void Camera::Init(const std::shared_ptr<Camera>& sp, Engine* engine)
+    void Camera::Init(const std::shared_ptr<Camera>& sp)
     {
         camera_rot.x = cos(rot_x) * cos(rot_y);
         camera_rot.y = sin(rot_x);

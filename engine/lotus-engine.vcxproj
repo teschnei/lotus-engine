@@ -32,6 +32,7 @@
     <ClCompile Include="engine\renderer\memory.cpp" />
     <ClCompile Include="engine\renderer\mesh.cpp" />
     <ClCompile Include="engine\renderer\model.cpp" />
+    <ClCompile Include="engine\renderer\raytrace_query.cpp" />
     <ClCompile Include="engine\renderer\renderer.cpp" />
     <ClCompile Include="engine\renderer\skeleton.cpp" />
     <ClCompile Include="engine\renderer\texture.cpp" />
@@ -68,6 +69,7 @@
     <ClInclude Include="engine\light_manager.h" />
     <ClInclude Include="engine\renderer\acceleration_structure.h" />
     <ClInclude Include="engine\renderer\animation.h" />
+    <ClInclude Include="engine\renderer\raytrace_query.h" />
     <ClInclude Include="engine\renderer\memory.h" />
     <ClInclude Include="engine\renderer\mesh.h" />
     <ClInclude Include="engine\renderer\model.h" />

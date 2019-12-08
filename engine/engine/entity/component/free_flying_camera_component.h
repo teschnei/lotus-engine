@@ -7,7 +7,7 @@ namespace lotus
     class FreeFlyingCameraComponent : public InputComponent
     {
     public:
-        explicit FreeFlyingCameraComponent(Entity*, Input*);
+        explicit FreeFlyingCameraComponent(Entity*, Engine*, Input*);
         virtual bool handleInput(const SDL_Event&) override;
         virtual void tick(time_point time, duration delta) override;
     private:

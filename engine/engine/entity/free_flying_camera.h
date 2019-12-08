@@ -8,7 +8,7 @@ namespace lotus
     class FreeFlyingCamera : public Camera
     {
     public:
-        FreeFlyingCamera();
-        void Init(const std::shared_ptr<FreeFlyingCamera>& sp, Engine* engine);
+        explicit FreeFlyingCamera(Engine*);
+        void Init(const std::shared_ptr<FreeFlyingCamera>& sp);
     };
 }

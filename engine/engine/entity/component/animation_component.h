@@ -25,7 +25,7 @@ namespace lotus
         virtual ~AnimationComponent() override = default;
 
         virtual void tick(time_point time, duration delta) override;
-        virtual void render(Engine* engine) override;
+        virtual void render() override;
         void playAnimation(std::string name, float speed = 1.f, std::optional<std::string> next_anim = {});
         void playAnimationLoop(std::string name, float speed = 1.f );
 
@@ -49,7 +49,6 @@ namespace lotus
         void changeAnimation(std::string name, float speed);
         static constexpr duration interpolation_time{ 100ms };
 
-        Engine* engine;
         std::optional<std::string> next_anim;
         std::vector<Skeleton::Bone> bones_interpolate;
         float anim_speed{ 1.f };

@@ -55,7 +55,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine) : engine(_engine), render_mode{RenderMode::RTX}
+    Renderer::Renderer(Engine* _engine) : render_mode{RenderMode::RTX}, engine(_engine)
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -85,6 +85,7 @@ namespace lotus
         createAnimationResources();
 
         render_commandbuffers.resize(getImageCount());
+        raytracer = std::make_unique<Raytracer>(engine);
     }
 
     Renderer::~Renderer()
@@ -251,14 +252,23 @@ namespace lotus
         std::set<uint32_t> queues = { graphics_queue_idx.value(), present_queue_idx.value(), compute_queue_idx.value() };
 
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
-        float queue_priority = 1.f;
+        float queue_priority = 0.f;
+        float queue_priority_compute[2] = { 0.f, 1.f };
 
         for (auto queue : queues)
         {
             vk::DeviceQueueCreateInfo create_info;
             create_info.queueFamilyIndex = queue;
-            create_info.pQueuePriorities = &queue_priority;
-            create_info.queueCount = 1;
+            if (queue == compute_queue_idx.value())
+            {
+                create_info.pQueuePriorities = queue_priority_compute;
+                create_info.queueCount = 2;
+            }
+            else
+            {
+                create_info.pQueuePriorities = &queue_priority;
+                create_info.queueCount = 1;
+            }
             queue_create_infos.push_back(create_info);
         }
 
@@ -1216,7 +1226,7 @@ namespace lotus
         vk::CommandPoolCreateInfo pool_info = {};
         pool_info.queueFamilyIndex = graphics_queue.value();
 
-        command_pool = device->createCommandPoolUnique(pool_info);
+        command_pool = device->createCommandPoolUnique(pool_info, nullptr, dispatch);
     }
 
     void Renderer::createShadowmapResources()
@@ -1750,21 +1760,6 @@ namespace lotus
 
             buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 1, { write_info_target, write_info_cam, write_info_light }, dispatch);
 
-            vk::MemoryBarrier barrier;
-
-            //barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV;
-            //barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eAccelerationStructureReadNV;
-
-            //buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eRayTracingShaderNV,
-            //    {}, barrier, nullptr, nullptr, engine->renderer.dispatch);
-
-            auto events = engine->worker_pool.getComputeEvents(image_index);
-
-            if (!events.empty())
-            {
-                //buffer[0]->waitEvents(events, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eRayTracingShaderNV, {}, {}, {}, dispatch);
-            }
-
             buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 3, shader_stride,
@@ -1869,6 +1864,7 @@ namespace lotus
         engine->worker_pool.deleteFinished();
         device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max(), dispatch);
 
+        auto prev_image = current_image;
         auto [result, value] = device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr, dispatch);
         current_image = value;
 
@@ -1879,6 +1875,10 @@ namespace lotus
         }
         engine->worker_pool.clearProcessed(current_image);
         engine->worker_pool.waitIdle();
+        if (raytracer->hasQueries())
+        {
+            raytracer->runQueries(prev_image);
+        }
         engine->game->scene->render();
 
         engine->worker_pool.waitIdle();

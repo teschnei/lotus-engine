@@ -7,7 +7,7 @@ namespace lotus
     class ThirdPersonCameraComponent : public InputComponent
     {
     public:
-        explicit ThirdPersonCameraComponent(Entity*, Input*, std::weak_ptr<Entity>& focus);
+        explicit ThirdPersonCameraComponent(Entity*, Engine*, Input*, std::weak_ptr<Entity>& focus);
         virtual bool handleInput(const SDL_Event&) override;
         virtual void tick(time_point time, duration delta) override;
     protected:

@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    ThirdPersonCameraComponent::ThirdPersonCameraComponent(Entity* _entity, Input* _input, std::weak_ptr<Entity>& _focus) : InputComponent(_entity, _input), focus(_focus)
+    ThirdPersonCameraComponent::ThirdPersonCameraComponent(Entity* _entity, Engine* _engine, Input* _input, std::weak_ptr<Entity>& _focus) : InputComponent(_entity, _engine, _input), focus(_focus)
     {
     }
 

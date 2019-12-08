@@ -24,15 +24,15 @@ namespace lotus
         template <typename T, typename... Args>
         std::shared_ptr<T> AddEntity(Args... args)
         {
-            auto sp = std::static_pointer_cast<T>(entities.emplace_back(std::make_shared<T>()));
-            sp->Init(sp, engine, args...);
+            auto sp = std::static_pointer_cast<T>(entities.emplace_back(std::make_shared<T>(engine)));
+            sp->Init(sp, args...);
             return sp;
         }
+        std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
     protected:
         virtual void tick(time_point time, duration delta) {}
 
         Engine* engine;
-        std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
         std::vector<std::shared_ptr<Entity>> entities;
     };
 }

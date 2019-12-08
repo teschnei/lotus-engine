@@ -6,7 +6,7 @@
 #include "engine/entity/component/animation_component.h"
 #include <glm/gtx/vector_angle.hpp>
 
-ThirdPersonEntityFFXIInputComponent::ThirdPersonEntityFFXIInputComponent(lotus::Entity* _entity, lotus::Input* _input, lotus::Engine* _engine) : lotus::ThirdPersonEntityInputComponent(_entity, _input), engine(_engine)
+ThirdPersonEntityFFXIInputComponent::ThirdPersonEntityFFXIInputComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input) : lotus::ThirdPersonEntityInputComponent(_entity, _engine, _input)
 {
 }
 

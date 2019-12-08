@@ -5,7 +5,7 @@
 #include "entity/third_person_ffxiv_camera.h"
 #include <glm/gtx/vector_angle.hpp>
 
-ThirdPersonFFXIVCameraComponent::ThirdPersonFFXIVCameraComponent(lotus::Entity* _entity, lotus::Input* _input, std::weak_ptr<lotus::Entity>& _focus) : InputComponent(_entity, _input), focus(_focus)
+ThirdPersonFFXIVCameraComponent::ThirdPersonFFXIVCameraComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input, std::weak_ptr<lotus::Entity>& _focus) : InputComponent(_entity, _engine, _input), focus(_focus)
 {
 }
 

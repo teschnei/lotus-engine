@@ -31,7 +31,6 @@ lotus::WorkerThread::WorkerThread(Engine* _engine, WorkerPool* _pool) : pool(_po
     graphics.shadow_buffers.resize(engine->renderer.getImageCount());
 
     compute.primary_buffers.resize(engine->renderer.getImageCount());
-    compute.events.resize(engine->renderer.getImageCount());
 }
 
 void lotus::WorkerThread::WorkLoop()

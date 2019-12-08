@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <SDL.h>
 #include "memory.h"
+#include "raytrace_query.h"
 
 namespace lotus
 {
@@ -41,6 +42,8 @@ namespace lotus
 
         void drawFrame();
         void resized() { resize = true; }
+
+        vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
 
         vk::UniqueHandle<vk::Instance, vk::DispatchLoaderStatic> instance;
         vk::PhysicalDevice physical_device;
@@ -117,6 +120,7 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;
 
         vk::DispatchLoaderDynamic dispatch;
+        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
 
         RenderMode render_mode{ RenderMode::RTX };
 
@@ -124,7 +128,9 @@ namespace lotus
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> animation_descriptor_set_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> animation_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> animation_pipeline;
-        /* Animatino pipeline */
+        /* Animation pipeline */
+
+        std::unique_ptr<Raytracer> raytracer;
 
         /* Ray tracing */
         bool RTXEnabled();
@@ -171,8 +177,6 @@ namespace lotus
         void createQuad();
         void createAnimationResources();
 
-        vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
-
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;
         vk::Format getDepthFormat() const;
@@ -195,7 +199,6 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> image_ready_sem;
         std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> frame_finish_sem;
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> compute_sem;
-        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
         uint32_t current_image{ 0 };
         uint32_t max_pending_frames{ 2 };
         uint32_t current_frame{ 0 };

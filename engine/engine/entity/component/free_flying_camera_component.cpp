@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    FreeFlyingCameraComponent::FreeFlyingCameraComponent(Entity* _entity, Input* _input) : InputComponent(_entity, _input)
+    FreeFlyingCameraComponent::FreeFlyingCameraComponent(Entity* _entity, Engine* _engine, Input* _input) : InputComponent(_entity, _engine, _input)
     {
     }
 

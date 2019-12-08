@@ -2,7 +2,7 @@
 
 namespace lotus
 {
-    Entity::Entity()
+    Entity::Entity(Engine* engine) : engine(engine)
     {
     }
 
@@ -19,7 +19,7 @@ namespace lotus
     {
         for (auto& component : components)
         {
-            component->render(engine);
+            component->render();
         }
         render(engine, sp);
     }

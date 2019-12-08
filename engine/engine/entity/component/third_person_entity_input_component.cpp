@@ -4,7 +4,7 @@
 
 namespace lotus
 {
-    ThirdPersonEntityInputComponent::ThirdPersonEntityInputComponent(Entity* _entity, Input* _input) : InputComponent(_entity, _input)
+    ThirdPersonEntityInputComponent::ThirdPersonEntityInputComponent(Entity* _entity, Engine* _engine, Input* _input) : InputComponent(_entity, _engine, _input)
     {
     }
 

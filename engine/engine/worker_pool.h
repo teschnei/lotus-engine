@@ -62,7 +62,6 @@ namespace lotus
         std::vector<vk::CommandBuffer> getShadowmapGraphicsBuffers(int image);
 
         std::vector<vk::CommandBuffer> getPrimaryComputeBuffers(int image);
-        std::vector<vk::Event> getComputeEvents(int image);
 
         void clearProcessed(int image);
         void deleteFinished();

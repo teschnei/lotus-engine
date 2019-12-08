@@ -9,7 +9,7 @@ namespace lotus
     class InputComponent : public Component
     {
     public:
-        explicit InputComponent(Entity*, Input*);
+        explicit InputComponent(Entity*, Engine*, Input*);
         virtual ~InputComponent() override;
 
         virtual bool handleInput(const SDL_Event&) = 0;

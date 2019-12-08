@@ -3,7 +3,7 @@
 #include "engine/entity/renderable_entity.h"
 #include "engine/entity/component/animation_component.h"
 
-ThirdPersonEntityFFXIVInputComponent::ThirdPersonEntityFFXIVInputComponent(lotus::Entity* _entity, lotus::Input* _input) : lotus::ThirdPersonEntityInputComponent(_entity, _input)
+ThirdPersonEntityFFXIVInputComponent::ThirdPersonEntityFFXIVInputComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input) : lotus::ThirdPersonEntityInputComponent(_entity, _engine, _input)
 {
 }
 

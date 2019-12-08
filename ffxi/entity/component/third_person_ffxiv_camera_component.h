@@ -5,7 +5,7 @@
 class ThirdPersonFFXIVCameraComponent : public lotus::InputComponent
 {
 public:
-    explicit ThirdPersonFFXIVCameraComponent(lotus::Entity*, lotus::Input*, std::weak_ptr<lotus::Entity>& focus);
+    explicit ThirdPersonFFXIVCameraComponent(lotus::Entity*, lotus::Engine*, lotus::Input*, std::weak_ptr<lotus::Entity>& focus);
     virtual bool handleInput(const SDL_Event&) override;
     virtual void tick(lotus::time_point time, lotus::duration delta) override;
 protected:

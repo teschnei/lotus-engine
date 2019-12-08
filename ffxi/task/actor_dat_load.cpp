@@ -55,7 +55,7 @@ void ActorDatLoad::Process(lotus::WorkerThread* thread)
         skel->animations[animation->name] = std::move(animation);
     }
 
-    entity->addSkeleton(std::move(skel), thread->engine, sizeof(FFXI::OS2::Vertex));
+    entity->addSkeleton(std::move(skel), sizeof(FFXI::OS2::Vertex));
 
     entity->models.push_back(lotus::Model::LoadModel<FFXIActorLoader>(thread->engine, "iroha_test", &parser.getOS2s(), sk2.get()));
 

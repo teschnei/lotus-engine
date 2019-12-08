@@ -8,8 +8,8 @@ namespace lotus
     class ThirdPersonBoomCamera : public Camera
     {
     public:
-        ThirdPersonBoomCamera();
-        void Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, Engine* engine, std::weak_ptr<Entity>& focus);
+        explicit ThirdPersonBoomCamera(Engine*);
+        void Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& focus);
 
         void setDistance(float distance);
         void look(glm::vec3 eye_focus);
@@ -17,8 +17,9 @@ namespace lotus
         void setPos(glm::vec3 pos);
 
     protected:
-        void updatePos();
+        void tick(time_point time, duration delta) override;
         float distance {7.f};
+        bool update_pos {false};
         std::weak_ptr<Entity> focus;
     };
 }

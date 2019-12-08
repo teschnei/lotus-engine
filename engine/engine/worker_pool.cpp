@@ -85,17 +85,6 @@ namespace lotus
         return buffers;
     }
 
-    std::vector<vk::Event> WorkerPool::getComputeEvents(int image)
-    {
-        std::vector<vk::Event> buffers;
-        for (const auto& thread : threads)
-        {
-            buffers.insert(buffers.end(), thread->compute.events[image].begin(), thread->compute.events[image].end());
-            thread->compute.events[image].clear();
-        }
-        return buffers;
-    }
-
     void WorkerPool::clearProcessed(int image)
     {
         //a mutex is not needed here because the fence already assures us that we have nothing being posted to this queue yet
