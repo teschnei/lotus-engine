@@ -8,7 +8,7 @@ void lotus::AccelerationStructure::PopulateAccelerationStructure(uint32_t instan
     std::vector<vk::GeometryNV>* geometries, bool updateable)
 {
     info.instanceCount = instanceCount;
-    info.geometryCount = geometries ? geometries->size() : 0;
+    info.geometryCount = geometries ? static_cast<uint32_t>(geometries->size()) : 0;
     info.pGeometries = geometries ? geometries->data() : nullptr;
     if (updateable)
     {
@@ -43,8 +43,8 @@ void lotus::AccelerationStructure::PopulateBuffers()
 
     vk::BindAccelerationStructureMemoryInfoNV bind_info;
     bind_info.accelerationStructure = *acceleration_structure;
-    bind_info.memory = object_memory->memory;
-    bind_info.memoryOffset = object_memory->memory_offset;
+    bind_info.memory = object_memory->get_memory();
+    bind_info.memoryOffset = object_memory->get_memory_offset();
     engine->renderer.device->bindAccelerationStructureMemoryNV(bind_info, engine->renderer.dispatch);
     engine->renderer.device->getAccelerationStructureHandleNV(*acceleration_structure, sizeof(handle), &handle, engine->renderer.dispatch);
 }
@@ -169,9 +169,9 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
             writes.push_back(write_info_as);
             engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
         }
-        auto data = engine->renderer.device->mapMemory(instance_memory->memory, instance_memory->memory_offset, instances.size() * sizeof(VkGeometryInstance), {}, engine->renderer.dispatch);
+        auto data = instance_memory->map(0, instances.size() * sizeof(VkGeometryInstance), {});
         memcpy(data, instances.data(), instances.size() * sizeof(VkGeometryInstance));
-        engine->renderer.device->unmapMemory(instance_memory->memory, engine->renderer.dispatch);
+        instance_memory->unmap();
 
         vk::MemoryBarrier barrier;
 

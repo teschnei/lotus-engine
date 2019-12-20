@@ -2,6 +2,8 @@
 #include <utility>
 #include <vulkan/vulkan.hpp>
 #include "vk_mem_alloc.h"
+#include <unordered_map>
+#include <mutex>
 
 namespace lotus
 {
@@ -21,11 +23,13 @@ namespace lotus
         Memory& operator=(const Memory&) = delete;
         Memory& operator=(Memory&&) = default;
         virtual ~Memory() = default;
+        void* map(vk::DeviceSize offset, vk::DeviceSize size, vk::MemoryMapFlags flags);
+        void unmap();
         VmaAllocation allocation;
+    protected:
         vk::DeviceSize memory_offset;
         vk::DeviceMemory memory;
         vk::DeviceSize size;
-    protected:
         MemoryManager* manager{ nullptr };
     };
 
@@ -55,6 +59,9 @@ namespace lotus
         GenericMemory(MemoryManager* _manager, VmaAllocation _allocation, VmaAllocationInfo _alloc_info) :
             Memory(_manager, _allocation, _alloc_info) {}
         ~GenericMemory();
+
+        vk::DeviceMemory get_memory() const { return memory; }
+        vk::DeviceSize get_memory_offset() const { return memory_offset; }
     };
 
     class MemoryManager
@@ -71,5 +78,8 @@ namespace lotus
         vk::Device device;
         vk::PhysicalDevice physical_device;
         vk::DispatchLoaderDynamic dispatch;
+        std::mutex allocation_mutex;
+
+        friend class Memory;
     };
 }

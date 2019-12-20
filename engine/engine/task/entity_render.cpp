@@ -36,9 +36,9 @@ namespace lotus
         ubo.modelIT = glm::transpose(glm::inverse(glm::mat3(ubo.model)));
 
         auto& uniform_buffer = entity->uniform_buffer;
-        auto data = thread->engine->renderer.device->mapMemory(uniform_buffer->memory, uniform_buffer->memory_offset, sizeof(ubo) * thread->engine->renderer.getImageCount(), {}, thread->engine->renderer.dispatch);
+        auto data = uniform_buffer->map(0, sizeof(ubo) * thread->engine->renderer.getImageCount(), {});
             memcpy(static_cast<uint8_t*>(data)+(image_index*sizeof(ubo)), &ubo, sizeof(ubo));
-        thread->engine->renderer.device->unmapMemory(uniform_buffer->memory, thread->engine->renderer.dispatch);
+        uniform_buffer->unmap();
     }
 
     void EntityRenderTask::updateAnimationVertices(WorkerThread* thread, int image_index, RenderableEntity* entity)

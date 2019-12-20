@@ -135,7 +135,7 @@ namespace lotus
                 rtx_descriptor_set = std::move(sets[0]);
             }
 
-            uint8_t* shader_mapped = static_cast<uint8_t*>(engine->renderer.device->mapMemory(shader_binding_table->memory, shader_binding_table->memory_offset, sbt_size, {}, engine->renderer.dispatch));
+            uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
             std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_size);
             engine->renderer.device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), engine->renderer.dispatch);
@@ -149,7 +149,7 @@ namespace lotus
             {
                 memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (shader_size * shader_nonhitcount) + (i * shader_size), shader_size);
             }
-            engine->renderer.device->unmapMemory(shader_binding_table->memory);
+            shader_binding_table->unmap();
 
         }
         auto [graphics_queue_idx, present_queue_idx, compute_queue_idx] = engine->renderer.getQueueFamilies(engine->renderer.physical_device);
@@ -176,7 +176,7 @@ namespace lotus
             size_t output_buffer_size = sizeof(RaytraceOutput) * queries.size();
             input_buffer = engine->renderer.memory_manager->GetBuffer(input_buffer_size, vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             output_buffer = engine->renderer.memory_manager->GetBuffer(output_buffer_size, vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            RaytraceInput* input_mapped = static_cast<RaytraceInput*>(engine->renderer.device->mapMemory(input_buffer->memory, input_buffer->memory_offset, input_buffer_size, {}, engine->renderer.dispatch));
+            RaytraceInput* input_mapped = static_cast<RaytraceInput*>(input_buffer->map(0, input_buffer_size, {}));
             for (size_t i = 0; i < queries.size(); ++i)
             {
                 const auto& query = queries[i];
@@ -186,7 +186,7 @@ namespace lotus
                 input_mapped[i].max = query.max;
                 input_mapped[i].flags = static_cast<uint32_t>(query.object_flags);
             }
-            engine->renderer.device->unmapMemory(input_buffer->memory, engine->renderer.dispatch);
+            input_buffer->unmap();
 
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.commandPool = *command_pool;
@@ -256,13 +256,13 @@ namespace lotus
             engine->renderer.device->waitForFences(*fence, true, std::numeric_limits<uint64_t>::max(), engine->renderer.dispatch);
             engine->renderer.device->resetFences(*fence);
 
-            RaytraceOutput* output_mapped = static_cast<RaytraceOutput*>(engine->renderer.device->mapMemory(output_buffer->memory, output_buffer->memory_offset, output_buffer_size, {}, engine->renderer.dispatch));
+            RaytraceOutput* output_mapped = static_cast<RaytraceOutput*>(output_buffer->map(0, output_buffer_size, {}));
             for (size_t i = 0; i < queries.size(); ++i)
             {
                 const auto& query = queries[i];
                 query.callback(output_mapped[i].intersection_dist);
             }
-            engine->renderer.device->unmapMemory(output_buffer->memory);
+            output_buffer->unmap();
         }
         queries.clear();
     }

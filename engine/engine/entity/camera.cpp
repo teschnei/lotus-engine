@@ -79,12 +79,12 @@ namespace lotus
         {
             engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this, engine](WorkerThread* thread)
             {
-                void* buf = thread->engine->renderer.device->mapMemory(view_proj_ubo->memory, view_proj_ubo->memory_offset + (sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getCurrentImage(), (sizeof(view) + sizeof(proj)) * 2, {}, thread->engine->renderer.dispatch);
+                void* buf = view_proj_ubo->map((sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getCurrentImage(), (sizeof(view) + sizeof(proj)) * 2, {});
                 memcpy(buf, &proj, sizeof(proj));
                 memcpy(static_cast<uint8_t*>(buf) + sizeof(proj), &view, sizeof(view));
                 memcpy(static_cast<uint8_t*>(buf) + sizeof(proj) * 2, &proj_inverse, sizeof(proj_inverse));
                 memcpy(static_cast<uint8_t*>(buf) + sizeof(proj) * 3, &view_inverse, sizeof(view_inverse));
-                thread->engine->renderer.device->unmapMemory(view_proj_ubo->memory, thread->engine->renderer.dispatch);
+                view_proj_ubo->unmap();
 
                 if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
                 {
@@ -165,9 +165,9 @@ namespace lotus
                         last_split = cascade_splits[i];
                     }
                     cascade_data.inverse_view = glm::inverse(getViewMatrix());
-                    auto data = thread->engine->renderer.device->mapMemory(cascade_data_ubo->memory, cascade_data_ubo->memory_offset, sizeof(cascade_data) * engine->renderer.getImageCount(), {}, thread->engine->renderer.dispatch);
+                    auto data = cascade_data_ubo->map(0, sizeof(cascade_data) * engine->renderer.getImageCount(), {});
                     memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(cascade_data)), &cascade_data, sizeof(cascade_data));
-                    thread->engine->renderer.device->unmapMemory(cascade_data_ubo->memory, thread->engine->renderer.dispatch);
+                    cascade_data_ubo->unmap();
                 }
             }));
         }

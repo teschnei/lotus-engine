@@ -179,9 +179,9 @@ namespace lotus
 
         staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        void* data = thread->engine->renderer.device->mapMemory(staging_buffer->memory, staging_buffer->memory_offset, buffer_size, {}, thread->engine->renderer.dispatch);
+        void* data = staging_buffer->map(0, buffer_size, {});
         memcpy(data, instance_info.data(), buffer_size);
-        thread->engine->renderer.device->unmapMemory(staging_buffer->memory, thread->engine->renderer.dispatch);
+        staging_buffer->unmap();
 
         entity->instance_info = std::move(instance_info);
 

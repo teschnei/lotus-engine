@@ -26,8 +26,7 @@ namespace lotus
         auto anim_component = entity->animation_component;
         auto skeleton = anim_component->skeleton.get();
         staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(AnimationComponent::BufferBone) * skeleton->bones.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        AnimationComponent::BufferBone* buffer = static_cast<AnimationComponent::BufferBone*>(thread->engine->renderer.device->mapMemory(staging_buffer->memory,
-            staging_buffer->memory_offset, VK_WHOLE_SIZE, {}, thread->engine->renderer.dispatch));
+        AnimationComponent::BufferBone* buffer = static_cast<AnimationComponent::BufferBone*>(staging_buffer->map(0, VK_WHOLE_SIZE, {}));
         for (size_t i = 0; i < skeleton->bones.size(); ++i)
         {
             buffer[i].trans = skeleton->bones[i].trans;
@@ -37,7 +36,7 @@ namespace lotus
             buffer[i].rot.z = skeleton->bones[i].rot.z;
             buffer[i].rot.w = skeleton->bones[i].rot.w;
         }
-        thread->engine->renderer.device->unmapMemory(staging_buffer->memory);
+        staging_buffer->unmap();
 
         vk::BufferCopy copy_region;
         copy_region.srcOffset = 0;

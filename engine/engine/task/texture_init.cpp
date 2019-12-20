@@ -15,9 +15,9 @@ namespace lotus
     {
         staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(texture_data.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        void* data = thread->engine->renderer.device->mapMemory(staging_buffer->memory, staging_buffer->memory_offset, texture_data.size(), {}, thread->engine->renderer.dispatch);
+        void* data = staging_buffer->map(0, texture_data.size(), {});
         memcpy(data, texture_data.data(), texture_data.size());
-        thread->engine->renderer.device->unmapMemory(staging_buffer->memory);
+        staging_buffer->unmap();
 
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::ePrimary;

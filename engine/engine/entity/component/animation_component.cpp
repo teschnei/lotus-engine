@@ -32,7 +32,7 @@ namespace lotus
             if (animation_delta < interpolation_time)
             {
                 float frame_f = static_cast<float>(animation_delta.count()) / static_cast<float>(interpolation_time.count());
-                uint32_t frame = (interpolation_time / frame_duration) % current_animation->transforms.size();
+                size_t frame = (interpolation_time / frame_duration) % current_animation->transforms.size();
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
                     auto& bone = skeleton->bones[i];
@@ -44,7 +44,7 @@ namespace lotus
             else
             {
                 float frame_f = static_cast<float>((animation_delta % frame_duration).count()) / static_cast<float>(frame_duration.count());
-                uint32_t frame = (animation_delta / frame_duration) % current_animation->transforms.size();
+                size_t frame = (animation_delta / frame_duration) % current_animation->transforms.size();
                 uint32_t next_frame = (frame + 1) % current_animation->transforms.size();
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {

@@ -135,7 +135,7 @@ namespace lotus
             vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
             shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
 
-            uint8_t* shader_mapped = static_cast<uint8_t*>(device->mapMemory(shader_binding_table->memory, shader_binding_table->memory_offset, sbt_size, {}, dispatch));
+            uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
             std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * ray_tracing_properties.shaderGroupHandleSize);
             device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
@@ -150,7 +150,7 @@ namespace lotus
                 memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
                 *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % 16;
             }
-            device->unmapMemory(shader_binding_table->memory);
+            shader_binding_table->unmap();
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
             pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
@@ -1500,9 +1500,9 @@ namespace lotus
         };
 
         quad.vertex_buffer = memory_manager->GetBuffer(vertex_buffer.size() * sizeof(Vertex), vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        void* buf_mem = device->mapMemory(quad.vertex_buffer->memory, quad.vertex_buffer->memory_offset, vertex_buffer.size() * sizeof(Vertex), {}, dispatch);
+        void* buf_mem = quad.vertex_buffer->map(0, vertex_buffer.size() * sizeof(Vertex), {});
         memcpy(buf_mem, vertex_buffer.data(), vertex_buffer.size() * sizeof(Vertex));
-        device->unmapMemory(quad.vertex_buffer->memory, dispatch);
+        quad.vertex_buffer->unmap();
 
         std::vector<uint32_t> index_buffer = { 0,1,2,2,3,0 };
 		for (uint32_t i = 0; i < 3; ++i)
@@ -1516,9 +1516,9 @@ namespace lotus
 		quad.index_count = static_cast<uint32_t>(index_buffer.size());
 
         quad.index_buffer = memory_manager->GetBuffer(index_buffer.size() * sizeof(uint32_t), vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        buf_mem = device->mapMemory(quad.index_buffer->memory, quad.index_buffer->memory_offset, index_buffer.size() * sizeof(uint32_t), {}, dispatch);
+        buf_mem = quad.index_buffer->map(0, index_buffer.size() * sizeof(uint32_t), {});
         memcpy(buf_mem, index_buffer.data(), index_buffer.size() * sizeof(uint32_t));
-        device->unmapMemory(quad.index_buffer->memory, dispatch);
+        quad.index_buffer->unmap();
     }
 
     void Renderer::createAnimationResources()

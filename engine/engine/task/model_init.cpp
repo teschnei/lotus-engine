@@ -33,7 +33,7 @@ namespace lotus
             }
 
             staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            uint8_t* staging_buffer_data = static_cast<uint8_t*>(thread->engine->renderer.device->mapMemory(staging_buffer->memory, staging_buffer->memory_offset, staging_buffer_size, {}, thread->engine->renderer.dispatch));
+            uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
 
             vk::DeviceSize staging_buffer_offset = 0;
 
@@ -100,7 +100,7 @@ namespace lotus
 
                 staging_buffer_offset += vertex_buffer.size() + index_buffer.size();
             }
-            thread->engine->renderer.device->unmapMemory(staging_buffer->memory, thread->engine->renderer.dispatch);
+            staging_buffer->unmap();
 
             if (thread->engine->renderer.RTXEnabled() && !model->weighted)
             {

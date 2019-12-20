@@ -240,7 +240,7 @@ namespace lotus
                     geo.geometryType = vk::GeometryTypeNV::eTriangles;
                     geo.geometry.triangles.vertexData = vertex_buffer[i].back()->buffer;
                     geo.geometry.triangles.vertexOffset = 0;
-                    geo.geometry.triangles.vertexCount = vertices.size();
+                    geo.geometry.triangles.vertexCount = static_cast<uint32_t>(vertices.size());
                     geo.geometry.triangles.vertexStride = sizeof(FFXI::OS2::Vertex);
                     geo.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
 

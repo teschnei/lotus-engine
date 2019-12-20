@@ -26,7 +26,7 @@ namespace lotus
         void UpdateAccelerationStructure(vk::CommandBuffer command_buffer, vk::Buffer instance_buffer, vk::DeviceSize instance_offset);
         vk::UniqueHandle<vk::AccelerationStructureNV, vk::DispatchLoaderDynamic> acceleration_structure;
         std::unique_ptr<Buffer> scratch_memory;
-        std::unique_ptr<Memory> object_memory;
+        std::unique_ptr<GenericMemory> object_memory;
         uint64_t handle {0};
     };
 
