@@ -9,10 +9,10 @@ namespace lotus
 #ifdef SINGLETHREAD
         threads.push_back(std::make_unique<WorkerThread>(engine, this));
 #else
-        //for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
-        //{
+        for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
+        {
             threads.push_back(std::make_unique<WorkerThread>(engine, this));
-        //}
+        }
 #endif
         processing_work.resize(engine->renderer.getImageCount());
     }

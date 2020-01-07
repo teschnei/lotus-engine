@@ -115,6 +115,8 @@ namespace lotus
                     std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
                     std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
                     std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
+                    //TODO: move these into some kind of thread-safe implementation
+                    std::lock_guard lg{ thread->engine->renderer.acceleration_binding_mutex };
                     uint16_t index = thread->engine->renderer.static_acceleration_bindings_offset;
                     for (const auto& mesh : model->meshes)
                     {
