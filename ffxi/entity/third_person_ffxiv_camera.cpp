@@ -18,5 +18,5 @@ void ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>&
     glm::quat pitch = glm::angleAxis(rot_x, glm::vec3(0.f, 1.f, 0.f));
     glm::quat yaw = glm::angleAxis(rot_y, glm::vec3(0.f, 0.f, 1.f));
     rot = glm::normalize(yaw * pitch);
-    update_pos = true;
+    update = true;
 }

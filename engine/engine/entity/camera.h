@@ -6,6 +6,10 @@
 #include "engine/renderer/memory.h"
 #include "engine/renderer/renderer.h"
 
+//i love windows
+#undef near
+#undef far
+
 namespace lotus
 {
     class Engine;
@@ -37,6 +41,16 @@ namespace lotus
             glm::mat4 inverse_view;
         } cascade_data;
 
+        struct Frustum
+        {
+            glm::vec4 left;
+            glm::vec4 right;
+            glm::vec4 top;
+            glm::vec4 bottom;
+            glm::vec4 near;
+            glm::vec4 far;
+        } frustum;
+
         std::unique_ptr<Buffer> cascade_data_ubo;
 
 
@@ -55,6 +69,11 @@ namespace lotus
         glm::mat4 view_inverse{};
         glm::mat4 proj_inverse{};
 
-        bool update_ubo{ false };
+        float nh;
+        float nw;
+        float fh;
+        float fw;
+
+        bool update{ false };
     };
 }

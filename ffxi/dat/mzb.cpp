@@ -1,23 +1,26 @@
 #include "mzb.h"
 
 #include "key_tables.h"
+#include <algorithm>
+#include "engine/entity/camera.h"
 
 namespace FFXI
 {
     struct SMZBHeader {
         char id[4];
-        unsigned int totalRecord100 : 24;
-        unsigned int R100Flag : 8;
-        unsigned int offsetHeader2;
-        unsigned int d1 : 8;
-        unsigned int d2 : 8;
-        unsigned int d3 : 8;
-        unsigned int d4 : 8;
-        int offsetlooseTree;
-        unsigned int offsetEndRecord100;
-        unsigned int offsetEndlooseTree;
-        int unk5;
+        uint32_t totalRecord100 : 24;
+        uint32_t R100Flag : 8;
+        uint32_t collisionMeshOffset;
+        uint8_t gridWidth;
+        uint8_t gridHeight;
+        uint8_t bucketWidth;
+        uint8_t bucketHeight;
+        uint32_t quadtreeOffset;
+        uint32_t objectOffsetEnd;
+        uint32_t shortnamesOffset;
+        int32_t unk5;
     };
+    static_assert(sizeof(SMZBHeader) == 0x20);
 
     struct SMZBBlock84 {
         char id[16];
@@ -38,40 +41,135 @@ namespace FFXI
         unsigned int i1, i2, i3, i4, i5, i6;
     };
 
+    enum class FrustumResult
+    {
+        Inside,
+        Outside,
+        Intersect
+    };
+
+    FrustumResult isInFrustum(lotus::Camera::Frustum& frustum, glm::vec3 pos_min, glm::vec3 pos_max)
+    {
+        FrustumResult result = FrustumResult::Inside;
+        for (const auto& plane : {frustum.left, frustum.right, frustum.top, frustum.bottom, frustum.near, frustum.far})
+        {
+            //p: AABB corner furthest in the direction of plane normal, n: AABB corner furthest in the direction opposite of plane normal
+            glm::vec3 p = pos_min;
+            glm::vec3 n = pos_max;
+
+            if (plane.x >= 0)
+            {
+                p.x = pos_max.x;
+                n.x = pos_min.x;
+            }
+            if (plane.y >= 0)
+            {
+                p.y = pos_max.y;
+                n.y = pos_min.y;
+            }
+            if (plane.z >= 0)
+            {
+                p.z = pos_max.z;
+                n.z = pos_min.z;
+            }
+
+            if (glm::dot(p, glm::vec3(plane)) + plane.w < 0.f)
+            {
+                return FrustumResult::Outside;
+            }
+            if (glm::dot(n, glm::vec3(plane)) + plane.w < 0.f)
+            {
+                result = FrustumResult::Intersect;
+            }
+        }
+        return result;
+    }
+
+    std::vector<uint32_t> QuadTree::find(lotus::Camera::Frustum& frustum) const
+    {
+        std::vector<uint32_t> ret;
+        auto result = isInFrustum(frustum, pos1, pos2);
+        if (result == FrustumResult::Outside)
+            return ret;
+        else if (result == FrustumResult::Inside)
+        {
+            ret = nodes;
+            for (const auto& child : children)
+            {
+                auto nodes = child.get_nodes();
+                ret.insert(ret.end(), nodes.begin(), nodes.end());
+            }
+        }
+        else if (result == FrustumResult::Intersect)
+        {
+            ret = nodes;
+            for (const auto& child : children)
+            {
+                if (auto nodes = child.find(frustum); !nodes.empty())
+                {
+                    ret.insert(ret.end(), nodes.begin(), nodes.end());
+                }
+            }
+        }
+        return ret;
+    }
+
+    std::vector<uint32_t> QuadTree::find(glm::vec3 pos) const
+    {
+        std::vector<uint32_t> ret;
+        if (pos.x >= pos1.x && pos.y >= pos1.y && pos.z >= pos1.z &&
+            pos.x <= pos2.x && pos.y <= pos2.y && pos.z <= pos2.z)
+        {
+            ret = nodes;
+            for (const auto& child : children)
+            {
+                if (auto nodes = child.find(pos); !nodes.empty())
+                {
+                    ret.insert(ret.end(), nodes.begin(), nodes.end());
+                }
+            }
+        }
+        return ret;
+    }
+
+    std::vector<uint32_t> QuadTree::get_nodes() const
+    {
+        std::vector<uint32_t> ret = nodes;
+        for (const auto& child : children)
+        {
+            auto nodes = child.get_nodes();
+            ret.insert(ret.end(), nodes.begin(), nodes.end());
+        }
+        return ret;
+    }
+
     MZB::MZB(uint8_t* buffer, size_t max_len)
     {
         SMZBHeader* header = (SMZBHeader*)buffer;
 
         for (size_t i = 0; i < header->totalRecord100; ++i)
         {
-            vecMZB.push_back(((SMZBBlock100*)(buffer + 32))[i]);
+            vecMZB.push_back(((SMZBBlock100*)(buffer + sizeof(SMZBHeader)))[i]);
         }
 
-        //bool haveLooseTree = header->offsetlooseTree > header->offsetEndRecord100 && header->offsetEndlooseTree > header->offsetlooseTree;
-        //bool havePVS = false;
-        //int sizePVS = 0;
+        uint32_t maplist_offset = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x14);
+        uint32_t maplist_count = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x18);
 
-        //if (haveLooseTree)
-        //{
-        //    if (header->offsetlooseTree - header->offsetEndRecord100 > 16)
-        //    {
-        //        havePVS = true;
-        //    }
-        //}
-        //else
-        //{
-        //    if (header->offsetlooseTree > 0)
-        //    {
-        //        sizePVS = header->offsetlooseTree;
-        //        havePVS = true;
-        //    }
-        //}
+        for (uint32_t i = 0; i < maplist_count; ++i)
+        {
+            uint8_t* maplist_base = buffer + maplist_offset + 0x0C * i;
+            uint32_t mapid_encoded = *(uint32_t*)(maplist_base + 0x29 * sizeof(float));
+            uint32_t objvis_offset = *(uint32_t*)(maplist_base + 0x2a * sizeof(float));
+            uint32_t objvis_count = *(uint32_t*)(maplist_base + 0x2b * sizeof(float));
 
-        //if (havePVS)
-        //{
-        //    
-        //}
+            float x = *(float*)(maplist_base + 0x2c * sizeof(float));
+            float y = *(float*)(maplist_base + 0x2c * sizeof(float));
 
+            uint32_t mapid = ((mapid_encoded >> 3) & 0x7) | (((mapid_encoded >> 26) & 0x3) << 3);
+            vismap.push_back(mapid);
+        }
+
+        quadtree = parseQuadTree(buffer, header->quadtreeOffset);
     }
 
     bool MZB::DecodeMZB(uint8_t* buffer, size_t max_len)
@@ -114,5 +212,40 @@ namespace FFXI
         }
         return true;
     }
-    
+
+    QuadTree MZB::parseQuadTree(uint8_t* buffer, uint32_t offset)
+    {
+        uint8_t* quad_base = buffer + offset;
+        glm::vec3 pos1 = ((glm::vec3*)quad_base)[0];
+        glm::vec3 pos2 = ((glm::vec3*)quad_base)[0];
+
+        for (int i = 1; i < 8; ++i)
+        {
+            glm::vec3 bb = ((glm::vec3*)quad_base)[i];
+            pos1 = glm::min(pos1, bb);
+            pos2 = glm::max(pos2, bb);
+        }
+
+        QuadTree quadtree{ pos1, pos2 };
+
+        uint32_t visibility_list_offset = *(uint32_t*)(quad_base + sizeof(glm::vec3) * 8);
+        uint32_t visibility_list_count = *(uint32_t*)(quad_base + sizeof(glm::vec3) * 8 + sizeof(uint32_t));
+
+        for (size_t i = 0; i < visibility_list_count; ++i)
+        {
+            uint32_t node = *(uint32_t*)(buffer + visibility_list_offset + sizeof(uint32_t) * i);
+            quadtree.nodes.push_back(node);
+        }
+
+        for (int i = 0; i < 6; ++i)
+        {
+            uint32_t child_offset = *(uint32_t*)(quad_base + sizeof(glm::vec3) * 8 + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) * i);
+            if (child_offset != 0)
+            {
+                quadtree.children.push_back(parseQuadTree(buffer, child_offset));
+            }
+        }
+
+        return quadtree;
+    }
 }

@@ -15,18 +15,16 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
     if (moving.x != 0 || moving.z != 0)
     {
         auto norm = glm::normalize(moving);
-        //float speed = .000005f;
-        float speed = static_cast<Actor*>(entity)->speed / std::chrono::duration_cast<std::chrono::microseconds>(1s).count();
-        auto ms = std::chrono::duration_cast<std::chrono::microseconds>(delta).count();
-        float forward_offset = norm.x * ms * speed;
-        float right_offset = norm.z * ms * speed;
-        glm::vec3 offset{ forward_offset, 0.f, right_offset };
-        auto pos = entity->getPos();
         auto camera_rot = engine->camera->getRot();
-        //camera's rot is the direction the boom is (ie. opposite the way the view is facing)
-        auto rotated_offset = -offset * camera_rot;
-        pos.x += rotated_offset.x;
-        pos.z += rotated_offset.z;
+        auto rotated_norm = -norm * camera_rot;
+        //remove the y component since the character can only move on xz
+        rotated_norm.y = 0.f;
+        rotated_norm = glm::normalize(rotated_norm);
+        float speed = static_cast<Actor*>(entity)->speed / std::chrono::duration_cast<std::chrono::microseconds>(1s).count();
+        auto ms = std::max<long long>(1000, std::chrono::duration_cast<std::chrono::microseconds>(delta).count());
+        glm::vec3 offset = rotated_norm * glm::vec3(ms * speed);
+        auto pos = entity->getPos();
+        pos += offset;
         entity->setPos(pos);
 
         auto entity_quat = entity->getRot();

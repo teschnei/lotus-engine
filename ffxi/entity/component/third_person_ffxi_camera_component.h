@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/entity/component/input_component.h"
 #include <memory>
+#include <glm/glm.hpp>
 
 class ThirdPersonFFXICameraComponent : public lotus::InputComponent
 {

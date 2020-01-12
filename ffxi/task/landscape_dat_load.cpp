@@ -31,11 +31,13 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
             }
         }
 
+        std::map<std::string, uint32_t> model_map;
         for (const auto& mmb : parser.getMMBs())
         {
             std::string name(mmb->name, 16);
 
             entity->models.push_back(lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb.get()));
+            model_map[name] = entity->models.size() - 1;
         }
 
         entity->instance_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
@@ -57,6 +59,7 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
             glm::mat3 model_it = glm::transpose(glm::inverse(glm::mat3(model)));
             lotus::LandscapeEntity::InstanceInfo info{ model, model_t, model_it };
             temp_map[name].push_back(info);
+            entity->model_vec.push_back(std::make_pair(model_map[name], info));
         }
 
         for (auto& [name, info_vec] : temp_map)
@@ -64,6 +67,8 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
             entity->instance_offsets[name] = std::make_pair(instance_info.size(), static_cast<uint32_t>(info_vec.size()));
             instance_info.insert(instance_info.end(), std::make_move_iterator(info_vec.begin()), std::make_move_iterator(info_vec.end()));
         }
+
+        entity->quadtree = *mzb->quadtree;
 
         thread->engine->worker_pool.addWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
     }

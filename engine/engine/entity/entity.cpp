@@ -8,11 +8,11 @@ namespace lotus
 
     void Entity::tick_all(time_point time, duration delta)
     {
-        tick(time, delta);
         for (auto& component : components)
         {
             component->tick(time, delta);
         }
+        tick(time, delta);
     }
 
     void Entity::render_all(Engine* engine, std::shared_ptr<Entity>& sp)
