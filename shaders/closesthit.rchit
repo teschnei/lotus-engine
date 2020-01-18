@@ -86,28 +86,31 @@ void main()
     vec3 transformed_normal = mat3(gl_ObjectToWorldNV) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
 
-    float dot_product = max(dot(-light.light, normalized_normal), 0.5);
+    float dot_product = dot(-light.light, normalized_normal);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
     vec3 color = texture(textures[resource_index], uv).xyz;
 
-    vec3 vertex_vec1 = normalize(vec3(v1.pos - v0.pos));
-    vec3 vertex_vec2 = normalize(vec3(v2.pos - v0.pos));
+    shadow = false;
+    if (dot_product > 0)
+    {
+        vec3 vertex_vec1 = normalize(vec3(v1.pos - v0.pos));
+        vec3 vertex_vec2 = normalize(vec3(v2.pos - v0.pos));
 
-    vec3 cross_vec = normalize(cross(vertex_vec1, vertex_vec2));
+        vec3 cross_vec = normalize(cross(vertex_vec1, vertex_vec2));
 
-    if ((dot(cross_vec, normalized_normal)) < 0)
-        cross_vec = -cross_vec;
+        if ((dot(cross_vec, normalized_normal)) < 0)
+            cross_vec = -cross_vec;
 
-    vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-
-    shadow = true;
-    traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.000, -light.light, 500, 1);
+        vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
+        shadow = true;
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.000, -light.light, 500, 1);
+    }
     vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
     vec3 total_light = vec3(0);
     if (!shadow)
-        total_light = light.color;
+        total_light = light.color * max(dot_product, 0.0);
     total_light = max(ambient, total_light);
 
     hitValue.color = color * total_light;

@@ -29,6 +29,8 @@ namespace lotus
         float getFarClip() { return far_clip; }
         void move(float forward_offset, float right_offset);
         void look(float rot_x_offset, float rot_y_offset);
+        float getRotX() const { return rot_x; }
+        float getRotY() const { return rot_y; }
 
         glm::vec3 getRotationVector() { return camera_rot; }
 
@@ -39,7 +41,7 @@ namespace lotus
             glm::vec4 cascade_splits;
             glm::mat4 cascade_view_proj[Renderer::shadowmap_cascades];
             glm::mat4 inverse_view;
-        } cascade_data;
+        } cascade_data {};
 
         struct Frustum
         {
@@ -49,7 +51,7 @@ namespace lotus
             glm::vec4 bottom;
             glm::vec4 near;
             glm::vec4 far;
-        } frustum;
+        } frustum {};
 
         std::unique_ptr<Buffer> cascade_data_ubo;
 
@@ -69,10 +71,10 @@ namespace lotus
         glm::mat4 view_inverse{};
         glm::mat4 proj_inverse{};
 
-        float nh;
-        float nw;
-        float fh;
-        float fw;
+        float nh{};
+        float nw{};
+        float fh{};
+        float fw{};
 
         bool update{ false };
     };

@@ -15,13 +15,11 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
     if (moving.x != 0 || moving.z != 0)
     {
         auto norm = glm::normalize(moving);
-        auto camera_rot = engine->camera->getRot();
-        auto rotated_norm = -norm * camera_rot;
-        //remove the y component since the character can only move on xz
-        rotated_norm.y = 0.f;
-        rotated_norm = glm::normalize(rotated_norm);
+        auto camera_rot = engine->camera->getRotX();
+
+        auto rotated_norm = glm::rotateY(-norm, -camera_rot);
         float speed = static_cast<Actor*>(entity)->speed / std::chrono::duration_cast<std::chrono::microseconds>(1s).count();
-        auto ms = std::max<long long>(1000, std::chrono::duration_cast<std::chrono::microseconds>(delta).count());
+        auto ms = std::min<long long>(1000000, std::chrono::duration_cast<std::chrono::microseconds>(delta).count());
         glm::vec3 offset = rotated_norm * glm::vec3(ms * speed);
         auto pos = entity->getPos();
         pos += offset;
@@ -31,7 +29,7 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
 
         glm::vec3 base = glm::normalize(moving);
         auto source_rot_vec = glm::vec3{ 1.f, 0.f, 0.f } * entity_quat;
-        auto dest_rot_vec = -base * camera_rot;
+        auto dest_rot_vec = glm::rotateY(-base, -camera_rot);
 
         auto diff = glm::orientedAngle(glm::normalize(glm::vec2{ source_rot_vec.x, source_rot_vec.z }), glm::normalize(glm::vec2{ dest_rot_vec.x, dest_rot_vec.z }));
         auto max_turn_rate = ms * 0.00001f;
