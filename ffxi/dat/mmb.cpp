@@ -290,12 +290,29 @@ namespace FFXI
                 }
                 else
                 {
-                    mesh.topology = vk::PrimitiveTopology::eTriangleStrip;
+                    //mesh.topology = vk::PrimitiveTopology::eTriangleStrip;
+                    mesh.topology = vk::PrimitiveTopology::eTriangleList;
                     for (int i = 0; i < num_indices - 2; ++i)
                     {
-                        mesh.indices.push_back(*(uint16_t*)(buffer + offset));
-                        mesh.indices.push_back(*(uint16_t*)(buffer + offset + sizeof(uint16_t)));
-                        mesh.indices.push_back(*(uint16_t*)(buffer + offset + sizeof(uint16_t) * 2));
+                        auto i1 = *(uint16_t*)(buffer + offset);
+                        auto i2 = *(uint16_t*)(buffer + offset + sizeof(uint16_t));
+                        auto i3 = *(uint16_t*)(buffer + offset + sizeof(uint16_t) * 2);
+
+                        if (i1 != i2 && i2 != i3)
+                        {
+                            if (i % 2)
+                            {
+                                mesh.indices.push_back(i2);
+                                mesh.indices.push_back(i1);
+                                mesh.indices.push_back(i3);
+                            }
+                            else
+                            {
+                                mesh.indices.push_back(i1);
+                                mesh.indices.push_back(i2);
+                                mesh.indices.push_back(i3);
+                            }
+                        }
                         offset += sizeof(uint16_t);
                     }
                     offset += sizeof(uint16_t) * 2;
@@ -303,7 +320,8 @@ namespace FFXI
                 if (num_indices % 2 != 0)
                     offset += sizeof(uint16_t);
 
-                meshes.push_back(std::move(mesh));
+                if (!mesh.indices.empty())
+                    meshes.push_back(std::move(mesh));
             }
         }
     }
