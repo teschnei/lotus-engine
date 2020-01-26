@@ -17,6 +17,21 @@ namespace lotus
         processing_work.resize(engine->renderer.getImageCount());
     }
 
+    WorkerPool::~WorkerPool()
+    {
+        for(auto& thread : threads)
+        {
+            thread->Exit();
+        }
+        exit = true;
+        work_cv.notify_all();
+
+        for(auto& thread : threads)
+        {
+            thread->Join();
+        }
+    }
+
     void WorkerPool::addWork(std::unique_ptr<WorkItem> work_item)
     {
         std::lock_guard lg(work_mutex);
@@ -27,11 +42,14 @@ namespace lotus
     void WorkerPool::waitForWork(std::unique_ptr<WorkItem>* item)
     {
         std::unique_lock lk(work_mutex);
-        if (work.empty())
+        if (work.empty() && !exit)
         {
-            work_cv.wait(lk, [this] {return !work.empty(); });
+            work_cv.wait(lk, [this] {return !work.empty() || exit; });
         }
-        *item = work.top_and_pop();
+        if (!work.empty())
+            *item = work.top_and_pop();
+        else
+            *item = nullptr;
     }
 
     void WorkerPool::workFinished(std::unique_ptr<WorkItem>* work_item)

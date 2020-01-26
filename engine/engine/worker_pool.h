@@ -43,6 +43,7 @@ namespace lotus
     {
     public:
         WorkerPool(Engine*);
+        ~WorkerPool();
 
         void addWork(std::unique_ptr<WorkItem>);
         template<typename Container>
@@ -77,6 +78,7 @@ namespace lotus
         std::mutex work_mutex;
         std::condition_variable work_cv;
         std::condition_variable idle_cv;
+        bool exit{ false };
 
         Engine* engine {nullptr};
     };

@@ -123,6 +123,7 @@ namespace lotus
             pool_ci.maxSets = 1;
             pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes_const.size());
             pool_ci.pPoolSizes = pool_sizes_const.data();
+            pool_ci.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
             rtx_descriptor_pool = engine->renderer.device->createDescriptorPoolUnique(pool_ci, nullptr, engine->renderer.dispatch);
 

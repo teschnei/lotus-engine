@@ -48,6 +48,7 @@ namespace lotus
         vk::UniqueHandle<vk::Instance, vk::DispatchLoaderStatic> instance;
         vk::PhysicalDevice physical_device;
         vk::UniqueHandle<vk::Device, vk::DispatchLoaderStatic> device;
+        std::unique_ptr<MemoryManager> memory_manager;
         vk::Queue graphics_queue;
         vk::Queue present_queue;
         vk::Queue compute_queue;
@@ -82,7 +83,7 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
         SDL_Window* window {nullptr};
         vk::SurfaceKHR surface;
-        std::unique_ptr<MemoryManager> memory_manager;
+        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
         static constexpr uint32_t shadowmap_cascades {4};
 
@@ -121,7 +122,6 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;
 
         vk::DispatchLoaderDynamic dispatch;
-        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
 
         RenderMode render_mode{ RenderMode::RTX };
 

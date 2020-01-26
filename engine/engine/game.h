@@ -18,8 +18,8 @@ namespace lotus
             tick(time, delta);
             scene->tick_all(time, delta);
         }
-        std::unique_ptr<Scene> scene;
         std::unique_ptr<Engine> engine;
+        std::unique_ptr<Scene> scene;
 
     protected:
         virtual void tick(time_point time, duration delta) {}

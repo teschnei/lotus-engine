@@ -20,6 +20,8 @@ namespace lotus
 
         void WorkLoop();
         bool Busy() const { return work != nullptr; }
+        void Exit();
+        void Join();
 
         struct QueueResourcesGraphics
         {
@@ -44,5 +46,6 @@ namespace lotus
         std::thread thread{ &WorkerThread::WorkLoop, this };
 #endif
         std::unique_ptr<WorkItem> work;
+        bool active{ true };
     };
 }
