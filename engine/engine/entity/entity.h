@@ -7,6 +7,7 @@
 
 #include "component/component.h"
 #include "../types.h"
+#include "engine/work_item.h"
 
 namespace lotus
 {
@@ -23,6 +24,7 @@ namespace lotus
 
         void tick_all(time_point time, duration delta);
         void render_all(Engine* engine, std::shared_ptr<Entity>& sp);
+        virtual std::unique_ptr<WorkItem> recreate_command_buffers(std::shared_ptr<Entity>& sp) { return {}; };
 
         template<typename T, typename... Args>
         void addComponent(Args&&... args)

@@ -112,7 +112,8 @@ namespace lotus
     {
         if (RTXEnabled())
         {
-
+            rtx_render_targets.clear();
+            rtx_render_target_views.clear();
             for (int i = 0; i < swapchain_images.size(); ++i)
             {
                 rtx_render_targets.push_back(memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, swapchain_image_format,
@@ -129,49 +130,52 @@ namespace lotus
                 rtx_render_target_views.push_back(device->createImageViewUnique(view_ci, nullptr, dispatch));
             }
 
-            constexpr uint32_t shader_nonhitcount = 3;
-            constexpr uint32_t shader_hitcount = 64;
-            shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
-            vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
-            shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
-
-            uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
-
-            std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * ray_tracing_properties.shaderGroupHandleSize);
-            device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
-            for (uint32_t i = 0; i < shader_nonhitcount; ++i)
+            if (!shader_binding_table)
             {
-                memcpy(shader_mapped + (i * ray_tracing_properties.shaderGroupHandleSize), shader_handle_storage.data() + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
+                constexpr uint32_t shader_nonhitcount = 3;
+                constexpr uint32_t shader_hitcount = 64;
+                shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
+                vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
+                shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
+
+                uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
+
+                std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * ray_tracing_properties.shaderGroupHandleSize);
+                device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
+                for (uint32_t i = 0; i < shader_nonhitcount; ++i)
+                {
+                    memcpy(shader_mapped + (i * ray_tracing_properties.shaderGroupHandleSize), shader_handle_storage.data() + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
+                }
+                shader_mapped += ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount;
+
+                for (uint32_t i = 0; i < shader_hitcount; ++i)
+                {
+                    memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
+                    *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % 16;
+                }
+                shader_binding_table->unmap();
+
+                std::vector<vk::DescriptorPoolSize> pool_sizes_const;
+                pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
+                pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
+                pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
+                pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, max_acceleration_binding_index);
+
+                vk::DescriptorPoolCreateInfo pool_ci;
+                pool_ci.maxSets = 3;
+                pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes_const.size());
+                pool_ci.pPoolSizes = pool_sizes_const.data();
+
+                rtx_descriptor_pool_const = device->createDescriptorPoolUnique(pool_ci, nullptr, dispatch);
+
+                std::array<vk::DescriptorSetLayout, 3> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
+
+                vk::DescriptorSetAllocateInfo set_ci;
+                set_ci.descriptorPool = *rtx_descriptor_pool_const;
+                set_ci.descriptorSetCount = 3;
+                set_ci.pSetLayouts = layouts.data();
+                rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, dispatch);
             }
-            shader_mapped += ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount;
-
-            for (uint32_t i = 0; i < shader_hitcount; ++i)
-            {
-                memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
-                *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % 16;
-            }
-            shader_binding_table->unmap();
-
-            std::vector<vk::DescriptorPoolSize> pool_sizes_const;
-            pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, max_acceleration_binding_index);
-
-            vk::DescriptorPoolCreateInfo pool_ci;
-            pool_ci.maxSets = 3;
-            pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes_const.size());
-            pool_ci.pPoolSizes = pool_sizes_const.data();
-
-            rtx_descriptor_pool_const = device->createDescriptorPoolUnique(pool_ci, nullptr, dispatch);
-
-            std::array<vk::DescriptorSetLayout, 3> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
-
-            vk::DescriptorSetAllocateInfo set_ci;
-            set_ci.descriptorPool = *rtx_descriptor_pool_const;
-            set_ci.descriptorSetCount = 3;
-            set_ci.pSetLayouts = layouts.data();
-            rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, dispatch);
         }
     }
 
@@ -307,13 +311,11 @@ namespace lotus
 
     void Renderer::createSwapchain()
     {
-        //device->waitIdle(dispatch);
-        //swapchain_image_views.clear();
-        //swapchain_images.clear();
-        //swapchain.reset();
         if (swapchain)
         {
             old_swapchain = std::move(swapchain);
+            old_swapchain_image = getCurrentImage();
+            swapchain.reset();
         }
         auto swap_chain_info = getSwapChainInfo(physical_device);
         vk::SurfaceFormatKHR surface_format;
@@ -1187,6 +1189,7 @@ namespace lotus
 
     void Renderer::createFramebuffers()
     {
+        frame_buffers.clear();
         for (auto& swapchain_image_view : swapchain_image_views) {
             std::array<vk::ImageView, 2> attachments = {
                 *swapchain_image_view,
@@ -1292,10 +1295,10 @@ namespace lotus
 
     void Renderer::createGBufferResources()
     {
-        gbuffer.position.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.normal.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.albedo.image = memory_manager->GetImage(WIDTH, HEIGHT, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.depth.image = memory_manager->GetImage(WIDTH, HEIGHT, getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.position.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.normal.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.albedo.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.depth.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = gbuffer.position.image->image;
@@ -1323,8 +1326,8 @@ namespace lotus
         framebuffer_info.renderPass = *gbuffer_render_pass;
         framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebuffer_info.pAttachments = attachments.data();
-        framebuffer_info.width = WIDTH;
-        framebuffer_info.height = HEIGHT;
+        framebuffer_info.width = swapchain_extent.width;
+        framebuffer_info.height = swapchain_extent.height;
         framebuffer_info.layers = 1;
 
         gbuffer.frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr, dispatch);
@@ -1586,6 +1589,35 @@ namespace lotus
         animation_pipeline = device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr, dispatch);
     }
 
+    void Renderer::recreateRenderer()
+    {
+        device->waitIdle(dispatch);
+        swapchain_image_views.clear();
+        swapchain_images.clear();
+
+        createSwapchain();
+        createRenderpasses();
+        createDepthImage();
+        //can skip this if scissor/viewport are dynamic
+        createGraphicsPipeline();
+        createFramebuffers();
+        createGBufferResources();
+        createDeferredCommandBuffer();
+        createRayTracingResources();
+        //recreate command buffers
+        recreateStaticCommandBuffers();
+    }
+
+    void Renderer::recreateStaticCommandBuffers()
+    {
+        engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
+        {
+            auto work = entity->recreate_command_buffers(entity);
+            if (work)
+                engine->worker_pool.addWork(std::move(work));
+        });
+    }
+
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)
     {
         std::ifstream file(file_name, std::ios::ate | std::ios::binary);
@@ -1681,7 +1713,7 @@ namespace lotus
 
             renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
             renderpass_info.pClearValues = clearValues.data();
-            renderpass_info.renderArea.extent = { WIDTH, HEIGHT };
+            renderpass_info.renderArea.extent = swapchain_extent;
 
             buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
             auto secondary_buffers = engine->worker_pool.getSecondaryGraphicsBuffers(image_index);
@@ -1870,10 +1902,14 @@ namespace lotus
 
         if (result == vk::Result::eErrorOutOfDateKHR)
         {
-            createSwapchain();
+            recreateRenderer();
             return;
         }
         engine->worker_pool.clearProcessed(current_image);
+        if (old_swapchain && old_swapchain_image == current_image)
+        {
+            old_swapchain.reset();
+        }
         engine->worker_pool.waitIdle();
         if (raytracer->hasQueries())
         {
@@ -1944,16 +1980,20 @@ namespace lotus
 
         presentInfo.pImageIndices = &current_image;
 
-        if (present_queue.presentKHR(presentInfo) == vk::Result::eErrorOutOfDateKHR)
+        try
+        {
+            present_queue.presentKHR(presentInfo, dispatch);
+        }
+        catch (vk::OutOfDateKHRError& )
         {
             resize = false;
-            createSwapchain();
+            recreateRenderer();
         }
 
         if (resize)
         {
             resize = false;
-            createSwapchain();
+            recreateRenderer();
         }
 
         current_frame = (current_frame + 1) % max_pending_frames;

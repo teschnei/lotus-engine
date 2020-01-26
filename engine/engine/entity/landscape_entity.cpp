@@ -1,5 +1,6 @@
 #include "landscape_entity.h"
 #include "engine/renderer/raytrace_query.h"
+#include "engine/task/landscape_entity_init.h"
 
 namespace lotus
 {
@@ -29,5 +30,10 @@ namespace lotus
     void LandscapeEntity::update_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
         //landscape can't move so no need to update
+    }
+
+    std::unique_ptr<WorkItem> LandscapeEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
+    {
+        return std::make_unique<LandscapeEntityReInitTask>(std::static_pointer_cast<LandscapeEntity>(sp));
     }
 }

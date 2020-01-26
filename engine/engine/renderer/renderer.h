@@ -53,6 +53,7 @@ namespace lotus
         vk::Queue compute_queue;
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> swapchain;
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> old_swapchain;
+        uint32_t old_swapchain_image{ 0 };
         vk::Extent2D swapchain_extent{};
         vk::Format swapchain_image_format{};
         std::vector<vk::Image> swapchain_images;
@@ -177,6 +178,9 @@ namespace lotus
         void createDeferredCommandBuffer();
         void createQuad();
         void createAnimationResources();
+
+        void recreateRenderer();
+        void recreateStaticCommandBuffers();
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;

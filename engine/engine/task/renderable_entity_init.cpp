@@ -41,7 +41,11 @@ namespace lotus
         }
 
         entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(RenderableEntity::UniformBufferObject) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        createStaticCommandBuffers(thread);
+    }
 
+    void RenderableEntityInitTask::createStaticCommandBuffers(WorkerThread* thread)
+    {
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
         alloc_info.commandPool = *thread->graphics.command_pool;
@@ -266,5 +270,14 @@ namespace lotus
                 animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(thread->engine, command_buffer, raytrace_geometry[i], true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
             }
         }
+    }
+
+    RenderableEntityReInitTask::RenderableEntityReInitTask(const std::shared_ptr<RenderableEntity>& entity) : RenderableEntityInitTask(entity)
+    {
+    }
+
+    void RenderableEntityReInitTask::Process(WorkerThread* thread)
+    {
+        createStaticCommandBuffers(thread);
     }
 }

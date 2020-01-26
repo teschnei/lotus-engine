@@ -2,11 +2,17 @@
 #include "engine/core.h"
 #include "engine/task/entity_render.h"
 #include "component/animation_component.h"
+#include "engine/task/renderable_entity_init.h"
 
 namespace lotus
 {
     RenderableEntity::RenderableEntity(Engine* engine) : Entity(engine)
     {
+    }
+
+    std::unique_ptr<WorkItem> RenderableEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
+    {
+        return std::make_unique<RenderableEntityReInitTask>(std::static_pointer_cast<RenderableEntity>(sp));
     }
 
     void RenderableEntity::setScale(float x, float y, float z)

@@ -28,6 +28,14 @@ namespace lotus
             sp->Init(sp, args...);
             return sp;
         }
+        template<typename F>
+        void forEachEntity(F func)
+        {
+            for(auto& entity : entities)
+            {
+                func(entity);
+            }
+        }
         std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
     protected:
         virtual void tick(time_point time, duration delta) {}
