@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/entity/component/input_component.h"
 #include <memory>
+#include <glm/glm.hpp>
 
 class ThirdPersonFFXIVCameraComponent : public lotus::InputComponent
 {
@@ -10,6 +11,7 @@ public:
     virtual void tick(lotus::time_point time, lotus::duration delta) override;
 protected:
     std::weak_ptr<lotus::Entity> focus;
+    glm::vec3 last_focus_pos{};
     //min/max camera distance (squared)
     float max_camera_distance{ 100.f };
     float min_camera_distance{ 10.f };

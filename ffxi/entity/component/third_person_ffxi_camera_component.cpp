@@ -70,19 +70,10 @@ void ThirdPersonFFXICameraComponent::tick(lotus::time_point time, lotus::duratio
     auto focus_lock = focus.lock();
     if (focus_lock)
     {
-        //if (auto dist2 = glm::distance2(camera->getPos(), focus_lock->getPos()); dist2 > max_camera_distance + 0.001f)
-        //{
-        //    //move towards focus
-        //    //move = (focus_lock->getPos() - camera->getPos()) * (1 - sqrt(max_camera_distance / dist2));
-        //    camera->setDistance(sqrt(max_camera_distance));
-        //}
-        //else if (dist2 < min_camera_distance - 0.001f)
-        //{
-        //    //move away from focus
-        //    //move = (camera->getPos() - focus_lock->getPos()) * (sqrt(dist2 / min_camera_distance));
-        //    camera->setDistance(sqrt(min_camera_distance));
-        //}
-        camera->look(focus_lock->getPos());
+        if (last_focus_pos != focus_lock->getPos())
+        {
+            camera->update_camera();
+        }
     }
     else
     {

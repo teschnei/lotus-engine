@@ -78,6 +78,7 @@ namespace lotus
                 glm::vec3 boom{ new_distance - 0.05f, 0.f, 0.f };
                 glm::vec3 new_pos = boom * rot;
                 Entity::setPos(new_pos + boom_source);
+                look(boom_source);
             });
         }
         Camera::tick(time, delta);

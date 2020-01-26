@@ -16,6 +16,7 @@ namespace lotus
         void look(glm::vec3 eye_focus);
         void swivel(float x_offset, float y_offset);
         void setPos(glm::vec3 pos);
+        void update_camera() { update = true; }
 
     protected:
         void tick(time_point time, duration delta) override;
