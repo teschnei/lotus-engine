@@ -68,6 +68,7 @@ namespace lotus
     {
     public:
         MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _device, vk::DispatchLoaderDynamic _dispatch);
+        ~MemoryManager();
         std::unique_ptr<Buffer> GetBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryflags);
         std::unique_ptr<Image> GetImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlags memoryflags, uint32_t arrayLayers = 1);
         std::unique_ptr<GenericMemory> GetMemory(const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryflags);

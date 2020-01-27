@@ -42,6 +42,11 @@ namespace lotus
         vmaCreateAllocator(&vma_ci, &allocator);
     }
 
+    MemoryManager::~MemoryManager()
+    {
+        vmaDestroyAllocator(allocator);
+    }
+
     std::unique_ptr<Buffer> MemoryManager::GetBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags memoryflags)
     {
