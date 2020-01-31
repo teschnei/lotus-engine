@@ -24,7 +24,7 @@ namespace lotus
     {
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics.command_pool;
+        alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
 
         entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
@@ -191,7 +191,7 @@ namespace lotus
 
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *thread->graphics.command_pool;
+        alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
         auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
@@ -218,7 +218,7 @@ namespace lotus
 
         command_buffer->end(thread->engine->renderer.dispatch);
 
-        thread->graphics.primary_buffers[thread->engine->renderer.getCurrentImage()].push_back(*command_buffer);
+        graphics.primary = *command_buffer;
     }
 
     LandscapeEntityReInitTask::LandscapeEntityReInitTask(const std::shared_ptr<LandscapeEntity>& entity) : LandscapeEntityInitTask(entity, {})

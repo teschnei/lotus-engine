@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <vulkan/vulkan.hpp>
 
 namespace lotus
 {
@@ -17,6 +18,18 @@ namespace lotus
 
         int priority = 0;
         bool operator>(const WorkItem& o) const { return priority > o.priority; }
+
+        struct GraphicsResources
+        {
+            vk::CommandBuffer primary;
+            vk::CommandBuffer secondary;
+            vk::CommandBuffer shadow;
+        } graphics {};
+
+        struct ComputeResources
+        {
+            vk::CommandBuffer primary;
+        } compute {};
     };
 
     class LambdaWorkItem : public WorkItem

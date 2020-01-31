@@ -23,19 +23,8 @@ namespace lotus
         void Exit();
         void Join();
 
-        struct QueueResourcesGraphics
-        {
-            vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
-            std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
-            std::vector<std::vector<vk::CommandBuffer>> secondary_buffers;
-            std::vector<std::vector<vk::CommandBuffer>> shadow_buffers;
-        } graphics;
-
-        struct QueueResourcesCompute
-        {
-            vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> command_pool;
-            std::vector<std::vector<vk::CommandBuffer>> primary_buffers;
-        } compute;
+        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> graphics_pool;
+        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> compute_pool;
 
         vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderStatic> desc_pool;
 

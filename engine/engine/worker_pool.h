@@ -16,16 +16,32 @@ namespace lotus
         class Compare = std::less<typename Container::value_type>>
     class WorkItemQueue : public std::priority_queue<T, Container, Compare> {
     public:
-      T top_and_pop() {
-        std::pop_heap(c.begin(), c.end(), comp);
-        T value = std::move(c.back());
-        c.pop_back();
-        return value;
-      }
+        T top_and_pop()
+        {
+            std::pop_heap(c.begin(), c.end(), comp);
+            T value = std::move(c.back());
+            c.pop_back();
+            return value;
+        }
+
+        void clear()
+        {
+            c.clear();
+        }
+
+        typename Container::iterator begin() noexcept
+        {
+            return c.begin();
+        }
+
+        typename Container::iterator end() noexcept
+        {
+            return c.end();
+        }
 
     protected:
-      using std::priority_queue<T, Container, Compare>::c;
-      using std::priority_queue<T, Container, Compare>::comp;
+        using std::priority_queue<T, Container, Compare>::c;
+        using std::priority_queue<T, Container, Compare>::comp;
     };
 
     class WorkItem;
@@ -72,9 +88,9 @@ namespace lotus
     private:
         std::vector<std::unique_ptr<WorkerThread>> threads;
         WorkItemQueue<std::unique_ptr<WorkItem>, std::vector<std::unique_ptr<WorkItem>>, WorkCompare> work;
-        std::vector<std::unique_ptr<WorkItem>> pending_work;
-        std::vector<std::vector<std::unique_ptr<WorkItem>>> processing_work;
-        std::vector<std::unique_ptr<WorkItem>> finished_work;
+        WorkItemQueue<std::unique_ptr<WorkItem>> pending_work;
+        std::vector<WorkItemQueue<std::unique_ptr<WorkItem>>> processing_work;
+        WorkItemQueue<std::unique_ptr<WorkItem>> finished_work;
         std::mutex work_mutex;
         std::condition_variable work_cv;
         std::condition_variable idle_cv;

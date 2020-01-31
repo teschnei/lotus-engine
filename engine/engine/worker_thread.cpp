@@ -8,10 +8,10 @@ lotus::WorkerThread::WorkerThread(Engine* _engine, WorkerPool* _pool) : pool(_po
 
     vk::CommandPoolCreateInfo pool_info = {};
     pool_info.queueFamilyIndex = graphics_queue.value();
-    graphics.command_pool = engine->renderer.device->createCommandPoolUnique(pool_info);
+    graphics_pool = engine->renderer.device->createCommandPoolUnique(pool_info);
 
     pool_info.queueFamilyIndex = compute_queue.value();
-    compute.command_pool = engine->renderer.device->createCommandPoolUnique(pool_info);
+    compute_pool = engine->renderer.device->createCommandPoolUnique(pool_info);
 
     std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
     poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
@@ -26,12 +26,6 @@ lotus::WorkerThread::WorkerThread(Engine* _engine, WorkerPool* _pool) : pool(_po
     poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
     desc_pool = engine->renderer.device->createDescriptorPoolUnique(poolInfo);
-
-    graphics.primary_buffers.resize(engine->renderer.getImageCount());
-    graphics.secondary_buffers.resize(engine->renderer.getImageCount());
-    graphics.shadow_buffers.resize(engine->renderer.getImageCount());
-
-    compute.primary_buffers.resize(engine->renderer.getImageCount());
 }
 
 void lotus::WorkerThread::WorkLoop()

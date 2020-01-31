@@ -1,5 +1,6 @@
 #include "worker_pool.h"
 #include "core.h"
+#include "work_item.h"
 #include <algorithm>
 
 namespace lotus
@@ -9,7 +10,7 @@ namespace lotus
 #ifdef SINGLETHREAD
         threads.push_back(std::make_unique<WorkerThread>(engine, this));
 #else
-        //for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
+        for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
         {
             threads.push_back(std::make_unique<WorkerThread>(engine, this));
         }
@@ -55,17 +56,17 @@ namespace lotus
     void WorkerPool::workFinished(std::unique_ptr<WorkItem>* work_item)
     {
         std::lock_guard lg(work_mutex);
-        pending_work.push_back(std::move(*work_item));
+        pending_work.push(std::move(*work_item));
         idle_cv.notify_all();
     }
 
     std::vector<vk::CommandBuffer> WorkerPool::getPrimaryGraphicsBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
-        for (const auto& thread : threads)
+        for (const auto& task : processing_work[image])
         {
-            buffers.insert(buffers.end(), thread->graphics.primary_buffers[image].begin(), thread->graphics.primary_buffers[image].end());
-            thread->graphics.primary_buffers[image].clear();
+            if (task->graphics.primary)
+                buffers.push_back(task->graphics.primary);
         }
         return buffers;
     }
@@ -73,10 +74,10 @@ namespace lotus
     std::vector<vk::CommandBuffer> WorkerPool::getSecondaryGraphicsBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
-        for (const auto& thread : threads)
+        for (const auto& task : processing_work[image])
         {
-            buffers.insert(buffers.end(), thread->graphics.secondary_buffers[image].begin(), thread->graphics.secondary_buffers[image].end());
-            thread->graphics.secondary_buffers[image].clear();
+            if (task->graphics.secondary)
+                buffers.push_back(task->graphics.secondary);
         }
         return buffers;
     }
@@ -84,10 +85,10 @@ namespace lotus
     std::vector<vk::CommandBuffer> WorkerPool::getShadowmapGraphicsBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
-        for (const auto& thread : threads)
+        for (const auto& task : processing_work[image])
         {
-            buffers.insert(buffers.end(), thread->graphics.shadow_buffers[image].begin(), thread->graphics.shadow_buffers[image].end());
-            thread->graphics.shadow_buffers[image].clear();
+            if (task->graphics.shadow)
+                buffers.push_back(task->graphics.shadow);
         }
         return buffers;
     }
@@ -95,10 +96,10 @@ namespace lotus
     std::vector<vk::CommandBuffer> WorkerPool::getPrimaryComputeBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;
-        for (const auto& thread : threads)
+        for (const auto& task : processing_work[image])
         {
-            buffers.insert(buffers.end(), thread->compute.primary_buffers[image].begin(), thread->compute.primary_buffers[image].end());
-            thread->compute.primary_buffers[image].clear();
+            if (task->compute.primary)
+                buffers.push_back(task->compute.primary);
         }
         return buffers;
     }
