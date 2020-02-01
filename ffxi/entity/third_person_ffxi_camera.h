@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/renderer/renderer.h"
+#include "engine/renderer/vulkan/renderer.h"
 #include "engine/entity/third_person_boom_camera.h"
 
 class ThirdPersonFFXICamera : public lotus::ThirdPersonBoomCamera

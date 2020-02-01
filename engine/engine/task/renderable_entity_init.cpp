@@ -1,7 +1,7 @@
 #include "renderable_entity_init.h"
 #include "engine/worker_thread.h"
 #include "engine/core.h"
-#include "engine/renderer/renderer.h"
+#include "engine/renderer/vulkan/renderer.h"
 #include "engine/entity/component/animation_component.h"
 #include "../../../ffxi/dat/os2.h"
 

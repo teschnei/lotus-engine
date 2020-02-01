@@ -2,7 +2,7 @@
 #include <vector>
 #include <functional>
 #include <glm/glm.hpp>
-#include <vulkan/vulkan.hpp>
+#include <engine/renderer/vulkan/vulkan_inc.h>
 #include "engine/renderer/memory.h"
 
 //class for doing generic raytracing queries

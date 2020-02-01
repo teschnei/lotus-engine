@@ -3,11 +3,9 @@
 #include <string>
 #include <optional>
 #include <cstdint>
-#include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
-#include <SDL.h>
-#include "memory.h"
-#include "raytrace_query.h"
+#include <SDL2/SDL.h>
+#include <engine/renderer/raytrace_query.h>
 
 namespace lotus
 {
@@ -216,5 +214,7 @@ namespace lotus
         } quad;
 
         bool resize{ false };
+
+        vk::DispatchLoaderStatic dispatch_static{};
     };
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "component.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 namespace lotus
 {

@@ -1,7 +1,6 @@
 #pragma once
 #include <thread>
-#include <vulkan/vulkan.hpp>
-#include <glm/glm.hpp>
+#include <engine/renderer/vulkan/vulkan_inc.h>
 #include "work_item.h"
 
 namespace lotus
@@ -23,10 +22,10 @@ namespace lotus
         void Exit();
         void Join();
 
-        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> graphics_pool;
-        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderStatic> compute_pool;
+        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> graphics_pool;
+        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> compute_pool;
 
-        vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderStatic> desc_pool;
+        vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> desc_pool;
 
         WorkerPool* pool{ nullptr };
         Engine* engine{ nullptr };

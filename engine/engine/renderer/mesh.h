@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <vulkan/vulkan.hpp>
+#include <engine/renderer/vulkan/vulkan_inc.h>
 #include "memory.h"
 #include "texture.h"
 

@@ -13,6 +13,9 @@
     <Filter Include="task">
       <UniqueIdentifier>{5cac1752-39f6-413f-a485-d0dcd8fd569e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="renderer\vulkan">
+      <UniqueIdentifier>{24a33fed-d241-45c8-aa66-ee9c03070bc1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="engine\task\acceleration_build.cpp">
@@ -46,9 +49,6 @@
       <Filter>renderer</Filter>
     </ClCompile>
     <ClCompile Include="engine\renderer\model.cpp">
-      <Filter>renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\renderer\renderer.cpp">
       <Filter>renderer</Filter>
     </ClCompile>
     <ClCompile Include="engine\renderer\texture.cpp">
@@ -110,6 +110,9 @@
     <ClCompile Include="engine\renderer\raytrace_query.cpp">
       <Filter>renderer</Filter>
     </ClCompile>
+    <ClCompile Include="engine\renderer\vulkan\renderer.cpp">
+      <Filter>renderer\vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\task\acceleration_build.h">
@@ -143,9 +146,6 @@
       <Filter>renderer</Filter>
     </ClInclude>
     <ClInclude Include="engine\renderer\model.h">
-      <Filter>renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\renderer\renderer.h">
       <Filter>renderer</Filter>
     </ClInclude>
     <ClInclude Include="engine\renderer\texture.h">
@@ -208,6 +208,12 @@
     </ClInclude>
     <ClInclude Include="engine\renderer\raytrace_query.h">
       <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\vulkan\renderer.h">
+      <Filter>renderer\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\renderer\vulkan\vulkan_inc.h">
+      <Filter>renderer\vulkan</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

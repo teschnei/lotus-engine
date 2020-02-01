@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include <vulkan/vulkan.hpp>
+#include <engine/renderer/vulkan/vulkan_inc.h>
 
 namespace lotus
 {

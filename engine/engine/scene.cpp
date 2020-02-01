@@ -1,7 +1,7 @@
 #include "scene.h"
 #include "entity/renderable_entity.h"
 #include "core.h"
-#include "renderer/renderer.h"
+#include "renderer/vulkan/renderer.h"
 #include "task/acceleration_build.h"
 
 namespace lotus

@@ -1,7 +1,7 @@
 #pragma once
 #include "../work_item.h"
 #include "../entity/renderable_entity.h"
-#include <vulkan/vulkan.hpp>
+#include <engine/renderer/vulkan/vulkan_inc.h>
 
 namespace lotus
 {

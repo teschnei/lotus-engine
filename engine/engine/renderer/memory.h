@@ -1,6 +1,6 @@
 #pragma once
 #include <utility>
-#include <vulkan/vulkan.hpp>
+#include <engine/renderer/vulkan/vulkan_inc.h>
 #include "vk_mem_alloc.h"
 #include <unordered_map>
 #include <mutex>

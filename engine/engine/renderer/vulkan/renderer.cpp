@@ -1,5 +1,5 @@
 #include "renderer.h"
-#include <SDL_vulkan.h>
+#include <SDL2/SDL_vulkan.h>
 #include <glm/glm.hpp>
 #include <fstream>
 #include <iostream>
@@ -12,8 +12,11 @@ constexpr size_t HEIGHT = 1000;
 
 constexpr size_t shadowmap_dimension = 2048;
 
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
 namespace lotus
 {
+
     const std::vector<const char*> validation_layers = {
         "VK_LAYER_KHRONOS_validation",
         "VK_LAYER_LUNARG_monitor"
@@ -216,25 +219,19 @@ namespace lotus
             createInfo.pNext = nullptr;
         }
 
-        instance = vk::createInstanceUnique(createInfo);
+        instance = vk::createInstanceUnique(createInfo, nullptr, dispatch_static);
 
-        if (enableValidationLayers)
-        {
-            if (CreateDebugUtilsMessengerEXT(*instance, &debugCreateInfo, nullptr, &debug_messenger) != VK_SUCCESS) {
-                throw std::runtime_error("failed to set up debug messenger!");
-            }
-        }
     }
 
     void Renderer::createPhysicalDevice()
     {
-        auto physical_devices = instance->enumeratePhysicalDevices();
+        auto physical_devices = instance->enumeratePhysicalDevices(dispatch_static);
 
         physical_device = *std::find_if(physical_devices.begin(), physical_devices.end(), [this](auto& device) {
             auto [graphics, present, compute] = getQueueFamilies(device);
             auto extensions_supported = extensionsSupported(device);
             auto swap_chain_info = getSwapChainInfo(device);
-            auto supported_features = device.getFeatures();
+            auto supported_features = device.getFeatures(dispatch_static);
             return graphics && present && compute && extensions_supported && !swap_chain_info.formats.empty() && !swap_chain_info.present_modes.empty() && supported_features.samplerAnisotropy;
         });
 
@@ -247,7 +244,7 @@ namespace lotus
         ray_tracing_properties.shaderGroupHandleSize = 0;
         vk::PhysicalDeviceProperties2 properties;
         properties.pNext = &ray_tracing_properties;
-        physical_device.getProperties2(&properties);
+        physical_device.getProperties2(&properties, dispatch_static);
     }
 
     void Renderer::createDevice()
@@ -301,13 +298,25 @@ namespace lotus
         } else {
             device_create_info.enabledLayerCount = 0;
         }
-        device = physical_device.createDeviceUnique(device_create_info);
+        device = physical_device.createDeviceUnique(device_create_info, nullptr, dispatch_static);
+
+        vk::defaultDispatchLoaderDynamic = vk::DispatchLoaderDynamic(*instance, *device);
+        dispatch = vk::defaultDispatchLoaderDynamic;
 
         graphics_queue = device->getQueue(graphics_queue_idx.value(), 0);
         present_queue = device->getQueue(present_queue_idx.value(), 0);
         compute_queue = device->getQueue(compute_queue_idx.value(), 0);
 
-        dispatch = vk::DispatchLoaderDynamic(*instance, *device);
+        if (enableValidationLayers)
+        {
+            vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+            debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+            debugCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+            debugCreateInfo.pfnUserCallback = debugCallback;
+            if (CreateDebugUtilsMessengerEXT(*instance, &debugCreateInfo, nullptr, &debug_messenger) != VK_SUCCESS) {
+                throw std::runtime_error("failed to set up debug messenger!");
+            }
+        }
     }
 
     void Renderer::createSwapchain()
@@ -1643,7 +1652,7 @@ namespace lotus
 
     bool Renderer::extensionsSupported(vk::PhysicalDevice device)
     {
-        auto supported_extensions = device.enumerateDeviceExtensionProperties();
+        auto supported_extensions = device.enumerateDeviceExtensionProperties(nullptr, dispatch_static);
 
         std::set<std::string> requested_extensions{ device_extensions.begin(), device_extensions.end() };
 
@@ -1656,9 +1665,9 @@ namespace lotus
 
     Renderer::swapChainInfo Renderer::getSwapChainInfo(vk::PhysicalDevice device) const
     {
-        return {device.getSurfaceCapabilitiesKHR(surface),
-            device.getSurfaceFormatsKHR(surface),
-            device.getSurfacePresentModesKHR(surface)
+        return {device.getSurfaceCapabilitiesKHR(surface, dispatch_static),
+            device.getSurfaceFormatsKHR(surface, dispatch_static),
+            device.getSurfacePresentModesKHR(surface, dispatch_static)
         };
     }
 
@@ -1815,7 +1824,7 @@ namespace lotus
 
     bool Renderer::checkValidationLayerSupport() const
     {
-        auto availableLayers = vk::enumerateInstanceLayerProperties();
+        auto availableLayers = vk::enumerateInstanceLayerProperties(dispatch_static);
 
         for (const char* layerName : validation_layers) {
             bool layerFound = false;
@@ -1855,7 +1864,7 @@ namespace lotus
 
     std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<std::uint32_t>> Renderer::getQueueFamilies(vk::PhysicalDevice device) const
     {
-        auto queue_families = device.getQueueFamilyProperties();
+        auto queue_families = device.getQueueFamilyProperties(dispatch_static);
         std::optional<uint32_t> graphics;
         std::optional<uint32_t> present;
         std::optional<uint32_t> compute;
@@ -1879,7 +1888,7 @@ namespace lotus
                 compute_dedicated = static_cast<uint32_t>(i);
             }
 
-            if (device.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface) && family.queueCount > 0 && !present)
+            if (device.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface, dispatch_static) && family.queueCount > 0 && !present)
             {
                 present = static_cast<uint32_t>(i);
             }

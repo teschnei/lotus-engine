@@ -33,9 +33,9 @@
     <ClCompile Include="engine\renderer\mesh.cpp" />
     <ClCompile Include="engine\renderer\model.cpp" />
     <ClCompile Include="engine\renderer\raytrace_query.cpp" />
-    <ClCompile Include="engine\renderer\renderer.cpp" />
     <ClCompile Include="engine\renderer\skeleton.cpp" />
     <ClCompile Include="engine\renderer\texture.cpp" />
+    <ClCompile Include="engine\renderer\vulkan\renderer.cpp" />
     <ClCompile Include="engine\scene.cpp" />
     <ClCompile Include="engine\task\acceleration_build.cpp" />
     <ClCompile Include="engine\task\dependency_dummy.cpp" />
@@ -73,9 +73,10 @@
     <ClInclude Include="engine\renderer\memory.h" />
     <ClInclude Include="engine\renderer\mesh.h" />
     <ClInclude Include="engine\renderer\model.h" />
-    <ClInclude Include="engine\renderer\renderer.h" />
     <ClInclude Include="engine\renderer\skeleton.h" />
     <ClInclude Include="engine\renderer\texture.h" />
+    <ClInclude Include="engine\renderer\vulkan\renderer.h" />
+    <ClInclude Include="engine\renderer\vulkan\vulkan_inc.h" />
     <ClInclude Include="engine\scene.h" />
     <ClInclude Include="engine\task\acceleration_build.h" />
     <ClInclude Include="engine\task\dependency_dummy.h" />
@@ -137,7 +138,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.1.106.0\Include;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\SDL2;D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Include\glm;D:\Dev\VulkanSDK-1.1.106.0\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.2.131.1\Include;D:\Dev\VulkanSDK-1.2.131.1\Third-Party\Include;D:\Dev\VulkanSDK-1.2.131.1\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
