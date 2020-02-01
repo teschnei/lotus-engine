@@ -31,6 +31,7 @@
     <ClCompile Include="task\landscape_dat_load.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="config.h" />
     <ClInclude Include="dat\dat_parser.h" />
     <ClInclude Include="dat\dxt3.h" />
     <ClInclude Include="dat\key_tables.h" />

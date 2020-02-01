@@ -19,7 +19,7 @@ namespace lotus
             uint32_t app_version;
             Renderer::Settings renderer_settings;
         };
-        Engine(Game* game, Settings settings);
+        Engine(Game* game, Settings settings, std::unique_ptr<Config> config);
         ~Engine();
 
         void run();
@@ -31,7 +31,7 @@ namespace lotus
         Input input;
         Camera* camera {nullptr};
         WorkerPool worker_pool{ this };
-        Config config;
+        std::unique_ptr<Config> config;
         LightManager lights{ this };
         time_point simulation_time;
 

@@ -1,15 +1,16 @@
 #pragma once
-#include <string>
-#include <unordered_map>
+#include <engine/types.h>
 
 namespace lotus
 {
     class Config
     {
     public:
-        const std::string& getConfigOption(const std::string&);
-    private:
-        std::unordered_map<std::string, std::string> options;
-        std::unordered_map<std::string, std::string> default_options;
+        struct Renderer
+        {
+            uint32_t screen_width = 1600;
+            uint32_t screen_height = 900;
+            uint32_t borderless = 0;
+        } renderer {};
     };
 }

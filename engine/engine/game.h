@@ -9,7 +9,7 @@ namespace lotus
     class Game
     {
     public:
-        Game(const Engine::Settings& settings) : engine(std::make_unique<Engine>(this, settings)) {}
+        Game(const Engine::Settings& settings, std::unique_ptr<Config> config) : engine(std::make_unique<Engine>(this, settings, std::move(config))) {}
         virtual ~Game() = default;
 
         virtual void run() { engine->run(); }

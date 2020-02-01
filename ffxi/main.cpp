@@ -13,17 +13,19 @@
 #include "engine/entity/free_flying_camera.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
 #include "entity/third_person_ffxi_camera.h"
+#include "config.h"
 #include <iostream>
 
 class Game : public lotus::Game
 {
 public:
-    Game(const lotus::Engine::Settings& settings) : lotus::Game(settings)
+    Game(const lotus::Engine::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>())
     {
         scene = std::make_unique<lotus::Scene>(engine.get());
         default_texture = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
-        scene->AddEntity<FFXILandscapeEntity>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\342\73.dat)");
-        auto iroha = scene->AddEntity<Actor>(R"(E:\Apps\SteamLibrary\SteamApps\common\ffxi\SquareEnix\FINAL FANTASY XI\ROM\310\3.dat)");
+        auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
+        scene->AddEntity<FFXILandscapeEntity>(path + R"(\ROM\342\73.dat)");
+        auto iroha = scene->AddEntity<Actor>(path + R"(\ROM\310\3.dat)");
         iroha->setPos(glm::vec3(259.f, -87.f, 99.f));
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(iroha));
         engine->set_camera(camera.get());

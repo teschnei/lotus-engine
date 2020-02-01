@@ -127,6 +127,7 @@
     <ClInclude Include="entity\component\third_person_ffxi_entity_input.h">
       <Filter>entity\component</Filter>
     </ClInclude>
+    <ClInclude Include="config.h" />
   </ItemGroup>
   <ItemGroup>
     <GLSLValidate Include="..\shaders\blend.frag">
