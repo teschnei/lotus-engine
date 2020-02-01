@@ -12,6 +12,11 @@ namespace lotus
         return static_cast<uint8_t*>(mapped) + offset;
     }
 
+    void Memory::flush(vk::DeviceSize offset, vk::DeviceSize size)
+    {
+        vmaFlushAllocation(manager->allocator, allocation, offset, size);
+    }
+
     void Memory::unmap()
     {
         vmaUnmapMemory(manager->allocator, allocation);

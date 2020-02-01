@@ -26,15 +26,17 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
 
     for (const auto& os2 : *os2s)
     {
-        auto mesh = std::make_unique<lotus::Mesh>(); 
-        mesh->has_transparency = true;
-
-        std::vector<FFXI::OS2::WeightingVertex> os2_vertices;
-        std::vector<uint8_t> vertices_uint8;
-        std::vector<uint16_t> mesh_indices;
-        std::vector<uint8_t> indices_uint8;
         for (const auto& os2_mesh : os2->meshes)
         {
+            auto mesh = std::make_unique<lotus::Mesh>(); 
+            mesh->has_transparency = true;
+            mesh->specular = os2_mesh.specular1;
+            mesh->specular_multi = os2_mesh.specular2;
+
+            std::vector<FFXI::OS2::WeightingVertex> os2_vertices;
+            std::vector<uint8_t> vertices_uint8;
+            std::vector<uint16_t> mesh_indices;
+            std::vector<uint8_t> indices_uint8;
             mesh->texture = lotus::Texture::getTexture(os2_mesh.tex_name);
             int passes = os2->mirror ? 2 : 1;
             for (int i = 0; i < passes; ++i)
@@ -76,8 +78,6 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
                     mesh_indices.push_back((uint16_t)mesh_indices.size());
                 }
             }
-        }
-
         vertices_uint8.resize(os2_vertices.size() * sizeof(FFXI::OS2::WeightingVertex));
         memcpy(vertices_uint8.data(), os2_vertices.data(), vertices_uint8.size());
         indices_uint8.resize(mesh_indices.size() * sizeof(uint16_t));
@@ -100,8 +100,14 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         vertices.push_back(std::move(vertices_uint8));
         indices.push_back(std::move(indices_uint8));
         model->meshes.push_back(std::move(mesh));
+        }
     }
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
+    if (model->meshes.size() > 32)
+    {
+        //RTX shader groups need to be increased if this goes up more, or some kind of refactoring needs to happen to move meshes to something that uses their own resource index
+        __debugbreak();
+    }
     engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices)));
 }

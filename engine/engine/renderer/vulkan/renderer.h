@@ -132,6 +132,13 @@ namespace lotus
         std::unique_ptr<Raytracer> raytracer;
 
         /* Ray tracing */
+        struct MeshInfo
+        {
+            uint32_t vertex_index_offset;
+            uint32_t texture_offset;
+            float specular1;
+            float specular2;
+        };
         bool RTXEnabled();
         bool RasterizationEnabled();
         vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;
@@ -145,7 +152,10 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>> rtx_descriptor_sets_dynamic;
         std::vector<std::unique_ptr<Image>> rtx_render_targets;
         std::vector<vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic>> rtx_render_target_views;
-        vk::DeviceSize shader_stride;
+        vk::DeviceSize shader_stride {};
+        std::unique_ptr<Buffer> mesh_info_buffer;
+        MeshInfo* mesh_info_buffer_mapped;
+
         struct shader_binding
         {
             uint32_t geometry_instance;
@@ -154,6 +164,7 @@ namespace lotus
         uint16_t static_acceleration_bindings_offset {0};
         std::mutex acceleration_binding_mutex;
         static constexpr uint16_t max_acceleration_binding_index{ 1024 };
+        static constexpr uint32_t shaders_per_group{ 32 };
 
     private:
         void createRayTracingResources();

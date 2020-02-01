@@ -54,6 +54,9 @@ namespace lotus
         uint16_t blending{ 0 };
         //TODO: move me back to protected
         Mesh() = default;
+
+        float specular{};
+        float specular_multi{};
     protected:
 
         std::vector<vk::VertexInputBindingDescription> vertex_bindings;

@@ -115,6 +115,7 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
     if (dirty)
     {
         bool update = true;
+        uint32_t i = engine->renderer.getCurrentImage();
         if (!instance_memory)
         {
             instance_memory = engine->renderer.memory_manager->GetBuffer(instances.size() * sizeof(VkGeometryInstance), vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -154,12 +155,24 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
             write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
             write_info_texture.pImageInfo = descriptor_texture_info.data();
 
+            vk::DescriptorBufferInfo mesh_info;
+            mesh_info.buffer = engine->renderer.mesh_info_buffer->buffer;
+            mesh_info.offset = sizeof(Renderer::MeshInfo) * engine->renderer.max_acceleration_binding_index * i;
+            mesh_info.range = sizeof(Renderer::MeshInfo) * engine->renderer.max_acceleration_binding_index;
+
+            vk::WriteDescriptorSet write_info_mesh_info;
+            write_info_mesh_info.descriptorType = vk::DescriptorType::eUniformBuffer;
+            write_info_mesh_info.dstArrayElement = 0;
+            write_info_mesh_info.dstBinding = 4;
+            write_info_mesh_info.descriptorCount = 1;
+            write_info_mesh_info.pBufferInfo = &mesh_info;
+
             std::vector<vk::WriteDescriptorSet> writes;
-            uint32_t i = engine->renderer.getCurrentImage();
             write_info_vertex.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
             write_info_index.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
             write_info_texture.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
             write_info_as.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
+            write_info_mesh_info.dstSet = *engine->renderer.rtx_descriptor_sets_const[i];
             if (write_info_vertex.descriptorCount > 0)
                 writes.push_back(write_info_vertex);
             if (write_info_index.descriptorCount > 0)
@@ -167,11 +180,13 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
             if (write_info_texture.descriptorCount > 0)
                 writes.push_back(write_info_texture);
             writes.push_back(write_info_as);
+            writes.push_back(write_info_mesh_info);
             engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
         }
         auto data = instance_memory->map(0, instances.size() * sizeof(VkGeometryInstance), {});
         memcpy(data, instances.data(), instances.size() * sizeof(VkGeometryInstance));
         instance_memory->unmap();
+        engine->renderer.mesh_info_buffer->flush(Renderer::max_acceleration_binding_index * sizeof(Renderer::MeshInfo) * i, Renderer::max_acceleration_binding_index * sizeof(Renderer::MeshInfo));
 
         vk::MemoryBarrier barrier;
 
@@ -196,12 +211,15 @@ void lotus::TopLevelAccelerationStructure::UpdateInstance(uint32_t instance_id, 
 
 void lotus::TopLevelAccelerationStructure::AddBLASResource(Model* model)
 {
+    uint32_t image = engine->renderer.getCurrentImage();
     uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size()) + engine->renderer.static_acceleration_bindings_offset;
-    for (const auto& mesh : model->meshes)
+    for (size_t i = 0; i < model->meshes.size(); ++i)
     {
+        auto& mesh = model->meshes[i];
         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+        engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular, mesh->specular_multi };
     }
     model->bottom_level_as->resource_index = index;
 }
@@ -220,6 +238,7 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(RenderableEntity* ent
                 descriptor_vertex_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
                 descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
                 descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + j] = { index + (uint32_t)j, index + (uint32_t)j, mesh->specular, mesh->specular_multi };
             }
             entity->animation_component->transformed_geometries[i].bottom_level_as[image]->resource_index = index;
         }

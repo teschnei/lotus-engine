@@ -70,6 +70,7 @@
     <ClCompile Include="entity\component\third_person_ffxi_entity_input.cpp">
       <Filter>entity\component</Filter>
     </ClCompile>
+    <ClCompile Include="config.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dat\dat_parser.h">

@@ -24,6 +24,19 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
+struct Mesh
+{
+    int vec_index_offset;
+    int tex_offset;
+    float specular1;
+    float specular2;
+};
+
+layout(binding = 4, set = 0) uniform MeshInfo
+{
+    Mesh m[1024];
+} meshInfo;
+
 layout(binding = 2, set = 1) uniform Light
 {
     vec3 light;
@@ -49,7 +62,7 @@ hitAttributeNV vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -71,7 +84,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
     Vertex v;
 
     vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
@@ -103,10 +116,10 @@ void main()
     vec3 color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].tex_offset;
     color *= texture(textures[resource_index], uv).xyz;
 
-    shadow = false;
+    shadow = true;
     if (dot_product > 0)
     {
         vec3 vertex_vec1 = normalize(vec3(v1.pos - v0.pos));
@@ -118,7 +131,6 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        shadow = true;
         traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.000, -light.light, 500, 1);
     }
     vec3 ambient = vec3(0.3, 0.3, 0.3); //ambient

@@ -1,6 +1,7 @@
 #include "landscape_entity.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task/landscape_entity_init.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {
@@ -19,7 +20,7 @@ namespace lotus
                     instance.accelerationStructureHandle = model->bottom_level_as->handle;
                     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                     instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry);
-                    instance.instanceOffset = 32;
+                    instance.instanceOffset = Renderer::shaders_per_group * 2;
                     instance.instanceId = model->bottom_level_as->resource_index;
                     model->bottom_level_as->instanceid = as->AddInstance(instance);
                 }

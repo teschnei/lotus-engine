@@ -118,11 +118,16 @@ namespace lotus
                     //TODO: move these into some kind of thread-safe implementation
                     std::lock_guard lg{ thread->engine->renderer.acceleration_binding_mutex };
                     uint16_t index = thread->engine->renderer.static_acceleration_bindings_offset;
-                    for (const auto& mesh : model->meshes)
+                    for (size_t i = 0; i < model->meshes.size(); ++i)
                     {
+                        auto& mesh = model->meshes[i];
                         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
                         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
                         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                        for (int image = 0; image < thread->engine->renderer.getImageCount(); ++image)
+                        {
+                            thread->engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular, mesh->specular_multi };
+                        }
                     }
                     model->bottom_level_as->resource_index = index;
 

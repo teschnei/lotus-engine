@@ -22,6 +22,19 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
+struct Mesh
+{
+    int vec_index_offset;
+    int tex_offset;
+    float specular1;
+    float specular2;
+};
+
+layout(binding = 4, set = 0) uniform MeshInfo
+{
+    Mesh m[1024];
+} meshInfo;
+
 layout(binding = 2, set = 1) uniform Light
 {
     vec3 light;
@@ -45,7 +58,7 @@ hitAttributeNV vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -67,7 +80,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
     Vertex v = vertices[resource_index].v[index];
 
     return v;
@@ -89,10 +102,10 @@ void main()
     float dot_product = dot(-light.light, normalized_normal);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
-    vec3 color = texture(textures[resource_index], uv).xyz;
+    Mesh mesh = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index];
+    vec4 color = texture(textures[mesh.tex_offset], uv);
 
-    shadow = false;
+    shadow = true;
     if (dot_product > 0)
     {
         vec3 vertex_vec1 = normalize(vec3(v1.pos - v0.pos));
@@ -104,14 +117,28 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        shadow = true;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.000, -light.light, 500, 1);
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 32, 1, 1, origin, 0.000, -light.light, 500, 1);
     }
     vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
-    vec3 total_light = vec3(0);
+    vec3 specular = vec3(0);
+    vec3 diffuse = vec3(0);
     if (!shadow)
-        total_light = light.color * max(dot_product, 0.0);
-    total_light = max(ambient, total_light);
+    {
+        if (mesh.specular2 > 0)
+        {
+            vec3 ray = normalize(gl_WorldRayDirectionNV);
+            vec3 reflection = normalize(reflect(-light.light, normalized_normal));
+            float specular_dot = dot(ray, reflection);
+            float specular_factor = mesh.specular1 * color.a / 10;
+            if (specular_dot > 0)
+            {
+                specular_dot = pow(specular_dot, mesh.specular2);
+                specular = light.color.rgb * specular_factor * specular_dot;
+            }
+        }
+        diffuse = light.color.rgb * max(dot_product, 0.0);
+    }
+    vec3 total_light = ambient + specular + diffuse;
 
-    hitValue.color = color * total_light;
+    hitValue.color = color.rgb * total_light;
 }

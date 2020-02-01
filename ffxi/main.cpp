@@ -30,7 +30,6 @@ public:
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(iroha));
         engine->set_camera(camera.get());
         iroha->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input);
-        //iroha->animation_component->playAnimation("idl0");
         //TODO: move this back to core.cpp after camera is figured out
         engine->renderer.generateCommandBuffers();
         engine->lights.directional_light.direction = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });

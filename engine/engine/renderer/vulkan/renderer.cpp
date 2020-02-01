@@ -6,9 +6,7 @@
 
 #include "engine/core.h"
 #include "engine/game.h"
-
-constexpr size_t WIDTH = 1900;
-constexpr size_t HEIGHT = 1000;
+#include "engine/config.h"
 
 constexpr size_t shadowmap_dimension = 2048;
 
@@ -61,7 +59,7 @@ namespace lotus
     Renderer::Renderer(Engine* _engine) : render_mode{RenderMode::RTX}, engine(_engine)
     {
         SDL_Init(SDL_INIT_VIDEO);
-        window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+        window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, engine->config->renderer.screen_width, engine->config->renderer.screen_height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
         createInstance(engine->settings.app_name, engine->settings.app_version);
         if (!SDL_Vulkan_CreateSurface(window, *instance, reinterpret_cast<VkSurfaceKHR*>(&surface)))
@@ -94,6 +92,7 @@ namespace lotus
     Renderer::~Renderer()
     {
         device->waitIdle(dispatch);
+        mesh_info_buffer->unmap();
     }
 
     void Renderer::generateCommandBuffers()
@@ -136,7 +135,7 @@ namespace lotus
             if (!shader_binding_table)
             {
                 constexpr uint32_t shader_nonhitcount = 3;
-                constexpr uint32_t shader_hitcount = 64;
+                constexpr uint32_t shader_hitcount = shaders_per_group * 4;
                 shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
                 vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
                 shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
@@ -154,7 +153,7 @@ namespace lotus
                 for (uint32_t i = 0; i < shader_hitcount; ++i)
                 {
                     memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
-                    *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % 16;
+                    *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % shaders_per_group;
                 }
                 shader_binding_table->unmap();
 
@@ -163,6 +162,7 @@ namespace lotus
                 pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
                 pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
                 pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, max_acceleration_binding_index);
+                pool_sizes_const.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
 
                 vk::DescriptorPoolCreateInfo pool_ci;
                 pool_ci.maxSets = 3;
@@ -179,6 +179,9 @@ namespace lotus
                 set_ci.descriptorSetCount = 3;
                 set_ci.pSetLayouts = layouts.data();
                 rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, dispatch);
+
+                mesh_info_buffer = memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
+                mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
             }
         }
     }
@@ -769,12 +772,19 @@ namespace lotus
             texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
             texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
 
+            vk::DescriptorSetLayoutBinding mesh_info_binding;
+            mesh_info_binding.binding = 4;
+            mesh_info_binding.descriptorCount = 1;
+            mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+            mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+
             std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
             {
                 acceleration_structure_binding,
                 vertex_buffer_binding,
                 index_buffer_binding,
-                texture_bindings
+                texture_bindings,
+                mesh_info_binding
             };
 
             std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_dynamic
@@ -1118,7 +1128,7 @@ namespace lotus
                 VK_SHADER_UNUSED_NV
                 }
             };
-            for (int i = 0; i < 16; ++i)
+            for (int i = 0; i < shaders_per_group; ++i)
             {
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
@@ -1128,7 +1138,7 @@ namespace lotus
                     VK_SHADER_UNUSED_NV
                 );
             }
-            for (int i = 0; i < 16; ++i)
+            for (int i = 0; i < shaders_per_group; ++i)
             {
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
@@ -1138,7 +1148,7 @@ namespace lotus
                     VK_SHADER_UNUSED_NV
                 );
             }
-            for (int i = 0; i < 16; ++i)
+            for (int i = 0; i < shaders_per_group; ++i)
             {
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
@@ -1148,7 +1158,7 @@ namespace lotus
                     VK_SHADER_UNUSED_NV
                 );
             }
-            for (int i = 0; i < 16; ++i)
+            for (int i = 0; i < shaders_per_group; ++i)
             {
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,

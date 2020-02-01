@@ -40,6 +40,16 @@ struct MeshHeader
     uint16_t mUnknown11;
 };
 
+struct DrawStateHeader
+{
+    unsigned char a[4];
+    float b[2];
+    uint32_t c;
+    float d[4];
+    uint32_t e;
+    float specular[2];
+};
+
 struct TriangleList
 {
     uint16_t indices[3];
@@ -117,8 +127,11 @@ FFXI::OS2::OS2(uint8_t* buffer, size_t max_len)
             //draw state
             case 0x8010:
             {
+                DrawStateHeader* draw_state = (DrawStateHeader*)draw_cmds;
                 draw_cmds += 44;
                 meshes.push_back({});
+                meshes.back().specular1 = draw_state->specular[0];
+                meshes.back().specular2 = draw_state->specular[1];
             }
             break;
             //set material

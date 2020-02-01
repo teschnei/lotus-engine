@@ -21,6 +21,19 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
+struct Mesh
+{
+    int vec_index_offset;
+    int tex_offset;
+    float specular1;
+    float specular2;
+};
+
+layout(binding = 4, set = 0) uniform MeshInfo
+{
+    Mesh m[1024];
+} meshInfo;
+
 layout(location = 0) rayPayloadInNV HitValue
 {
     vec3 color;
@@ -35,7 +48,7 @@ hitAttributeNV vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -57,7 +70,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
     Vertex v = vertices[resource_index].v[index];
 
     return v;
@@ -73,7 +86,7 @@ void main()
     const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    uint resource_index = gl_InstanceCustomIndexNV+block.geometry_index;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].tex_offset;
     float a = texture(textures[resource_index], uv).a;
     if (a == 0)
         ignoreIntersectionNV();

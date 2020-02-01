@@ -26,12 +26,12 @@ namespace lotus
         void close() { closing = true; }
 
         Game* game;
+        std::unique_ptr<Config> config;
         Settings settings;
         Renderer renderer;
         Input input;
         Camera* camera {nullptr};
         WorkerPool worker_pool{ this };
-        std::unique_ptr<Config> config;
         LightManager lights{ this };
         time_point simulation_time;
 

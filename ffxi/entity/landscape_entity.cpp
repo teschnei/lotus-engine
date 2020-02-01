@@ -23,7 +23,7 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
             instance.accelerationStructureHandle = model->bottom_level_as->handle;
             instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
             instance.mask = static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry);
-            instance.instanceOffset = 32;
+            instance.instanceOffset = lotus::Renderer::shaders_per_group * 2;
             instance.instanceId = model->bottom_level_as->resource_index;
             model->bottom_level_as->instanceid = as->AddInstance(instance);
         }

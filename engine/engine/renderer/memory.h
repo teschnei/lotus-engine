@@ -25,6 +25,7 @@ namespace lotus
         virtual ~Memory() = default;
         void* map(vk::DeviceSize offset, vk::DeviceSize size, vk::MemoryMapFlags flags);
         void unmap();
+        void flush(vk::DeviceSize offset, vk::DeviceSize size);
         VmaAllocation allocation;
     protected:
         vk::DeviceSize memory_offset;

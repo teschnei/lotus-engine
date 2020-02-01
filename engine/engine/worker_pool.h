@@ -88,9 +88,9 @@ namespace lotus
     private:
         std::vector<std::unique_ptr<WorkerThread>> threads;
         WorkItemQueue<std::unique_ptr<WorkItem>, std::vector<std::unique_ptr<WorkItem>>, WorkCompare> work;
-        WorkItemQueue<std::unique_ptr<WorkItem>> pending_work;
-        std::vector<WorkItemQueue<std::unique_ptr<WorkItem>>> processing_work;
-        WorkItemQueue<std::unique_ptr<WorkItem>> finished_work;
+        WorkItemQueue<std::unique_ptr<WorkItem>, std::vector<std::unique_ptr<WorkItem>>, WorkCompare> pending_work;
+        std::vector<WorkItemQueue<std::unique_ptr<WorkItem>, std::vector<std::unique_ptr<WorkItem>>, WorkCompare>> processing_work;
+        WorkItemQueue<std::unique_ptr<WorkItem>, std::vector<std::unique_ptr<WorkItem>>, WorkCompare> finished_work;
         std::mutex work_mutex;
         std::condition_variable work_cv;
         std::condition_variable idle_cv;
