@@ -23,14 +23,15 @@ namespace FFXI
         QuadTree(glm::vec3 pos1, glm::vec3 pos2) : pos1(pos1), pos2(pos2) {}
 
         std::vector<uint32_t> find(lotus::Camera::Frustum&) const;
-        std::vector<uint32_t> find(glm::vec3 pos) const;
-
-        std::vector<uint32_t> get_nodes() const;
 
         glm::vec3 pos1;
         glm::vec3 pos2;
         std::vector<uint32_t> nodes;
         std::vector<QuadTree> children;
+    private:
+        void find_internal(lotus::Camera::Frustum&, std::vector<uint32_t>&) const;
+        void get_nodes(std::vector<uint32_t>&) const;
+
     };
 
     class MZB

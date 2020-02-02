@@ -126,6 +126,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\engine;$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.2.131.1\Include;D:\Dev\VulkanSDK-1.2.131.1\Third-Party\Include;D:\Dev\VulkanSDK-1.2.131.1\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

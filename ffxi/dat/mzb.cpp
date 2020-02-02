@@ -85,62 +85,39 @@ namespace FFXI
         return result;
     }
 
-    std::vector<uint32_t> QuadTree::find(lotus::Camera::Frustum& frustum) const
+    void QuadTree::find_internal(lotus::Camera::Frustum& frustum, std::vector<uint32_t>& results) const
     {
-        std::vector<uint32_t> ret;
         auto result = isInFrustum(frustum, pos1, pos2);
         if (result == FrustumResult::Outside)
-            return ret;
+            return;
         else if (result == FrustumResult::Inside)
         {
-            ret = nodes;
-            for (const auto& child : children)
-            {
-                auto nodes = child.get_nodes();
-                ret.insert(ret.end(), nodes.begin(), nodes.end());
-            }
+            get_nodes(results);
         }
         else if (result == FrustumResult::Intersect)
         {
-            ret = nodes;
+            results.insert(results.end(), nodes.begin(), nodes.end());
             for (const auto& child : children)
             {
-                if (auto nodes = child.find(frustum); !nodes.empty())
-                {
-                    ret.insert(ret.end(), nodes.begin(), nodes.end());
-                }
+                child.find_internal(frustum, results);
             }
         }
-        return ret;
     }
 
-    std::vector<uint32_t> QuadTree::find(glm::vec3 pos) const
+    std::vector<uint32_t> QuadTree::find(lotus::Camera::Frustum& frustum) const
     {
         std::vector<uint32_t> ret;
-        if (pos.x >= pos1.x && pos.y >= pos1.y && pos.z >= pos1.z &&
-            pos.x <= pos2.x && pos.y <= pos2.y && pos.z <= pos2.z)
-        {
-            ret = nodes;
-            for (const auto& child : children)
-            {
-                if (auto nodes = child.find(pos); !nodes.empty())
-                {
-                    ret.insert(ret.end(), nodes.begin(), nodes.end());
-                }
-            }
-        }
+        find_internal(frustum, ret);
         return ret;
     }
 
-    std::vector<uint32_t> QuadTree::get_nodes() const
+    void QuadTree::get_nodes(std::vector<uint32_t>& results) const
     {
-        std::vector<uint32_t> ret = nodes;
+        results.insert(results.end(), nodes.begin(), nodes.end());
         for (const auto& child : children)
         {
-            auto nodes = child.get_nodes();
-            ret.insert(ret.end(), nodes.begin(), nodes.end());
+            child.get_nodes(results);
         }
-        return ret;
     }
 
     MZB::MZB(uint8_t* buffer, size_t max_len)
