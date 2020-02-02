@@ -26,8 +26,8 @@ struct Mesh
 {
     int vec_index_offset;
     int tex_offset;
-    float specular1;
-    float specular2;
+    float specular_exponent;
+    float specular_intensity;
 };
 
 layout(binding = 4, set = 0) uniform MeshInfo
@@ -124,17 +124,14 @@ void main()
     vec3 diffuse = vec3(0);
     if (!shadow)
     {
-        if (mesh.specular2 > 0)
+        vec3 ray = normalize(gl_WorldRayDirectionNV);
+        vec3 reflection = normalize(reflect(-light.light, normalized_normal));
+        float specular_dot = dot(ray, reflection);
+        float specular_factor = mesh.specular_intensity * color.a;
+        if (specular_dot > 0)
         {
-            vec3 ray = normalize(gl_WorldRayDirectionNV);
-            vec3 reflection = normalize(reflect(-light.light, normalized_normal));
-            float specular_dot = dot(ray, reflection);
-            float specular_factor = mesh.specular1 * color.a / 10;
-            if (specular_dot > 0)
-            {
-                specular_dot = pow(specular_dot, mesh.specular2);
-                specular = light.color.rgb * specular_factor * specular_dot;
-            }
+            specular_dot = pow(specular_dot, mesh.specular_exponent);
+            specular = light.color.rgb * specular_factor * specular_dot;
         }
         diffuse = light.color.rgb * max(dot_product, 0.0);
     }

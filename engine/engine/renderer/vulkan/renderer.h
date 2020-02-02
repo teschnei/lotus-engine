@@ -136,8 +136,8 @@ namespace lotus
         {
             uint32_t vertex_index_offset;
             uint32_t texture_offset;
-            float specular1;
-            float specular2;
+            float specular_exponent;
+            float specular_intensity;
         };
         bool RTXEnabled();
         bool RasterizationEnabled();

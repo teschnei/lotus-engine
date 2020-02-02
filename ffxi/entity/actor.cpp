@@ -30,8 +30,8 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         {
             auto mesh = std::make_unique<lotus::Mesh>(); 
             mesh->has_transparency = true;
-            mesh->specular = os2_mesh.specular1;
-            mesh->specular_multi = os2_mesh.specular2;
+            mesh->specular_exponent = os2_mesh.specular_exponent;
+            mesh->specular_intensity = os2_mesh.specular_intensity;
 
             std::vector<FFXI::OS2::WeightingVertex> os2_vertices;
             std::vector<uint8_t> vertices_uint8;

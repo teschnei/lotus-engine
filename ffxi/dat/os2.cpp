@@ -47,7 +47,8 @@ struct DrawStateHeader
     uint32_t c;
     float d[4];
     uint32_t e;
-    float specular[2];
+    float specular_exponent;
+    float specular_intensity;
 };
 
 struct TriangleList
@@ -130,8 +131,8 @@ FFXI::OS2::OS2(uint8_t* buffer, size_t max_len)
                 DrawStateHeader* draw_state = (DrawStateHeader*)draw_cmds;
                 draw_cmds += 44;
                 meshes.push_back({});
-                meshes.back().specular1 = draw_state->specular[0];
-                meshes.back().specular2 = draw_state->specular[1];
+                meshes.back().specular_exponent = draw_state->specular_exponent;
+                meshes.back().specular_intensity = draw_state->specular_intensity;
             }
             break;
             //set material

@@ -55,8 +55,8 @@ namespace lotus
         //TODO: move me back to protected
         Mesh() = default;
 
-        float specular{};
-        float specular_multi{};
+        float specular_exponent{};
+        float specular_intensity{};
     protected:
 
         std::vector<vk::VertexInputBindingDescription> vertex_bindings;

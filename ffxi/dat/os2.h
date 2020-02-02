@@ -50,8 +50,8 @@ namespace FFXI
         {
             std::vector<std::pair<uint16_t, glm::vec2>> indices;
             std::string tex_name;
-            float specular1 {};
-            float specular2 {};
+            float specular_exponent {};
+            float specular_intensity {};
         };
 
         OS2(uint8_t* buffer, size_t max_len);
