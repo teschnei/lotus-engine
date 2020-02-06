@@ -2,12 +2,11 @@
 #include <utility>
 #include "../worker_thread.h"
 #include "../core.h"
-#include "../../../ffxi/dat/mmb.h"
 
 namespace lotus
 {
-    ModelInitTask::ModelInitTask(int _image_index, std::shared_ptr<Model> _model, std::vector<std::vector<uint8_t>>&& _vertex_buffers,
-        std::vector<std::vector<uint8_t>>&& _index_buffers) : WorkItem(), image_index(_image_index), model(std::move(_model)), vertex_buffers(std::move(_vertex_buffers)), index_buffers(std::move(_index_buffers))
+    ModelInitTask::ModelInitTask(int _image_index, std::shared_ptr<Model> _model, std::vector<std::vector<uint8_t>>&& _vertex_buffers, std::vector<std::vector<uint8_t>>&& _index_buffers, uint32_t _vertex_stride) :
+        WorkItem(), image_index(_image_index), model(std::move(_model)), vertex_buffers(std::move(_vertex_buffers)), index_buffers(std::move(_index_buffers)), vertex_stride(_vertex_stride)
     {
         priority = -1;
     }
@@ -53,22 +52,22 @@ namespace lotus
                 memcpy(staging_buffer_data + staging_buffer_offset, vertex_buffer.data(), vertex_buffer.size());
                 memcpy(staging_buffer_data + staging_buffer_offset + vertex_buffer.size(), index_buffer.data(), index_buffer.size());
 
-                std::array<vk::BufferMemoryBarrier, 2> barriers;
-                barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[0].buffer = mesh->vertex_buffer->buffer;
-                barriers[0].size = VK_WHOLE_SIZE;
-                barriers[0].srcAccessMask = {};
-                barriers[0].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+                //std::array<vk::BufferMemoryBarrier, 2> barriers;
+                //barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                //barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                //barriers[0].buffer = mesh->vertex_buffer->buffer;
+                //barriers[0].size = VK_WHOLE_SIZE;
+                //barriers[0].srcAccessMask = {};
+                //barriers[0].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
-                barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barriers[1].buffer = mesh->index_buffer->buffer;
-                barriers[1].size = VK_WHOLE_SIZE;
-                barriers[1].srcAccessMask = {};
-                barriers[1].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+                //barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                //barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                //barriers[1].buffer = mesh->index_buffer->buffer;
+                //barriers[1].size = VK_WHOLE_SIZE;
+                //barriers[1].srcAccessMask = {};
+                //barriers[1].dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barriers, nullptr, thread->engine->renderer.dispatch);
+                //command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barriers, nullptr, thread->engine->renderer.dispatch);
 
                 vk::BufferCopy copy_region;
                 copy_region.srcOffset = staging_buffer_offset;
@@ -84,14 +83,15 @@ namespace lotus
                     geo.geometryType = vk::GeometryTypeNV::eTriangles;
                     geo.geometry.triangles.vertexData = mesh->vertex_buffer->buffer;
                     geo.geometry.triangles.vertexOffset = 0;
-                    geo.geometry.triangles.vertexCount = static_cast<uint32_t>(vertex_buffer.size() / sizeof(FFXI::MMB::Vertex));
-                    geo.geometry.triangles.vertexStride = sizeof(FFXI::MMB::Vertex);
+                    geo.geometry.triangles.vertexCount = static_cast<uint32_t>(vertex_buffer.size() / vertex_stride);
+                    geo.geometry.triangles.vertexStride = vertex_stride;
                     geo.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
 
                     geo.geometry.triangles.indexData = mesh->index_buffer->buffer;
                     geo.geometry.triangles.indexOffset = 0;
                     geo.geometry.triangles.indexCount = static_cast<uint32_t>(index_buffer.size() / sizeof(uint16_t));
                     geo.geometry.triangles.indexType = vk::IndexType::eUint16;
+
                     if (!mesh->has_transparency)
                     {
                         geo.flags = vk::GeometryFlagBitsNV::eOpaque;
@@ -110,7 +110,7 @@ namespace lotus
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
                 model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, model->lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
 
-                if (model->lifetime == Lifetime::Long)
+                if (model->lifetime == Lifetime::Long && model->rendered)
                 {
                     std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
                     std::vector<vk::DescriptorBufferInfo> descriptor_index_info;

@@ -3,6 +3,9 @@
 #include "key_tables.h"
 #include <algorithm>
 #include "engine/entity/camera.h"
+#include "engine/core.h"
+#include "entity/landscape_entity.h"
+#include "task/collision_model_init.h"
 
 namespace FFXI
 {
@@ -129,6 +132,30 @@ namespace FFXI
             vecMZB.push_back(((SMZBBlock100*)(buffer + sizeof(SMZBHeader)))[i]);
         }
 
+        uint32_t mesh_count = *(uint32_t*)(buffer + header->collisionMeshOffset);
+        uint32_t mesh_data = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x04);
+
+        uint32_t offset = mesh_data;
+        for (uint32_t i = 0; i < mesh_count; ++i)
+        {
+            offset = parseMesh(buffer, offset);
+        }
+
+        uint32_t grid_offset = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x10);
+
+        for (int y = 0; y < header->gridHeight * 10; ++y)
+        {
+            for (int x = 0; x < header->gridWidth * 10; ++x)
+            {
+                uint32_t offsets = (y * header->gridWidth * 10 + x) * 4;
+                uint32_t entry_offset = *(uint32_t*)(buffer + grid_offset + offsets);
+                if (entry_offset != 0)
+                {
+                    parseGridEntry(buffer, entry_offset, x, y);
+                }
+            }
+        }
+
         uint32_t maplist_offset = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x14);
         uint32_t maplist_count = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x18);
 
@@ -224,5 +251,100 @@ namespace FFXI
         }
 
         return quadtree;
+    }
+
+    uint32_t MZB::parseMesh(uint8_t* buffer, uint32_t offset)
+    {
+        uint32_t vertices_offset = *(uint32_t*)(buffer + offset + 0x00);
+        uint32_t normals_offset = *(uint32_t*)(buffer + offset + 0x04);
+        uint32_t triangles = *(uint32_t*)(buffer + offset + 0x08);
+        uint16_t triangle_count = *(uint16_t*)(buffer + offset + 0x0c);
+        uint16_t flags = *(uint16_t*)(buffer + offset + 0x0e);
+
+        CollisionMeshData& mesh = meshes.emplace_back();
+
+        mesh.vertices.resize(normals_offset - vertices_offset);
+        memcpy(mesh.vertices.data(), buffer + vertices_offset, normals_offset - vertices_offset);
+
+        mesh.normals.resize(triangles - normals_offset);
+        memcpy(mesh.normals.data(), buffer + normals_offset, triangles - normals_offset);
+
+        mesh.indices.reserve(triangle_count * 3);
+        for (int i = 0; i < triangle_count; ++i)
+        {
+            mesh.indices.push_back((*(uint16_t*)(buffer + triangles + (i * 4 + 0) * 2)) & 0x3FFF);
+            mesh.indices.push_back((*(uint16_t*)(buffer + triangles + (i * 4 + 1) * 2)) & 0x3FFF);
+            mesh.indices.push_back((*(uint16_t*)(buffer + triangles + (i * 4 + 2) * 2)) & 0x3FFF);
+        }
+
+        mesh_map.insert({ offset, meshes.size() - 1 });
+
+        return triangles + triangle_count * sizeof(uint16_t) * 4;
+    }
+    
+    void MZB::parseGridEntry(uint8_t* buffer, uint32_t offset, int x, int y)
+    {
+        std::vector<uint32_t> entries;
+
+        while (true)
+        {
+            uint32_t entry = *(uint32_t*)(buffer + offset);
+            if (entry == 0) break;
+            entries.push_back(entry);
+            offset += 4;
+        }
+
+        uint32_t pos = entries.front();
+        uint32_t xx = (pos >> 14) & 0x1FF;
+        uint32_t yy = (pos >> 23) & 0x1FF;
+        uint32_t flags = pos & 0x3FFF;
+
+        for (int i = 1; i < entries.size(); i += 2)
+        {
+            uint32_t vis_entry_offset = entries[i];
+            uint32_t geo_entry_offset = entries[i+1];
+
+            parseGridMesh(buffer, x, y, vis_entry_offset, geo_entry_offset);
+        }
+    }
+
+    void MZB::parseGridMesh(uint8_t* buffer, int x, int y, uint32_t vis_entry_offset, uint32_t geo_entry_offset)
+    {
+        glm::mat4 transform_matrix = *(glm::mat4*)(buffer + vis_entry_offset);
+
+        uint32_t mesh_offset = mesh_map[geo_entry_offset];
+
+        mesh_entries.push_back({ glm::transpose(transform_matrix), mesh_offset });
+    }
+
+    CollisionLoader::CollisionLoader(std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries) : ModelLoader(), meshes(meshes), entries(entries) {}
+
+    void CollisionLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    {
+        model->rendered = false;
+        auto mesh = std::make_unique<CollisionMesh>();
+
+        auto vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+        auto index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
+        auto transform_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer;
+
+        auto vertex_buffer_size = 0;
+        auto index_buffer_size = 0;
+        auto transformation_buffer_size = entries.size() * sizeof(float) * 12;
+
+        for (const auto& mesh : meshes)
+        {
+            vertex_buffer_size += mesh.vertices.size();
+            index_buffer_size += mesh.indices.size() * 2;
+        }
+
+        mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertex_buffer_size, vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(index_buffer_size, index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->transform_buffer = engine->renderer.memory_manager->GetBuffer(transformation_buffer_size, transform_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        model->meshes.push_back(std::move(mesh));
+        model->lifetime = lotus::Lifetime::Long;
+
+        engine->worker_pool.addWork(std::make_unique<CollisionModelInitTask>(model, std::move(meshes), std::move(entries), sizeof(float) * 3));
     }
 }

@@ -14,17 +14,27 @@ namespace lotus
         template<typename ModelLoader, typename... Args>
         static std::shared_ptr<Model> LoadModel(Engine* engine, const std::string& modelname, Args... args)
         {
-            if (auto found = model_map.find(modelname); found != model_map.end())
+            if (!modelname.empty())
             {
-                auto ptr = found->second.lock();
-                if (ptr)
-                    return ptr;
+                if (auto found = model_map.find(modelname); found != model_map.end())
+                {
+                    auto ptr = found->second.lock();
+                    if (ptr)
+                        return ptr;
+                }
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));
             ModelLoader loader{args...};
             loader.setEngine(engine);
             loader.LoadModel(new_model);
-            return model_map.emplace(modelname, new_model).first->second.lock();
+            if (!modelname.empty())
+            {
+                return model_map.emplace(modelname, new_model).first->second.lock();
+            }
+            else
+            {
+                return new_model;
+            }
         }
 
         static std::shared_ptr<Model> getModel(const std::string& modelname)
@@ -52,6 +62,7 @@ namespace lotus
         std::vector<std::unique_ptr<Mesh>> meshes;
         bool weighted{ false };
         Lifetime lifetime {Lifetime::Short};
+        bool rendered{ true };
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
 

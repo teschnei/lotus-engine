@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <optional>
 #include "engine/entity/camera.h"
+#include "engine/renderer/model.h"
 
 namespace FFXI
 {
@@ -16,6 +17,20 @@ namespace FFXI
         long  fe,ff,fg,fh,fi,fj,fk,fl;
     };
     static_assert(sizeof(SMZBBlock100) == 0x64);
+
+    struct CollisionMeshData
+    {
+        std::vector<uint8_t> vertices;
+        std::vector<uint8_t> normals;
+        std::vector<uint16_t> indices;
+        uint16_t flags{};
+    };
+
+    struct CollisionEntry
+    {
+        glm::mat4 transform;
+        uint32_t mesh_entry;
+    };
 
     class QuadTree
     {
@@ -42,10 +57,25 @@ namespace FFXI
         static bool DecodeMZB(uint8_t* buffer, size_t max_len);
         std::vector<SMZBBlock100> vecMZB;
         std::optional<QuadTree> quadtree;
+        std::vector<CollisionMeshData> meshes;
+        std::vector<CollisionEntry> mesh_entries;
 
     private:
         QuadTree parseQuadTree(uint8_t* buffer, uint32_t offset);
+        uint32_t parseMesh(uint8_t* buffer, uint32_t offset);
+        void parseGridEntry(uint8_t* buffer, uint32_t offset, int x, int y);
+        void parseGridMesh(uint8_t* buffer, int x, int y, uint32_t vis_entry_offset, uint32_t geo_entry_offset);
         std::vector<uint32_t> vismap;
-        
+        std::unordered_map<uint32_t, uint32_t> mesh_map;
+    };
+
+    class CollisionLoader : public lotus::ModelLoader
+    {
+    public:
+        CollisionLoader(std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries);
+        virtual void LoadModel(std::shared_ptr<lotus::Model>&) override;
+    private:
+        std::vector<CollisionMeshData>& meshes;
+        std::vector<CollisionEntry>& entries;
     };
 }
