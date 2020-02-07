@@ -28,4 +28,16 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
             model->bottom_level_as->instanceid = as->AddInstance(instance);
         }
     }
+    for (const auto& collision_model : collision_models)
+    {
+        lotus::VkGeometryInstance instance{};
+        //glm is column-major so we have to transpose the model matrix for RTX
+        instance.transform = glm::mat3x4{1.f};
+        instance.accelerationStructureHandle = collision_model->bottom_level_as->handle;
+        instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+        instance.mask = static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelCollision);
+        instance.instanceOffset = 0;
+        instance.instanceId = 0;
+        collision_model->bottom_level_as->instanceid = as->AddInstance(instance);
+    }
 }

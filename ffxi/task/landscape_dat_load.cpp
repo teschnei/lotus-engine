@@ -4,6 +4,7 @@
 #include "engine/core.h"
 #include "engine/worker_thread.h"
 #include "engine/task/landscape_entity_init.h"
+#include "engine/renderer/acceleration_structure.h"
 #include "dat/dat_parser.h"
 
 LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _entity, const std::string& _dat) : entity(_entity), dat(_dat)
@@ -69,6 +70,8 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
         }
 
         entity->quadtree = *mzb->quadtree;
+
+        entity->collision_models.push_back(lotus::Model::LoadModel<FFXI::CollisionLoader>(thread->engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries)));
 
         thread->engine->worker_pool.addWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
     }

@@ -15,8 +15,9 @@ namespace lotus
         enum class ObjectFlags
         {
             LevelGeometry = 1,
-            LevelNavMesh = 2,
-            DynamicEntities = 4
+            DynamicEntities = 2,
+            LevelCollision = 4,
+            LevelCollisionLOS = 8
         };
         Raytracer(Engine* engine);
         void query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback);

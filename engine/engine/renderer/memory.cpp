@@ -71,7 +71,7 @@ namespace lotus
 
         vmaCreateBuffer(allocator, &buffer_create_info, &vma_ci, &buffer, &allocation, &alloc_info);
 
-        return std::make_unique<Buffer>(this, buffer, allocation, alloc_info);
+        return std::make_unique<Buffer>(this, buffer, allocation, alloc_info, size);
     }
 
     std::unique_ptr<Image> MemoryManager::GetImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
@@ -102,7 +102,7 @@ namespace lotus
 
         vmaCreateImage(allocator, &image_info, &vma_ci, &image, &allocation, &alloc_info);
 
-        return std::make_unique<Image>(this, image, allocation, alloc_info);
+        return std::make_unique<Image>(this, image, allocation, alloc_info, alloc_info.size);
     }
 
     std::unique_ptr<GenericMemory> MemoryManager::GetMemory(const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryflags)
@@ -116,6 +116,6 @@ namespace lotus
 
         vmaAllocateMemory(allocator, (VkMemoryRequirements*)& requirements, &vma_ci, &allocation, &alloc_info);
 
-        return std::make_unique<GenericMemory>(this, allocation, alloc_info);
+        return std::make_unique<GenericMemory>(this, allocation, alloc_info, requirements.size);
     }
 }

@@ -131,7 +131,7 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0xFF, 16, 1, 1, origin, 0.000, -light.light, 500, 1);
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02 , 16, 1, 1, origin, 0.000, -light.light, 500, 1);
     }
     vec3 ambient = vec3(0.3, 0.3, 0.3); //ambient
     vec3 total_light = vec3(0);

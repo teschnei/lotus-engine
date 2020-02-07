@@ -21,5 +21,8 @@ namespace lotus
         std::unique_ptr<Buffer> instance_buffer;
         std::vector<InstanceInfo> instance_info;
         std::unordered_map<std::string, std::pair<vk::DeviceSize, uint32_t>> instance_offsets; //pair of offset/count
+
+        std::vector<std::shared_ptr<Model>> collision_models;
+        std::shared_ptr<TopLevelAccelerationStructure> collision_as;
     };
 }

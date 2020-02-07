@@ -109,5 +109,5 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         //RTX shader groups need to be increased if this goes up more, or some kind of refactoring needs to happen to move meshes to something that uses their own resource index
         __debugbreak();
     }
-    engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices)));
+    engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
 }

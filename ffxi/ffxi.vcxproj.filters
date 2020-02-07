@@ -71,6 +71,9 @@
       <Filter>entity\component</Filter>
     </ClCompile>
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="task\collision_model_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dat\dat_parser.h">
@@ -129,6 +132,9 @@
       <Filter>entity\component</Filter>
     </ClInclude>
     <ClInclude Include="config.h" />
+    <ClInclude Include="task\collision_model_init.h">
+      <Filter>task</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <GLSLValidate Include="..\shaders\blend.frag">

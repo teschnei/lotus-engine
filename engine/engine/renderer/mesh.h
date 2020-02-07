@@ -52,7 +52,7 @@ namespace lotus
 
         bool has_transparency{ false };
         uint16_t blending{ 0 };
-        //TODO: move me back to protected
+
         Mesh() = default;
 
         float specular_exponent{};

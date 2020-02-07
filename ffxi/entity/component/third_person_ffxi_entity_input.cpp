@@ -4,6 +4,7 @@
 #include "engine/input.h"
 #include "engine/entity/renderable_entity.h"
 #include "engine/entity/component/animation_component.h"
+#include "engine/renderer/raytrace_query.h"
 #include <glm/gtx/vector_angle.hpp>
 
 ThirdPersonEntityFFXIInputComponent::ThirdPersonEntityFFXIInputComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input) : lotus::ThirdPersonEntityInputComponent(_entity, _engine, _input)
@@ -22,8 +23,15 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
         auto ms = std::min<long long>(1000000, std::chrono::duration_cast<std::chrono::microseconds>(delta).count());
         glm::vec3 offset = rotated_norm * glm::vec3(ms * speed);
         auto pos = entity->getPos();
-        pos += offset;
-        entity->setPos(pos);
+        auto width = 0.3f;
+
+        engine->renderer.raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, pos + step_height, glm::normalize(offset), 0.f, glm::length(offset) + width, [this, pos, offset, width](float new_distance)
+        {
+            auto new_pos = pos + (new_distance - width) * glm::normalize(offset);
+            engine->renderer.raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, new_pos + step_height, glm::vec3{ 0.f, 1.f, 0.f }, 0.f, 500.f, [this, new_pos](float new_distance) {
+                entity->setPos(new_pos + step_height + (glm::vec3{ 0.f, 1.f, 0.f } * new_distance));
+            });
+        });
 
         auto entity_quat = entity->getRot();
 

@@ -4,8 +4,8 @@
 
 namespace lotus
 {
-    AccelerationBuildTask::AccelerationBuildTask(int _image_index, const std::shared_ptr<TopLevelAccelerationStructure>& _as)
-        : WorkItem(), image_index(_image_index), as(_as)
+    AccelerationBuildTask::AccelerationBuildTask(const std::shared_ptr<TopLevelAccelerationStructure>& _as)
+        : WorkItem(), as(_as)
     {
         priority = 2;
     }

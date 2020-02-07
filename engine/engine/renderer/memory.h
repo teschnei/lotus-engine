@@ -12,11 +12,11 @@ namespace lotus
     class Memory
     {
     public:
-        Memory(MemoryManager* _manager, VmaAllocation _allocation, VmaAllocationInfo _alloc_info) :
+        Memory(MemoryManager* _manager, VmaAllocation _allocation, VmaAllocationInfo _alloc_info, vk::DeviceSize _size) :
             allocation(_allocation),
             memory_offset(_alloc_info.offset),
             memory(_alloc_info.deviceMemory),
-            size(_alloc_info.size),
+            size(_size),
             manager(_manager) {}
         Memory(const Memory&) = delete;
         Memory(Memory&&) = default;
@@ -26,6 +26,7 @@ namespace lotus
         void* map(vk::DeviceSize offset, vk::DeviceSize size, vk::MemoryMapFlags flags);
         void unmap();
         void flush(vk::DeviceSize offset, vk::DeviceSize size);
+        vk::DeviceSize getSize() { return size; }
         VmaAllocation allocation;
     protected:
         vk::DeviceSize memory_offset;
@@ -37,8 +38,8 @@ namespace lotus
     class Buffer : public Memory
     {
     public:
-        Buffer(MemoryManager* _manager, vk::Buffer _buffer, VmaAllocation _allocation, VmaAllocationInfo _alloc_info) :
-            Memory(_manager, _allocation, _alloc_info),
+        Buffer(MemoryManager* _manager, vk::Buffer _buffer, VmaAllocation _allocation, VmaAllocationInfo _alloc_info, vk::DeviceSize _size) :
+            Memory(_manager, _allocation, _alloc_info, _size),
             buffer(_buffer) {}
         ~Buffer();
         vk::Buffer buffer;
@@ -47,8 +48,8 @@ namespace lotus
     class Image : public Memory
     {
     public:
-        Image(MemoryManager* _manager, vk::Image _image,  VmaAllocation _allocation, VmaAllocationInfo _alloc_info) :
-            Memory(_manager, _allocation, _alloc_info),
+        Image(MemoryManager* _manager, vk::Image _image,  VmaAllocation _allocation, VmaAllocationInfo _alloc_info, vk::DeviceSize _size) :
+            Memory(_manager, _allocation, _alloc_info, _size),
             image(_image) {}
         ~Image();
         vk::Image image;
@@ -57,8 +58,8 @@ namespace lotus
     class GenericMemory : public Memory
     {
     public:
-        GenericMemory(MemoryManager* _manager, VmaAllocation _allocation, VmaAllocationInfo _alloc_info) :
-            Memory(_manager, _allocation, _alloc_info) {}
+        GenericMemory(MemoryManager* _manager, VmaAllocation _allocation, VmaAllocationInfo _alloc_info, vk::DeviceSize _size) :
+            Memory(_manager, _allocation, _alloc_info, _size) {}
         ~GenericMemory();
 
         vk::DeviceMemory get_memory() const { return memory; }

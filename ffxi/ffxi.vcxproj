@@ -29,6 +29,7 @@
     <ClCompile Include="entity\third_person_ffxi_camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="task\actor_dat_load.cpp" />
+    <ClCompile Include="task\collision_model_init.cpp" />
     <ClCompile Include="task\landscape_dat_load.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +51,7 @@
     <ClInclude Include="entity\third_person_ffxiv_camera.h" />
     <ClInclude Include="entity\third_person_ffxi_camera.h" />
     <ClInclude Include="task\actor_dat_load.h" />
+    <ClInclude Include="task\collision_model_init.h" />
     <ClInclude Include="task\landscape_dat_load.h" />
     <ClInclude Include="test_loader.h" />
   </ItemGroup>

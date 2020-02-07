@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/entity/landscape_entity.h"
+#include "engine/renderer/mesh.h"
 #include "dat/mzb.h"
 
 class FFXILandscapeEntity : public lotus::LandscapeEntity
@@ -12,4 +13,12 @@ public:
     std::vector<std::pair<uint32_t, InstanceInfo>> model_vec;
 protected:
     //virtual void render(lotus::Engine* engine, std::shared_ptr<Entity>& sp) override;
+};
+
+class CollisionMesh : public lotus::Mesh
+{
+public:
+    CollisionMesh() : Mesh() {}
+
+    std::unique_ptr<lotus::Buffer> transform_buffer;
 };
