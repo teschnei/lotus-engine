@@ -108,8 +108,11 @@ void main()
     shadow = true;
     if (dot_product > 0)
     {
-        vec3 vertex_vec1 = normalize(vec3(v1.pos - v0.pos));
-        vec3 vertex_vec2 = normalize(vec3(v2.pos - v0.pos));
+        vec3 transformed_v0 = mat3(gl_ObjectToWorldNV) * v0.pos;
+        vec3 transformed_v1 = mat3(gl_ObjectToWorldNV) * v1.pos;
+        vec3 transformed_v2 = mat3(gl_ObjectToWorldNV) * v2.pos;
+        vec3 vertex_vec1 = normalize(vec3(transformed_v1 - transformed_v0));
+        vec3 vertex_vec2 = normalize(vec3(transformed_v2 - transformed_v0));
 
         vec3 cross_vec = normalize(cross(vertex_vec1, vertex_vec2));
 

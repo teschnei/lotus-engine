@@ -68,16 +68,14 @@ void main() {
     Bone bone1 = skeleton.bones[weight1.bone_index];
 
     vec3 pos = rotate_trans(bone1.rot, mirror_vec(weight1.pos * bone1.scale, weight1.mirror_axis)) + (bone1.trans * weight1.weight);
-    //TODO: probably not right
-    vec3 norm = rotate_trans(bone1.rot, weight1.norm);
+    vec3 norm = rotate_trans(bone1.rot, mirror_vec(weight1.norm * bone1.scale, weight1.mirror_axis));
 
     if (weight2.weight > 0)
     {
         Bone bone2 = skeleton.bones[weight2.bone_index];
 
         pos += rotate_trans(bone2.rot, mirror_vec(weight2.pos * bone2.scale, weight2.mirror_axis)) + (bone2.trans * weight2.weight);
-        //TODO: probably not right
-        norm += rotate_trans(bone2.rot, weight2.norm);
+        norm += rotate_trans(bone2.rot, mirror_vec(weight2.norm * bone2.scale, weight2.mirror_axis));
     }
 
     norm = normalize(norm);
