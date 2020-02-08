@@ -119,7 +119,7 @@ void main()
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
         traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02, 32, 1, 1, origin, 0.000, -light.light, 500, 1);
     }
-    vec3 ambient = vec3(0.5, 0.5, 0.5); //ambient
+    vec3 ambient = vec3(0.3, 0.3, 0.3);
     vec3 specular = vec3(0);
     vec3 diffuse = vec3(0);
     if (!shadow)
@@ -131,11 +131,10 @@ void main()
         if (specular_dot > 0)
         {
             specular_dot = pow(specular_dot, mesh.specular_exponent);
-            specular = light.color.rgb * specular_factor * specular_dot;
+            specular = vec3(specular_factor * specular_dot);
         }
-        diffuse = light.color.rgb * max(dot_product, 0.0);
+        diffuse = vec3(max(dot_product, 0.0));
     }
-    vec3 total_light = ambient + specular + diffuse;
 
-    hitValue.color = color.rgb * total_light;
+    hitValue.color = ((ambient + diffuse) * color.rgb * 2 + specular) * light.color.rgb;
 }
