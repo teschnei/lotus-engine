@@ -3,12 +3,13 @@
 #include <cstdint>
 #include <vector>
 #include <glm/glm.hpp>
+#include "dat_chunk.h"
 #include "engine/renderer/vulkan/vulkan_inc.h"
 #include "engine/renderer/model.h"
 
 namespace FFXI
 {
-    class MMB
+    class MMB : public DatChunk
     {
     public:
         struct Vertex
@@ -30,7 +31,7 @@ namespace FFXI
             std::vector<uint16_t> indices;
             vk::PrimitiveTopology topology;
         };
-        MMB(uint8_t* buffer, size_t max_len, bool offset_vertices);
+        MMB(char* _name, uint8_t* _buffer, size_t _len, bool offset_vertices);
 
         static bool DecodeMMB(uint8_t* buffer, size_t max_len);
 
@@ -43,7 +44,7 @@ namespace FFXI
     class MMBLoader : public lotus::ModelLoader
     {
     public:
-        MMBLoader(MMB* mmb);
+        explicit MMBLoader(MMB* mmb);
         virtual void LoadModel(std::shared_ptr<lotus::Model>&) override;
     private:
         MMB* mmb;

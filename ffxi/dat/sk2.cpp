@@ -6,7 +6,7 @@ struct Skeleton
     uint16_t bone_count;
 };
 
-FFXI::SK2::SK2(uint8_t* buffer, size_t max_len)
+FFXI::SK2::SK2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
 {
     Skeleton* skel = (Skeleton*)buffer;
     Bone* bone_buf = (Bone*)(buffer + sizeof(Skeleton));

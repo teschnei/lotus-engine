@@ -1,432 +1,838 @@
 #include "dat_parser.h"
+#include "mzb.h"
+#include "mmb.h"
+#include "os2.h"
+#include "mo2.h"
+#include "sk2.h"
+#include "dxt3.h"
 #include <fstream>
 
-#pragma pack(push,1)
-typedef struct 
+namespace FFXI
 {
-  char id[4];
-  unsigned long type:7;
-  unsigned long next:19;
-  unsigned long is_shadow:1;
-  unsigned long is_extracted:1;
-  unsigned long ver_num:3;
-  unsigned long is_virtual:1;
-  unsigned int parent;
-  unsigned int child;
-} DATHEAD;
+
+#pragma pack(push,1)
+    typedef struct
+    {
+        char id[4];
+        unsigned long type : 7;
+        unsigned long next : 19;
+        unsigned long is_shadow : 1;
+        unsigned long is_extracted : 1;
+        unsigned long ver_num : 3;
+        unsigned long is_virtual : 1;
+        unsigned int parent;
+        unsigned int child;
+    } DATHEAD;
 #pragma pack(pop)
 
-DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
-{
-    std::ifstream dat{filepath, std::ios::ate | std::ios::binary };
-
-    size_t fileSize = (size_t) dat.tellg();
-    std::vector<uint8_t> buffer(fileSize);
-
-    dat.seekg(0);
-    dat.read((char*)buffer.data(), fileSize);
-    dat.close();
-
-    int terminate = 0;
-    int rmp = 0;
-    int rmw = 0;
-    int directory = 0;
-    int bin = 0;
-    int generator = 0;
-    int camera = 0;
-    int scheduler = 0;
-    int mtx = 0;
-    int tim = 0;
-    int texInfo = 0;
-    int vum = 0;
-    int om1 = 0;
-    int fileInfo = 0;
-    int anm = 0;
-    int rsd = 0;
-    int unknown = 0;
-    int osm = 0;
-    int skd = 0;
-    int mtd = 0;
-    int mld = 0;
-    int mlt = 0;
-    int mws = 0;
-    int mod = 0;
-    int tim2 = 0;
-    int keyframe = 0;
-    int bmp = 0;
-    int bmp2 = 0;
-    int mzb = 0;
-    int mmd = 0;
-    int mep = 0;
-    int d3m = 0;
-    int d3s = 0;
-    int d3a = 0;
-    int distProg = 0;
-    int vuLineProg = 0;
-    int ringProg = 0;
-    int d3b = 0;
-    int asn = 0;
-    int mot = 0;
-    int skl = 0;
-    int sk2 = 0;
-    int os2 = 0;
-    int mo2 = 0;
-    int psw = 0;
-    int wsd = 0;
-    int mmb = 0;
-    int weather = 0;
-    int meb = 0;
-    int msb = 0;
-    int med = 0;
-    int msh = 0;
-    int ysh = 0;
-    int mbp = 0;
-    int rid = 0;
-    int wd = 0;
-    int bgm = 0;
-    int lfd = 0;
-    int lfe = 0;
-    int esh = 0;
-    int sch = 0;
-    int sep = 0;
-    int vtx = 0;
-    int lwo = 0;
-    int rme = 0;
-    int elt = 0;
-    int rab = 0;
-    int mtt = 0;
-    int mtb = 0;
-    int cib = 0;
-    int tlt = 0;
-    int pointLightProg = 0;
-    int mgd = 0;
-    int mgb = 0;
-    int sph = 0;
-    int bmd = 0;
-    int qif = 0;
-    int qdt = 0;
-    int mif = 0;
-    int mdt = 0;
-    int sif = 0;
-    int sdt = 0;
-    int acd = 0;
-    int acb = 0;
-    int afb = 0;
-    int aft = 0;
-    int wwd = 0;
-    int nullProg = 0;
-    int spw = 0;
-    int fud = 0;
-    int disgregaterProg = 0;
-    int smt = 0;
-    int damValueProg = 0;
-    int bp = 0;
-
-    int offset = 0;
-    while(offset < buffer.size())
+    struct WeatherData
     {
-        DATHEAD* dathead = (DATHEAD*)&buffer[offset];
-        int len = (dathead->next & 0x7ffff) * 16;
+        float unk[3];
+        uint32_t unk2[4];
+        float unk3[4];
+        uint32_t unk4[4];
+        float unk5[4];
+        uint32_t unk6;
+        float unk7[3];
+        uint32_t unk8;
+        float unk9[3];
+        uint32_t unk10[8];
+        float unk11[9];
+    };
 
-        switch (dathead->type)
+    class Weather : public DatChunk
+    {
+    public:
+        Weather(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
         {
-        case 0x00:
-            terminate++;
-            break;
-        case 0x01:
-            rmp++;
-            break;
-        case 0x02:
-            rmw++;
-            break;
-        case 0x03:
-            directory++;
-            break;
-        case 0x04:
-            bin++;
-            break;
-        case 0x05:
-            generator++;
-            break;
-        case 0x06:
-            camera++;
-            break;
-        case 0x07:
-            scheduler++;
-            break;
-        case 0x08:
-            mtx++;
-            break;
-        case 0x09:
-            tim++;
-            break;
-        case 0x0A:
-            texInfo++;
-            break;
-        case 0x0B:
-            vum++;
-            break;
-        case 0x0C:
-            om1++;
-            break;
-        case 0x0D:
-            fileInfo++;
-            break;
-        case 0x0E:
-            anm++;
-            break;
-        case 0x0F:
-            rsd++;
-            break;
-        case 0x10:
-            unknown++;
-            break;
-        case 0x11:
-            osm++;
-            break;
-        case 0x12:
-            skd++;
-            break;
-        case 0x13:
-            mtd++;
-            break;
-        case 0x14:
-            mld++;
-            break;
-        case 0x15:
-            mlt++;
-            break;
-        case 0x16:
-            mws++;
-            break;
-        case 0x17:
-            mod++;
-            break;
-        case 0x18:
-            tim2++;
-            break;
-        case 0x19:
-            keyframe++;
-            break;
-        case 0x1A:
-            bmp++;
-            break;
-        case 0x1B:
-            bmp2++;
-            break;
-        case 0x1C:
-            mzb++;
-            if (FFXI::MZB::DecodeMZB(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)))
-            {
-                mzbs.push_back(std::make_unique<FFXI::MZB>(&buffer[offset + sizeof(DATHEAD)], len - (sizeof(DATHEAD))));
-            }
-            break;
-        case 0x1D:
-            mmd++;
-            break;
-        case 0x1E:
-            mep++;
-            break;
-        case 0x1F:
-            d3m++;
-            break;
-        case 0x20:
-            d3s++;
-            dxt3s.push_back(std::make_unique<FFXI::DXT3>(&buffer[offset + sizeof(DATHEAD)]));
-            break;
-        case 0x21:
-            d3a++;
-            break;
-        case 0x22:
-            distProg++;
-            break;
-        case 0x23:
-            vuLineProg++;
-            break;
-        case 0x24:
-            ringProg++;
-            break;
-        case 0x25:
-            d3b++;
-            break;
-        case 0x26:
-            asn++;
-            break;
-        case 0x27:
-            mot++;
-            break;
-        case 0x28:
-            skl++;
-            break;
-        case 0x29:
-            sk2++;
-            sk2s.push_back(std::make_unique<FFXI::SK2>(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)));
-            break;
-        case 0x2A:
-            os2++;
-            os2s.push_back(std::make_unique<FFXI::OS2>(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)));
-            break;
-        case 0x2B:
-            mo2++;
-            mo2s.push_back(std::make_unique<FFXI::MO2>(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD), dathead->id));
-            break;
-        case 0x2C:
-            psw++;
-            break;
-        case 0x2D:
-            wsd++;
-            break;
-        case 0x2E:
-            mmb++;
-            if (FFXI::MMB::DecodeMMB(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)))
-            {
-                mmbs.push_back(std::make_unique<FFXI::MMB>(&buffer[offset + sizeof(DATHEAD)], len - (sizeof(DATHEAD)), rtx));
-            }
-            break;
-        case 0x2F:
-            weather++;
-            break;
-        case 0x30:
-            meb++;
-            break;
-        case 0x31:
-            msb++;
-            break;
-        case 0x32:
-            med++;
-            break;
-        case 0x33:
-            msh++;
-            break;
-        case 0x34:
-            ysh++;
-            break;
-        case 0x35:
-            mbp++;
-            break;
-        case 0x36:
-            rid++;
-            break;
-        case 0x37:
-            wd++;
-            break;
-        case 0x38:
-            bgm++;
-            break;
-        case 0x39:
-            lfd++;
-            break;
-        case 0x3A:
-            lfe++;
-            break;
-        case 0x3B:
-            esh++;
-            break;
-        case 0x3C:
-            sch++;
-            break;
-        case 0x3D:
-            sep++;
-            break;
-        case 0x3E:
-            vtx++;
-            break;
-        case 0x3F:
-            lwo++;
-            break;
-        case 0x40:
-            rme++;
-            break;
-        case 0x41:
-            elt++;
-            break;
-        case 0x42:
-            rab++;
-            break;
-        case 0x43:
-            mtt++;
-            break;
-        case 0x44:
-            mtb++;
-            break;
-        case 0x45:
-            cib++;
-            break;
-        case 0x46:
-            tlt++;
-            break;
-        case 0x47:
-            pointLightProg++;
-            break;
-        case 0x48:
-            mgd++;
-            break;
-        case 0x49:
-            mgb++;
-            break;
-        case 0x4A:
-            sph++;
-            break;
-        case 0x4B:
-            bmd++;
-            break;
-        case 0x4C:
-            qif++;
-            break;
-        case 0x4D:
-            qdt++;
-            break;
-        case 0x4E:
-            mif++;
-            break;
-        case 0x4F:
-            mdt++;
-            break;
-        case 0x50:
-            sif++;
-            break;
-        case 0x51:
-            sdt++;
-            break;
-        case 0x52:
-            acd++;
-            break;
-        case 0x53:
-            acb++;
-            break;
-        case 0x54:
-            afb++;
-            break;
-        case 0x55:
-            aft++;
-            break;
-        case 0x56:
-            wwd++;
-            break;
-        case 0x57:
-            nullProg++;
-            break;
-        case 0x58:
-            spw++;
-            break;
-        case 0x59:
-            fud++;
-            break;
-        case 0x5A:
-            disgregaterProg++;
-            break;
-        case 0x5B:
-            smt++;
-            break;
-        case 0x5C:
-            damValueProg++;
-            break;
-        case 0x5D:
-            bp++;
-            break;
-        default:
-            break;
+            data = reinterpret_cast<WeatherData*>(buffer);
         }
-        offset += len;
+        WeatherData* data;
+    };
+
+    DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
+    {
+        std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };
+
+        size_t file_size = (size_t)dat.tellg();
+        buffer.resize(file_size);
+
+        dat.seekg(0);
+        dat.read((char*)buffer.data(), file_size);
+        dat.close();
+
+        int offset = 0;
+        DatChunk* current_chunk = nullptr;
+        while (offset < buffer.size())
+        {
+            DATHEAD* dathead = (DATHEAD*)&buffer[offset];
+            int len = (dathead->next & 0x7ffff) * 16;
+
+            switch (dathead->type)
+            {
+                //terminate
+            case 0x00:
+                current_chunk = current_chunk->parent;
+                break;
+                //rmp
+            case 0x01:
+            {
+                std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                DatChunk* new_chunk_ptr = new_chunk.get();
+                if (!root)
+                {
+                    root = std::move(new_chunk);
+                }
+                else
+                {
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                current_chunk = new_chunk_ptr;
+            }
+            break;
+            case 0x02:
+                current_chunk->rmw++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x03:
+                current_chunk->directory++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x04:
+                current_chunk->bin++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x05:
+                current_chunk->generator++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x06:
+                current_chunk->camera++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x07:
+                current_chunk->scheduler++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x08:
+                current_chunk->mtx++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x09:
+                current_chunk->tim++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x0A:
+                current_chunk->texInfo++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x0B:
+                current_chunk->vum++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x0C:
+                current_chunk->om1++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x0D:
+                current_chunk->fileInfo++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x0E:
+                current_chunk->anm++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x0F:
+                current_chunk->rsd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x10:
+                current_chunk->unknown++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x11:
+                current_chunk->osm++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x12:
+                current_chunk->skd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x13:
+                current_chunk->mtd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x14:
+                current_chunk->mld++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x15:
+                current_chunk->mlt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x16:
+                current_chunk->mws++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x17:
+                current_chunk->mod++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x18:
+                current_chunk->tim2++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x19:
+                current_chunk->keyframe++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x1A:
+                current_chunk->bmp++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x1B:
+                current_chunk->bmp2++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x1C:
+                current_chunk->mzb++;
+                if (MZB::DecodeMZB(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)))
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<MZB>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - (sizeof(DATHEAD)));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x1D:
+                current_chunk->mmd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x1E:
+                current_chunk->mep++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x1F:
+                current_chunk->d3m++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x20:
+                current_chunk->d3s++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DXT3>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x21:
+                current_chunk->d3a++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x22:
+                current_chunk->distProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x23:
+                current_chunk->vuLineProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x24:
+                current_chunk->ringProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x25:
+                current_chunk->d3b++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x26:
+                current_chunk->asn++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x27:
+                current_chunk->mot++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x28:
+                current_chunk->skl++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x29:
+                current_chunk->sk2++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<SK2>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x2A:
+                current_chunk->os2++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<OS2>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x2B:
+                current_chunk->mo2++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<MO2>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x2C:
+                current_chunk->psw++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x2D:
+                current_chunk->wsd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x2E:
+                current_chunk->mmb++;
+                if (MMB::DecodeMMB(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)))
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<MMB>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD), rtx);
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x2F:
+                current_chunk->weather++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<Weather>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x30:
+                current_chunk->meb++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x31:
+                current_chunk->msb++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x32:
+                current_chunk->med++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x33:
+                current_chunk->msh++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x34:
+                current_chunk->ysh++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x35:
+                current_chunk->mbp++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x36:
+                current_chunk->rid++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x37:
+                current_chunk->wd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x38:
+                current_chunk->bgm++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x39:
+                current_chunk->lfd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x3A:
+                current_chunk->lfe++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x3B:
+                current_chunk->esh++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x3C:
+                current_chunk->sch++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x3D:
+                current_chunk->sep++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x3E:
+                current_chunk->vtx++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x3F:
+                current_chunk->lwo++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x40:
+                current_chunk->rme++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x41:
+                current_chunk->elt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x42:
+                current_chunk->rab++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x43:
+                current_chunk->mtt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x44:
+                current_chunk->mtb++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x45:
+                current_chunk->cib++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x46:
+                current_chunk->tlt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x47:
+                current_chunk->pointLightProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x48:
+                current_chunk->mgd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x49:
+                current_chunk->mgb++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x4A:
+                current_chunk->sph++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x4B:
+                current_chunk->bmd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x4C:
+                current_chunk->qif++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x4D:
+                current_chunk->qdt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x4E:
+                current_chunk->mif++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x4F:
+                current_chunk->mdt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x50:
+                current_chunk->sif++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x51:
+                current_chunk->sdt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x52:
+                current_chunk->acd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x53:
+                current_chunk->acb++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x54:
+                current_chunk->afb++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x55:
+                current_chunk->aft++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x56:
+                current_chunk->wwd++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x57:
+                current_chunk->nullProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x58:
+                current_chunk->spw++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x59:
+                current_chunk->fud++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x5A:
+                current_chunk->disgregaterProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x5B:
+                current_chunk->smt++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x5C:
+                current_chunk->damValueProg++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            case 0x5D:
+                current_chunk->bp++;
+                {
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    new_chunk->parent = current_chunk;
+                    current_chunk->children.push_back(std::move(new_chunk));
+                }
+                break;
+            default:
+                break;
+            }
+            offset += len;
+        }
     }
 }

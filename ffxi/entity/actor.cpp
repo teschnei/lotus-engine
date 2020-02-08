@@ -15,7 +15,7 @@ void Actor::Init(const std::shared_ptr<Actor>& sp, const std::string& dat)
     engine->worker_pool.addWork(std::make_unique<ActorDatLoad>(sp, dat));
 }
 
-FFXIActorLoader::FFXIActorLoader(const std::vector<std::unique_ptr<FFXI::OS2>>* _os2s, FFXI::SK2* _sk2) : ModelLoader(), os2s(_os2s), sk2(_sk2)
+FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2* _sk2) : ModelLoader(), os2s(_os2s), sk2(_sk2)
 {
 }
 
@@ -24,7 +24,7 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     std::vector<std::vector<uint8_t>> vertices;
     std::vector<std::vector<uint8_t>> indices;
 
-    for (const auto& os2 : *os2s)
+    for (const auto& os2 : os2s)
     {
         for (const auto& os2_mesh : os2->meshes)
         {

@@ -1,11 +1,14 @@
 #include "landscape_dat_load.h"
 
 #include <map>
+#include "dat/dat_parser.h"
+#include "dat/dxt3.h"
+#include "dat/mzb.h"
+#include "dat/mmb.h"
 #include "engine/core.h"
 #include "engine/worker_thread.h"
 #include "engine/task/landscape_entity_init.h"
 #include "engine/renderer/acceleration_structure.h"
-#include "dat/dat_parser.h"
 
 LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _entity, const std::string& _dat) : entity(_entity), dat(_dat)
 {
@@ -13,34 +16,48 @@ LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _
 
 void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 {
-    DatParser parser{dat, thread->engine->renderer.RTXEnabled()};
+    FFXI::DatParser parser{dat, thread->engine->renderer.RTXEnabled()};
 
-    const auto& mzbs = parser.getMZBs();
 
-    if (mzbs.size() == 1)
+    FFXI::MZB* mzb{ nullptr };
+    std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
+    std::map<std::string, uint32_t> model_map;
+
+    FFXI::DatChunk* model = nullptr;
+    for (const auto& chunk : parser.root->children)
     {
-        const auto& mzb = mzbs[0];
-
-        std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
-
-        for (const auto& texture_data : parser.getDXT3s())
+        if (memcmp(chunk->name, "mode", 4) == 0)
         {
-            if (texture_data->width > 0)
+            model = chunk.get();
+            break;
+        }
+    }
+
+    for (const auto& chunk : model->children)
+    {
+        if (auto dxt3 = dynamic_cast<FFXI::DXT3*>(chunk.get()))
+        {
+            if (dxt3->width > 0)
             {
-                auto texture = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, texture_data->name, texture_data.get());
-                texture_map[texture_data->name] = std::move(texture);
+                auto texture = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, dxt3->name, dxt3);
+                texture_map[dxt3->name] = std::move(texture);
             }
         }
-
-        std::map<std::string, uint32_t> model_map;
-        for (const auto& mmb : parser.getMMBs())
+        else if (auto mzb_chunk = dynamic_cast<FFXI::MZB*>(chunk.get()))
+        {
+            mzb = mzb_chunk;
+        }
+        else if (auto mmb = dynamic_cast<FFXI::MMB*>(chunk.get()))
         {
             std::string name(mmb->name, 16);
 
-            entity->models.push_back(lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb.get()));
+            entity->models.push_back(lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb));
             model_map[name] = entity->models.size() - 1;
         }
+    }
 
+    if (mzb)
+    {
         entity->instance_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
             vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
 

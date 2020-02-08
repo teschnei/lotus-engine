@@ -4,7 +4,6 @@
 #include "engine/entity/renderable_entity.h"
 
 #include "engine/game.h"
-#include "../../../ffxi/dat/os2.h"
 #include "engine/entity/component/animation_component.h"
 
 namespace lotus

@@ -106,7 +106,7 @@ std::vector<vk::VertexInputAttributeDescription> FFXI::OS2::Vertex::getAttribute
     return attribute_descriptions;
 }
 
-FFXI::OS2::OS2(uint8_t* buffer, size_t max_len)
+FFXI::OS2::OS2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
 {
     MeshHeader* header = (MeshHeader*)buffer;
 

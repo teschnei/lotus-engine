@@ -146,7 +146,7 @@ namespace FFXI
         return attribute_descriptions;
     }
 
-    MMB::MMB(uint8_t* buffer, size_t max_len, bool offset_vertices)
+    MMB::MMB(char* _name, uint8_t* _buffer, size_t _len, bool offset_vertices) : DatChunk(_name, _buffer, _len)
     {
         size_t offset = 0;
         SMMBHEAD* head = (SMMBHEAD*)buffer;
@@ -235,7 +235,7 @@ namespace FFXI
             }
             for (int model_index = 0; model_index < block_header->numModel; ++model_index)
             {
-                if (offset + sizeof(SMMBModelHeader) > max_len)
+                if (offset + sizeof(SMMBModelHeader) > len)
                 {
                     break;
                 }

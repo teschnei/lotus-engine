@@ -135,6 +135,9 @@
     <ClInclude Include="task\collision_model_init.h">
       <Filter>task</Filter>
     </ClInclude>
+    <ClInclude Include="dat\dat_chunk.h">
+      <Filter>dat</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <GLSLValidate Include="..\shaders\blend.frag">

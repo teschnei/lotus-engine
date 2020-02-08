@@ -31,7 +31,7 @@ namespace FFXI
     } IMGINFOB1;
 #pragma pack(pop)
 
-    DXT3::DXT3(uint8_t* buffer)
+    DXT3::DXT3(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
     {
         IMGINFOA1* infoa1 = reinterpret_cast<IMGINFOA1*>(buffer);
 

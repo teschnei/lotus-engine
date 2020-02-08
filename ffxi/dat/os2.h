@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/types.h"
+#include "dat_chunk.h"
 #include <vector>
 #include <glm/glm.hpp>
 #include <string>
@@ -8,7 +8,7 @@
 
 namespace FFXI
 {
-    class OS2
+    class OS2 : public DatChunk
     {
     public:
 
@@ -54,7 +54,7 @@ namespace FFXI
             float specular_intensity {};
         };
 
-        OS2(uint8_t* buffer, size_t max_len);
+        OS2(char* _name, uint8_t* _buffer, size_t _len);
         std::vector<Mesh> meshes;
         std::vector<std::pair<WeightingVertexMirror, WeightingVertexMirror>> vertices;
         bool mirror;

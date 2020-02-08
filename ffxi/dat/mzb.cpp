@@ -123,7 +123,7 @@ namespace FFXI
         }
     }
 
-    MZB::MZB(uint8_t* buffer, size_t max_len)
+    MZB::MZB(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
     {
         SMZBHeader* header = (SMZBHeader*)buffer;
 

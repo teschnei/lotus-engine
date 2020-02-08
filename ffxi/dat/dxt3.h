@@ -1,14 +1,14 @@
 #pragma once
 
-#include "engine/types.h"
+#include "dat_chunk.h"
 #include "engine/renderer/texture.h"
 
 namespace FFXI
 {
-    class DXT3
+    class DXT3 : public DatChunk
     {
     public:
-        explicit DXT3(uint8_t* buffer);
+        DXT3(char* _name, uint8_t* _buffer, size_t _len);
 
         std::string name;
         uint32_t width {0};

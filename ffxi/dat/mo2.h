@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/types.h"
+#include "dat_chunk.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -8,7 +8,7 @@
 
 namespace FFXI
 {
-    class MO2
+    class MO2 : public DatChunk
     {
     public:
 
@@ -19,7 +19,7 @@ namespace FFXI
             glm::vec3 scale;
         };
 
-        MO2(uint8_t* buffer, size_t max_len, char name[4]);
+        MO2(char* _name, uint8_t* _buffer, size_t _len);
 
         std::string name;
         uint32_t frames;

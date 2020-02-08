@@ -3,6 +3,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <optional>
+#include "dat_chunk.h"
 #include "engine/entity/camera.h"
 #include "engine/renderer/model.h"
 
@@ -49,10 +50,10 @@ namespace FFXI
 
     };
 
-    class MZB
+    class MZB : public DatChunk
     {
     public:
-        MZB(uint8_t* buffer, size_t max_len);
+        MZB(char* _name, uint8_t* _buffer, size_t _len);
 
         static bool DecodeMZB(uint8_t* buffer, size_t max_len);
         std::vector<SMZBBlock100> vecMZB;

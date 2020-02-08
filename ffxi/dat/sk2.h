@@ -1,13 +1,13 @@
 #pragma once
 
-#include "engine/types.h"
+#include "dat_chunk.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
 
 namespace FFXI
 {
-    class SK2
+    class SK2 : public DatChunk
     {
     public:
 #pragma pack(push,2)
@@ -20,7 +20,7 @@ namespace FFXI
         };
 #pragma pack(pop)
 
-        SK2(uint8_t* buffer, size_t max_len);
+        SK2(char* _name, uint8_t* _buffer, size_t _len);
         std::vector<Bone> bones;
     };
 }
