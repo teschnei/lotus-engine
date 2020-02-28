@@ -25,31 +25,6 @@ namespace FFXI
     } DATHEAD;
 #pragma pack(pop)
 
-    struct WeatherData
-    {
-        float unk[3];
-        uint32_t unk2[4];
-        float unk3[4];
-        uint32_t unk4[4];
-        float unk5[4];
-        uint32_t unk6;
-        float unk7[3];
-        uint32_t unk8;
-        float unk9[3];
-        uint32_t unk10[8];
-        float unk11[9];
-    };
-
-    class Weather : public DatChunk
-    {
-    public:
-        Weather(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
-        {
-            data = reinterpret_cast<WeatherData*>(buffer);
-        }
-        WeatherData* data;
-    };
-
     DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
     {
         std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };

@@ -746,7 +746,7 @@ namespace lotus
             light_binding.descriptorCount = 1;
             light_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
             light_binding.pImmutableSamplers = nullptr;
-            light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV;
+            light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eMissNV;
 
             vk::DescriptorSetLayoutBinding acceleration_structure_binding;
             acceleration_structure_binding.binding = 0;
@@ -1453,8 +1453,8 @@ namespace lotus
             {
                 vk::DescriptorBufferInfo light_buffer_info;
                 light_buffer_info.buffer = engine->lights.dir_buffer->buffer;
-                light_buffer_info.offset = i * sizeof(engine->lights.directional_light);
-                light_buffer_info.range = sizeof(engine->lights.directional_light);
+                light_buffer_info.offset = i * sizeof(engine->lights.light);
+                light_buffer_info.range = sizeof(engine->lights.light);
 
                 vk::DescriptorImageInfo shadowmap_image_info;
                 shadowmap_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -1800,8 +1800,8 @@ namespace lotus
 
             vk::DescriptorBufferInfo light_buffer_info;
             light_buffer_info.buffer = engine->lights.dir_buffer->buffer;
-            light_buffer_info.offset = engine->renderer.getCurrentImage() * sizeof(engine->lights.directional_light);
-            light_buffer_info.range = sizeof(engine->lights.directional_light);
+            light_buffer_info.offset = engine->renderer.getCurrentImage() * sizeof(engine->lights.light);
+            light_buffer_info.range = sizeof(engine->lights.light);
 
             vk::WriteDescriptorSet write_info_light;
             write_info_light.descriptorCount = 1;
@@ -1939,6 +1939,7 @@ namespace lotus
 
         engine->worker_pool.waitIdle();
         engine->worker_pool.startProcessing(current_image);
+        engine->lights.UpdateLightBuffer();
 
         vk::SubmitInfo submitInfo = {};
 

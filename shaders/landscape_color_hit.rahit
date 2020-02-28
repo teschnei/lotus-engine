@@ -100,6 +100,6 @@ void main()
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].tex_offset;
     float a = texture(textures[resource_index], uv).a;
-    if (a == 0)
+    if (a < 1.f/32.f)
         ignoreIntersectionNV();
 }

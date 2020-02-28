@@ -17,7 +17,7 @@ void main() {
     outNormal = vec4(normal, 1.0);
     outAlbedo = texture(texSampler, fragTexCoord);
     outAlbedo.rgb *= fragColor;
-    if (outAlbedo.a > 0)
+    if (outAlbedo.a > 1.f/32.f)
         outAlbedo.a = 1;
     else
         discard;

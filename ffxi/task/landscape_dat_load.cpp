@@ -1,6 +1,7 @@
 #include "landscape_dat_load.h"
 
 #include <map>
+#include <charconv>
 #include "dat/dat_parser.h"
 #include "dat/dxt3.h"
 #include "dat/mzb.h"
@@ -91,5 +92,57 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
         entity->collision_models.push_back(lotus::Model::LoadModel<FFXI::CollisionLoader>(thread->engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries)));
 
         thread->engine->worker_pool.addWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
+    }
+    for (const auto& chunk : parser.root->children)
+    {
+        if (memcmp(chunk->name, "weat", 4) == 0)
+        {
+            auto uint_to_color_vec = [](uint32_t color)
+            {
+                float r = (color & 0xFF) / 255.f;
+                float g = ((color & 0xFF00) >> 8) / 255.f;
+                float b = ((color & 0xFF0000) >> 16) / 255.f;
+                float a = ((color & 0xFF000000) >> 24) / 255.f;
+                return glm::vec4(r, g, b, a);
+            };
+            for (const auto& chunk2 : chunk->children)
+            {
+                std::string weather = std::string(chunk2->name, 4);
+                for (const auto& chunk3 : chunk2->children)
+                {
+                    if (auto casted = dynamic_cast<FFXI::Weather*>(chunk3.get()))
+                    {
+                        uint32_t time = 0;
+                        if (auto [p, e] = std::from_chars(casted->name, casted->name + 4, time); e == std::errc())
+                        {
+                            time = ((time / 100) * 60) + (time - ((time / 100) * 100));
+                            FFXILandscapeEntity::LightTOD light =
+                            {
+                                uint_to_color_vec(casted->data->sunlight_diffuse1),
+                                uint_to_color_vec(casted->data->moonlight_diffuse1),
+                                uint_to_color_vec(casted->data->ambient1),
+                                uint_to_color_vec(casted->data->fog1),
+                                casted->data->max_fog_dist1,
+                                casted->data->min_fog_dist1,
+                                casted->data->brightness1,
+                                uint_to_color_vec(casted->data->sunlight_diffuse2),
+                                uint_to_color_vec(casted->data->moonlight_diffuse2),
+                                uint_to_color_vec(casted->data->ambient2),
+                                uint_to_color_vec(casted->data->fog2),
+                                casted->data->max_fog_dist2,
+                                casted->data->min_fog_dist2,
+                                casted->data->brightness2
+                            };
+                            memcpy(light.skybox_altitudes, casted->data->skybox_values, sizeof(float) * 8);
+                            for (int i = 0; i < 8; ++i)
+                            {
+                                light.skybox_colors[i] = uint_to_color_vec(casted->data->skybox_colors[i]);
+                            }
+                            entity->weather_light_map[weather][time] = std::move(light);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

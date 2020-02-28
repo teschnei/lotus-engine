@@ -1,6 +1,7 @@
 #version 460
 #extension GL_NV_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : require
 
 struct Vertex
 {
@@ -37,11 +38,26 @@ layout(binding = 4, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-layout(binding = 2, set = 1) uniform Light
+struct Lights
 {
-    vec3 light;
-    float pad;
-    vec3 color;
+    vec4 diffuse_color;
+    vec4 specular_color;
+    vec4 ambient_color;
+    vec4 fog_color;
+    float max_fog;
+    float min_fog;
+    float brightness;
+    float _pad;
+};
+
+layout(std430, binding = 2, set = 1) uniform Light
+{
+    Lights entity;
+    Lights landscape;
+    vec3 diffuse_dir;
+    float _pad;
+    float skybox_altitudes[8];
+    vec4 skybox_colors[8];
 } light;
 
 layout(location = 0) rayPayloadInNV HitValue
@@ -100,6 +116,11 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
+    if (gl_HitTNV > light.landscape.max_fog)
+    {
+        hitValue.color = light.landscape.fog_color.rgb;
+        return;
+    }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
@@ -111,7 +132,7 @@ void main()
     vec3 transformed_normal = mat3(gl_ObjectToWorldNV) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
 
-    float dot_product = dot(-light.light, normalized_normal);
+    float dot_product = dot(-light.diffuse_dir, normalized_normal);
 
     vec3 primitive_color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
 
@@ -134,14 +155,18 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02 , 16, 1, 1, origin, 0.000, -light.light, 500, 1);
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02 , 16, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
     }
-    vec3 ambient = vec3(0.3, 0.3, 0.3);
+    vec3 ambient = light.landscape.ambient_color.rgb;
     vec3 diffuse = vec3(0);
     if (!shadow)
     {
-        diffuse = vec3(max(dot_product, 0.0));
+        diffuse = vec3(max(dot_product, 0.0)) * light.landscape.diffuse_color.rgb * light.landscape.brightness;
     }
 
-    hitValue.color = (diffuse + ambient) * light.color.rgb * primitive_color * texture_color * 2;
+    vec3 real_color = (diffuse + ambient) * primitive_color * texture_color;
+    real_color = pow(real_color, vec3(2.2/1.5));
+    if (gl_HitTNV > light.landscape.min_fog)
+        real_color = mix(real_color, light.landscape.fog_color.rgb, (gl_HitTNV - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
+    hitValue.color = real_color;
 }

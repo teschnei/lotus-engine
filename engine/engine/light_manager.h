@@ -23,6 +23,28 @@ namespace lotus
         float _pad2;
     };
 
+    struct Lights
+    {
+        glm::vec4 diffuse_color;
+        glm::vec4 specular_color;
+        glm::vec4 ambient_color;
+        glm::vec4 fog_color;
+        float max_fog;
+        float min_fog;
+        float brightness;
+        float _pad;
+    };
+
+    struct LightBuffer
+    {
+        Lights entity;
+        Lights landscape;
+        glm::vec3 diffuse_dir;
+        float _pad;
+        float skybox_altitudes[8];
+        glm::vec4 skybox_colors[8];
+    };
+
     class LightManager
     {
     public:
@@ -30,7 +52,7 @@ namespace lotus
 
         void UpdateLightBuffer();
 
-        DirectionalLight directional_light {};
+        LightBuffer light {};
         std::vector<PointLight> point_lights;
 
         std::unique_ptr<Buffer> dir_buffer;

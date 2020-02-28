@@ -15,11 +15,18 @@ layout(binding = 3) uniform CameraUBO
 
 layout(binding = 4) uniform LightUBO
 {
-    vec3 light_dir;
+    vec3 diffuse_dir;
     float pad;
-    vec3 color;
+    vec3 diffuse_color;
     float pad2;
+    vec3 ambient_color;
+    float min_fog;
+    vec3 fog_color;
+    float max_fog;
+    float skybox_altitudes[8];
+    vec3 skybox_colors[8];
 } light_ubo;
+
 
 layout(binding = 5) uniform CascadeUBO
 {
@@ -71,7 +78,7 @@ void main() {
 
     outColor = albedo;
     vec3 norm = normalize(normal);
-    float theta = clamp(dot(norm, -light_ubo.light_dir), 0.5, 1);
+    float theta = clamp(dot(norm, -light_ubo.diffuse_dir), 0.5, 1);
     outColor.rgb = outColor.rgb * theta;
     outColor = outColor * shadow;
 }

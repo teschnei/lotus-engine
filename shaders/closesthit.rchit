@@ -1,6 +1,7 @@
 #version 460
 #extension GL_NV_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : require
 
 struct Vertex
 {
@@ -35,11 +36,26 @@ layout(binding = 4, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-layout(binding = 2, set = 1) uniform Light
+struct Lights
 {
-    vec3 light;
-    float pad;
-    vec3 color;
+    vec4 diffuse_color;
+    vec4 specular_color;
+    vec4 ambient_color;
+    vec4 fog_color;
+    float max_fog;
+    float min_fog;
+    float brightness;
+    float _pad;
+};
+
+layout(std430, binding = 2, set = 1) uniform Light
+{
+    Lights entity;
+    Lights landscape;
+    vec3 diffuse_dir;
+    float _pad;
+    float skybox_altitudes[8];
+    vec4 skybox_colors[8];
 } light;
 
 layout(location = 0) rayPayloadInNV HitValue
@@ -88,6 +104,11 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
+    if (gl_HitTNV > light.entity.max_fog)
+    {
+        hitValue.color = light.entity.fog_color.rgb;
+        return;
+    }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
@@ -99,11 +120,11 @@ void main()
     vec3 transformed_normal = mat3(gl_ObjectToWorldNV) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
 
-    float dot_product = dot(-light.light, normalized_normal);
+    float dot_product = dot(-light.diffuse_dir, normalized_normal);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index];
-    vec4 color = texture(textures[mesh.tex_offset], uv);
+    vec4 texture_color = texture(textures[mesh.tex_offset], uv);
 
     shadow = true;
     if (dot_product > 0)
@@ -120,24 +141,28 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02, 32, 1, 1, origin, 0.000, -light.light, 500, 1);
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02, 32, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
     }
-    vec3 ambient = vec3(0.3, 0.3, 0.3);
+    vec3 ambient = light.entity.ambient_color.rgb;
     vec3 specular = vec3(0);
     vec3 diffuse = vec3(0);
     if (!shadow)
     {
         vec3 ray = normalize(gl_WorldRayDirectionNV);
-        vec3 reflection = normalize(reflect(-light.light, normalized_normal));
+        vec3 reflection = normalize(reflect(-light.diffuse_dir, normalized_normal));
         float specular_dot = dot(ray, reflection);
-        float specular_factor = mesh.specular_intensity * color.a;
+        float specular_factor = mesh.specular_intensity * texture_color.a;
         if (specular_dot > 0)
         {
             specular_dot = pow(specular_dot, mesh.specular_exponent);
-            specular = vec3(specular_factor * specular_dot);
+            specular = vec3(specular_factor * specular_dot) * light.entity.diffuse_color.rgb;
         }
-        diffuse = vec3(max(dot_product, 0.0));
+        diffuse = vec3(max(dot_product, 0.0)) * light.entity.diffuse_color.rgb * light.entity.brightness;
     }
 
-    hitValue.color = ((ambient + diffuse) * color.rgb * 2 + specular) * light.color.rgb;
+    vec3 real_color = ((ambient + diffuse) * texture_color.rgb  + specular);
+    real_color = pow(real_color, vec3(2.2/1.5));
+    if (gl_HitTNV > light.entity.min_fog)
+        real_color = mix(real_color, light.entity.fog_color.rgb, (gl_HitTNV - light.entity.min_fog) / (light.entity.max_fog - light.entity.min_fog));
+    hitValue.color = real_color;
 }

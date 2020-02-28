@@ -154,7 +154,7 @@ namespace lotus
 
                 if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
                 {
-                    glm::vec3 lightDir = thread->engine->lights.directional_light.direction;
+                    glm::vec3 lightDir = thread->engine->lights.light.diffuse_dir;
                     float cascade_splits[lotus::Renderer::shadowmap_cascades];
 
                     float near_clip = this->getNearClip();

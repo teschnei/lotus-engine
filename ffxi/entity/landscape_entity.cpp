@@ -41,3 +41,49 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
         collision_model->bottom_level_as->instanceid = as->AddInstance(instance);
     }
 }
+
+void FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr<Entity>& sp)
+{
+    auto& weather_data = weather_light_map[current_weather];
+    auto time1 = weather_data.end();
+    auto time2 = weather_data.upper_bound(current_time);
+    if (time2 != weather_data.begin()) { time1 = time2; time1--; };
+    if (time2 == weather_data.end()) time2 = weather_data.begin();
+
+    float a = (float)((current_time - time1->first)) / (time2->first - time1->first);
+
+    auto& light = engine->lights.light;
+    if (current_time > 360 && current_time < 1080)
+    {
+        light.entity.diffuse_color = glm::mix(time1->second.sunlight_diffuse_entity, time2->second.sunlight_diffuse_entity, a);
+        light.landscape.diffuse_color = glm::mix(time1->second.sunlight_diffuse_landscape, time2->second.sunlight_diffuse_landscape, a);
+    }
+    else
+    {
+        light.entity.diffuse_color = glm::mix(time1->second.moonlight_diffuse_entity, time2->second.moonlight_diffuse_entity, a);
+        light.landscape.diffuse_color = glm::mix(time1->second.moonlight_diffuse_landscape, time2->second.moonlight_diffuse_landscape, a);
+    }
+    light.entity.specular_color = glm::vec4(1.f);
+    light.entity.ambient_color = glm::mix(time1->second.ambient_entity, time2->second.ambient_entity, a);
+    light.entity.fog_color = glm::mix(time1->second.fog_color_entity, time2->second.fog_color_entity, a);
+    light.entity.max_fog = glm::mix(time1->second.max_fog_entity, time2->second.max_fog_entity, a);
+    light.entity.min_fog = glm::mix(time1->second.min_fog_entity, time2->second.min_fog_entity, a);
+    light.entity.brightness = glm::mix(time1->second.brightness_entity, time2->second.brightness_entity, a);
+
+    light.landscape.specular_color = glm::vec4(1.f);
+    light.landscape.ambient_color = glm::mix(time1->second.ambient_landscape, time2->second.ambient_landscape, a);
+    light.landscape.fog_color = glm::mix(time1->second.fog_color_landscape, time2->second.fog_color_landscape, a);
+    light.landscape.max_fog = glm::mix(time1->second.max_fog_landscape, time2->second.max_fog_landscape, a);
+    light.landscape.min_fog = glm::mix(time1->second.min_fog_landscape, time2->second.min_fog_landscape, a);
+    light.landscape.brightness = glm::mix(time1->second.brightness_landscape, time2->second.brightness_landscape, a);
+
+    for (int i = 0; i < 8; ++i)
+    {
+        light.skybox_altitudes[i] = glm::mix(time1->second.skybox_altitudes[i], time2->second.skybox_altitudes[i], a);
+        light.skybox_colors[i] = glm::mix(time1->second.skybox_colors[i], time2->second.skybox_colors[i], a);
+    }
+}
+
+void FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
+{
+}
