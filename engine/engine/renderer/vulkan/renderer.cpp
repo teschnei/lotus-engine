@@ -1528,15 +1528,15 @@ namespace lotus
         quad.vertex_buffer->unmap();
 
         std::vector<uint32_t> index_buffer = { 0,1,2,2,3,0 };
-		for (uint32_t i = 0; i < 3; ++i)
-		{
-			uint32_t indices[6] = { 0,1,2, 2,3,0 };
-			for (auto index : indices)
-			{
-				index_buffer.push_back(i * 4 + index);
-			}
-		}
-		quad.index_count = static_cast<uint32_t>(index_buffer.size());
+        for (uint32_t i = 0; i < 3; ++i)
+        {
+            uint32_t indices[6] = { 0,1,2, 2,3,0 };
+            for (auto index : indices)
+            {
+                index_buffer.push_back(i * 4 + index);
+            }
+        }
+        quad.index_count = static_cast<uint32_t>(index_buffer.size());
 
         quad.index_buffer = memory_manager->GetBuffer(index_buffer.size() * sizeof(uint32_t), vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         buf_mem = quad.index_buffer->map(0, index_buffer.size() * sizeof(uint32_t), {});
