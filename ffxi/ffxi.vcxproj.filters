@@ -203,5 +203,11 @@
     <GLSLValidate Include="..\shaders\rayquery.rgen">
       <Filter>shaders</Filter>
     </GLSLValidate>
+    <GLSLValidate Include="..\shaders\deferred_raytrace_hybrid.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\quad.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
   </ItemGroup>
 </Project>

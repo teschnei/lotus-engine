@@ -4,9 +4,8 @@
 
 layout(location = 0) rayPayloadInNV HitValue
 {
-    vec3 color;
-    uint max_index;
-    float min_dist;
+    vec3 albedo;
+    vec3 light;
 } hitValue;
 
 struct Lights
@@ -21,7 +20,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 2, set = 1) uniform Light
+layout(std430, binding = 3, set = 1) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -39,8 +38,9 @@ void main()
         if (dot_up < light.skybox_altitudes[i])
         {
             float value = (max(dot_up, 0.0) - light.skybox_altitudes[i-1]) / (light.skybox_altitudes[i] - light.skybox_altitudes[i-1]);
-            hitValue.color = mix(light.skybox_colors[i-1], light.skybox_colors[i], value).xyz;
+            hitValue.albedo = mix(light.skybox_colors[i-1], light.skybox_colors[i], value).xyz;
             break;
         }
     }
+    hitValue.light = vec3(1.0);
 }

@@ -50,7 +50,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 2, set = 1) uniform Light
+layout(std430, binding = 3, set = 1) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -62,9 +62,8 @@ layout(std430, binding = 2, set = 1) uniform Light
 
 layout(location = 0) rayPayloadInNV HitValue
 {
-    vec3 color;
-    uint max_index;
-    float min_dist;
+    vec3 albedo;
+    vec3 light;
 } hitValue;
 
 layout(location = 1) rayPayloadNV bool shadow;
@@ -118,7 +117,8 @@ void main()
 {
     if (gl_HitTNV > light.landscape.max_fog)
     {
-        hitValue.color = light.landscape.fog_color.rgb;
+        hitValue.albedo = light.landscape.fog_color.rgb;
+        hitValue.light = vec3(1.0);
         return;
     }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
@@ -164,9 +164,14 @@ void main()
         diffuse = vec3(max(dot_product, 0.0)) * light.landscape.diffuse_color.rgb * light.landscape.brightness;
     }
 
-    vec3 real_color = (diffuse + ambient) * primitive_color * texture_color;
-    real_color = pow(real_color, vec3(2.2/1.5));
+    vec3 out_light = diffuse + ambient;
+    vec3 out_color = primitive_color * texture_color;
+    //todo: split these
+    out_color = out_light * out_color;
     if (gl_HitTNV > light.landscape.min_fog)
-        real_color = mix(real_color, light.landscape.fog_color.rgb, (gl_HitTNV - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
-    hitValue.color = real_color;
+    {
+        out_color = mix(out_color, light.landscape.fog_color.rgb, (gl_HitTNV - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
+    }
+    hitValue.albedo = out_color;
+    hitValue.light = out_light;
 }

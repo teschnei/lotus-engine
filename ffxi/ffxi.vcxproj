@@ -63,6 +63,7 @@
     <GLSLValidate Include="..\shaders\deferred.vert" />
     <GLSLValidate Include="..\shaders\deferred_raster.frag" />
     <GLSLValidate Include="..\shaders\deferred_raytrace.frag" />
+    <GLSLValidate Include="..\shaders\deferred_raytrace_hybrid.frag" />
     <GLSLValidate Include="..\shaders\gbuffer_frag.frag" />
     <GLSLValidate Include="..\shaders\gbuffer_vert.vert" />
     <GLSLValidate Include="..\shaders\landscape_closest_hit.rchit" />
@@ -75,6 +76,7 @@
     <GLSLValidate Include="..\shaders\shadow_miss.rmiss" />
     <GLSLValidate Include="..\shaders\shadow_vert.vert" />
     <GLSLValidate Include="..\shaders\animation_skin.comp" />
+    <GLSLValidate Include="..\shaders\quad.vert" />
     <GLSLValidate Include="..\shaders\query_closest_hit.rchit" />
     <GLSLValidate Include="..\shaders\query_miss.rmiss" />
     <GLSLValidate Include="..\shaders\rayquery.rgen" />

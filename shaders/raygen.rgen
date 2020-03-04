@@ -2,8 +2,9 @@
 #extension GL_NV_ray_tracing : require
 
 layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
-layout(binding = 0, set = 1, rgba8) uniform image2D image;
-layout(binding = 1, set = 1) uniform Camera
+layout(binding = 0, set = 1, rgba8) uniform image2D albedo;
+layout(binding = 1, set = 1, rgba8) uniform image2D light;
+layout(binding = 2, set = 1) uniform Camera
 {
     mat4 proj;
     mat4 view;
@@ -13,7 +14,8 @@ layout(binding = 1, set = 1) uniform Camera
 
 layout(location = 0) rayPayloadNV HitValue
 {
-    vec3 color;
+    vec3 albedo;
+    vec3 light;
 } hitValue;
 
 void main() 
@@ -28,5 +30,6 @@ void main()
 
     traceNV(topLevelAS, 0, 0x01 | 0x02, 0, 1, 0, origin.xyz, 0.001, dir.xyz, 1000.0, 0);
 
-    imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(hitValue.color, 0.0));
+    imageStore(albedo, ivec2(gl_LaunchIDNV.xy), vec4(hitValue.albedo, 0.0));
+    imageStore(light, ivec2(gl_LaunchIDNV.xy), vec4(hitValue.light, 0.0));
 }

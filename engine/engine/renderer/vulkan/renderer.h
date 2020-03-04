@@ -144,17 +144,25 @@ namespace lotus
         vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_const;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
+        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_pipeline;
         vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> rtx_descriptor_pool_const;
-        vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> rtx_descriptor_pool_dynamic;
         std::vector<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>> rtx_descriptor_sets_const;
-        std::vector<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>> rtx_descriptor_sets_dynamic;
-        std::vector<std::unique_ptr<Image>> rtx_render_targets;
-        std::vector<vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic>> rtx_render_target_views;
+        vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> rtx_render_pass;
+        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_deferred_pipeline_layout;
+        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_deferred_pipeline;
         vk::DeviceSize shader_stride {};
         std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped;
+
+        struct RTXGBuffer
+        {
+            FramebufferAttachment albedo;
+            FramebufferAttachment light;
+
+            vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
+        } rtx_gbuffer;
 
         struct shader_binding
         {
