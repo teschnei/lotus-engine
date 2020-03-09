@@ -56,7 +56,7 @@ namespace lotus
     void WorkerPool::workFinished(std::unique_ptr<WorkItem>* work_item)
     {
         std::lock_guard lg(work_mutex);
-        pending_work.push(std::move(*work_item));
+        pending_work.push_back(std::move(*work_item));
         idle_cv.notify_all();
     }
 
@@ -118,6 +118,7 @@ namespace lotus
     void WorkerPool::startProcessing(int image)
     {
         std::swap(pending_work, processing_work[image]);
+        std::sort(processing_work[image].rbegin(), processing_work[image].rend(), WorkCompare());
     }
 
     void WorkerPool::waitIdle()
