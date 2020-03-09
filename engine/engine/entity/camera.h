@@ -19,9 +19,10 @@ namespace lotus
     {
     public:
         explicit Camera(Engine*);
+        ~Camera();
         void Init(const std::shared_ptr<Camera>& sp);
-        glm::mat4& getViewMatrix() { return view; }
-        glm::mat4& getProjMatrix() { return proj; }
+        glm::mat4& getViewMatrix() { return camera_data.view; }
+        glm::mat4& getProjMatrix() { return camera_data.proj; }
 
         void setPos(glm::vec3);
         void setPerspective(float radians, float aspect, float near_clip, float far_clip);
@@ -34,7 +35,17 @@ namespace lotus
 
         glm::vec3 getRotationVector() { return camera_rot; }
 
+        struct CameraData
+        {
+            glm::mat4 proj{};
+            glm::mat4 view{};
+            glm::mat4 proj_inverse{};
+            glm::mat4 view_inverse{};
+            glm::vec4 eye_pos;
+        } camera_data;
+
         std::unique_ptr<Buffer> view_proj_ubo;
+        CameraData* view_proj_mapped{ nullptr };
 
         struct UBOFS
         {
@@ -65,11 +76,6 @@ namespace lotus
         float near_clip{ 0.f };
         float far_clip{ 0.f };
         glm::vec3 camera_rot{};
-
-        glm::mat4 view{};
-        glm::mat4 proj{};
-        glm::mat4 view_inverse{};
-        glm::mat4 proj_inverse{};
 
         float nh{};
         float nw{};

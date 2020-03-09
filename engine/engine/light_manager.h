@@ -49,13 +49,16 @@ namespace lotus
     {
     public:
         explicit LightManager(Engine* engine);
+        ~LightManager();
 
         void UpdateLightBuffer();
 
         LightBuffer light {};
         std::vector<PointLight> point_lights;
 
-        std::unique_ptr<Buffer> dir_buffer;
+        std::unique_ptr<Buffer> light_buffer;
+
+        LightBuffer* buffer_map{ nullptr };
 
     private:
         Engine* engine;

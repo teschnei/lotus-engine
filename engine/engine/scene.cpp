@@ -48,7 +48,7 @@ namespace lotus
         }
         if (engine->renderer.RTXEnabled())
         {
-            engine->worker_pool.addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
+           engine->worker_pool.addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
         }
     }
 }

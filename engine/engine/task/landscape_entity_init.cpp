@@ -49,8 +49,8 @@ namespace lotus
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = thread->engine->camera->view_proj_ubo->buffer;
-                buffer_info.offset = i * (sizeof(glm::mat4) * 4);
-                buffer_info.range = sizeof(glm::mat4) * 4;
+                buffer_info.offset = i * sizeof(Camera::CameraData);
+                buffer_info.range = sizeof(Camera::CameraData);
 
                 std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
 
@@ -137,18 +137,24 @@ namespace lotus
             if (count > 0 && !model->meshes.empty())
             {
                 command_buffer.bindVertexBuffers(1, entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo), thread->engine->renderer.dispatch);
-                for (const auto& mesh : model->meshes)
+                uint32_t material_index = 1;
+                for (size_t i = 0; i < model->meshes.size(); ++i)
                 {
+                    auto& mesh = model->meshes[i];
                     if (mesh->has_transparency == transparency)
                     {
-                        drawMesh(thread, command_buffer, *mesh, count, layout);
+                        if (model->bottom_level_as)
+                        {
+                            material_index = model->bottom_level_as->resource_index + i;
+                        }
+                        drawMesh(thread, command_buffer, *mesh, count, layout, material_index);
                     }
                 }
             }
         }
     }
 
-    void LandscapeEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout)
+    void LandscapeEntityInitTask::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout, uint32_t material_index)
     {
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -170,6 +176,8 @@ namespace lotus
         descriptorWrites[0].pImageInfo = &image_info;
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
+
+        command_buffer.pushConstants<uint32_t>(layout, vk::ShaderStageFlagBits::eFragment, 0, material_index);
 
         command_buffer.bindVertexBuffers(0, mesh.vertex_buffer->buffer, {0}, thread->engine->renderer.dispatch);
         command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, {0}, vk::IndexType::eUint16, thread->engine->renderer.dispatch);

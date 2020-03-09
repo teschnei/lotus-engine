@@ -108,7 +108,9 @@ namespace lotus
         {
             FramebufferAttachment position;
             FramebufferAttachment normal;
+            FramebufferAttachment face_normal;
             FramebufferAttachment albedo;
+            FramebufferAttachment material;
             FramebufferAttachment depth;
 
             vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> frame_buffer;
@@ -138,6 +140,8 @@ namespace lotus
             uint32_t texture_offset;
             float specular_exponent;
             float specular_intensity;
+            uint32_t light_type;
+            float _pad[3];
         };
         bool RTXEnabled();
         bool RasterizationEnabled();

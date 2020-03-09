@@ -381,6 +381,7 @@ namespace FFXI
 
     void MMBLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
+        model->light_offset = 1;
         std::vector<std::vector<uint8_t>> vertices;
         std::vector<std::vector<uint8_t>> indices;
         for (const auto& mmb_mesh : mmb->meshes)

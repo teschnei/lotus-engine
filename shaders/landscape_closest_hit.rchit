@@ -27,10 +27,11 @@ layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
 struct Mesh
 {
-    int vec_index_offset;
-    int tex_offset;
+    uint vec_index_offset;
+    uint tex_offset;
     float specular1;
     float specular2;
+    uint light_type;
 };
 
 layout(binding = 4, set = 0) uniform MeshInfo
@@ -173,5 +174,5 @@ void main()
         out_color = mix(out_color, light.landscape.fog_color.rgb, (gl_HitTNV - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
     }
     hitValue.albedo = out_color;
-    hitValue.light = out_light;
+    hitValue.light = vec3(1.0);
 }

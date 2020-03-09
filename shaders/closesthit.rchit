@@ -25,10 +25,11 @@ layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
 struct Mesh
 {
-    int vec_index_offset;
-    int tex_offset;
+    uint vec_index_offset;
+    uint tex_offset;
     float specular_exponent;
     float specular_intensity;
+    uint light_type;
 };
 
 layout(binding = 4, set = 0) uniform MeshInfo
@@ -142,7 +143,7 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02, 32, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02, 16, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
     }
     vec3 ambient = light.entity.ambient_color.rgb;
     vec3 specular = vec3(0);
@@ -170,5 +171,5 @@ void main()
         out_color = mix(out_color, light.entity.fog_color.rgb, (gl_HitTNV - light.entity.min_fog) / (light.entity.max_fog - light.entity.min_fog));
     }
     hitValue.albedo = out_color;
-    hitValue.light = out_light;
+    hitValue.light = vec3(1.0);
 }

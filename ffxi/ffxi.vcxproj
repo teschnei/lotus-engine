@@ -72,6 +72,7 @@
     <GLSLValidate Include="..\shaders\landscape_shadow_vert.vert" />
     <GLSLValidate Include="..\shaders\miss.rmiss" />
     <GLSLValidate Include="..\shaders\raygen.rgen" />
+    <GLSLValidate Include="..\shaders\raygen_hybrid.rgen" />
     <GLSLValidate Include="..\shaders\shadow_frag.frag" />
     <GLSLValidate Include="..\shaders\shadow_miss.rmiss" />
     <GLSLValidate Include="..\shaders\shadow_vert.vert" />

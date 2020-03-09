@@ -27,6 +27,7 @@ struct Mesh
     int tex_offset;
     float specular1;
     float specular2;
+    uint light_type;
 };
 
 layout(binding = 4, set = 0) uniform MeshInfo

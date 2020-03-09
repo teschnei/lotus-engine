@@ -10,15 +10,30 @@ layout(location = 3) in vec3 normal;
 
 layout(location = 0) out vec4 outPosition;
 layout(location = 1) out vec4 outNormal;
-layout(location = 2) out vec4 outAlbedo;
+layout(location = 2) out vec4 outFaceNormal;
+layout(location = 3) out vec4 outAlbedo;
+layout(location = 4) out uint outMaterialIndex;
+
+layout(push_constant) uniform PushConstant
+{
+    uint material_index;
+} push;
 
 void main() {
     outPosition = vec4(fragPos, 1.0);
     outNormal = vec4(normal, 1.0);
+    vec3 dx = dFdx(fragPos);
+    vec3 dy = dFdy(fragPos);
+    vec3 cross_vec = normalize(cross(dx, dy));
+    if ((dot(cross_vec, normal)) < 0)
+        cross_vec = -cross_vec;
+
+    outFaceNormal = vec4(cross_vec, 1.0);
     outAlbedo = texture(texSampler, fragTexCoord);
     outAlbedo.rgb *= fragColor;
     if (outAlbedo.a > 1.f/32.f)
         outAlbedo.a = 1;
     else
         outAlbedo.a = 0;
+    outMaterialIndex = push.material_index;
 }

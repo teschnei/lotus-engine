@@ -15,7 +15,7 @@ layout(binding = 3) uniform CascadeUBO
 
 layout(push_constant) uniform PushConstants
 {
-    uint cascade;
+    layout(offset = 4) uint cascade;
 } push_constants;
 
 layout(location = 0) in vec3 inPosition;

@@ -39,9 +39,9 @@ namespace lotus
         update = true;
         //TODO: base this value off a portion of height/bounding box
         glm::vec3 eye_focus_midpoint = eye_focus + glm::vec3{ 0.f, -0.5f, 0.f };
-        view = glm::lookAt(pos, eye_focus_midpoint, glm::vec3(0.f, -1.f, 0.f));
+        camera_data.view = glm::lookAt(pos, eye_focus_midpoint, glm::vec3(0.f, -1.f, 0.f));
         camera_rot = glm::normalize(eye_focus_midpoint - pos);
-        view_inverse = glm::inverse(view);
+        camera_data.view_inverse = glm::inverse(camera_data.view);
         update = true;
     }
 

@@ -209,5 +209,8 @@
     <GLSLValidate Include="..\shaders\quad.vert">
       <Filter>shaders</Filter>
     </GLSLValidate>
+    <GLSLValidate Include="..\shaders\raygen_hybrid.rgen">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
   </ItemGroup>
 </Project>

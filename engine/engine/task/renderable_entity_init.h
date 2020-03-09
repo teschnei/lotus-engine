@@ -13,7 +13,7 @@ namespace lotus
     protected:
         void createStaticCommandBuffers(WorkerThread* thread);
         void drawModel(WorkerThread* thread, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout, size_t image);
-        void drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout);
+        void drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout, uint32_t material_index);
         void generateVertexBuffers(WorkerThread* thread, vk::CommandBuffer buffer, const Model& mesh, std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
         std::shared_ptr<RenderableEntity> entity;
         std::vector<std::unique_ptr<Buffer>> staging_buffers;

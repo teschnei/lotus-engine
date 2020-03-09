@@ -82,6 +82,8 @@ void FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr<Entity>&
         light.skybox_altitudes[i] = glm::mix(time1->second.skybox_altitudes[i], time2->second.skybox_altitudes[i], a);
         light.skybox_colors[i] = glm::mix(time1->second.skybox_colors[i], time2->second.skybox_colors[i], a);
     }
+
+    lotus::LandscapeEntity::render(engine, sp);
 }
 
 void FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)

@@ -6,13 +6,17 @@ namespace lotus
 {
     LightManager::LightManager(Engine* _engine) : engine(_engine)
     {
-        dir_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(LightBuffer) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        light_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(LightBuffer) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        buffer_map = static_cast<LightBuffer*>(light_buffer->map(0, sizeof(light) * engine->renderer.getImageCount(), {}));
+    }
+
+    LightManager::~LightManager()
+    {
+        light_buffer->unmap();
     }
 
     void LightManager::UpdateLightBuffer()
     {
-        auto data = dir_buffer->map(0, sizeof(light), {});
-        memcpy(static_cast<uint8_t*>(data) + (engine->renderer.getCurrentImage() * sizeof(light)), &light, sizeof(light));
-        dir_buffer->unmap();
+        memcpy(buffer_map + engine->renderer.getCurrentImage(), &light, sizeof(light));
     }
 }

@@ -12,6 +12,12 @@ namespace lotus
         
     }
 
+    Camera::~Camera()
+    {
+        if (view_proj_ubo)
+            view_proj_ubo->unmap();
+    }
+
     void Camera::Init(const std::shared_ptr<Camera>& sp)
     {
         camera_rot.x = cos(rot_x) * cos(rot_y);
@@ -19,7 +25,8 @@ namespace lotus
         camera_rot.z = cos(rot_x) * sin(rot_y);
         camera_rot = glm::normalize(camera_rot);
 
-        view_proj_ubo = engine->renderer.memory_manager->GetBuffer((sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        view_proj_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(CameraData) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        view_proj_mapped = static_cast<Camera::CameraData*>(view_proj_ubo->map(0, sizeof(Camera::CameraData) * engine->renderer.getImageCount(), {}));
 
         if (engine->renderer.render_mode == RenderMode::Rasterization)
         {
@@ -32,9 +39,9 @@ namespace lotus
     {
         near_clip = _near_clip;
         far_clip = _far_clip;
-        proj = glm::perspective(radians, aspect, near_clip, far_clip);
-        proj[1][1] *= -1;
-        proj_inverse = glm::inverse(proj);
+        camera_data.proj = glm::perspective(radians, aspect, near_clip, far_clip);
+        camera_data.proj[1][1] *= -1;
+        camera_data.proj_inverse = glm::inverse(camera_data.proj);
 
         auto tangent = glm::tan(radians * 0.5);
         nh = near_clip * tangent;
@@ -48,8 +55,9 @@ namespace lotus
     void Camera::setPos(glm::vec3 pos)
     {
         Entity::setPos(pos);
-        view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
-        view_inverse = glm::inverse(view);
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        camera_data.view_inverse = glm::inverse(camera_data.view);
+        camera_data.eye_pos = glm::vec4(pos, 0.0);
         update = true;
     }
 
@@ -57,8 +65,9 @@ namespace lotus
     {
         pos += forward_offset * camera_rot;
         pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, -1.f, 0.f)));
-        view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
-        view_inverse = glm::inverse(view);
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        camera_data.view_inverse = glm::inverse(camera_data.view);
+        camera_data.eye_pos = glm::vec4(pos, 0.0);
         update = true;
     }
 
@@ -73,8 +82,8 @@ namespace lotus
         camera_rot.y = sin(rot_x);
         camera_rot = glm::normalize(camera_rot);
 
-        view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
-        view_inverse = glm::inverse(view);
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        camera_data.view_inverse = glm::inverse(camera_data.view);
         update = true;
     }
 
@@ -145,12 +154,7 @@ namespace lotus
         {
             engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this, engine](WorkerThread* thread)
             {
-                void* buf = view_proj_ubo->map((sizeof(view) + sizeof(proj)) * 2 * engine->renderer.getCurrentImage(), (sizeof(view) + sizeof(proj)) * 2, {});
-                memcpy(buf, &proj, sizeof(proj));
-                memcpy(static_cast<uint8_t*>(buf) + sizeof(proj), &view, sizeof(view));
-                memcpy(static_cast<uint8_t*>(buf) + sizeof(proj) * 2, &proj_inverse, sizeof(proj_inverse));
-                memcpy(static_cast<uint8_t*>(buf) + sizeof(proj) * 3, &view_inverse, sizeof(view_inverse));
-                view_proj_ubo->unmap();
+                memcpy(view_proj_mapped + engine->renderer.getCurrentImage(), &camera_data, sizeof(camera_data));
 
                 if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
                 {

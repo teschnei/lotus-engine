@@ -21,6 +21,7 @@ FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2
 
 void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
 {
+    model->light_offset = 0;
     std::vector<std::vector<uint8_t>> vertices;
     std::vector<std::vector<uint8_t>> indices;
 

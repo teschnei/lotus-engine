@@ -63,6 +63,7 @@ namespace lotus
         bool weighted{ false };
         Lifetime lifetime {Lifetime::Short};
         bool rendered{ true };
+        uint32_t light_offset{ 0 };
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
 
