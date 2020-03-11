@@ -1821,91 +1821,91 @@ namespace lotus
 
         deferred_command_buffers = device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, dispatch);
 
-        for (int i = 0; i < deferred_command_buffers.size(); ++i)
+        if (render_mode == RenderMode::Rasterization)
         {
-            vk::CommandBuffer buffer = *deferred_command_buffers[i];
-            vk::CommandBufferBeginInfo begin_info = {};
-            begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-
-            buffer.begin(begin_info, dispatch);
-
-            std::array<vk::ClearValue, 2> clearValues;
-            clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clearValues[1].depthStencil = { 1.f, 0 };
-
-            vk::RenderPassBeginInfo renderpass_info;
-            renderpass_info.renderPass = *render_pass;
-            renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-            renderpass_info.pClearValues = clearValues.data();
-            renderpass_info.renderArea.offset = { 0, 0 };
-            renderpass_info.renderArea.extent = swapchain_extent;
-            renderpass_info.framebuffer = *frame_buffers[i];
-            buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
-
-            vk::DescriptorImageInfo pos_info;
-            pos_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            pos_info.imageView = *gbuffer.position.image_view;
-            pos_info.sampler = *gbuffer.sampler;
-
-            vk::DescriptorImageInfo normal_info;
-            normal_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            normal_info.imageView = *gbuffer.normal.image_view;
-            normal_info.sampler = *gbuffer.sampler;
-
-            vk::DescriptorImageInfo albedo_info;
-            albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            albedo_info.imageView = *gbuffer.albedo.image_view;
-            albedo_info.sampler = *gbuffer.sampler;
-
-            vk::DescriptorImageInfo material_info;
-            material_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            material_info.imageView = *gbuffer.material.image_view;
-            material_info.sampler = *gbuffer.sampler;
-
-            vk::DescriptorBufferInfo camera_buffer_info;
-            camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
-            camera_buffer_info.offset = i * sizeof(Camera::CameraData);
-            camera_buffer_info.range = sizeof(Camera::CameraData);
-
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {5};
-
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pImageInfo = &pos_info;
-
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &normal_info;
-
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &albedo_info;
-
-            descriptorWrites[3].dstSet = nullptr;
-            descriptorWrites[3].dstBinding = 3;
-            descriptorWrites[3].dstArrayElement = 0;
-            descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &material_info;
-
-            descriptorWrites[4].dstSet = nullptr;
-            descriptorWrites[4].dstBinding = 4;
-            descriptorWrites[4].dstArrayElement = 0;
-            descriptorWrites[4].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[4].descriptorCount = 1;
-            descriptorWrites[4].pBufferInfo = &camera_buffer_info;
-
-            if (render_mode == RenderMode::Rasterization)
+            for (int i = 0; i < deferred_command_buffers.size(); ++i)
             {
+                vk::CommandBuffer buffer = *deferred_command_buffers[i];
+                vk::CommandBufferBeginInfo begin_info = {};
+                begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+                buffer.begin(begin_info, dispatch);
+
+                std::array<vk::ClearValue, 2> clearValues;
+                clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+                clearValues[1].depthStencil = { 1.f, 0 };
+
+                vk::RenderPassBeginInfo renderpass_info;
+                renderpass_info.renderPass = *render_pass;
+                renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+                renderpass_info.pClearValues = clearValues.data();
+                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.extent = swapchain_extent;
+                renderpass_info.framebuffer = *frame_buffers[i];
+                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+
+                vk::DescriptorImageInfo pos_info;
+                pos_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                pos_info.imageView = *gbuffer.position.image_view;
+                pos_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorImageInfo normal_info;
+                normal_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                normal_info.imageView = *gbuffer.normal.image_view;
+                normal_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorImageInfo albedo_info;
+                albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                albedo_info.imageView = *gbuffer.albedo.image_view;
+                albedo_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorImageInfo material_info;
+                material_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                material_info.imageView = *gbuffer.material.image_view;
+                material_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorBufferInfo camera_buffer_info;
+                camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
+                camera_buffer_info.offset = i * sizeof(Camera::CameraData);
+                camera_buffer_info.range = sizeof(Camera::CameraData);
+
+                std::vector<vk::WriteDescriptorSet> descriptorWrites{ 5 };
+
+                descriptorWrites[0].dstSet = nullptr;
+                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].dstArrayElement = 0;
+                descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pImageInfo = &pos_info;
+
+                descriptorWrites[1].dstSet = nullptr;
+                descriptorWrites[1].dstBinding = 1;
+                descriptorWrites[1].dstArrayElement = 0;
+                descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[1].descriptorCount = 1;
+                descriptorWrites[1].pImageInfo = &normal_info;
+
+                descriptorWrites[2].dstSet = nullptr;
+                descriptorWrites[2].dstBinding = 2;
+                descriptorWrites[2].dstArrayElement = 0;
+                descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[2].descriptorCount = 1;
+                descriptorWrites[2].pImageInfo = &albedo_info;
+
+                descriptorWrites[3].dstSet = nullptr;
+                descriptorWrites[3].dstBinding = 3;
+                descriptorWrites[3].dstArrayElement = 0;
+                descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[3].descriptorCount = 1;
+                descriptorWrites[3].pImageInfo = &material_info;
+
+                descriptorWrites[4].dstSet = nullptr;
+                descriptorWrites[4].dstBinding = 4;
+                descriptorWrites[4].dstArrayElement = 0;
+                descriptorWrites[4].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[4].descriptorCount = 1;
+                descriptorWrites[4].pBufferInfo = &camera_buffer_info;
+
                 vk::DescriptorBufferInfo light_buffer_info;
                 light_buffer_info.buffer = engine->lights.light_buffer->buffer;
                 light_buffer_info.offset = i * sizeof(engine->lights.light);
@@ -1943,19 +1943,224 @@ namespace lotus
                 descriptorWrites[7].descriptorType = vk::DescriptorType::eCombinedImageSampler;
                 descriptorWrites[7].descriptorCount = 1;
                 descriptorWrites[7].pImageInfo = &shadowmap_image_info;
+
+                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites, dispatch);
+
+                buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
+
+                vk::DeviceSize offsets = 0;
+                buffer.bindVertexBuffers(0, quad.vertex_buffer->buffer, offsets, dispatch);
+                buffer.bindIndexBuffer(quad.index_buffer->buffer, offsets, vk::IndexType::eUint32, dispatch);
+                buffer.drawIndexed(6, 1, 0, 0, 0, dispatch);
+
+                buffer.endRenderPass(dispatch);
+                buffer.end(dispatch);
             }
+        }
+        else if (render_mode == RenderMode::RTX)
+        {
+            for (int i = 0; i < deferred_command_buffers.size(); ++i)
+            {
+                vk::CommandBuffer buffer = *deferred_command_buffers[i];
 
-            buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites, dispatch);
+                vk::CommandBufferBeginInfo begin_info = {};
+                begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
 
-            buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
+                buffer.begin(begin_info);
 
-            vk::DeviceSize offsets = 0;
-            buffer.bindVertexBuffers(0, quad.vertex_buffer->buffer, offsets, dispatch);
-            buffer.bindIndexBuffer(quad.index_buffer->buffer, offsets, vk::IndexType::eUint32, dispatch);
-            buffer.drawIndexed(6, 1, 0, 0, 0, dispatch);
+                std::array<vk::ClearValue, 2> clear_values;
+                clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+                clear_values[1].depthStencil = 1.f;
 
-            buffer.endRenderPass(dispatch);
-            buffer.end(dispatch);
+                vk::RenderPassBeginInfo renderpass_info;
+                renderpass_info.renderPass = *rtx_render_pass;
+                renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+                renderpass_info.pClearValues = clear_values.data();
+                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.extent = swapchain_extent;
+                renderpass_info.framebuffer = *frame_buffers[i];
+                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+
+                buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
+
+                vk::DescriptorImageInfo albedo_info;
+                albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                albedo_info.imageView = *rtx_gbuffer.albedo.image_view;
+                albedo_info.sampler = *rtx_gbuffer.sampler;
+
+                vk::DescriptorImageInfo light_info;
+                light_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                light_info.imageView = *rtx_gbuffer.light.image_view;
+                light_info.sampler = *rtx_gbuffer.sampler;
+
+                vk::DescriptorImageInfo material_index_info;
+                material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                material_index_info.imageView = *gbuffer.material.image_view;
+                material_index_info.sampler = *rtx_gbuffer.sampler;
+
+                vk::DescriptorBufferInfo mesh_info;
+                mesh_info.buffer = mesh_info_buffer->buffer;
+                mesh_info.offset = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index * i;
+                mesh_info.range = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index;
+
+                std::vector<vk::WriteDescriptorSet> descriptorWrites {4};
+
+                descriptorWrites[0].dstSet = nullptr;
+                descriptorWrites[0].dstBinding = 1;
+                descriptorWrites[0].dstArrayElement = 0;
+                descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pImageInfo = &albedo_info;
+
+                descriptorWrites[1].dstSet = nullptr;
+                descriptorWrites[1].dstBinding = 2;
+                descriptorWrites[1].dstArrayElement = 0;
+                descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[1].descriptorCount = 1;
+                descriptorWrites[1].pImageInfo = &light_info;
+
+                descriptorWrites[2].dstSet = nullptr;
+                descriptorWrites[2].dstBinding = 3;
+                descriptorWrites[2].dstArrayElement = 0;
+                descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[2].descriptorCount = 1;
+                descriptorWrites[2].pImageInfo = &material_index_info;
+
+                descriptorWrites[3].dstSet = nullptr;
+                descriptorWrites[3].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[3].dstBinding = 4;
+                descriptorWrites[3].dstArrayElement = 0;
+                descriptorWrites[3].descriptorCount = 1;
+                descriptorWrites[3].pBufferInfo = &mesh_info;
+
+                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites);
+
+                buffer.draw(3, 1, 0, 0);
+
+                buffer.endRenderPass();
+                buffer.end();
+            }
+        }
+        else if (render_mode == RenderMode::Hybrid)
+        {
+            for (int i = 0; i < deferred_command_buffers.size(); ++i)
+            {
+                vk::CommandBuffer buffer = *deferred_command_buffers[i];
+
+                vk::CommandBufferBeginInfo begin_info = {};
+                begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+                buffer.begin(begin_info);
+
+                std::array<vk::ClearValue, 2> clear_values;
+                clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+                clear_values[1].depthStencil = 1.f;
+
+                vk::RenderPassBeginInfo renderpass_info;
+                renderpass_info.renderPass = *rtx_render_pass;
+                renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+                renderpass_info.pClearValues = clear_values.data();
+                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.extent = swapchain_extent;
+                renderpass_info.framebuffer = *frame_buffers[i];
+                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+
+                buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
+
+                vk::DescriptorImageInfo albedo_info;
+                albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                albedo_info.imageView = *gbuffer.albedo.image_view;
+                albedo_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorImageInfo light_info;
+                light_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                light_info.imageView = *rtx_gbuffer.light.image_view;
+                light_info.sampler = *rtx_gbuffer.sampler;
+
+                vk::DescriptorImageInfo position_info;
+                position_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                position_info.imageView = *gbuffer.position.image_view;
+                position_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorImageInfo deferred_material_index_info;
+                deferred_material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                deferred_material_index_info.imageView = *gbuffer.material.image_view;
+                deferred_material_index_info.sampler = *gbuffer.sampler;
+
+                vk::DescriptorBufferInfo mesh_info;
+                mesh_info.buffer = mesh_info_buffer->buffer;
+                mesh_info.offset = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index * i;
+                mesh_info.range = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index;
+
+                vk::DescriptorBufferInfo light_buffer_info;
+                light_buffer_info.buffer = engine->lights.light_buffer->buffer;
+                light_buffer_info.offset = i * sizeof(engine->lights.light);
+                light_buffer_info.range = sizeof(engine->lights.light);
+
+                vk::DescriptorBufferInfo camera_buffer_info;
+                camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
+                camera_buffer_info.offset = i * sizeof(Camera::CameraData);
+                camera_buffer_info.range = sizeof(Camera::CameraData);
+
+                std::vector<vk::WriteDescriptorSet> descriptorWrites {7};
+
+                descriptorWrites[0].dstSet = nullptr;
+                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].dstArrayElement = 0;
+                descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pImageInfo = &position_info;
+
+                descriptorWrites[1].dstSet = nullptr;
+                descriptorWrites[1].dstBinding = 1;
+                descriptorWrites[1].dstArrayElement = 0;
+                descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[1].descriptorCount = 1;
+                descriptorWrites[1].pImageInfo = &albedo_info;
+
+                descriptorWrites[2].dstSet = nullptr;
+                descriptorWrites[2].dstBinding = 2;
+                descriptorWrites[2].dstArrayElement = 0;
+                descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[2].descriptorCount = 1;
+                descriptorWrites[2].pImageInfo = &light_info;
+
+                descriptorWrites[3].dstSet = nullptr;
+                descriptorWrites[3].dstBinding = 3;
+                descriptorWrites[3].dstArrayElement = 0;
+                descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+                descriptorWrites[3].descriptorCount = 1;
+                descriptorWrites[3].pImageInfo = &deferred_material_index_info;
+
+                descriptorWrites[4].dstSet = nullptr;
+                descriptorWrites[4].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[4].dstBinding = 4;
+                descriptorWrites[4].dstArrayElement = 0;
+                descriptorWrites[4].descriptorCount = 1;
+                descriptorWrites[4].pBufferInfo = &mesh_info;
+
+                descriptorWrites[5].dstSet = nullptr;
+                descriptorWrites[5].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[5].dstBinding = 5;
+                descriptorWrites[5].dstArrayElement = 0;
+                descriptorWrites[5].descriptorCount = 1;
+                descriptorWrites[5].pBufferInfo = &light_buffer_info;
+
+                descriptorWrites[6].dstSet = nullptr;
+                descriptorWrites[6].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[6].dstBinding = 6;
+                descriptorWrites[6].dstArrayElement = 0;
+                descriptorWrites[6].descriptorCount = 1;
+                descriptorWrites[6].pBufferInfo = &camera_buffer_info;
+
+                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites, dispatch);
+
+                buffer.draw(3, 1, 0, 0);
+
+                buffer.endRenderPass(dispatch);
+
+                buffer.end();
+            }
         }
     }
 
@@ -2254,77 +2459,6 @@ namespace lotus
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 3, shader_stride,
                 nullptr, 0, 0, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
-
-            std::array<vk::ClearValue, 2> clear_values;
-            clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clear_values[1].depthStencil = 1.f;
-
-            vk::RenderPassBeginInfo renderpass_info;
-            renderpass_info.renderPass = *rtx_render_pass;
-            renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-            renderpass_info.pClearValues = clear_values.data();
-            renderpass_info.renderArea.offset = { 0, 0 };
-            renderpass_info.renderArea.extent = swapchain_extent;
-            renderpass_info.framebuffer = *frame_buffers[image_index];
-            buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
-
-            buffer[0]->bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
-
-            vk::DescriptorImageInfo albedo_info;
-            albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            albedo_info.imageView = *rtx_gbuffer.albedo.image_view;
-            albedo_info.sampler = *rtx_gbuffer.sampler;
-
-            vk::DescriptorImageInfo light_info;
-            light_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            light_info.imageView = *rtx_gbuffer.light.image_view;
-            light_info.sampler = *rtx_gbuffer.sampler;
-
-            vk::DescriptorImageInfo material_index_info;
-            material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            material_index_info.imageView = *gbuffer.material.image_view;
-            material_index_info.sampler = *rtx_gbuffer.sampler;
-
-            vk::DescriptorBufferInfo mesh_info;
-            mesh_info.buffer = mesh_info_buffer->buffer;
-            mesh_info.offset = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index * getCurrentImage();
-            mesh_info.range = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index;
-
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {4};
-
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 1;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pImageInfo = &albedo_info;
-
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 2;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &light_info;
-
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 3;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &material_index_info;
-
-            descriptorWrites[3].dstSet = nullptr;
-            descriptorWrites[3].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[3].dstBinding = 4;
-            descriptorWrites[3].dstArrayElement = 0;
-            descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pBufferInfo = &mesh_info;
-
-            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites, dispatch);
-
-            buffer[0]->draw(3, 1, 0, 0);
-
-            buffer[0]->endRenderPass(dispatch);
         }
         else if (render_mode == RenderMode::Hybrid)
         {
@@ -2337,6 +2471,7 @@ namespace lotus
             write_info_target_light.descriptorType = vk::DescriptorType::eStorageImage;
             write_info_target_light.dstBinding = 0;
             write_info_target_light.dstArrayElement = 0;
+
             vk::DescriptorImageInfo target_image_info_light;
             target_image_info_light.imageView = *rtx_gbuffer.light.image_view;
             target_image_info_light.imageLayout = vk::ImageLayout::eGeneral;
@@ -2408,103 +2543,6 @@ namespace lotus
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
                 shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 3, shader_stride,
                 nullptr, 0, 0, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
-
-            std::array<vk::ClearValue, 2> clear_values;
-            clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clear_values[1].depthStencil = 1.f;
-
-            vk::RenderPassBeginInfo renderpass_info;
-            renderpass_info.renderPass = *rtx_render_pass;
-            renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-            renderpass_info.pClearValues = clear_values.data();
-            renderpass_info.renderArea.offset = { 0, 0 };
-            renderpass_info.renderArea.extent = swapchain_extent;
-            renderpass_info.framebuffer = *frame_buffers[image_index];
-            buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
-
-            buffer[0]->bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
-
-            vk::DescriptorImageInfo albedo_info;
-            albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            albedo_info.imageView = *gbuffer.albedo.image_view;
-            albedo_info.sampler = *gbuffer.sampler;
-
-            vk::DescriptorImageInfo light_info;
-            light_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            light_info.imageView = *rtx_gbuffer.light.image_view;
-            light_info.sampler = *rtx_gbuffer.sampler;
-
-            vk::DescriptorImageInfo deferred_material_index_info;
-            deferred_material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            deferred_material_index_info.imageView = *gbuffer.material.image_view;
-            deferred_material_index_info.sampler = *rtx_gbuffer.sampler;
-
-            vk::DescriptorBufferInfo mesh_info;
-            mesh_info.buffer = mesh_info_buffer->buffer;
-            mesh_info.offset = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index * getCurrentImage();
-            mesh_info.range = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index;
-
-            vk::DescriptorBufferInfo camera_buffer_info;
-            camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
-            camera_buffer_info.offset = getCurrentImage() * sizeof(Camera::CameraData);
-            camera_buffer_info.range = sizeof(Camera::CameraData);
-
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {7};
-
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pImageInfo = &position_info;
-
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &albedo_info;
-
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &light_info;
-
-            descriptorWrites[3].dstSet = nullptr;
-            descriptorWrites[3].dstBinding = 3;
-            descriptorWrites[3].dstArrayElement = 0;
-            descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &deferred_material_index_info;
-
-            descriptorWrites[4].dstSet = nullptr;
-            descriptorWrites[4].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[4].dstBinding = 4;
-            descriptorWrites[4].dstArrayElement = 0;
-            descriptorWrites[4].descriptorCount = 1;
-            descriptorWrites[4].pBufferInfo = &mesh_info;
-
-            descriptorWrites[5].dstSet = nullptr;
-            descriptorWrites[5].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[5].dstBinding = 5;
-            descriptorWrites[5].dstArrayElement = 0;
-            descriptorWrites[5].descriptorCount = 1;
-            descriptorWrites[5].pBufferInfo = &light_buffer_info;
-
-            descriptorWrites[6].dstSet = nullptr;
-            descriptorWrites[6].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[6].dstBinding = 6;
-            descriptorWrites[6].dstArrayElement = 0;
-            descriptorWrites[6].descriptorCount = 1;
-            descriptorWrites[6].pBufferInfo = &camera_buffer_info;
-
-            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites, dispatch);
-
-            buffer[0]->draw(3, 1, 0, 0);
-
-            buffer[0]->endRenderPass(dispatch);
         }
 
         buffer[0]->end(dispatch);
@@ -2634,7 +2672,7 @@ namespace lotus
         compute_queue.submit(submitInfo, nullptr, dispatch);
 
         vk::Semaphore waitSemaphores[] = { *image_ready_sem[current_frame], *compute_sem };
-        vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV };
+        vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderNV, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV };
         submitInfo.waitSemaphoreCount = 2;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
@@ -2645,23 +2683,17 @@ namespace lotus
         submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
         submitInfo.pCommandBuffers = buffers.data();
 
-        if (render_mode == RenderMode::Rasterization)
-        {
-            vk::Semaphore gbuffer_semaphores[] = { *gbuffer_sem };
-            submitInfo.pSignalSemaphores = gbuffer_semaphores;
-            submitInfo.signalSemaphoreCount = 1;
+        vk::Semaphore gbuffer_semaphores[] = { *gbuffer_sem };
+        submitInfo.pSignalSemaphores = gbuffer_semaphores;
+        submitInfo.signalSemaphoreCount = 1;
 
-            graphics_queue.submit(submitInfo, nullptr, dispatch);
+        graphics_queue.submit(submitInfo, nullptr, dispatch);
 
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores = gbuffer_semaphores;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
-        }
-        else
-        {
-            waitStages[0] |= vk::PipelineStageFlagBits::eRayTracingShaderNV;
-        }
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = gbuffer_semaphores;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
+
         vk::Semaphore signalSemaphores[] = { *frame_finish_sem[current_frame] };
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
