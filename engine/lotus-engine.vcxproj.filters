@@ -113,6 +113,9 @@
     <ClCompile Include="engine\renderer\vulkan\renderer.cpp">
       <Filter>renderer\vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="engine\entity\deformable_entity.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\task\acceleration_build.h">
@@ -214,6 +217,9 @@
     </ClInclude>
     <ClInclude Include="engine\renderer\vulkan\vulkan_inc.h">
       <Filter>renderer\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\deformable_entity.h">
+      <Filter>entity</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

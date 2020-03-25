@@ -21,12 +21,6 @@ namespace lotus
         this->scale_mat = glm::scale(glm::mat4{ 1.f }, glm::vec3{ x, y, z });
     }
 
-    void RenderableEntity::addSkeleton(std::unique_ptr<Skeleton>&& skeleton, size_t vertex_stride)
-    {
-        addComponent<AnimationComponent>(std::move(skeleton), vertex_stride);
-        animation_component = getComponent<AnimationComponent>();
-    }
-
     void RenderableEntity::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
         //TODO: check bounding box
@@ -42,20 +36,11 @@ namespace lotus
         for (size_t i = 0; i < models.size(); ++i)
         {
             const auto& model = models[i];
-            BottomLevelAccelerationStructure* blas = nullptr;
-            if (model->weighted)
-            {
-                blas = animation_component->transformed_geometries[i].bottom_level_as[image_index].get();
-            }
-            else if (model->bottom_level_as)
-            {
-                blas = model->bottom_level_as.get();
-            }
-            if (blas)
+            if (model->bottom_level_as)
             {
                 VkGeometryInstance instance{};
                 instance.transform = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                instance.accelerationStructureHandle = blas->handle;
+                instance.accelerationStructureHandle = model->bottom_level_as->handle;
                 instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                 if (std::none_of(model->meshes.begin(), model->meshes.end(), [](auto& mesh)
                 {
@@ -66,8 +51,8 @@ namespace lotus
                 }
                 instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities);
                 instance.instanceOffset = 0;
-                instance.instanceId = blas->resource_index;
-                blas->instanceid = as->AddInstance(instance);
+                instance.instanceId = model->bottom_level_as->resource_index;
+                model->bottom_level_as->instanceid = as->AddInstance(instance);
             }
         }
     }
@@ -77,18 +62,9 @@ namespace lotus
         for (size_t i = 0; i < models.size(); ++i)
         {
             const auto& model = models[i];
-            BottomLevelAccelerationStructure* blas = nullptr;
-            if (model->weighted)
+            if (model->bottom_level_as)
             {
-                blas = animation_component->transformed_geometries[i].bottom_level_as[image_index].get();
-            }
-            else if (model->bottom_level_as)
-            {
-                blas = model->bottom_level_as.get();
-            }
-            if (blas)
-            {
-                as->UpdateInstance(blas->instanceid, glm::mat3x4{ getModelMatrix() });
+                as->UpdateInstance(model->bottom_level_as->instanceid, glm::mat3x4{ getModelMatrix() });
             }
         }
     }

@@ -12,7 +12,7 @@ namespace lotus
         virtual void Process(WorkerThread*) override;
     private:
         void updateUniformBuffer(WorkerThread* thread, int image_index, RenderableEntity* entity);
-        void updateAnimationVertices(WorkerThread* thread, int image_index, RenderableEntity* entity);
+        void updateAnimationVertices(WorkerThread* thread, int image_index, DeformableEntity* entity);
         std::shared_ptr<RenderableEntity> entity;
         vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic> command_buffer;
         std::vector<std::unique_ptr<Buffer>> staging_buffers;

@@ -1,19 +1,19 @@
 #pragma once
 
 #include "../work_item.h"
-#include "engine/entity/renderable_entity.h"
+#include "engine/entity/deformable_entity.h"
 
 namespace lotus
 {
     class TransformSkeletonTask : public WorkItem
     {
     public:
-        TransformSkeletonTask(RenderableEntity* entity);
+        TransformSkeletonTask(DeformableEntity* entity);
         virtual ~TransformSkeletonTask() override = default;
         virtual void Process(WorkerThread*) override;
 
     private:
-        RenderableEntity* entity;
+        DeformableEntity* entity;
         vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic> command_buffer;
         std::unique_ptr<Buffer> staging_buffer;
     };

@@ -1,7 +1,7 @@
 #include "acceleration_structure.h"
 #include "engine/core.h"
 #include "engine/renderer/model.h"
-#include "engine/entity/renderable_entity.h"
+#include "engine/entity/deformable_entity.h"
 #include "engine/entity/component/animation_component.h"
 
 void lotus::AccelerationStructure::PopulateAccelerationStructure(uint32_t instanceCount,
@@ -224,23 +224,20 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(Model* model)
     model->bottom_level_as->resource_index = index;
 }
 
-void lotus::TopLevelAccelerationStructure::AddBLASResource(RenderableEntity* entity)
+void lotus::TopLevelAccelerationStructure::AddBLASResource(DeformableEntity* entity)
 {
-    if (entity->animation_component)
+    uint32_t image = engine->renderer.getCurrentImage();
+    for (size_t i = 0; i < entity->models.size(); ++i)
     {
-        uint32_t image = engine->renderer.getCurrentImage();
-        for (size_t i = 0; i < entity->models.size(); ++i)
+        uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size()) + engine->renderer.static_acceleration_bindings_offset;
+        for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
         {
-            uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size()) + engine->renderer.static_acceleration_bindings_offset;
-            for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
-            {
-                const auto& mesh = entity->models[i]->meshes[j];
-                descriptor_vertex_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
-                descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-                descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-                engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + j] = { index + (uint32_t)j, index + (uint32_t)j, mesh->specular_exponent, mesh->specular_intensity, entity->models[i]->light_offset };
-            }
-            entity->animation_component->transformed_geometries[i].bottom_level_as[image]->resource_index = index;
+            const auto& mesh = entity->models[i]->meshes[j];
+            descriptor_vertex_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
+            descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
+            descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+            engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + j] = { index + (uint32_t)j, index + (uint32_t)j, mesh->specular_exponent, mesh->specular_intensity, entity->models[i]->light_offset };
         }
+        entity->animation_component->transformed_geometries[i].bottom_level_as[image]->resource_index = index;
     }
 }

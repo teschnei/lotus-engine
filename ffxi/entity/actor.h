@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/entity/renderable_entity.h"
+#include "engine/entity/deformable_entity.h"
 
 namespace FFXI {
     class SK2;
@@ -7,7 +7,7 @@ namespace FFXI {
 }
 
 //main FFXI entity class
-class Actor : public lotus::RenderableEntity
+class Actor : public lotus::DeformableEntity
 {
 public:
     explicit Actor(lotus::Engine* engine);

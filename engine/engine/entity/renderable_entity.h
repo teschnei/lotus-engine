@@ -24,8 +24,6 @@ namespace lotus
 
         void setScale(float x, float y, float z);
 
-        void addSkeleton(std::unique_ptr<Skeleton>&& skeleton, size_t vertex_stride);
-
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
         virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
 
@@ -36,7 +34,6 @@ namespace lotus
         std::unique_ptr<Buffer> uniform_buffer;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
-        AnimationComponent* animation_component {nullptr};
 
     protected:
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;

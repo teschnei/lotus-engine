@@ -6,7 +6,7 @@
 #include "dat/os2.h"
 #include "dat/sk2.h"
 
-Actor::Actor(lotus::Engine* engine) : RenderableEntity(engine)
+Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
 }
 
@@ -97,6 +97,8 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(mesh_indices.size());
         mesh->setVertexCount(os2_vertices.size());
+        mesh->setVertexInputAttributeDescription(FFXI::OS2::Vertex::getAttributeDescriptions());
+        mesh->setVertexInputBindingDescription(FFXI::OS2::Vertex::getBindingDescriptions());
 
         vertices.push_back(std::move(vertices_uint8));
         indices.push_back(std::move(indices_uint8));

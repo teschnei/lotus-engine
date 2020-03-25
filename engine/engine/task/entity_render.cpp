@@ -2,6 +2,7 @@
 #include "../worker_thread.h"
 #include "engine/core.h"
 #include "engine/entity/renderable_entity.h"
+#include "engine/entity/deformable_entity.h"
 
 #include "engine/game.h"
 #include "engine/entity/component/animation_component.h"
@@ -17,9 +18,9 @@ namespace lotus
     {
         auto image_index = thread->engine->renderer.getCurrentImage();
         updateUniformBuffer(thread, image_index, entity.get());
-        if (entity->animation_component)
+        if (auto deformable = dynamic_cast<DeformableEntity*>(entity.get()))
         {
-            updateAnimationVertices(thread, image_index, entity.get());
+            updateAnimationVertices(thread, image_index, deformable);
         }
         if (thread->engine->renderer.RasterizationEnabled())
         {
@@ -40,7 +41,7 @@ namespace lotus
         uniform_buffer->unmap();
     }
 
-    void EntityRenderTask::updateAnimationVertices(WorkerThread* thread, int image_index, RenderableEntity* entity)
+    void EntityRenderTask::updateAnimationVertices(WorkerThread* thread, int image_index, DeformableEntity* entity)
     {
         auto component = entity->animation_component;
         auto& skeleton = component->skeleton;

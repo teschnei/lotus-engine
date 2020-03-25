@@ -20,6 +20,7 @@
     <ClCompile Include="engine\entity\component\input_component.cpp" />
     <ClCompile Include="engine\entity\component\third_person_camera_component.cpp" />
     <ClCompile Include="engine\entity\component\third_person_entity_input_component.cpp" />
+    <ClCompile Include="engine\entity\deformable_entity.cpp" />
     <ClCompile Include="engine\entity\entity.cpp" />
     <ClCompile Include="engine\entity\free_flying_camera.cpp" />
     <ClCompile Include="engine\entity\landscape_entity.cpp" />
@@ -59,6 +60,7 @@
     <ClInclude Include="engine\entity\component\input_component.h" />
     <ClInclude Include="engine\entity\component\third_person_camera_component.h" />
     <ClInclude Include="engine\entity\component\third_person_entity_input_component.h" />
+    <ClInclude Include="engine\entity\deformable_entity.h" />
     <ClInclude Include="engine\entity\entity.h" />
     <ClInclude Include="engine\entity\free_flying_camera.h" />
     <ClInclude Include="engine\entity\landscape_entity.h" />

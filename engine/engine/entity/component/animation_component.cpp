@@ -1,6 +1,6 @@
 #include "animation_component.h"
 #include "engine/core.h"
-#include "engine/entity/renderable_entity.h"
+#include "engine/entity/deformable_entity.h"
 #include "engine/renderer/skeleton.h"
 #include "engine/task/transform_skeleton.h"
 
@@ -59,7 +59,7 @@ namespace lotus
 
     void AnimationComponent::render()
     {
-        engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<RenderableEntity*>(entity)));
+        engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<DeformableEntity*>(entity)));
     }
 
     void AnimationComponent::playAnimation(std::string name, float speed, std::optional<std::string> _next_anim)

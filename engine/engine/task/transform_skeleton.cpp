@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    TransformSkeletonTask::TransformSkeletonTask(RenderableEntity* _entity) : entity(_entity)
+    TransformSkeletonTask::TransformSkeletonTask(DeformableEntity* _entity) : entity(_entity)
     {
     }
 

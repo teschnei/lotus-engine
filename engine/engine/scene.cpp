@@ -1,5 +1,6 @@
 #include "scene.h"
 #include "entity/renderable_entity.h"
+#include "entity/deformable_entity.h"
 #include "core.h"
 #include "renderer/vulkan/renderer.h"
 #include "task/acceleration_build.h"
@@ -26,12 +27,9 @@ namespace lotus
             });
             for (const auto& entity : entities)
             {
-                if (auto renderable_entity = std::dynamic_pointer_cast<RenderableEntity>(entity))
+                if (auto deformable_entity = dynamic_cast<DeformableEntity*>(entity.get()))
                 {
-                    if (renderable_entity->animation_component)
-                    {
-                        top_level_as[image_index]->AddBLASResource(renderable_entity.get());
-                    }
+                    top_level_as[image_index]->AddBLASResource(deformable_entity);
                 }
             }
         }

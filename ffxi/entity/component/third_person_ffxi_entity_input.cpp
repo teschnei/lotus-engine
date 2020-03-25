@@ -55,20 +55,21 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
 
     //play animation
     bool now_moving = moving.x != 0.f || moving.z != 0.f;
+    auto deformable = dynamic_cast<lotus::DeformableEntity*>(entity);
     if (!moving_prev && now_moving)
     {
         //the movement animations appear to sync at 6 units/s
         float speed = static_cast<Actor*>(entity)->speed / 6.f;
-        if (auto animation_component = static_cast<lotus::RenderableEntity*>(entity)->animation_component)
+        if (deformable)
         {
-            animation_component->playAnimationLoop("run0", speed);
+            deformable->animation_component->playAnimationLoop("run0", speed);
         }
     }
     else if (moving_prev && !now_moving)
     {
-        if (auto animation_component = static_cast<lotus::RenderableEntity*>(entity)->animation_component)
+        if (deformable)
         {
-            animation_component->playAnimationLoop("idl0");
+            deformable->animation_component->playAnimationLoop("idl0");
         }
     }
     moving_prev = now_moving;
