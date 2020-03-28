@@ -39,6 +39,8 @@ namespace FFXI
         {
             case 0xA1:
             {
+                if (infoa1->ddsType[0] != '3')
+                    __debugbreak();
                 name = std::string(infoa1->id, 16);
                 width = infoa1->imgx;
                 height = infoa1->imgy;

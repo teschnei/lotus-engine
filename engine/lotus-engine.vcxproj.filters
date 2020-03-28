@@ -116,6 +116,15 @@
     <ClCompile Include="engine\entity\deformable_entity.cpp">
       <Filter>entity</Filter>
     </ClCompile>
+    <ClCompile Include="engine\entity\particle.cpp">
+      <Filter>entity</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\particle_model_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\task\particle_entity_init.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\task\acceleration_build.h">
@@ -220,6 +229,15 @@
     </ClInclude>
     <ClInclude Include="engine\entity\deformable_entity.h">
       <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\entity\particle.h">
+      <Filter>entity</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\particle_model_init.h">
+      <Filter>task</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\particle_entity_init.h">
+      <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

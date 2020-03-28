@@ -5,6 +5,8 @@
 #include "mo2.h"
 #include "sk2.h"
 #include "dxt3.h"
+#include "generator.h"
+#include "d3m.h"
 #include <fstream>
 
 namespace FFXI
@@ -28,6 +30,9 @@ namespace FFXI
     DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
     {
         std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };
+
+        if (!dat.good())
+            throw std::exception("dat not found");
 
         size_t file_size = (size_t)dat.tellg();
         buffer.resize(file_size);
@@ -93,7 +98,7 @@ namespace FFXI
             case 0x05:
                 current_chunk->generator++;
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<Generator>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }
@@ -253,7 +258,7 @@ namespace FFXI
             case 0x19:
                 current_chunk->keyframe++;
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<Keyframe>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }
@@ -302,7 +307,7 @@ namespace FFXI
             case 0x1F:
                 current_chunk->d3m++;
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<D3M>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }

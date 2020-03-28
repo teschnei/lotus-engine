@@ -10,10 +10,15 @@
 #include "test_loader.h"
 #include "dat/mmb.h"
 #include "dat/os2.h"
+#include "dat/d3m.h"
 #include "engine/entity/free_flying_camera.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
 #include "entity/third_person_ffxi_camera.h"
 #include "config.h"
+
+#include "dat/dat_parser.h"
+#include "particle_tester.h"
+
 #include <iostream>
 
 class Game : public lotus::Game
@@ -22,6 +27,7 @@ public:
     Game(const lotus::Engine::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>())
     {
         scene = std::make_unique<lotus::Scene>(engine.get());
+        particle_tester = std::make_unique<ParticleTester>(engine.get());
         default_texture = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
         auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
         /* zone dats vtable:
@@ -45,8 +51,10 @@ public:
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {
+        particle_tester->tick(time, delta);
     }
     std::shared_ptr<lotus::Texture> default_texture;
+    std::unique_ptr<ParticleTester> particle_tester;
 };
 
 int main(int argc, char* argv[]) {
@@ -58,6 +66,8 @@ int main(int argc, char* argv[]) {
     settings.renderer_settings.landscape_vertex_input_binding_descriptions = FFXI::MMB::Vertex::getBindingDescriptions();
     settings.renderer_settings.model_vertex_input_attribute_descriptions = FFXI::OS2::Vertex::getAttributeDescriptions();
     settings.renderer_settings.model_vertex_input_binding_descriptions = FFXI::OS2::Vertex::getBindingDescriptions();
+    settings.renderer_settings.particle_vertex_input_attribute_descriptions = FFXI::D3M::Vertex::getAttributeDescriptions();
+    settings.renderer_settings.particle_vertex_input_binding_descriptions = FFXI::D3M::Vertex::getBindingDescriptions();
     Game game{settings};
 
     game.run();

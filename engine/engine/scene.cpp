@@ -49,5 +49,18 @@ namespace lotus
            engine->worker_pool.addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
         }
     }
+
+    void Scene::tick_all(time_point time, duration delta)
+    {
+        tick(time, delta);
+        for (const auto& entity : entities)
+        {
+            entity->tick_all(time, delta);
+        }
+        entities.erase(std::remove_if(entities.begin(), entities.end(), [](auto& entity)
+        {
+            return entity->should_remove();
+        }), entities.end());
+    }
 }
 

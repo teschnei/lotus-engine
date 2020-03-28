@@ -24,6 +24,7 @@ namespace lotus
             vk::CommandBuffer primary;
             vk::CommandBuffer secondary;
             vk::CommandBuffer shadow;
+            vk::CommandBuffer particle;
         } graphics {};
 
         struct ComputeResources

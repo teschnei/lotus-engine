@@ -51,6 +51,8 @@ namespace lotus
         glm::vec3 getPos();
         glm::quat getRot();
 
+        bool should_remove() { return remove; };
+
     protected:
         virtual void tick(time_point time, duration delta){}
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp){}
@@ -61,6 +63,9 @@ namespace lotus
         glm::mat4 pos_mat{ 1.f };
         glm::mat4 rot_mat{ 1.f };
         //glm::mat4 model_matrix {1.f};
+
+        //toggle when the entity is to be removed from the scene
+        bool remove{ false };
 
     private:
         std::vector<std::unique_ptr<Component>> components;

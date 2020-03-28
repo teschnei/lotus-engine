@@ -33,11 +33,12 @@ namespace lotus
         Camera* camera {nullptr};
         WorkerPool worker_pool{ this };
         LightManager lights{ this };
-        time_point simulation_time;
 
         void set_camera(Camera* _camera) { camera = _camera; }
+        time_point getSimulationTime() { return simulation_time; }
 
     private:
+        time_point simulation_time;
         void mainLoop();
         bool closing{ false };
     };

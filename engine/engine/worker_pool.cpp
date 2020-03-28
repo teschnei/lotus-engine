@@ -93,6 +93,17 @@ namespace lotus
         return buffers;
     }
 
+    std::vector<vk::CommandBuffer> WorkerPool::getParticleGraphicsBuffers(int image)
+    {
+        std::vector<vk::CommandBuffer> buffers;
+        for (const auto& task : processing_work[image])
+        {
+            if (task->graphics.particle)
+                buffers.push_back(task->graphics.particle);
+        }
+        return buffers;
+    }
+
     std::vector<vk::CommandBuffer> WorkerPool::getPrimaryComputeBuffers(int image)
     {
         std::vector<vk::CommandBuffer> buffers;

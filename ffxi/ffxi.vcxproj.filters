@@ -74,6 +74,13 @@
     <ClCompile Include="task\collision_model_init.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="dat\generator.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="dat\d3m.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
+    <ClCompile Include="particle_tester.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dat\dat_parser.h">
@@ -138,6 +145,13 @@
     <ClInclude Include="dat\dat_chunk.h">
       <Filter>dat</Filter>
     </ClInclude>
+    <ClInclude Include="dat\generator.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="dat\d3m.h">
+      <Filter>dat</Filter>
+    </ClInclude>
+    <ClInclude Include="particle_tester.h" />
   </ItemGroup>
   <ItemGroup>
     <GLSLValidate Include="..\shaders\blend.frag">
@@ -174,6 +188,15 @@
       <Filter>shaders</Filter>
     </GLSLValidate>
     <GLSLValidate Include="..\shaders\landscape_shadow_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_blend.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_gbuffer_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_shadow_vert.vert">
       <Filter>shaders</Filter>
     </GLSLValidate>
     <GLSLValidate Include="..\shaders\miss.rmiss">

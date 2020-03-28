@@ -3,6 +3,7 @@
 #include "engine/core.h"
 #include "engine/entity/renderable_entity.h"
 #include "engine/entity/deformable_entity.h"
+#include "engine/entity/particle.h"
 
 #include "engine/game.h"
 #include "engine/entity/component/animation_component.h"
@@ -11,7 +12,8 @@ namespace lotus
 {
     EntityRenderTask::EntityRenderTask(std::shared_ptr<RenderableEntity>& _entity) : WorkItem(), entity(_entity)
     {
-        priority = 1;
+        auto particle = dynamic_cast<Particle*>(entity.get());
+        priority = particle ? 3 : 1;
     }
 
     void EntityRenderTask::Process(WorkerThread* thread)
@@ -24,8 +26,15 @@ namespace lotus
         }
         if (thread->engine->renderer.RasterizationEnabled())
         {
-            graphics.secondary = *entity->command_buffers[image_index];
-            graphics.shadow = *entity->shadowmap_buffers[image_index];
+            if (dynamic_cast<Particle*>(entity.get()))
+            {
+                graphics.particle = *entity->command_buffers[image_index];
+            }
+            else
+            {
+                graphics.secondary = *entity->command_buffers[image_index];
+                graphics.shadow = *entity->shadowmap_buffers[image_index];
+            }
         }
     }
 

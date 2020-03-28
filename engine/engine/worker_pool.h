@@ -77,6 +77,7 @@ namespace lotus
         std::vector<vk::CommandBuffer> getPrimaryGraphicsBuffers(int image);
         std::vector<vk::CommandBuffer> getSecondaryGraphicsBuffers(int image);
         std::vector<vk::CommandBuffer> getShadowmapGraphicsBuffers(int image);
+        std::vector<vk::CommandBuffer> getParticleGraphicsBuffers(int image);
 
         std::vector<vk::CommandBuffer> getPrimaryComputeBuffers(int image);
 

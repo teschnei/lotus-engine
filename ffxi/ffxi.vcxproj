@@ -12,8 +12,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="dat\d3m.cpp" />
     <ClCompile Include="dat\dat_parser.cpp" />
     <ClCompile Include="dat\dxt3.cpp" />
+    <ClCompile Include="dat\generator.cpp" />
     <ClCompile Include="dat\mmb.cpp" />
     <ClCompile Include="dat\mo2.cpp" />
     <ClCompile Include="dat\mzb.cpp" />
@@ -28,15 +30,18 @@
     <ClCompile Include="entity\third_person_ffxiv_camera.cpp" />
     <ClCompile Include="entity\third_person_ffxi_camera.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="particle_tester.cpp" />
     <ClCompile Include="task\actor_dat_load.cpp" />
     <ClCompile Include="task\collision_model_init.cpp" />
     <ClCompile Include="task\landscape_dat_load.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
+    <ClInclude Include="dat\d3m.h" />
     <ClInclude Include="dat\dat_chunk.h" />
     <ClInclude Include="dat\dat_parser.h" />
     <ClInclude Include="dat\dxt3.h" />
+    <ClInclude Include="dat\generator.h" />
     <ClInclude Include="dat\key_tables.h" />
     <ClInclude Include="dat\mmb.h" />
     <ClInclude Include="dat\mo2.h" />
@@ -51,6 +56,7 @@
     <ClInclude Include="entity\landscape_entity.h" />
     <ClInclude Include="entity\third_person_ffxiv_camera.h" />
     <ClInclude Include="entity\third_person_ffxi_camera.h" />
+    <ClInclude Include="particle_tester.h" />
     <ClInclude Include="task\actor_dat_load.h" />
     <ClInclude Include="task\collision_model_init.h" />
     <ClInclude Include="task\landscape_dat_load.h" />
@@ -70,6 +76,9 @@
     <GLSLValidate Include="..\shaders\landscape_color_hit.rahit" />
     <GLSLValidate Include="..\shaders\landscape_gbuffer_vert.vert" />
     <GLSLValidate Include="..\shaders\landscape_shadow_vert.vert" />
+    <GLSLValidate Include="..\shaders\particle_blend.frag" />
+    <GLSLValidate Include="..\shaders\particle_gbuffer_vert.vert" />
+    <GLSLValidate Include="..\shaders\particle_shadow_vert.vert" />
     <GLSLValidate Include="..\shaders\miss.rmiss" />
     <GLSLValidate Include="..\shaders\raygen.rgen" />
     <GLSLValidate Include="..\shaders\raygen_hybrid.rgen" />

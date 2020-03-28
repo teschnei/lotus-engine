@@ -565,6 +565,16 @@ namespace lotus
             desc_albedo.initialLayout = vk::ImageLayout::eUndefined;
             desc_albedo.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
+            vk::AttachmentDescription desc_particle;
+            desc_particle.format = vk::Format::eR8G8B8A8Unorm;
+            desc_particle.samples = vk::SampleCountFlagBits::e1;
+            desc_particle.loadOp = vk::AttachmentLoadOp::eClear;
+            desc_particle.storeOp = vk::AttachmentStoreOp::eStore;
+            desc_particle.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+            desc_particle.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+            desc_particle.initialLayout = vk::ImageLayout::eUndefined;
+            desc_particle.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
             vk::AttachmentDescription desc_face_normal;
             desc_face_normal.format = vk::Format::eR32G32B32A32Sfloat;
             desc_face_normal.samples = vk::SampleCountFlagBits::e1;
@@ -585,7 +595,7 @@ namespace lotus
             desc_material.initialLayout = vk::ImageLayout::eUndefined;
             desc_material.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
-            std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_face_normal, desc_albedo, desc_material, depth_attachment };
+            std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_face_normal, desc_albedo, desc_particle, desc_material, depth_attachment };
 
             render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
             render_pass_info.pAttachments = gbuffer_attachments.data();
@@ -606,19 +616,37 @@ namespace lotus
             gbuffer_albedo_attachment_ref.attachment = 3;
             gbuffer_albedo_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
+            vk::AttachmentReference gbuffer_particle_attachment_ref;
+            gbuffer_particle_attachment_ref.attachment = 4;
+            gbuffer_particle_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
             vk::AttachmentReference gbuffer_material_attachment_ref;
-            gbuffer_material_attachment_ref.attachment = 4;
+            gbuffer_material_attachment_ref.attachment = 5;
             gbuffer_material_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
             vk::AttachmentReference gbuffer_depth_attachment_ref;
-            gbuffer_depth_attachment_ref.attachment = 5;
+            gbuffer_depth_attachment_ref.attachment = 6;
             gbuffer_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-            std::vector<vk::AttachmentReference> gbuffer_color_attachment_refs = { gbuffer_pos_attachment_ref, gbuffer_normal_attachment_ref, gbuffer_face_normal_attachment_ref, gbuffer_albedo_attachment_ref, gbuffer_material_attachment_ref };
+            std::vector<vk::AttachmentReference> gbuffer_color_attachment_refs = { gbuffer_pos_attachment_ref, gbuffer_normal_attachment_ref, gbuffer_face_normal_attachment_ref,
+                gbuffer_albedo_attachment_ref, gbuffer_material_attachment_ref };
 
-            subpass.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_refs.size());
-            subpass.pColorAttachments = gbuffer_color_attachment_refs.data();
-            subpass.pDepthStencilAttachment = &gbuffer_depth_attachment_ref;
+            vk::SubpassDescription subpass_deferred;
+            subpass_deferred.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+            subpass_deferred.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_refs.size());
+            subpass_deferred.pColorAttachments = gbuffer_color_attachment_refs.data();
+            subpass_deferred.pDepthStencilAttachment = &gbuffer_depth_attachment_ref;
+
+            std::vector<vk::AttachmentReference> gbuffer_color_attachment_particle_refs = { gbuffer_particle_attachment_ref };
+            std::vector<uint32_t> gbuffer_preserve_attachment_particle_refs = { gbuffer_pos_attachment_ref.attachment, gbuffer_normal_attachment_ref.attachment,
+                gbuffer_face_normal_attachment_ref.attachment, gbuffer_albedo_attachment_ref.attachment, gbuffer_material_attachment_ref.attachment };
+            vk::SubpassDescription subpass_particle;
+            subpass_particle.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+            subpass_particle.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_particle_refs.size());
+            subpass_particle.pColorAttachments = gbuffer_color_attachment_particle_refs.data();
+            subpass_particle.preserveAttachmentCount = gbuffer_preserve_attachment_particle_refs.size();
+            subpass_particle.pPreserveAttachments = gbuffer_preserve_attachment_particle_refs.data();
+            subpass_particle.pDepthStencilAttachment = &gbuffer_depth_attachment_ref;
 
             vk::SubpassDependency gbuffer_dependency_end;
             gbuffer_dependency_end.srcSubpass = 0;
@@ -628,10 +656,21 @@ namespace lotus
             gbuffer_dependency_end.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
             gbuffer_dependency_end.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-            std::vector<vk::SubpassDependency> dependencies = { dependency, gbuffer_dependency_end };
+            vk::SubpassDependency gbuffer_dependency_particles;
+            gbuffer_dependency_particles.srcSubpass = 0;
+            gbuffer_dependency_particles.dstSubpass = 1;
+            gbuffer_dependency_particles.srcStageMask = vk::PipelineStageFlagBits::eLateFragmentTests;
+            gbuffer_dependency_particles.dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+            gbuffer_dependency_particles.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+            gbuffer_dependency_particles.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead;
+
+            std::vector<vk::SubpassDependency> dependencies = { dependency, gbuffer_dependency_end, gbuffer_dependency_particles };
+            std::vector<vk::SubpassDescription> subpasses = { subpass_deferred, subpass_particle };
 
             render_pass_info.dependencyCount = dependencies.size();
             render_pass_info.pDependencies = dependencies.data();
+            render_pass_info.subpassCount = subpasses.size();
+            render_pass_info.pSubpasses = subpasses.data();
 
             gbuffer_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
         }
@@ -1043,27 +1082,35 @@ namespace lotus
             material_index_layout_binding.pImmutableSamplers = nullptr;
             material_index_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
+            vk::DescriptorSetLayoutBinding particle_sample_layout_binding;
+            particle_sample_layout_binding.binding = 4;
+            particle_sample_layout_binding.descriptorCount = 1;
+            particle_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            particle_sample_layout_binding.pImmutableSamplers = nullptr;
+            particle_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
             vk::DescriptorSetLayoutBinding mesh_info_binding;
-            mesh_info_binding.binding = 4;
+            mesh_info_binding.binding = 5;
             mesh_info_binding.descriptorCount = 1;
             mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
             mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
             vk::DescriptorSetLayoutBinding light_buffer_binding;
-            light_buffer_binding.binding = 5;
+            light_buffer_binding.binding = 6;
             light_buffer_binding.descriptorCount = 1;
             light_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
             light_buffer_binding.pImmutableSamplers = nullptr;
             light_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
             vk::DescriptorSetLayoutBinding camera_buffer_binding;
-            camera_buffer_binding.binding = 6;
+            camera_buffer_binding.binding = 7;
             camera_buffer_binding.descriptorCount = 1;
             camera_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
             camera_buffer_binding.pImmutableSamplers = nullptr;
             camera_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 
-            std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { position_sample_layout_binding, albedo_sample_layout_binding, light_sample_layout_binding, material_index_layout_binding, mesh_info_binding, light_buffer_binding, camera_buffer_binding };
+            std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { position_sample_layout_binding, albedo_sample_layout_binding, light_sample_layout_binding,
+                material_index_layout_binding, particle_sample_layout_binding, mesh_info_binding, light_buffer_binding, camera_buffer_binding };
 
             vk::DescriptorSetLayoutCreateInfo rtx_deferred_layout_info;
             rtx_deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
@@ -1078,7 +1125,9 @@ namespace lotus
     {
         auto vertex_module = getShader("shaders/gbuffer_vert.spv");
         auto landscape_vertex_module = getShader("shaders/landscape_gbuffer_vert.spv");
+        auto particle_vertex_module = getShader("shaders/particle_gbuffer_vert.spv");
         auto fragment_module = getShader("shaders/gbuffer_frag.spv");
+        auto particle_fragment_module = getShader("shaders/particle_blend.spv");
 
         vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
         vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
@@ -1090,13 +1139,24 @@ namespace lotus
         landscape_vert_shader_stage_info.module = *landscape_vertex_module;
         landscape_vert_shader_stage_info.pName = "main";
 
+        vk::PipelineShaderStageCreateInfo particle_vert_shader_stage_info;
+        particle_vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
+        particle_vert_shader_stage_info.module = *particle_vertex_module;
+        particle_vert_shader_stage_info.pName = "main";
+
         vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
         frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
         frag_shader_stage_info.module = *fragment_module;
         frag_shader_stage_info.pName = "main";
 
+        vk::PipelineShaderStageCreateInfo particle_frag_shader_stage_info;
+        particle_frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
+        particle_frag_shader_stage_info.module = *particle_fragment_module;
+        particle_frag_shader_stage_info.pName = "main";
+
         std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
         std::array<vk::PipelineShaderStageCreateInfo, 2> landscape_shaderStages = {landscape_vert_shader_stage_info, frag_shader_stage_info};
+        std::array<vk::PipelineShaderStageCreateInfo, 2> particle_shaderStages = {particle_vert_shader_stage_info, particle_frag_shader_stage_info};
 
         vk::PipelineVertexInputStateCreateInfo main_vertex_input_info;
 
@@ -1117,6 +1177,16 @@ namespace lotus
         landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
         landscape_vertex_input_info.pVertexBindingDescriptions = landscape_binding_descriptions.data();
         landscape_vertex_input_info.pVertexAttributeDescriptions = landscape_attribute_descriptions.data();
+
+        vk::PipelineVertexInputStateCreateInfo particle_vertex_input_info;
+
+        auto particle_binding_descriptions = engine->settings.renderer_settings.particle_vertex_input_binding_descriptions;
+        auto particle_attribute_descriptions = engine->settings.renderer_settings.particle_vertex_input_attribute_descriptions;
+
+        particle_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(particle_binding_descriptions.size());
+        particle_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(particle_attribute_descriptions.size());
+        particle_vertex_input_info.pVertexBindingDescriptions = particle_binding_descriptions.data();
+        particle_vertex_input_info.pVertexAttributeDescriptions = particle_attribute_descriptions.data();
 
         vk::PipelineInputAssemblyStateCreateInfo input_assembly = {};
         input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
@@ -1165,12 +1235,13 @@ namespace lotus
         color_blend_attachment.blendEnable = false;
         color_blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
         color_blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
-        color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
-        color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+        color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcColor;
+        color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
         color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
+        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1(1, color_blend_attachment);
 
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;
@@ -1181,6 +1252,10 @@ namespace lotus
         color_blending.blendConstants[1] = 0.0f;
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
+
+        vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
+        color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
+        color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
 
         std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *static_descriptor_set_layout };
 
@@ -1219,8 +1294,24 @@ namespace lotus
         main_pipeline_info.pStages = shaderStages.data();
         main_pipeline_info.pVertexInputState = &main_vertex_input_info;
 
+        vk::PipelineDepthStencilStateCreateInfo particle_depth_stencil;
+        particle_depth_stencil.depthTestEnable = true;
+        particle_depth_stencil.depthWriteEnable = false;
+        particle_depth_stencil.depthCompareOp = vk::CompareOp::eLessOrEqual;
+        particle_depth_stencil.depthBoundsTestEnable = false;
+        particle_depth_stencil.stencilTestEnable = false;
+
+        vk::GraphicsPipelineCreateInfo particle_pipeline_info = landscape_pipeline_info;
+        particle_pipeline_info.pDepthStencilState = &particle_depth_stencil;
+        particle_pipeline_info.stageCount = static_cast<uint32_t>(particle_shaderStages.size());
+        particle_pipeline_info.pStages = particle_shaderStages.data();
+        particle_pipeline_info.pVertexInputState = &particle_vertex_input_info;
+        particle_pipeline_info.pColorBlendState = &color_blending_subpass1;
+        particle_pipeline_info.subpass = 1;
+
         main_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
         landscape_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
+        particle_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
 
         fragment_module = getShader("shaders/blend.spv");
 
@@ -1231,6 +1322,7 @@ namespace lotus
 
         main_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
         landscape_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
+        particle_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
 
         landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
         landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
@@ -1262,14 +1354,14 @@ namespace lotus
         pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(deferred_descriptor_layouts.size());
         pipeline_layout_info.pSetLayouts = deferred_descriptor_layouts.data();
 
-        deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
-
-        deferred_pipeline_info.layout = *deferred_pipeline_layout;
-
-        deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, deferred_pipeline_info, nullptr, dispatch);
-
         if (render_mode == RenderMode::Rasterization)
         {
+            deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+
+            deferred_pipeline_info.layout = *deferred_pipeline_layout;
+
+            deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, deferred_pipeline_info, nullptr, dispatch);
+
             landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(landscape_binding_descriptions.size());
             landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
             vk::PushConstantRange push_constant_range_shadowmap;
@@ -1291,24 +1383,31 @@ namespace lotus
 
             main_pipeline_info.layout = *shadowmap_pipeline_layout;
             landscape_pipeline_info.layout = *shadowmap_pipeline_layout;
+            particle_pipeline_info.layout = *shadowmap_pipeline_layout;
 
             main_pipeline_info.renderPass = *shadowmap_render_pass;
             landscape_pipeline_info.renderPass = *shadowmap_render_pass;
+            particle_pipeline_info.renderPass = *shadowmap_render_pass;
             vertex_module = getShader("shaders/shadow_vert.spv");
             landscape_vertex_module = getShader("shaders/landscape_shadow_vert.spv");
+            particle_vertex_module = getShader("shaders/particle_shadow_vert.spv");
             fragment_module = getShader("shaders/shadow_frag.spv");
 
             vert_shader_stage_info.module = *vertex_module;
             landscape_vert_shader_stage_info.module = *landscape_vertex_module;
+            particle_vert_shader_stage_info.module = *particle_vertex_module;
             frag_shader_stage_info.module = *fragment_module;
 
             shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
             landscape_shaderStages = { landscape_vert_shader_stage_info, frag_shader_stage_info };
+            particle_shaderStages = { particle_vert_shader_stage_info, frag_shader_stage_info };
 
             main_pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
             main_pipeline_info.pStages = shaderStages.data();
             landscape_pipeline_info.stageCount = static_cast<uint32_t>(landscape_shaderStages.size());
             landscape_pipeline_info.pStages = landscape_shaderStages.data();
+            particle_pipeline_info.stageCount = static_cast<uint32_t>(particle_shaderStages.size());
+            particle_pipeline_info.pStages = particle_shaderStages.data();
 
             viewport.width = shadowmap_dimension;
             viewport.height = shadowmap_dimension;
@@ -1324,15 +1423,20 @@ namespace lotus
             dynamic_state_ci.pDynamicStates = dynamic_states.data();
             main_pipeline_info.pDynamicState = &dynamic_state_ci;
             landscape_pipeline_info.pDynamicState = &dynamic_state_ci;
+            particle_pipeline_info.pDynamicState = &dynamic_state_ci;
             main_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
             landscape_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
+            particle_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
 
             main_pipeline_info.stageCount = 1;
             main_pipeline_info.pStages = &vert_shader_stage_info;
             landscape_pipeline_info.stageCount = 1;
             landscape_pipeline_info.pStages = &landscape_vert_shader_stage_info;
+            particle_pipeline_info.stageCount = 1;
+            particle_pipeline_info.pStages = &particle_vert_shader_stage_info;
             main_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
             landscape_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
+            particle_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
         }
         if (RTXEnabled())
         {
@@ -1719,6 +1823,7 @@ namespace lotus
         gbuffer.normal.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.face_normal.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.albedo.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.particle.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.material.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR16Uint, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.depth.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
@@ -1739,6 +1844,8 @@ namespace lotus
         image_view_info.image = gbuffer.albedo.image->image;
         image_view_info.format = vk::Format::eR8G8B8A8Unorm;
         gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        image_view_info.image = gbuffer.particle.image->image;
+        gbuffer.particle.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
         image_view_info.image = gbuffer.material.image->image;
         image_view_info.format = vk::Format::eR16Uint;
         gbuffer.material.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
@@ -1747,7 +1854,8 @@ namespace lotus
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
         gbuffer.depth.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
 
-        std::vector<vk::ImageView> attachments = { *gbuffer.position.image_view, *gbuffer.normal.image_view, *gbuffer.face_normal.image_view, *gbuffer.albedo.image_view, *gbuffer.material.image_view, *gbuffer.depth.image_view };
+        std::vector<vk::ImageView> attachments = { *gbuffer.position.image_view, *gbuffer.normal.image_view, *gbuffer.face_normal.image_view,
+            *gbuffer.albedo.image_view, *gbuffer.particle.image_view, *gbuffer.material.image_view, *gbuffer.depth.image_view };
 
         vk::FramebufferCreateInfo framebuffer_info = {};
         framebuffer_info.renderPass = *gbuffer_render_pass;
@@ -2087,6 +2195,11 @@ namespace lotus
                 deferred_material_index_info.imageView = *gbuffer.material.image_view;
                 deferred_material_index_info.sampler = *gbuffer.sampler;
 
+                vk::DescriptorImageInfo particle_info;
+                particle_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                particle_info.imageView = *gbuffer.particle.image_view;
+                particle_info.sampler = *gbuffer.sampler;
+
                 vk::DescriptorBufferInfo mesh_info;
                 mesh_info.buffer = mesh_info_buffer->buffer;
                 mesh_info.offset = sizeof(Renderer::MeshInfo) * max_acceleration_binding_index * i;
@@ -2102,7 +2215,7 @@ namespace lotus
                 camera_buffer_info.offset = i * sizeof(Camera::CameraData);
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
-                std::vector<vk::WriteDescriptorSet> descriptorWrites {7};
+                std::vector<vk::WriteDescriptorSet> descriptorWrites {8};
 
                 descriptorWrites[0].dstSet = nullptr;
                 descriptorWrites[0].dstBinding = 0;
@@ -2133,25 +2246,32 @@ namespace lotus
                 descriptorWrites[3].pImageInfo = &deferred_material_index_info;
 
                 descriptorWrites[4].dstSet = nullptr;
-                descriptorWrites[4].descriptorType = vk::DescriptorType::eUniformBuffer;
                 descriptorWrites[4].dstBinding = 4;
                 descriptorWrites[4].dstArrayElement = 0;
+                descriptorWrites[4].descriptorType = vk::DescriptorType::eCombinedImageSampler;
                 descriptorWrites[4].descriptorCount = 1;
-                descriptorWrites[4].pBufferInfo = &mesh_info;
+                descriptorWrites[4].pImageInfo = &particle_info;
 
                 descriptorWrites[5].dstSet = nullptr;
                 descriptorWrites[5].descriptorType = vk::DescriptorType::eUniformBuffer;
                 descriptorWrites[5].dstBinding = 5;
                 descriptorWrites[5].dstArrayElement = 0;
                 descriptorWrites[5].descriptorCount = 1;
-                descriptorWrites[5].pBufferInfo = &light_buffer_info;
+                descriptorWrites[5].pBufferInfo = &mesh_info;
 
                 descriptorWrites[6].dstSet = nullptr;
                 descriptorWrites[6].descriptorType = vk::DescriptorType::eUniformBuffer;
                 descriptorWrites[6].dstBinding = 6;
                 descriptorWrites[6].dstArrayElement = 0;
                 descriptorWrites[6].descriptorCount = 1;
-                descriptorWrites[6].pBufferInfo = &camera_buffer_info;
+                descriptorWrites[6].pBufferInfo = &light_buffer_info;
+
+                descriptorWrites[7].dstSet = nullptr;
+                descriptorWrites[7].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[7].dstBinding = 7;
+                descriptorWrites[7].dstArrayElement = 0;
+                descriptorWrites[7].descriptorCount = 1;
+                descriptorWrites[7].pBufferInfo = &camera_buffer_info;
 
                 buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites, dispatch);
 
@@ -2385,13 +2505,14 @@ namespace lotus
 
             renderpass_info.renderPass = *gbuffer_render_pass;
             renderpass_info.framebuffer = *gbuffer.frame_buffer;
-            std::array<vk::ClearValue, 6> clearValues = {};
+            std::array<vk::ClearValue, 7> clearValues = {};
             clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clearValues[2].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clearValues[3].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
             clearValues[4].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clearValues[5].depthStencil = { 1.0f, 0 };
+            clearValues[5].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+            clearValues[6].depthStencil = { 1.0f, 0 };
 
             renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
             renderpass_info.pClearValues = clearValues.data();
@@ -2399,7 +2520,12 @@ namespace lotus
 
             buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
             auto secondary_buffers = engine->worker_pool.getSecondaryGraphicsBuffers(image_index);
-            buffer[0]->executeCommands(secondary_buffers, dispatch);
+            if (!secondary_buffers.empty())
+                buffer[0]->executeCommands(secondary_buffers, dispatch);
+            buffer[0]->nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
+            auto particle_buffers = engine->worker_pool.getParticleGraphicsBuffers(image_index);
+            if (!particle_buffers.empty())
+                buffer[0]->executeCommands(particle_buffers, dispatch);
             buffer[0]->endRenderPass(dispatch);
         }
         if (render_mode == RenderMode::RTX)

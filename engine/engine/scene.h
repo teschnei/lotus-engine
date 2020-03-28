@@ -13,14 +13,7 @@ namespace lotus
     public:
         explicit Scene(Engine* _engine);
         void render();
-        void tick_all(time_point time, duration delta)
-        {
-            tick(time, delta);
-            for (const auto& entity : entities)
-            {
-                entity->tick_all(time, delta);
-            }
-        }
+        void tick_all(time_point time, duration delta);
         template <typename T, typename... Args>
         std::shared_ptr<T> AddEntity(Args... args)
         {

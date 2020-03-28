@@ -6,6 +6,7 @@ layout(binding = 0) uniform sampler2D positionSampler;
 layout(binding = 1) uniform sampler2D albedoSampler;
 layout(binding = 2) uniform sampler2D lightSampler;
 layout(binding = 3) uniform usampler2D materialIndexSampler;
+layout(binding = 4) uniform sampler2D particleSampler;
 
 struct Mesh
 {
@@ -16,7 +17,7 @@ struct Mesh
     uint light_type;
 };
 
-layout(binding = 4, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -33,7 +34,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 5) uniform Light
+layout(std430, binding = 6) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -43,7 +44,7 @@ layout(std430, binding = 5) uniform Light
     vec4 skybox_colors[8];
 } light;
 
-layout(binding = 6) uniform Camera {
+layout(binding = 7) uniform Camera {
     mat4 proj;
     mat4 view;
     mat4 proj_inverse;
@@ -60,6 +61,7 @@ void main() {
     vec3 fragPos = texture(positionSampler, fragTexCoord).xyz;
     vec4 albedo = texture(albedoSampler, fragTexCoord);
     vec4 in_light = texture(lightSampler, fragTexCoord);
+    vec4 particle = texture(particleSampler, fragTexCoord);
     uint material_index = texture(materialIndexSampler, fragTexCoord).r;
     float dist = length(fragPos - camera.pos.xyz);
 
@@ -106,6 +108,8 @@ void main() {
     {
         outColor = albedo * in_light;
     }
+
+    outColor.rgb = mix(outColor.rgb, particle.rgb, particle.a);
 
     outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));
 }

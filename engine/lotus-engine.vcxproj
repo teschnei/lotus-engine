@@ -24,6 +24,7 @@
     <ClCompile Include="engine\entity\entity.cpp" />
     <ClCompile Include="engine\entity\free_flying_camera.cpp" />
     <ClCompile Include="engine\entity\landscape_entity.cpp" />
+    <ClCompile Include="engine\entity\particle.cpp" />
     <ClCompile Include="engine\entity\renderable_entity.cpp" />
     <ClCompile Include="engine\entity\third_person_boom_camera.cpp" />
     <ClCompile Include="engine\input.cpp" />
@@ -43,6 +44,8 @@
     <ClCompile Include="engine\task\entity_render.cpp" />
     <ClCompile Include="engine\task\landscape_entity_init.cpp" />
     <ClCompile Include="engine\task\model_init.cpp" />
+    <ClCompile Include="engine\task\particle_entity_init.cpp" />
+    <ClCompile Include="engine\task\particle_model_init.cpp" />
     <ClCompile Include="engine\task\renderable_entity_init.cpp" />
     <ClCompile Include="engine\task\transform_skeleton.cpp" />
     <ClCompile Include="engine\task\texture_init.cpp" />
@@ -64,6 +67,7 @@
     <ClInclude Include="engine\entity\entity.h" />
     <ClInclude Include="engine\entity\free_flying_camera.h" />
     <ClInclude Include="engine\entity\landscape_entity.h" />
+    <ClInclude Include="engine\entity\particle.h" />
     <ClInclude Include="engine\entity\renderable_entity.h" />
     <ClInclude Include="engine\entity\third_person_boom_camera.h" />
     <ClInclude Include="engine\game.h" />
@@ -85,6 +89,8 @@
     <ClInclude Include="engine\task\entity_render.h" />
     <ClInclude Include="engine\task\landscape_entity_init.h" />
     <ClInclude Include="engine\task\model_init.h" />
+    <ClInclude Include="engine\task\particle_entity_init.h" />
+    <ClInclude Include="engine\task\particle_model_init.h" />
     <ClInclude Include="engine\task\renderable_entity_init.h" />
     <ClInclude Include="engine\task\transform_skeleton.h" />
     <ClInclude Include="engine\task\texture_init.h" />

@@ -27,6 +27,8 @@ namespace lotus
             std::vector<vk::VertexInputAttributeDescription> landscape_vertex_input_attribute_descriptions;
             std::vector<vk::VertexInputBindingDescription> model_vertex_input_binding_descriptions;
             std::vector<vk::VertexInputAttributeDescription> model_vertex_input_attribute_descriptions;
+            std::vector<vk::VertexInputBindingDescription> particle_vertex_input_binding_descriptions;
+            std::vector<vk::VertexInputAttributeDescription> particle_vertex_input_attribute_descriptions;
         };
         Renderer(Engine* engine);
         ~Renderer();
@@ -73,7 +75,7 @@ namespace lotus
             vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_graphics_pipeline;
             vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> shadowmap_pipeline;
             vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_shadowmap_pipeline;
-        } landscape_pipeline_group, main_pipeline_group;
+        } landscape_pipeline_group, main_pipeline_group, particle_pipeline_group;
 
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;
         std::unique_ptr<Image> depth_image;
@@ -110,6 +112,7 @@ namespace lotus
             FramebufferAttachment normal;
             FramebufferAttachment face_normal;
             FramebufferAttachment albedo;
+            FramebufferAttachment particle;
             FramebufferAttachment material;
             FramebufferAttachment depth;
 

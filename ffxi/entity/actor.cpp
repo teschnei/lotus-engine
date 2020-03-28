@@ -84,7 +84,7 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         indices_uint8.resize(mesh_indices.size() * sizeof(uint16_t));
         memcpy(indices_uint8.data(), mesh_indices.data(), indices_uint8.size());
 
-        vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst;
+        vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
 
         vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
