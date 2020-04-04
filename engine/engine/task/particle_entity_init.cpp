@@ -157,7 +157,7 @@ namespace lotus
             Model* model = entity->models[model_i].get();
             if (!model->meshes.empty())
             {
-                uint32_t material_index = entity->material_index;
+                uint32_t material_index = 0;
                 for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
                 {
                     Mesh* mesh = model->meshes[mesh_i].get();
