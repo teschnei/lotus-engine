@@ -25,7 +25,7 @@ layout(location = 3) out vec3 normal;
 
 void main() {
     gl_Position = ubo.proj * ubo.view * model.model * vec4(inPosition, 1.0);
-    fragColor = vec4((inColor & 0xFF)/256.0, ((inColor & 0xFF00) >> 8)/256.0, ((inColor & 0xFF0000) >> 16)/256.0, ((inColor & 0xFF000000) >> 24))/256.0;
+    fragColor = vec4((inColor & 0xFF)/255.0, ((inColor & 0xFF00) >> 8)/255.0, ((inColor & 0xFF0000) >> 16)/255.0, ((inColor & 0xFF000000) >> 24))/255.0;
     fragColor = vec4(0.78,0.78,0.78,0.25);
     fragTexCoord = inTexCoord;
 

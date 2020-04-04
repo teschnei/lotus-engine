@@ -10,10 +10,9 @@
 
 namespace lotus
 {
-    EntityRenderTask::EntityRenderTask(std::shared_ptr<RenderableEntity>& _entity) : WorkItem(), entity(_entity)
+    EntityRenderTask::EntityRenderTask(std::shared_ptr<RenderableEntity>& _entity, float _priority) : WorkItem(), entity(_entity)
     {
-        auto particle = dynamic_cast<Particle*>(entity.get());
-        priority = particle ? 3 : 1;
+        priority = _priority;
     }
 
     void EntityRenderTask::Process(WorkerThread* thread)

@@ -8,6 +8,7 @@ namespace lotus
 {
     class DeformableEntity;
     class Model;
+    class Particle;
     class Engine;
 
     class AccelerationStructure
@@ -74,6 +75,7 @@ namespace lotus
         void UpdateInstance(uint32_t instance_id, glm::mat3x4 instance);
         void AddBLASResource(Model* model);
         void AddBLASResource(DeformableEntity* entity);
+        void AddBLASResource(Particle* entity);
         std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
         std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
         std::vector<vk::DescriptorImageInfo> descriptor_texture_info;

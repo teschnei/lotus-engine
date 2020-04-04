@@ -18,7 +18,18 @@ namespace lotus
     void RenderableEntity::setScale(float x, float y, float z)
     {
         this->scale = glm::vec3(x, y, z);
-        this->scale_mat = glm::scale(glm::mat4{ 1.f }, glm::vec3{ x, y, z });
+        this->scale_mat = glm::scale(glm::mat4{ 1.f }, scale);
+    }
+
+    void RenderableEntity::setScale(glm::vec3 scale)
+    {
+        this->scale = scale;
+        this->scale_mat = glm::scale(glm::mat4{ 1.f }, scale);
+    }
+
+    glm::vec3 RenderableEntity::getScale()
+    {
+        return scale;
     }
 
     void RenderableEntity::render(Engine* engine, std::shared_ptr<Entity>& sp)

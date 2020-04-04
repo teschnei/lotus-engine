@@ -239,5 +239,9 @@
     <ClInclude Include="engine\task\particle_entity_init.h">
       <Filter>task</Filter>
     </ClInclude>
+    <ClInclude Include="random.h" />
+    <ClInclude Include="engine\entity\component\tick_component.h">
+      <Filter>entity\component</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

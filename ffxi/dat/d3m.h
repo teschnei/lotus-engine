@@ -13,7 +13,7 @@ namespace FFXI
         {
             glm::vec3 pos;
             glm::vec3 normal;
-            uint32_t color;
+            glm::vec4 color;
             glm::vec2 uv;
 
             static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
@@ -23,7 +23,7 @@ namespace FFXI
 
         std::string texture_name;
         uint16_t num_triangles{ 0 };
-        Vertex* vertex_buffer{ nullptr };
+        std::vector<Vertex> vertex_buffer;
     };
 
     class D3MLoader : public lotus::ModelLoader

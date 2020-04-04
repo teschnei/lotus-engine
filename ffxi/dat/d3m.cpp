@@ -5,6 +5,13 @@
 
 namespace FFXI
 {
+    struct DatVertex
+    {
+        glm::vec3 pos;
+        glm::vec3 normal;
+        uint32_t color;
+        glm::vec2 uv;
+    };
 
     std::vector<vk::VertexInputBindingDescription> D3M::Vertex::getBindingDescriptions()
     {
@@ -54,13 +61,19 @@ namespace FFXI
         //numtri2 buffer + 0x0A
         //numtri3 buffer + 0x0C
         texture_name = std::string((char*)buffer + 0x0E, 16);
-        vertex_buffer = (Vertex*)(buffer + 0x1E);
+        auto vertices = (DatVertex*)(buffer + 0x1E);
+        for (size_t i = 0; i < num_triangles * 3; ++i)
+        {
+            glm::vec4 color{ (vertices[i].color & 0xFF) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 255.0 };
+            vertex_buffer.push_back({ vertices[i].pos, vertices[i].normal, color, vertices[i].uv });
+        }
     }
 
     void D3MLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
+        model->lifetime = lotus::Lifetime::Short;
         std::vector<uint8_t> vertices(d3m->num_triangles * sizeof(D3M::Vertex) * 3);
-        memcpy(vertices.data(), d3m->vertex_buffer, d3m->num_triangles * sizeof(D3M::Vertex) * 3);
+        memcpy(vertices.data(), d3m->vertex_buffer.data(), d3m->vertex_buffer.size() * sizeof(D3M::Vertex));
 
         vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;

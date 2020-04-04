@@ -63,6 +63,7 @@
     <ClInclude Include="engine\entity\component\input_component.h" />
     <ClInclude Include="engine\entity\component\third_person_camera_component.h" />
     <ClInclude Include="engine\entity\component\third_person_entity_input_component.h" />
+    <ClInclude Include="engine\entity\component\tick_component.h" />
     <ClInclude Include="engine\entity\deformable_entity.h" />
     <ClInclude Include="engine\entity\entity.h" />
     <ClInclude Include="engine\entity\free_flying_camera.h" />
@@ -98,6 +99,7 @@
     <ClInclude Include="engine\worker_pool.h" />
     <ClInclude Include="engine\worker_thread.h" />
     <ClInclude Include="engine\work_item.h" />
+    <ClInclude Include="random.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

@@ -23,6 +23,9 @@ namespace lotus
         virtual std::unique_ptr<WorkItem> recreate_command_buffers(std::shared_ptr<Entity>& sp) override;
 
         void setScale(float x, float y, float z);
+        void setScale(glm::vec3 scale);
+
+        glm::vec3 getScale();
 
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
         virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);

@@ -136,16 +136,17 @@ namespace lotus
 
         std::unique_ptr<Raytracer> raytracer;
 
-        /* Ray tracing */
         struct MeshInfo
         {
             uint32_t vertex_index_offset;
             uint32_t texture_offset;
             float specular_exponent;
             float specular_intensity;
+            glm::vec4 color;
             uint32_t light_type;
             float _pad[3];
         };
+        /* Ray tracing */
         bool RTXEnabled();
         bool RasterizationEnabled();
         vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;

@@ -29,6 +29,7 @@ struct Mesh
     uint tex_offset;
     float specular_exponent;
     float specular_intensity;
+    vec4 color;
     uint light_type;
 };
 
@@ -65,7 +66,11 @@ layout(location = 0) rayPayloadInNV HitValue
     vec3 light;
 } hitValue;
 
-layout(location = 1) rayPayloadNV bool shadow;
+layout(location = 1) rayPayloadNV Shadow 
+{
+    bool shadowed;
+    vec3 color;
+} shadow;
 
 layout(shaderRecordNV) buffer Block
 {
@@ -128,7 +133,8 @@ void main()
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index];
     vec4 texture_color = texture(textures[mesh.tex_offset], uv);
 
-    shadow = true;
+    shadow.shadowed = true;
+    shadow.color = light.entity.diffuse_color.rgb * light.entity.brightness;
     if (dot_product > 0)
     {
         vec3 transformed_v0 = mat3(gl_ObjectToWorldNV) * v0.pos;
@@ -143,12 +149,12 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02, 16, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
+        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02 | 0x10, 16, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
     }
     vec3 ambient = light.entity.ambient_color.rgb;
     vec3 specular = vec3(0);
     vec3 diffuse = vec3(0);
-    if (!shadow)
+    if (!shadow.shadowed)
     {
         vec3 ray = normalize(gl_WorldRayDirectionNV);
         vec3 reflection = normalize(reflect(-light.diffuse_dir, normalized_normal));
@@ -159,7 +165,7 @@ void main()
             specular_dot = pow(specular_dot, mesh.specular_exponent);
             specular = vec3(specular_factor * specular_dot) * light.entity.diffuse_color.rgb;
         }
-        diffuse = vec3(max(dot_product, 0.0)) * light.entity.diffuse_color.rgb * light.entity.brightness;
+        diffuse = vec3(max(dot_product, 0.0)) * shadow.color;
     }
 
     vec3 out_light = diffuse + ambient;

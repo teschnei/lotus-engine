@@ -17,7 +17,8 @@ namespace lotus
             LevelGeometry = 1,
             DynamicEntities = 2,
             LevelCollision = 4,
-            LevelCollisionLOS = 8
+            LevelCollisionLOS = 8,
+            Particle = 16
         };
         Raytracer(Engine* engine);
         void query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback);

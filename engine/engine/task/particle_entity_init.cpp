@@ -24,7 +24,7 @@ namespace lotus
         alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
 
         entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
-        entity->shadowmap_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+        //entity->shadowmap_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
 
         if (thread->engine->renderer.RasterizationEnabled())
         {
@@ -34,6 +34,7 @@ namespace lotus
                 vk::CommandBufferInheritanceInfo inheritInfo = {};
                 inheritInfo.renderPass = *thread->engine->renderer.gbuffer_render_pass;
                 inheritInfo.framebuffer = *thread->engine->renderer.gbuffer.frame_buffer;
+                inheritInfo.subpass = 1;
 
                 vk::CommandBufferBeginInfo beginInfo = {};
                 beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -53,7 +54,12 @@ namespace lotus
                 model_buffer_info.offset = i * (sizeof(RenderableEntity::UniformBufferObject));
                 model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-                std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
+                vk::DescriptorBufferInfo mesh_info;
+                mesh_info.buffer = thread->engine->renderer.mesh_info_buffer->buffer;
+                mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
+                mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
+
+                std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
                 descriptorWrites[0].dstSet = nullptr;
                 descriptorWrites[0].dstBinding = 0;
@@ -69,6 +75,13 @@ namespace lotus
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pBufferInfo = &model_buffer_info;
 
+                descriptorWrites[2].dstSet = nullptr;
+                descriptorWrites[2].dstBinding = 3;
+                descriptorWrites[2].dstArrayElement = 0;
+                descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[2].descriptorCount = 1;
+                descriptorWrites[2].pBufferInfo = &mesh_info;
+
                 command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 
                 drawModel(thread, *command_buffer, false, *thread->engine->renderer.pipeline_layout, i);
@@ -81,7 +94,7 @@ namespace lotus
             }
         }
 
-        if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
+       /* if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
         {
             for (size_t i = 0; i < entity->shadowmap_buffers.size(); ++i)
             {
@@ -134,7 +147,7 @@ namespace lotus
 
                 command_buffer->end(thread->engine->renderer.dispatch);
             }
-        }
+        }*/
     }
 
     void ParticleEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, bool transparency, vk::PipelineLayout layout, size_t image)
@@ -144,14 +157,13 @@ namespace lotus
             Model* model = entity->models[model_i].get();
             if (!model->meshes.empty())
             {
-                uint32_t material_index = 0;
+                uint32_t material_index = entity->material_index;
                 for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
                 {
                     Mesh* mesh = model->meshes[mesh_i].get();
                     if (mesh->has_transparency == transparency)
                     {
                         command_buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, {0}, thread->engine->renderer.dispatch);
-                        material_index = model->bottom_level_as->resource_index + mesh_i;
                         drawMesh(thread, command_buffer, *mesh, layout, material_index);
                     }
                 }

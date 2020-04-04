@@ -29,6 +29,7 @@ struct Mesh
     int tex_offset;
     float specular1;
     float specular2;
+    vec4 color;
     uint light_type;
 };
 

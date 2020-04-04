@@ -1,6 +1,7 @@
 #include "scene.h"
 #include "entity/renderable_entity.h"
 #include "entity/deformable_entity.h"
+#include "entity/particle.h"
 #include "core.h"
 #include "renderer/vulkan/renderer.h"
 #include "task/acceleration_build.h"
@@ -20,16 +21,21 @@ namespace lotus
             top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(engine, true);
             Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
             {
-                if (model->bottom_level_as && model->lifetime != Lifetime::Long)
-                {
-                    top_level_as[image_index]->AddBLASResource(model.get());
-                }
+                //TODO: review if this is needed
+                //if (model->bottom_level_as && model->lifetime != Lifetime::Long)
+                //{
+                //    top_level_as[image_index]->AddBLASResource(model.get());
+                //}
             });
             for (const auto& entity : entities)
             {
                 if (auto deformable_entity = dynamic_cast<DeformableEntity*>(entity.get()))
                 {
                     top_level_as[image_index]->AddBLASResource(deformable_entity);
+                }
+                if (auto particle = dynamic_cast<Particle*>(entity.get()))
+                {
+                    top_level_as[image_index]->AddBLASResource(particle);
                 }
             }
         }

@@ -14,6 +14,7 @@ struct Mesh
     uint tex_offset;
     float specular_exponent;
     float specular_intensity;
+    vec4 color;
     uint light_type;
 };
 

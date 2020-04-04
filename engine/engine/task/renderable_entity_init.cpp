@@ -86,7 +86,12 @@ namespace lotus
                 model_buffer_info.offset = i * (sizeof(RenderableEntity::UniformBufferObject));
                 model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-                std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
+                vk::DescriptorBufferInfo mesh_info;
+                mesh_info.buffer = thread->engine->renderer.mesh_info_buffer->buffer;
+                mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
+                mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
+
+                std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
                 descriptorWrites[0].dstSet = nullptr;
                 descriptorWrites[0].dstBinding = 0;
@@ -101,6 +106,13 @@ namespace lotus
                 descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pBufferInfo = &model_buffer_info;
+
+                descriptorWrites[2].dstSet = nullptr;
+                descriptorWrites[2].dstBinding = 3;
+                descriptorWrites[2].dstArrayElement = 0;
+                descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[2].descriptorCount = 1;
+                descriptorWrites[2].pBufferInfo = &mesh_info;
 
                 command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
 

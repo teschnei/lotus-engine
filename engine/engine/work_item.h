@@ -16,7 +16,7 @@ namespace lotus
         virtual void Process(WorkerThread*) = 0;
         virtual ~WorkItem() = default;
 
-        int priority = 0;
+        float priority = 0;
         bool operator>(const WorkItem& o) const { return priority > o.priority; }
 
         struct GraphicsResources

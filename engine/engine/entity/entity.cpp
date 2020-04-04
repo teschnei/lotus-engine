@@ -36,6 +36,12 @@ namespace lotus
         this->rot_mat = glm::transpose(glm::toMat4(quat));
     }
 
+    void Entity::setRot(glm::vec3 rot)
+    {
+        rot_euler = rot;
+        setRot(glm::quat(rot));
+    }
+
     glm::vec3 Entity::getPos()
     {
         return this->pos;
@@ -44,5 +50,9 @@ namespace lotus
     glm::quat Entity::getRot()
     {
         return this->rot;
+    }
+    glm::vec3 Entity::getRotEuler()
+    {
+        return rot_euler;
     }
 }

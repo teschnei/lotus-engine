@@ -6,12 +6,13 @@ struct Vertex
 {
     vec3 pos;
     vec3 norm;
+    vec4 color;
     vec2 uv;
 };
 
 layout(binding = 1, set = 0) buffer Vertices
 {
-    Vertex v[];
+    vec4 v[];
 } vertices[1024];
 
 layout(binding = 2, set = 0) buffer Indices
@@ -41,6 +42,12 @@ layout(location = 0) rayPayloadInNV HitValue
     vec3 color;
 } hitValue;
 
+layout(location = 1) rayPayloadInNV Shadow
+{
+    bool shadowed;
+    vec3 color;
+} shadow;
+
 layout(shaderRecordNV) buffer Block
 {
     uint geometry_index;
@@ -48,10 +55,10 @@ layout(shaderRecordNV) buffer Block
 
 hitAttributeNV vec3 attribs;
 
-ivec3 getIndex(uint primitive_id)
+uvec3 getIndex(uint primitive_id)
 {
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
-    ivec3 ret;
+    uvec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
     {
@@ -65,6 +72,9 @@ ivec3 getIndex(uint primitive_id)
         ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
         ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
     }
+    ret.x = base_index;
+    ret.y = base_index+1;
+    ret.z = base_index+2;
     return ret;
 }
 
@@ -73,14 +83,22 @@ uint vertexSize = 3;
 Vertex unpackVertex(uint index)
 {
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
-    Vertex v = vertices[resource_index].v[index];
+    Vertex v;
 
+    vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
+    vec4 d1 = vertices[resource_index].v[vertexSize * index + 1];
+    vec4 d2 = vertices[resource_index].v[vertexSize * index + 2];
+
+    v.pos = d0.xyz;
+    v.norm = vec3(d0.w, d1.x, d1.y);
+    v.color = vec4(d1.z, d1.w, d2.x, d2.y);
+    v.uv = vec2(d2.z, d2.w);
     return v;
 }
 
 void main()
 {
-    ivec3 primitive_indices = getIndex(gl_PrimitiveID);
+    uvec3 primitive_indices = getIndex(gl_PrimitiveID);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
     Vertex v2 = unpackVertex(primitive_indices.z);
@@ -88,8 +106,12 @@ void main()
     const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
+    vec4 mesh_color = v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z;
+    vec4 model_color = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].color;
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].tex_offset;
-    float a = texture(textures[resource_index], uv).a;
-    if (a == 0)
-        ignoreIntersectionNV();
+    vec4 color = texture(textures[resource_index], uv) * mesh_color * model_color;
+    float a = (color.r + color.g + color.b) / 3.0;
+
+    shadow.color *= (1 - a);
+    ignoreIntersectionNV();
 }

@@ -81,6 +81,9 @@
       <Filter>dat</Filter>
     </ClCompile>
     <ClCompile Include="particle_tester.cpp" />
+    <ClCompile Include="dat\scheduler.cpp">
+      <Filter>dat</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dat\dat_parser.h">
@@ -152,6 +155,9 @@
       <Filter>dat</Filter>
     </ClInclude>
     <ClInclude Include="particle_tester.h" />
+    <ClInclude Include="dat\scheduler.h">
+      <Filter>dat</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <GLSLValidate Include="..\shaders\blend.frag">
@@ -197,6 +203,15 @@
       <Filter>shaders</Filter>
     </GLSLValidate>
     <GLSLValidate Include="..\shaders\particle_shadow_vert.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_closest_hit.rchit">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_color_hit.rahit">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_intersection.rint">
       <Filter>shaders</Filter>
     </GLSLValidate>
     <GLSLValidate Include="..\shaders\miss.rmiss">

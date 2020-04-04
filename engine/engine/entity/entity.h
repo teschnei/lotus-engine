@@ -47,9 +47,11 @@ namespace lotus
 
         void setPos(glm::vec3);
         void setRot(glm::quat rot);
+        void setRot(glm::vec3 rot);
 
         glm::vec3 getPos();
         glm::quat getRot();
+        glm::vec3 getRotEuler();
 
         bool should_remove() { return remove; };
 
@@ -58,7 +60,10 @@ namespace lotus
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp){}
 
         Engine* engine;
-        glm::vec3 pos{};
+        glm::vec3 pos{0.f};
+        //despite there being two rot members, populating the quaternion does not populate the euler angle rotation - must choose which to use
+        //particles, camera will use euler angles, others can use quaternion
+        glm::vec3 rot_euler{0.f};
         glm::quat rot{1.f, 0.f, 0.f, 0.f};
         glm::mat4 pos_mat{ 1.f };
         glm::mat4 rot_mat{ 1.f };

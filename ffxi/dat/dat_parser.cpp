@@ -5,6 +5,7 @@
 #include "mo2.h"
 #include "sk2.h"
 #include "dxt3.h"
+#include "scheduler.h"
 #include "generator.h"
 #include "d3m.h"
 #include <fstream>

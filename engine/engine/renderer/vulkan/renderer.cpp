@@ -118,7 +118,7 @@ namespace lotus
             if (!shader_binding_table)
             {
                 constexpr uint32_t shader_nonhitcount = 3;
-                constexpr uint32_t shader_hitcount = shaders_per_group * 4;
+                constexpr uint32_t shader_hitcount = shaders_per_group * 6;
                 shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
                 vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
                 shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
@@ -162,9 +162,6 @@ namespace lotus
                 set_ci.descriptorSetCount = 3;
                 set_ci.pSetLayouts = layouts.data();
                 rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, dispatch);
-
-                mesh_info_buffer = memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
-                mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
             }
         }
     }
@@ -746,13 +743,6 @@ namespace lotus
         camera_layout_binding.pImmutableSamplers = nullptr;
         camera_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
-        vk::DescriptorSetLayoutBinding model_layout_binding;
-        model_layout_binding.binding = 2;
-        model_layout_binding.descriptorCount = 1;
-        model_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        model_layout_binding.pImmutableSamplers = nullptr;
-        model_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
-
         vk::DescriptorSetLayoutBinding sample_layout_binding;
         sample_layout_binding.binding = 1;
         sample_layout_binding.descriptorCount = 1;
@@ -760,7 +750,21 @@ namespace lotus
         sample_layout_binding.pImmutableSamplers = nullptr;
         sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding };
+        vk::DescriptorSetLayoutBinding model_layout_binding;
+        model_layout_binding.binding = 2;
+        model_layout_binding.descriptorCount = 1;
+        model_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        model_layout_binding.pImmutableSamplers = nullptr;
+        model_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+        vk::DescriptorSetLayoutBinding mesh_info_layout_binding;
+        mesh_info_layout_binding.binding = 3;
+        mesh_info_layout_binding.descriptorCount = 1;
+        mesh_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        mesh_info_layout_binding.pImmutableSamplers = nullptr;
+        mesh_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding, mesh_info_layout_binding };
 
         vk::DescriptorSetLayoutCreateInfo layout_info = {};
         layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
@@ -1426,7 +1430,7 @@ namespace lotus
             particle_pipeline_info.pDynamicState = &dynamic_state_ci;
             main_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
             landscape_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
-            particle_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
+            //particle_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
 
             main_pipeline_info.stageCount = 1;
             main_pipeline_info.pStages = &vert_shader_stage_info;
@@ -1436,7 +1440,7 @@ namespace lotus
             particle_pipeline_info.pStages = &particle_vert_shader_stage_info;
             main_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
             landscape_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
-            particle_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
+            //particle_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
         }
         if (RTXEnabled())
         {
@@ -1457,6 +1461,9 @@ namespace lotus
                 auto color_hit_shader_module = getShader("shaders/color_hit.spv");
                 auto landscape_closest_hit_shader_module = getShader("shaders/landscape_closest_hit.spv");
                 auto landscape_color_hit_shader_module = getShader("shaders/landscape_color_hit.spv");
+                auto particle_closest_hit_shader_module = getShader("shaders/particle_closest_hit.spv");
+                auto particle_color_hit_shader_module = getShader("shaders/particle_color_hit.spv");
+                auto particle_intersection_shader_module = getShader("shaders/particle_intersection.spv");
 
                 vk::PipelineShaderStageCreateInfo raygen_stage_ci;
                 raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenNV;
@@ -1493,7 +1500,23 @@ namespace lotus
                 landscape_color_hit_stage_ci.module = *landscape_color_hit_shader_module;
                 landscape_color_hit_stage_ci.pName = "main";
 
-                std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci, landscape_closest_stage_ci, landscape_color_hit_stage_ci };
+                vk::PipelineShaderStageCreateInfo particle_closest_stage_ci;
+                particle_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+                particle_closest_stage_ci.module = *particle_closest_hit_shader_module;
+                particle_closest_stage_ci.pName = "main";
+
+                vk::PipelineShaderStageCreateInfo particle_color_hit_stage_ci;
+                particle_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+                particle_color_hit_stage_ci.module = *particle_color_hit_shader_module;
+                particle_color_hit_stage_ci.pName = "main";
+
+                vk::PipelineShaderStageCreateInfo particle_intersection_stage_ci;
+                particle_intersection_stage_ci.stage = vk::ShaderStageFlagBits::eIntersectionNV;
+                particle_intersection_stage_ci.module = *particle_intersection_shader_module;
+                particle_intersection_stage_ci.pName = "main";
+
+                std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci,
+                    landscape_closest_stage_ci, landscape_color_hit_stage_ci, particle_closest_stage_ci, particle_color_hit_stage_ci, particle_intersection_stage_ci };
 
                 std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_group_ci = {
                     {
@@ -1555,6 +1578,28 @@ namespace lotus
                         VK_SHADER_UNUSED_NV,
                         VK_SHADER_UNUSED_NV,
                         6,
+                        VK_SHADER_UNUSED_NV
+                    );
+                }
+
+                for (int i = 0; i < shaders_per_group; ++i)
+                {
+                    shader_group_ci.emplace_back(
+                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_NV,
+                        7,
+                        8,
+                        VK_SHADER_UNUSED_NV
+                    );
+                }
+
+                for (int i = 0; i < shaders_per_group; ++i)
+                {
+                    shader_group_ci.emplace_back(
+                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_NV,
+                        VK_SHADER_UNUSED_NV,
+                        8,
                         VK_SHADER_UNUSED_NV
                     );
                 }
@@ -1918,6 +1963,9 @@ namespace lotus
 
             rtx_gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
         }
+
+        mesh_info_buffer = memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
+        mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
     }
 
     void Renderer::createDeferredCommandBuffer()
@@ -2136,7 +2184,7 @@ namespace lotus
 
                 descriptorWrites[3].dstSet = nullptr;
                 descriptorWrites[3].descriptorType = vk::DescriptorType::eUniformBuffer;
-                descriptorWrites[3].dstBinding = 4;
+                descriptorWrites[3].dstBinding = 5;
                 descriptorWrites[3].dstArrayElement = 0;
                 descriptorWrites[3].descriptorCount = 1;
                 descriptorWrites[3].pBufferInfo = &mesh_info;

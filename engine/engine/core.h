@@ -6,6 +6,7 @@
 #include "input.h"
 #include "types.h"
 #include "light_manager.h"
+#include "random.h"
 
 namespace lotus
 {

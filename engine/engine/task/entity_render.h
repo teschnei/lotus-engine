@@ -7,7 +7,7 @@ namespace lotus
     class EntityRenderTask : public WorkItem
     {
     public:
-        EntityRenderTask(std::shared_ptr<RenderableEntity>& entity);
+        EntityRenderTask(std::shared_ptr<RenderableEntity>& entity, float priority = 1);
 
         virtual void Process(WorkerThread*) override;
     private:

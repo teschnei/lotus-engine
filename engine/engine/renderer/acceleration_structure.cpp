@@ -2,6 +2,7 @@
 #include "engine/core.h"
 #include "engine/renderer/model.h"
 #include "engine/entity/deformable_entity.h"
+#include "engine/entity/particle.h"
 #include "engine/entity/component/animation_component.h"
 
 void lotus::AccelerationStructure::PopulateAccelerationStructure(uint32_t instanceCount,
@@ -219,7 +220,7 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(Model* model)
         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-        engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, model->light_offset };
+        engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, model->light_offset };
     }
     model->bottom_level_as->resource_index = index;
 }
@@ -236,8 +237,24 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(DeformableEntity* ent
             descriptor_vertex_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
             descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
             descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-            engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + j] = { index + (uint32_t)j, index + (uint32_t)j, mesh->specular_exponent, mesh->specular_intensity, entity->models[i]->light_offset };
+            engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + j] = { index + (uint32_t)j, index + (uint32_t)j, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, entity->models[i]->light_offset };
         }
         entity->animation_component->transformed_geometries[i].bottom_level_as[image]->resource_index = index;
     }
+}
+
+void lotus::TopLevelAccelerationStructure::AddBLASResource(Particle* entity)
+{
+    uint32_t image = engine->renderer.getCurrentImage();
+    uint16_t index = static_cast<uint16_t>(descriptor_vertex_info.size()) + engine->renderer.static_acceleration_bindings_offset;
+    auto& model = entity->models[0];
+    for (size_t i = 0; i < model->meshes.size(); ++i)
+    {
+        auto& mesh = model->meshes[i];
+        descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
+        descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
+        descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+        engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, entity->color, model->light_offset };
+    }
+    model->bottom_level_as->resource_index = index;
 }

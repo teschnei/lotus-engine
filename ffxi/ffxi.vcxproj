@@ -20,6 +20,7 @@
     <ClCompile Include="dat\mo2.cpp" />
     <ClCompile Include="dat\mzb.cpp" />
     <ClCompile Include="dat\os2.cpp" />
+    <ClCompile Include="dat\scheduler.cpp" />
     <ClCompile Include="dat\sk2.cpp" />
     <ClCompile Include="entity\actor.cpp" />
     <ClCompile Include="entity\component\third_person_ffxiv_camera_component.cpp" />
@@ -47,6 +48,7 @@
     <ClInclude Include="dat\mo2.h" />
     <ClInclude Include="dat\mzb.h" />
     <ClInclude Include="dat\os2.h" />
+    <ClInclude Include="dat\scheduler.h" />
     <ClInclude Include="dat\sk2.h" />
     <ClInclude Include="entity\actor.h" />
     <ClInclude Include="entity\component\third_person_ffxiv_camera_component.h" />
@@ -79,6 +81,9 @@
     <GLSLValidate Include="..\shaders\particle_blend.frag" />
     <GLSLValidate Include="..\shaders\particle_gbuffer_vert.vert" />
     <GLSLValidate Include="..\shaders\particle_shadow_vert.vert" />
+    <GLSLValidate Include="..\shaders\particle_closest_hit.rchit" />
+    <GLSLValidate Include="..\shaders\particle_color_hit.rahit" />
+    <GLSLValidate Include="..\shaders\particle_intersection.rint" />
     <GLSLValidate Include="..\shaders\miss.rmiss" />
     <GLSLValidate Include="..\shaders\raygen.rgen" />
     <GLSLValidate Include="..\shaders\raygen_hybrid.rgen" />
