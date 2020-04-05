@@ -256,5 +256,5 @@ void lotus::TopLevelAccelerationStructure::AddBLASResource(Particle* entity)
         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
         engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, entity->color, model->light_offset };
     }
-    model->bottom_level_as->resource_index = index;
+    entity->resource_index = index;
 }

@@ -125,6 +125,9 @@
     <ClCompile Include="engine\task\particle_entity_init.cpp">
       <Filter>task</Filter>
     </ClCompile>
+    <ClCompile Include="engine\task\particle_render.cpp">
+      <Filter>task</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\task\acceleration_build.h">
@@ -242,6 +245,9 @@
     <ClInclude Include="random.h" />
     <ClInclude Include="engine\entity\component\tick_component.h">
       <Filter>entity\component</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\task\particle_render.h">
+      <Filter>task</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

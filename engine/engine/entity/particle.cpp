@@ -2,7 +2,7 @@
 #include "engine/core.h"
 
 #include "engine/task/particle_entity_init.h"
-#include "engine/task/entity_render.h"
+#include "engine/task/particle_render.h"
 
 namespace lotus
 {
@@ -39,8 +39,8 @@ namespace lotus
     {
         auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
         auto length_squared = glm::pow(distance, 2);
-        auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
-        engine->worker_pool.addWork(std::make_unique<EntityRenderTask>(re_sp, -length_squared));
+        auto re_sp = std::static_pointer_cast<Particle>(sp);
+        engine->worker_pool.addWork(std::make_unique<ParticleRenderTask>(re_sp, -length_squared));
     }
     
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
@@ -56,7 +56,7 @@ namespace lotus
                 instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
                 instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::Particle);
                 instance.instanceOffset = lotus::Renderer::shaders_per_group * 4;
-                instance.instanceId = model->bottom_level_as->resource_index;
+                instance.instanceId = resource_index;
                 model->bottom_level_as->instanceid = as->AddInstance(instance);
             }
         }

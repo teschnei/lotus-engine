@@ -46,6 +46,7 @@
     <ClCompile Include="engine\task\model_init.cpp" />
     <ClCompile Include="engine\task\particle_entity_init.cpp" />
     <ClCompile Include="engine\task\particle_model_init.cpp" />
+    <ClCompile Include="engine\task\particle_render.cpp" />
     <ClCompile Include="engine\task\renderable_entity_init.cpp" />
     <ClCompile Include="engine\task\transform_skeleton.cpp" />
     <ClCompile Include="engine\task\texture_init.cpp" />
@@ -92,6 +93,7 @@
     <ClInclude Include="engine\task\model_init.h" />
     <ClInclude Include="engine\task\particle_entity_init.h" />
     <ClInclude Include="engine\task\particle_model_init.h" />
+    <ClInclude Include="engine\task\particle_render.h" />
     <ClInclude Include="engine\task\renderable_entity_init.h" />
     <ClInclude Include="engine\task\transform_skeleton.h" />
     <ClInclude Include="engine\task\texture_init.h" />

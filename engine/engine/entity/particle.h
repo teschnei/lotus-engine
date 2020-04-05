@@ -19,6 +19,8 @@ namespace lotus
 
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
 
+        uint64_t resource_index{ 0 };
+
     protected:
         virtual void tick(time_point time, duration delta) override;
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;

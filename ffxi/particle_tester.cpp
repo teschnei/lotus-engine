@@ -13,8 +13,6 @@
 
 #include "engine/entity/component/tick_component.h"
 
-#include <iostream>
-
 ParticleTester::ParticleTester(lotus::Engine* _engine) : engine(_engine),
     parser_system( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path + R"(\ROM\0\0.dat)", engine->renderer.RTXEnabled() ),
     parser( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path + R"(\ROM\10\9.dat)", engine->renderer.RTXEnabled() )
@@ -227,7 +225,6 @@ void ParticleTester::CreateParticle()
             }
             auto color = particle_pointer->color;
             particle_pointer->color.a = glm::mix(prev, next, a);
-            std::cout << "progress: " << progress << "alpha: " << particle_pointer->color.a << std::endl;
         }
         if (!generator->kf_u.empty())
         {
