@@ -12,4 +12,4 @@ add_library( engine
 
 message( STATUS "VULKAN SHIT ${Vulkan_INCLUDE_DIR} ${Vulkan_LIBRARIES}" )
 
-target_link_libraries( engine glm_static ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES} )
+target_link_libraries( engine ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES} )

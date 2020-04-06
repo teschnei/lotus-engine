@@ -86,7 +86,7 @@ find_path(SDL2_INCLUDE_DIR SDL.h
                 include/SDL2 include
 
 )
-message(STATUS "AAAAAAAAAAA $ENV{VULKAN_SDK}/Third-Party/Include/SDL2")
+#message(STATUS "AAAAAAAAAAA $ENV{VULKAN_SDK}/Third-Party/Include/SDL2")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(VC_LIB_PATH_SUFFIX lib/x64)
@@ -188,11 +188,12 @@ if ( SDL2_INCLUDE_DIR AND NOT SDL2_LIBRARY )
   endif()
 
   if( MSVC )
-    set( SDL2_LIBRARY "${SDL2_INCLUDE_DIR}../${VK_TP_LIB_DIR}/SDL2.lib" )
-    set( SDL2MAIN_LIBRARY "${SDL2_INCLUDE_DIR}../${VK_TP_LIB_DIR}/SDL2Main.lib" )
+    set( SDL2_LIBRARY "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2.lib" )
+    set( SDL2MAIN_LIBRARY "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2Main.lib" )
+    set( SDL2_DLL "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2.dll" )
   else()
-    set( SDL2_LIBRARY "${SDL2_INCLUDE_DIR}../${VK_TP_LIB_DIR}/SDL2.a" )
-    set( SDL2MAIN_LIBRARY "${SDL2_INCLUDE_DIR}../${VK_TP_LIB_DIR}/SDL2Main.a" )
+    set( SDL2_LIBRARY "${SDL2_INCLUDE_DIR/}/../../${VK_TP_LIB_DIR}/SDL2.a" )
+    set( SDL2MAIN_LIBRARY "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2Main.a" )
   endif()
 
   set( SDL2_LIBRARIES ${SDL2_LIBRARY} ${SDL2MAIN_LIBRARY} )

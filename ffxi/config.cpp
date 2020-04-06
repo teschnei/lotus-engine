@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <winreg.h>
 #endif
 
 FFXIConfig::FFXIConfig(): lotus::Config()

@@ -68,7 +68,9 @@ void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer 
 
     command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV,
         {}, nullptr, barrier, nullptr, engine->renderer.dispatch);
-    command_buffer.buildAccelerationStructureNV(info, instance_buffer, instance_offset, update, *acceleration_structure, update ? *acceleration_structure : VK_NULL_HANDLE, scratch_memory->buffer, 0, engine->renderer.dispatch);
+    // TODO: check this works with other vulkan api revs
+    // update ? *acceleration_structure : VK_NULL_HANDLE -> update ? *acceleration_structure : nullptr
+    command_buffer.buildAccelerationStructureNV(info, instance_buffer, instance_offset, update, *acceleration_structure, update ? *acceleration_structure : nullptr, scratch_memory->buffer, 0, engine->renderer.dispatch);
 }
 
 void lotus::AccelerationStructure::Copy(vk::CommandBuffer command_buffer, AccelerationStructure& target)

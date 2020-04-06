@@ -22,6 +22,7 @@ find_package( Vulkan REQUIRED )
 ## includes
 ###############################
 include_directories( "engine" )
+include_directories( "ffxi" )
 
 include_directories( "external" )
 include_directories( "external/stb" )
