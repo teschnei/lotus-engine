@@ -355,10 +355,10 @@ namespace lotus
             int width, height;
             SDL_GetWindowSize(window, &width, &height);
 
-            swap_extent =
+            swap_extent = VkExtent2D
             {
-                std::clamp(static_cast<uint32_t>(width), swap_chain_info.capabilities.minImageExtent.width, swap_chain_info.capabilities.maxImageExtent.width),
-                std::clamp(static_cast<uint32_t>(height), swap_chain_info.capabilities.minImageExtent.height, swap_chain_info.capabilities.maxImageExtent.height)
+                std::clamp( static_cast<uint32_t>( width ), swap_chain_info.capabilities.minImageExtent.width, swap_chain_info.capabilities.maxImageExtent.width ),
+                std::clamp( static_cast<uint32_t>( height ), swap_chain_info.capabilities.minImageExtent.height, swap_chain_info.capabilities.maxImageExtent.height )
             };
         }
         uint32_t image_count = swap_chain_info.capabilities.minImageCount + 1;
@@ -1205,7 +1205,7 @@ namespace lotus
         viewport.maxDepth = 1.0f;
 
         vk::Rect2D scissor;
-        scissor.offset = {0, 0};
+        scissor.offset = vk::Offset2D(0, 0);
         scissor.extent = swapchain_extent;
 
         vk::PipelineViewportStateCreateInfo viewport_state;
@@ -1664,7 +1664,7 @@ namespace lotus
                 viewport.maxDepth = 1.0f;
 
                 vk::Rect2D scissor;
-                scissor.offset = {0, 0};
+                scissor.offset = vk::Offset2D(0, 0);
                 scissor.extent = swapchain_extent;
 
                 vk::PipelineViewportStateCreateInfo viewport_state;
@@ -1989,13 +1989,13 @@ namespace lotus
 
                 std::array<vk::ClearValue, 2> clearValues;
                 clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-                clearValues[1].depthStencil = { 1.f, 0 };
+                clearValues[1].depthStencil = vk::ClearDepthStencilValue( 1.f, 0 );
 
                 vk::RenderPassBeginInfo renderpass_info;
                 renderpass_info.renderPass = *render_pass;
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
                 renderpass_info.pClearValues = clearValues.data();
-                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.offset = vk::Offset2D( 0, 0 );
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
@@ -2132,7 +2132,7 @@ namespace lotus
                 renderpass_info.renderPass = *rtx_render_pass;
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
                 renderpass_info.pClearValues = clear_values.data();
-                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.offset = vk::Offset2D( 0, 0 );
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
@@ -2216,7 +2216,7 @@ namespace lotus
                 renderpass_info.renderPass = *rtx_render_pass;
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
                 renderpass_info.pClearValues = clear_values.data();
-                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.offset = vk::Offset2D( 0, 0 );
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
@@ -2524,17 +2524,17 @@ namespace lotus
         buffer[0]->begin(begin_info, dispatch);
 
         vk::RenderPassBeginInfo renderpass_info = {};
-        renderpass_info.renderArea.offset = { 0, 0 };
+        renderpass_info.renderArea.offset = vk::Offset2D( 0, 0 );
 
         if (RasterizationEnabled())
         {
             if (render_mode == RenderMode::Rasterization)
             {
                 renderpass_info.renderPass = *shadowmap_render_pass;
-                renderpass_info.renderArea.extent = { shadowmap_dimension, shadowmap_dimension };
+                renderpass_info.renderArea.extent = vk::Extent2D( shadowmap_dimension, shadowmap_dimension );
 
                 std::array<vk::ClearValue, 1> clearValue = {};
-                clearValue[0].depthStencil = { 1.0f, 0 };
+                clearValue[0].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
 
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clearValue.size());
                 renderpass_info.pClearValues = clearValue.data();
@@ -2560,7 +2560,7 @@ namespace lotus
             clearValues[3].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
             clearValues[4].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clearValues[5].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clearValues[6].depthStencil = { 1.0f, 0 };
+            clearValues[6].depthStencil = vk::ClearDepthStencilValue( 1.0f, 0 );
 
             renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
             renderpass_info.pClearValues = clearValues.data();

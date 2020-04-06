@@ -110,7 +110,7 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     if (model->meshes.size() > 32)
     {
         //RTX shader groups need to be increased if this goes up more, or some kind of refactoring needs to happen to move meshes to something that uses their own resource index
-        __debugbreak();
+        DEBUG_BREAK();
     }
     engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
 }

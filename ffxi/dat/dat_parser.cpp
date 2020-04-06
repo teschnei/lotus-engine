@@ -33,7 +33,7 @@ namespace FFXI
         std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };
 
         if (!dat.good())
-            throw std::exception("dat not found");
+            throw std::runtime_error("dat not found");
 
         size_t file_size = (size_t)dat.tellg();
         buffer.resize(file_size);

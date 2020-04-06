@@ -138,7 +138,7 @@ FFXI::OS2::OS2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _bu
             //set material
             case 0x8000:
             {
-                if (!meshes.back().tex_name.empty()) __debugbreak();
+                if (!meshes.back().tex_name.empty()) DEBUG_BREAK();
                 meshes.back().tex_name = std::string{ (char*)draw_cmds, 16 };
                 draw_cmds += 16;
             }
@@ -212,7 +212,7 @@ FFXI::OS2::OS2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _bu
             break;
             default:
             {
-                __debugbreak();
+                DEBUG_BREAK();
             }
         }
     }
@@ -236,7 +236,7 @@ FFXI::OS2::OS2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _bu
     }
     else
     {
-        __debugbreak();
+        DEBUG_BREAK();
     }
 
     bool use_bone_table = header->mVertAndBoneRefFlag & 0x80;
