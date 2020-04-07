@@ -4,15 +4,13 @@ file( GLOB_RECURSE SOURCE *.cpp *.hpp *.c )
 file( GLOB_RECURSE HEADERS *.h )
 
 add_executable( ffxi
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${Vulkan_INCLUDE_DIR}"
 	${SOURCE}
 	${HEADERS}
 )
 
 message( STATUS "VULKAN SHIT ${Vulkan_INCLUDE_DIR} ${Vulkan_LIBRARIES}" )
 
-target_link_libraries( ffxi engine ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES} )
+target_link_libraries( ffxi engine ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES} -ldl )
 
 if (MSVC)
   add_custom_command( TARGET ffxi POST_BUILD

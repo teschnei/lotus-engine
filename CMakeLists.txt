@@ -6,17 +6,17 @@ project( ffxi )
 
 set(CMAKE_MODULE_PATH
 	${CMAKE_MODULE_PATH}
-	${CMAKE_MODULE_PATH}/cmake
+	${CMAKE_CURRENT_SOURCE_DIR}/cmake
 )
 
 ###############################
 ## deps
 ###############################
 include( "cmake/compiler.cmake" )
-include( "cmake/FindGLM.cmake" )
-include( "cmake/FindSDL2.cmake" )
 
 find_package( Vulkan REQUIRED )
+find_package( GLM REQUIRED )
+find_package( SDL2 REQUIRED )
 
 ###############################
 ## includes

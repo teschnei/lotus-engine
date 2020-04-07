@@ -2,11 +2,9 @@
 # https://github.com/SapphireServer/Sapphire/blob/master/cmake/compiler.cmake
 
 if( NOT MSVC )
+  #set( CMAKE_CXX_STANDARD 20 )
   set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a " )
-  set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
   add_definitions( -DGLM_ENABLE_EXPERIMENTAL=1 )
-
-  set( CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -ldl" )
 else()
 
   add_definitions( -D_CRT_SECURE_NO_WARNINGS )
