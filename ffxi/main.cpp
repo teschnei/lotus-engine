@@ -27,7 +27,6 @@ public:
     Game(const lotus::Engine::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>())
     {
         scene = std::make_unique<lotus::Scene>(engine.get());
-        particle_tester = std::make_unique<ParticleTester>(engine.get());
         default_texture = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
         auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
         /* zone dats vtable:
@@ -43,6 +42,7 @@ public:
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(iroha));
         engine->set_camera(camera.get());
         iroha->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input);
+        iroha->addComponent<ParticleTester>(&engine->input);
         //TODO: move this back to core.cpp after camera is figured out
         engine->renderer.generateCommandBuffers();
         engine->lights.light.diffuse_dir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
@@ -51,10 +51,8 @@ public:
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override
     {
-        particle_tester->tick(time, delta);
     }
     std::shared_ptr<lotus::Texture> default_texture;
-    std::unique_ptr<ParticleTester> particle_tester;
 };
 
 int main(int argc, char* argv[]) {

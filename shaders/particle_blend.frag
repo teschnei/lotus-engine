@@ -35,7 +35,7 @@ void main() {
     vec4 particle_color = meshInfo.m[push.material_index].color;
     outParticle.rgb = particle_color.rgb + tex.rgb;
     outParticle.a = ((tex.r + tex.g + tex.b) / 3.0) * particle_color.a;
-    //if (outParticle.a <= 1.f/32.f)
-    //    discard;
+    if (outParticle.a <= 1.f/32.f)
+        discard;
 }
 

@@ -1,4 +1,5 @@
 #include "entity.h"
+#include <glm/gtx/euler_angles.hpp>
 
 namespace lotus
 {
@@ -12,6 +13,12 @@ namespace lotus
         {
             component->tick(time, delta);
         }
+        components.erase(std::remove_if(components.begin(), components.end(), [](auto& component)
+        {
+            return component->removed();
+        }), components.end());
+        components.insert(components.end(), std::move_iterator(new_components.begin()), std::move_iterator(new_components.end()));
+        new_components.clear();
         tick(time, delta);
     }
 
@@ -39,7 +46,7 @@ namespace lotus
     void Entity::setRot(glm::vec3 rot)
     {
         rot_euler = rot;
-        setRot(glm::quat(rot));
+        this->rot_mat = glm::eulerAngleXYZ(rot.x, rot.z, rot.y);
     }
 
     glm::vec3 Entity::getPos()

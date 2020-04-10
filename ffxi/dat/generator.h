@@ -80,6 +80,9 @@ namespace FFXI
         float gen_height_fluctuation{ 0 };
         uint32_t rotations{ 0 };;
 
+        //addition to rot every generation
+        glm::vec3 gen_rot_add;
+
         //keyframe animation
         std::string kf_x_pos;
         std::string kf_y_pos;

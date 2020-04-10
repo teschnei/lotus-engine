@@ -2833,23 +2833,28 @@ namespace lotus
         engine->worker_pool.startProcessing(current_image);
         engine->lights.UpdateLightBuffer();
 
-        vk::SubmitInfo submitInfo = {};
-
+        std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame]};
+        std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderNV };
         auto buffers = engine->worker_pool.getPrimaryComputeBuffers(current_image);
-        submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
-        submitInfo.pCommandBuffers = buffers.data();
-        //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
-        vk::Semaphore compute_signal_sems[] = { *compute_sem };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = compute_signal_sems;
+        if (!buffers.empty())
+        {
+            vk::SubmitInfo submitInfo = {};
+            submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
+            submitInfo.pCommandBuffers = buffers.data();
+            //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
+            vk::Semaphore compute_signal_sems[] = { *compute_sem };
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = compute_signal_sems;
 
-        compute_queue.submit(submitInfo, nullptr, dispatch);
+            compute_queue.submit(submitInfo, nullptr, dispatch);
+            waitSemaphores.push_back(*compute_sem);
+            waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV | vk::PipelineStageFlagBits::eVertexInput);
+        }
 
-        vk::Semaphore waitSemaphores[] = { *image_ready_sem[current_frame], *compute_sem };
-        vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderNV, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV };
-        submitInfo.waitSemaphoreCount = 2;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
+        vk::SubmitInfo submitInfo = {};
+        submitInfo.waitSemaphoreCount = waitSemaphores.size();
+        submitInfo.pWaitSemaphores = waitSemaphores.data();
+        submitInfo.pWaitDstStageMask = waitStages.data();
 
         buffers = engine->worker_pool.getPrimaryGraphicsBuffers(current_image);
         buffers.push_back(getRenderCommandbuffer(current_image));

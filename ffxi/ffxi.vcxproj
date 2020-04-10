@@ -23,6 +23,8 @@
     <ClCompile Include="dat\scheduler.cpp" />
     <ClCompile Include="dat\sk2.cpp" />
     <ClCompile Include="entity\actor.cpp" />
+    <ClCompile Include="entity\component\generator_component.cpp" />
+    <ClCompile Include="entity\component\scheduler_component.cpp" />
     <ClCompile Include="entity\component\third_person_ffxiv_camera_component.cpp" />
     <ClCompile Include="entity\component\third_person_ffxiv_entity_input.cpp" />
     <ClCompile Include="entity\component\third_person_ffxi_camera_component.cpp" />
@@ -51,6 +53,8 @@
     <ClInclude Include="dat\scheduler.h" />
     <ClInclude Include="dat\sk2.h" />
     <ClInclude Include="entity\actor.h" />
+    <ClInclude Include="entity\component\generator_component.h" />
+    <ClInclude Include="entity\component\scheduler_component.h" />
     <ClInclude Include="entity\component\third_person_ffxiv_camera_component.h" />
     <ClInclude Include="entity\component\third_person_ffxiv_entity_input.h" />
     <ClInclude Include="entity\component\third_person_ffxi_camera_component.h" />

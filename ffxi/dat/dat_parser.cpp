@@ -115,7 +115,7 @@ namespace FFXI
             case 0x07:
                 current_chunk->scheduler++;
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<Scheduler>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }

@@ -28,6 +28,9 @@ namespace FFXI
         };
 #pragma pack(pop)
         Scheduler(char* name, uint8_t* buffer, size_t len);
+        std::pair<uint8_t*, uint32_t> getStage(uint32_t stage);
+
         SchedulerHeader* header{ nullptr };
+        uint8_t* data{ nullptr };
     };
 }

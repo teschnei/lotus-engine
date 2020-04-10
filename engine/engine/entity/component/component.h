@@ -16,8 +16,10 @@ namespace lotus {
         virtual ~Component() = default;
         virtual void tick(time_point time, duration delta) {};
         virtual void render() {};
+        bool removed() { return remove; }
     protected:
         Entity* entity;
         Engine* engine;
+        bool remove{ false };
     };
 }
