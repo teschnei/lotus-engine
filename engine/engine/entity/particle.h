@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "renderable_entity.h"
 
 namespace lotus
@@ -24,7 +25,7 @@ namespace lotus
     protected:
         virtual void tick(time_point time, duration delta) override;
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
-        glm::mat4 entity_rot_mat;
+        glm::mat4 entity_rot_mat{};
 
         duration lifetime;
         time_point spawn_time;

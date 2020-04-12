@@ -2,7 +2,7 @@
 #include "engine/core.h"
 
 #include "engine/task/particle_entity_init.h"
-#include "engine/task/particle_render.h"
+#include "engine/task/entity_render.h"
 
 #include <glm/gtx/euler_angles.hpp>
 
@@ -43,9 +43,8 @@ namespace lotus
     void Particle::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
         auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
-        auto length_squared = glm::pow(distance, 2);
-        auto re_sp = std::static_pointer_cast<Particle>(sp);
-        engine->worker_pool.addWork(std::make_unique<ParticleRenderTask>(re_sp, -length_squared));
+        auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
+        engine->worker_pool.addWork(std::make_unique<EntityRenderTask>(re_sp, 1000-distance));
     }
     
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)

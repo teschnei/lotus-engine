@@ -764,7 +764,14 @@ namespace lotus
         mesh_info_layout_binding.pImmutableSamplers = nullptr;
         mesh_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding, mesh_info_layout_binding };
+        vk::DescriptorSetLayoutBinding mesh_info_index_layout_binding;
+        mesh_info_index_layout_binding.binding = 4;
+        mesh_info_index_layout_binding.descriptorCount = 1;
+        mesh_info_index_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        mesh_info_index_layout_binding.pImmutableSamplers = nullptr;
+        mesh_info_index_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding, mesh_info_layout_binding, mesh_info_index_layout_binding };
 
         vk::DescriptorSetLayoutCreateInfo layout_info = {};
         layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;

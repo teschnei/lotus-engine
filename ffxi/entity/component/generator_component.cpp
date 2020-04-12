@@ -57,7 +57,7 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
         auto particle_pointer = particle.get();
         auto& kf_map = this->keyframes;
         auto generator = this->generator;
-        particle->addComponent<lotus::TickComponent>([particle_pointer, generator, movement_per_frame, rot_per_frame, kf_map](lotus::time_point current_time, lotus::duration delta)
+        auto particle_tick = [particle_pointer, generator, movement_per_frame, rot_per_frame, kf_map](lotus::time_point current_time, lotus::duration delta)
         {
             float movement = 30.f / ((float)std::chrono::nanoseconds(1s).count() / std::chrono::duration_cast<std::chrono::nanoseconds>(delta).count());
             particle_pointer->setPos(particle_pointer->getPos() + (movement * movement_per_frame));
@@ -209,7 +209,9 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
             {
 
             }
-        });
+        };
+        particle_tick(time, 0s);
+        particle->addComponent<lotus::TickComponent>(particle_tick);
         generated++;
     }
 }

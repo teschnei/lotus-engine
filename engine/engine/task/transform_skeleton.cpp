@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    TransformSkeletonTask::TransformSkeletonTask(DeformableEntity* _entity) : entity(_entity)
+    TransformSkeletonTask::TransformSkeletonTask(std::shared_ptr<DeformableEntity> _entity) : entity(_entity)
     {
     }
 

@@ -15,6 +15,10 @@ namespace lotus
     void LandscapeEntityInitTask::Process(WorkerThread* thread)
     {
         entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(RenderableEntity::UniformBufferObject) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(uint32_t) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        entity->uniform_buffer_mapped = static_cast<RenderableEntity::UniformBufferObject*>(entity->uniform_buffer->map(0, sizeof(RenderableEntity::UniformBufferObject) * thread->engine->renderer.getImageCount(), {}));
+        entity->mesh_index_buffer_mapped = static_cast<uint32_t*>(entity->mesh_index_buffer->map(0, sizeof(uint32_t) * thread->engine->renderer.getImageCount(), {}));
 
         populateInstanceBuffer(thread);
         createCommandBuffers(thread);

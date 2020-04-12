@@ -26,7 +26,7 @@ namespace lotus
     {
         for (auto& component : components)
         {
-            component->render();
+            component->render(engine, sp);
         }
         render(engine, sp);
     }
