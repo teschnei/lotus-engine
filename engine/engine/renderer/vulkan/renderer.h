@@ -39,6 +39,9 @@ namespace lotus
         uint32_t getCurrentImage() const { return current_image; }
         void setCurrentImage(int _current_image) { current_image = _current_image; }
         std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
+        size_t uniform_buffer_align_up(size_t in_size) const;
+        size_t storage_buffer_align_up(size_t in_size) const;
+        size_t align_up(size_t in_size, size_t alignment) const;
 
         void drawFrame();
         void resized() { resize = true; }
@@ -47,7 +50,9 @@ namespace lotus
 
         vk::UniqueHandle<vk::Instance, vk::DispatchLoaderStatic> instance;
         vk::PhysicalDevice physical_device;
+        vk::PhysicalDeviceProperties2 properties;
         vk::UniqueHandle<vk::Device, vk::DispatchLoaderStatic> device;
+        vk::DynamicLoader loader;
         std::unique_ptr<MemoryManager> memory_manager;
         vk::Queue graphics_queue;
         vk::Queue present_queue;

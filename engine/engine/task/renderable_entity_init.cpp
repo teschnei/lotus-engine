@@ -43,11 +43,11 @@ namespace lotus
             }
         }
 
-        entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(RenderableEntity::UniformBufferObject) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(uint32_t) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        entity->uniform_buffer_mapped = static_cast<RenderableEntity::UniformBufferObject*>(entity->uniform_buffer->map(0, sizeof(RenderableEntity::UniformBufferObject) * thread->engine->renderer.getImageCount(), {}));
-        entity->mesh_index_buffer_mapped = static_cast<uint32_t*>(entity->mesh_index_buffer->map(0, sizeof(uint32_t) * thread->engine->renderer.getImageCount(), {}));
+        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
+        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
         createStaticCommandBuffers(thread);
     }
 
@@ -82,12 +82,12 @@ namespace lotus
 
                 vk::DescriptorBufferInfo camera_buffer_info;
                 camera_buffer_info.buffer = thread->engine->camera->view_proj_ubo->buffer;
-                camera_buffer_info.offset = i * sizeof(Camera::CameraData);
+                camera_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
                 vk::DescriptorBufferInfo model_buffer_info;
                 model_buffer_info.buffer = entity->uniform_buffer->buffer;
-                model_buffer_info.offset = i * (sizeof(RenderableEntity::UniformBufferObject));
+                model_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
                 model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo mesh_info;
@@ -97,7 +97,7 @@ namespace lotus
 
                 vk::DescriptorBufferInfo material_index_info;
                 material_index_info.buffer = entity->mesh_index_buffer->buffer;
-                material_index_info.offset = i * sizeof(uint32_t);
+                material_index_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t));
                 material_index_info.range = sizeof(uint32_t);
 
                 std::array<vk::WriteDescriptorSet, 4> descriptorWrites = {};
@@ -165,7 +165,7 @@ namespace lotus
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
                 cascade_buffer_info.buffer = thread->engine->camera->cascade_data_ubo->buffer;
-                cascade_buffer_info.offset = i * sizeof(thread->engine->camera->cascade_data);
+                cascade_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(thread->engine->camera->cascade_data));
                 cascade_buffer_info.range = sizeof(thread->engine->camera->cascade_data);
 
                 std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};

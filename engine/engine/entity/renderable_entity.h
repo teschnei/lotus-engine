@@ -35,12 +35,12 @@ namespace lotus
         glm::mat4 getModelMatrix();
 
         std::unique_ptr<Buffer> uniform_buffer;
-        UniformBufferObject* uniform_buffer_mapped{ nullptr };
+        uint8_t* uniform_buffer_mapped{ nullptr };
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
 
         std::unique_ptr<Buffer> mesh_index_buffer;
-        uint32_t* mesh_index_buffer_mapped{ nullptr };
+        uint8_t* mesh_index_buffer_mapped{ nullptr };
 
     protected:
         virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;

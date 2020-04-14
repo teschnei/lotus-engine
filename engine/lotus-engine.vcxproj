@@ -46,7 +46,6 @@
     <ClCompile Include="engine\task\model_init.cpp" />
     <ClCompile Include="engine\task\particle_entity_init.cpp" />
     <ClCompile Include="engine\task\particle_model_init.cpp" />
-    <ClCompile Include="engine\task\particle_render.cpp" />
     <ClCompile Include="engine\task\renderable_entity_init.cpp" />
     <ClCompile Include="engine\task\transform_skeleton.cpp" />
     <ClCompile Include="engine\task\texture_init.cpp" />
@@ -93,7 +92,6 @@
     <ClInclude Include="engine\task\model_init.h" />
     <ClInclude Include="engine\task\particle_entity_init.h" />
     <ClInclude Include="engine\task\particle_model_init.h" />
-    <ClInclude Include="engine\task\particle_render.h" />
     <ClInclude Include="engine\task\renderable_entity_init.h" />
     <ClInclude Include="engine\task\transform_skeleton.h" />
     <ClInclude Include="engine\task\texture_init.h" />
@@ -150,14 +148,14 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.2.131.1\Include;D:\Dev\VulkanSDK-1.2.131.1\Third-Party\Include;D:\Dev\VulkanSDK-1.2.131.1\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;$(VULKAN_SDK)\Include;$(VULKAN_SDK)\Third-Party\Include;$(VULKAN_SDK)\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Bin;D:\Dev\VulkanSDK-1.1.106.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Third-Party\Bin;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -170,7 +168,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;D:\Dev\VulkanSDK-1.2.131.1\Include;D:\Dev\VulkanSDK-1.2.131.1\Third-Party\Include;D:\Dev\VulkanSDK-1.2.131.1\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\external\vma;$(ProjectDir)..\external\stb;$(VULKAN_SDK)\Include;$(VULKAN_SDK)\Third-Party\Include;$(VULKAN_SDK)\glslang</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -178,7 +176,7 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>D:\Dev\VulkanSDK-1.1.106.0\Third-Party\Bin;D:\Dev\VulkanSDK-1.1.106.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Third-Party\Bin;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

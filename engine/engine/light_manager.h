@@ -41,7 +41,14 @@ namespace lotus
         Lights landscape;
         glm::vec3 diffuse_dir;
         float _pad;
-        float skybox_altitudes[8];
+        float skybox_altitudes1;
+        float skybox_altitudes2;
+        float skybox_altitudes3;
+        float skybox_altitudes4;
+        float skybox_altitudes5;
+        float skybox_altitudes6;
+        float skybox_altitudes7;
+        float skybox_altitudes8;
         glm::vec4 skybox_colors[8];
     };
 
@@ -58,7 +65,7 @@ namespace lotus
 
         std::unique_ptr<Buffer> light_buffer;
 
-        LightBuffer* buffer_map{ nullptr };
+        uint8_t* buffer_map{ nullptr };
 
     private:
         Engine* engine;

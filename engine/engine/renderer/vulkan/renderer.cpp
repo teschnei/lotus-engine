@@ -225,7 +225,6 @@ namespace lotus
 
         ray_tracing_properties.maxRecursionDepth = 0;
         ray_tracing_properties.shaderGroupHandleSize = 0;
-        vk::PhysicalDeviceProperties2 properties;
         properties.pNext = &ray_tracing_properties;
         physical_device.getProperties2(&properties, dispatch_static);
     }
@@ -261,10 +260,18 @@ namespace lotus
         physical_device_features.samplerAnisotropy = VK_TRUE;
         physical_device_features.depthClamp = VK_TRUE;
 
+        vk::PhysicalDeviceUniformBufferStandardLayoutFeatures buffer_layout_features;
+        buffer_layout_features.uniformBufferStandardLayout = VK_TRUE;
+
         std::vector<const char*> device_extensions2 = device_extensions;
         if (RTXEnabled())
         {
             device_extensions2.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+            device_extensions2.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
         }
 
@@ -272,6 +279,7 @@ namespace lotus
         device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
         device_create_info.pEnabledFeatures = &physical_device_features;
+        device_create_info.pNext = &buffer_layout_features;
         device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size());
         device_create_info.ppEnabledExtensionNames = device_extensions2.data();
 
@@ -283,7 +291,7 @@ namespace lotus
         }
         device = physical_device.createDeviceUnique(device_create_info, nullptr, dispatch_static);
 
-        vk::defaultDispatchLoaderDynamic = vk::DispatchLoaderDynamic(*instance, *device);
+        vk::defaultDispatchLoaderDynamic.init(*instance, *device);
         dispatch = vk::defaultDispatchLoaderDynamic;
 
         graphics_queue = device->getQueue(graphics_queue_idx.value(), 0);
@@ -355,7 +363,7 @@ namespace lotus
             int width, height;
             SDL_GetWindowSize(window, &width, &height);
 
-            swap_extent =
+            swap_extent = vk::Extent2D
             {
                 std::clamp(static_cast<uint32_t>(width), swap_chain_info.capabilities.minImageExtent.width, swap_chain_info.capabilities.maxImageExtent.width),
                 std::clamp(static_cast<uint32_t>(height), swap_chain_info.capabilities.minImageExtent.height, swap_chain_info.capabilities.maxImageExtent.height)
@@ -1212,7 +1220,7 @@ namespace lotus
         viewport.maxDepth = 1.0f;
 
         vk::Rect2D scissor;
-        scissor.offset = {0, 0};
+        scissor.offset = vk::Offset2D{0, 0};
         scissor.extent = swapchain_extent;
 
         vk::PipelineViewportStateCreateInfo viewport_state;
@@ -1671,7 +1679,7 @@ namespace lotus
                 viewport.maxDepth = 1.0f;
 
                 vk::Rect2D scissor;
-                scissor.offset = {0, 0};
+                scissor.offset = vk::Offset2D{0, 0};
                 scissor.extent = swapchain_extent;
 
                 vk::PipelineViewportStateCreateInfo viewport_state;
@@ -1996,13 +2004,13 @@ namespace lotus
 
                 std::array<vk::ClearValue, 2> clearValues;
                 clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-                clearValues[1].depthStencil = { 1.f, 0 };
+                clearValues[1].depthStencil = vk::ClearDepthStencilValue{ 1.f, 0 };
 
                 vk::RenderPassBeginInfo renderpass_info;
                 renderpass_info.renderPass = *render_pass;
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
                 renderpass_info.pClearValues = clearValues.data();
-                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
@@ -2029,7 +2037,7 @@ namespace lotus
 
                 vk::DescriptorBufferInfo camera_buffer_info;
                 camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
-                camera_buffer_info.offset = i * sizeof(Camera::CameraData);
+                camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
                 std::vector<vk::WriteDescriptorSet> descriptorWrites{ 5 };
@@ -2071,7 +2079,7 @@ namespace lotus
 
                 vk::DescriptorBufferInfo light_buffer_info;
                 light_buffer_info.buffer = engine->lights.light_buffer->buffer;
-                light_buffer_info.offset = i * sizeof(engine->lights.light);
+                light_buffer_info.offset = i * uniform_buffer_align_up(sizeof(engine->lights.light));
                 light_buffer_info.range = sizeof(engine->lights.light);
 
                 vk::DescriptorImageInfo shadowmap_image_info;
@@ -2081,7 +2089,7 @@ namespace lotus
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
                 cascade_buffer_info.buffer = engine->camera->cascade_data_ubo->buffer;
-                cascade_buffer_info.offset = i * sizeof(engine->camera->cascade_data);
+                cascade_buffer_info.offset = i * uniform_buffer_align_up(sizeof(engine->camera->cascade_data));
                 cascade_buffer_info.range = sizeof(engine->camera->cascade_data);
 
                 descriptorWrites.resize(8);
@@ -2139,7 +2147,7 @@ namespace lotus
                 renderpass_info.renderPass = *rtx_render_pass;
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
                 renderpass_info.pClearValues = clear_values.data();
-                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
@@ -2223,7 +2231,7 @@ namespace lotus
                 renderpass_info.renderPass = *rtx_render_pass;
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
                 renderpass_info.pClearValues = clear_values.data();
-                renderpass_info.renderArea.offset = { 0, 0 };
+                renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
@@ -2262,12 +2270,12 @@ namespace lotus
 
                 vk::DescriptorBufferInfo light_buffer_info;
                 light_buffer_info.buffer = engine->lights.light_buffer->buffer;
-                light_buffer_info.offset = i * sizeof(engine->lights.light);
+                light_buffer_info.offset = i * uniform_buffer_align_up(sizeof(engine->lights.light));
                 light_buffer_info.range = sizeof(engine->lights.light);
 
                 vk::DescriptorBufferInfo camera_buffer_info;
                 camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
-                camera_buffer_info.offset = i * sizeof(Camera::CameraData);
+                camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
                 std::vector<vk::WriteDescriptorSet> descriptorWrites {8};
@@ -2531,17 +2539,17 @@ namespace lotus
         buffer[0]->begin(begin_info, dispatch);
 
         vk::RenderPassBeginInfo renderpass_info = {};
-        renderpass_info.renderArea.offset = { 0, 0 };
+        renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
 
         if (RasterizationEnabled())
         {
             if (render_mode == RenderMode::Rasterization)
             {
                 renderpass_info.renderPass = *shadowmap_render_pass;
-                renderpass_info.renderArea.extent = { shadowmap_dimension, shadowmap_dimension };
+                renderpass_info.renderArea.extent = vk::Extent2D{ shadowmap_dimension, shadowmap_dimension };
 
                 std::array<vk::ClearValue, 1> clearValue = {};
-                clearValue[0].depthStencil = { 1.0f, 0 };
+                clearValue[0].depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 };
 
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clearValue.size());
                 renderpass_info.pClearValues = clearValue.data();
@@ -2567,7 +2575,7 @@ namespace lotus
             clearValues[3].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
             clearValues[4].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clearValues[5].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clearValues[6].depthStencil = { 1.0f, 0 };
+            clearValues[6].depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 };
 
             renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
             renderpass_info.pClearValues = clearValues.data();
@@ -2611,7 +2619,7 @@ namespace lotus
 
             vk::DescriptorBufferInfo cam_buffer_info;
             cam_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
-            cam_buffer_info.offset = sizeof(Camera::CameraData) * getCurrentImage();
+            cam_buffer_info.offset = uniform_buffer_align_up(sizeof(Camera::CameraData)) * getCurrentImage();
             cam_buffer_info.range = sizeof(Camera::CameraData);
 
             vk::WriteDescriptorSet write_info_cam;
@@ -2623,7 +2631,7 @@ namespace lotus
 
             vk::DescriptorBufferInfo light_buffer_info_global;
             light_buffer_info_global.buffer = engine->lights.light_buffer->buffer;
-            light_buffer_info_global.offset = getCurrentImage() * sizeof(engine->lights.light);
+            light_buffer_info_global.offset = getCurrentImage() * uniform_buffer_align_up(sizeof(engine->lights.light));
             light_buffer_info_global.range = sizeof(engine->lights.light);
 
             vk::WriteDescriptorSet write_info_light;
@@ -2660,7 +2668,7 @@ namespace lotus
 
             vk::DescriptorBufferInfo light_buffer_info;
             light_buffer_info.buffer = engine->lights.light_buffer->buffer;
-            light_buffer_info.offset = getCurrentImage() * sizeof(engine->lights.light);
+            light_buffer_info.offset = getCurrentImage() * uniform_buffer_align_up(sizeof(engine->lights.light));
             light_buffer_info.range = sizeof(engine->lights.light);
 
             vk::WriteDescriptorSet write_info_light;
@@ -2805,6 +2813,24 @@ namespace lotus
         if (compute_dedicated)
             compute = compute_dedicated;
         return { graphics, present, compute };
+    }
+
+    size_t lotus::Renderer::uniform_buffer_align_up(size_t in_size) const
+    {
+        return align_up(in_size, properties.properties.limits.minUniformBufferOffsetAlignment);
+    }
+
+    size_t lotus::Renderer::storage_buffer_align_up(size_t in_size) const
+    {
+        return align_up(in_size, properties.properties.limits.minStorageBufferOffsetAlignment);
+    }
+
+    size_t lotus::Renderer::align_up(size_t in_size, size_t alignment) const
+    {
+        if (in_size % alignment == 0)
+            return in_size;
+        else
+            return ((in_size / alignment) + 1) * alignment;
     }
 
     void Renderer::drawFrame()
