@@ -40,7 +40,7 @@ namespace FFXI
 
         attribute_descriptions[2].binding = 0;
         attribute_descriptions[2].location = 2;
-        attribute_descriptions[2].format = vk::Format::eR8G8B8A8Uint;
+        attribute_descriptions[2].format = vk::Format::eR32G32B32A32Sfloat;
         attribute_descriptions[2].offset = offsetof(Vertex, color);
 
         attribute_descriptions[3].binding = 0;

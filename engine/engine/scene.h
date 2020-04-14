@@ -17,7 +17,7 @@ namespace lotus
         template <typename T, typename... Args>
         std::shared_ptr<T> AddEntity(Args... args)
         {
-            auto sp = std::static_pointer_cast<T>(entities.emplace_back(std::make_shared<T>(engine)));
+            auto sp = std::static_pointer_cast<T>(new_entities.emplace_back(std::make_shared<T>(engine)));
             sp->Init(sp, args...);
             return sp;
         }
@@ -35,5 +35,6 @@ namespace lotus
 
         Engine* engine;
         std::vector<std::shared_ptr<Entity>> entities;
+        std::vector<std::shared_ptr<Entity>> new_entities;
     };
 }

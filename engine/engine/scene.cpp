@@ -67,6 +67,8 @@ namespace lotus
         {
             return entity->should_remove();
         }), entities.end());
+        entities.insert(entities.end(), std::move_iterator(new_entities.begin()), std::move_iterator(new_entities.end()));
+        new_entities.clear();
     }
 }
 

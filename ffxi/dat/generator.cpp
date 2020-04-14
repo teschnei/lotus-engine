@@ -203,6 +203,7 @@ namespace FFXI
                 data2 += 36;
                 break;
             case 0x3b:
+                gen_rot_add = *(glm::vec3*)(data2);
                 data2 += 12;
                 break;
             case 0x3c:

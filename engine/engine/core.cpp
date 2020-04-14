@@ -3,7 +3,7 @@
 
 namespace lotus
 {
-    Engine::Engine(Game* _game, Settings settings, std::unique_ptr<Config> _config) : game(_game), config(std::move(_config)), settings(settings), renderer(this), input(this, renderer.window)
+    Engine::Engine(Game* _game, Settings settings, std::unique_ptr<Config> _config) : game(_game), config(std::move(_config)), settings(settings), renderer(this), input(this, renderer.window), simulation_time(sim_clock::now())
     {
         //renderer.generateCommandBuffers();
     }

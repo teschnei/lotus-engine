@@ -10,6 +10,18 @@ namespace lotus
     {
     }
 
+    RenderableEntity::~RenderableEntity()
+    {
+        if (uniform_buffer_mapped)
+        {
+            uniform_buffer->unmap();
+        }
+        if (mesh_index_buffer_mapped)
+        {
+            mesh_index_buffer->unmap();
+        }
+    }
+
     std::unique_ptr<WorkItem> RenderableEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
     {
         return std::make_unique<RenderableEntityReInitTask>(std::static_pointer_cast<RenderableEntity>(sp));

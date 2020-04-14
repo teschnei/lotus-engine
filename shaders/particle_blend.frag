@@ -18,6 +18,11 @@ layout(binding = 3, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
+layout(binding = 4, set = 0) uniform EntityIndex
+{
+    uint index;
+} entity;
+
 layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
@@ -27,15 +32,16 @@ layout(location = 0) out vec4 outParticle;
 
 layout(push_constant) uniform PushConstant
 {
-    uint material_index;
+    uint mesh_index;
 } push;
 
 void main() {
     vec4 tex = texture(texSampler, fragTexCoord);
-    vec4 particle_color = meshInfo.m[push.material_index].color;
+    vec4 particle_color = meshInfo.m[entity.index + push.mesh_index].color;
     outParticle.rgb = particle_color.rgb + tex.rgb;
-    outParticle.a = ((tex.r + tex.g + tex.b) / 3.0) * particle_color.a;
-    //if (outParticle.a <= 1.f/32.f)
-    //    discard;
+    float tex_a = (tex.r + tex.g + tex.b) / 3.0;
+    if (tex_a < 1.f/16.f)
+        discard;
+    outParticle.a = ((tex.r + tex.g + tex.b) / 3.0) * particle_color.a * 2;
 }
 

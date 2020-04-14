@@ -1,5 +1,6 @@
 #pragma once
-#include "../../types.h"
+#include <memory>
+#include "engine/types.h"
 
 namespace lotus {
     class Entity;
@@ -15,9 +16,11 @@ namespace lotus {
         Component& operator=(Component&&) = default;
         virtual ~Component() = default;
         virtual void tick(time_point time, duration delta) {};
-        virtual void render() {};
+        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) {};
+        bool removed() { return remove; }
     protected:
         Entity* entity;
         Engine* engine;
+        bool remove{ false };
     };
 }

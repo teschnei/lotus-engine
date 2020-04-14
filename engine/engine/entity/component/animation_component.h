@@ -25,7 +25,7 @@ namespace lotus
         virtual ~AnimationComponent() override = default;
 
         virtual void tick(time_point time, duration delta) override;
-        virtual void render() override;
+        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
         void playAnimation(std::string name, float speed = 1.f, std::optional<std::string> next_anim = {});
         void playAnimationLoop(std::string name, float speed = 1.f );
 

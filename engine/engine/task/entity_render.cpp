@@ -39,14 +39,8 @@ namespace lotus
 
     void EntityRenderTask::updateUniformBuffer(WorkerThread* thread, int image_index, RenderableEntity* entity)
     {
-        RenderableEntity::UniformBufferObject ubo = {};
-        ubo.model = entity->getModelMatrix();
-        ubo.modelIT = glm::transpose(glm::inverse(glm::mat3(ubo.model)));
-
-        auto& uniform_buffer = entity->uniform_buffer;
-        auto data = uniform_buffer->map(0, sizeof(ubo) * thread->engine->renderer.getImageCount(), {});
-            memcpy(static_cast<uint8_t*>(data)+(image_index*sizeof(ubo)), &ubo, sizeof(ubo));
-        uniform_buffer->unmap();
+        entity->uniform_buffer_mapped[image_index].model = entity->getModelMatrix();
+        entity->uniform_buffer_mapped[image_index].modelIT = glm::transpose(glm::inverse(glm::mat3(entity->uniform_buffer_mapped[image_index].model)));
     }
 
     void EntityRenderTask::updateAnimationVertices(WorkerThread* thread, int image_index, DeformableEntity* entity)

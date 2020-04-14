@@ -57,9 +57,9 @@ namespace lotus
         }
     }
 
-    void AnimationComponent::render()
+    void AnimationComponent::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
-        engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(static_cast<DeformableEntity*>(entity)));
+        engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(std::static_pointer_cast<DeformableEntity>(sp)));
     }
 
     void AnimationComponent::playAnimation(std::string name, float speed, std::optional<std::string> _next_anim)

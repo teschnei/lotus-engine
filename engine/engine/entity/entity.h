@@ -32,6 +32,13 @@ namespace lotus
             components.push_back(std::make_unique<T>(this, engine, std::forward<Args>(args)...));
         };
 
+        //Components added from within components of the same entity must use an alternate method
+        template<typename T, typename... Args>
+        void addNewComponent(Args&&... args)
+        {
+            new_components.push_back(std::make_unique<T>(this, engine, std::forward<Args>(args)...));
+        };
+
         template<typename T>
         T* getComponent()
         {
@@ -74,5 +81,6 @@ namespace lotus
 
     private:
         std::vector<std::unique_ptr<Component>> components;
+        std::vector<std::unique_ptr<Component>> new_components;
     };
 }

@@ -2,7 +2,9 @@
 #include "engine/core.h"
 
 #include "engine/task/particle_entity_init.h"
-#include "engine/task/particle_render.h"
+#include "engine/task/entity_render.h"
+
+#include <glm/gtx/euler_angles.hpp>
 
 namespace lotus
 {
@@ -25,12 +27,15 @@ namespace lotus
         }
         else
         {
-            if (billboard)
+            entity_rot_mat = glm::transpose(glm::eulerAngleXYZ(rot_euler.x, rot_euler.y, rot_euler.z));
+            auto camera_mat = glm::mat4(glm::transpose(glm::mat3(engine->camera->getViewMatrix())));
+            if (!billboard)
             {
-                auto& camera = engine->camera;
-                entity_rot_mat = glm::transpose(glm::toMat4(rot));
-                rot_mat = glm::mat4(glm::transpose(glm::mat3(engine->camera->getViewMatrix()))) * entity_rot_mat;
+                //non-billboard particles still billboard, but just on the y-axis only
+                camera_mat[1] = glm::vec4(0, 1, 0, 0);
+                camera_mat[2].y = 0;
             }
+            rot_mat = camera_mat * entity_rot_mat;
             RenderableEntity::tick(time, delta);
         }
     }
@@ -38,9 +43,8 @@ namespace lotus
     void Particle::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
         auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
-        auto length_squared = glm::pow(distance, 2);
-        auto re_sp = std::static_pointer_cast<Particle>(sp);
-        engine->worker_pool.addWork(std::make_unique<ParticleRenderTask>(re_sp, -length_squared));
+        auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
+        engine->worker_pool.addWork(std::make_unique<EntityRenderTask>(re_sp, 1000-distance));
     }
     
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)

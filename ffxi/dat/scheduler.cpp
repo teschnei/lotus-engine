@@ -4,41 +4,28 @@ FFXI::Scheduler::Scheduler(char* _name, uint8_t* _buffer, size_t _len) : DatChun
 {
     header = (SchedulerHeader*)buffer;
 
-    uint8_t* data = buffer + sizeof(SchedulerHeader);
+    data = buffer + sizeof(SchedulerHeader);
+}
 
-    while (data < buffer + sizeof(SchedulerHeader) + len)
+std::pair<uint8_t*, uint32_t> FFXI::Scheduler::getStage(uint32_t stage)
+{
+    uint8_t* ret = data;
+    uint32_t current_stage = 0;
+    uint32_t frame = 0;
+    while (ret < buffer + sizeof(SchedulerHeader) + len && current_stage < stage)
     {
-        uint8_t type = *data;
-        uint8_t length = *(data + 1) * sizeof(uint32_t);
+        uint8_t type = *ret;
+        uint8_t length = *(ret + 1) * sizeof(uint32_t);
+        uint16_t delay = *(uint16_t*)(ret + 4);
+        uint16_t duration = *(uint16_t*)(ret + 6);
+        char* id = (char*)(ret + 8);
 
-        switch (type)
-        {
-        case 0x00:
-        {
-            //end
-            data = data + len;
-            break;
-        }
-        case 0x02:
-        {
-            //generator
-            char* id = (char*)(data + 8);
-            break;
-        }
-        case 0x03:
-        {
-            //scheduler
-            char* id = (char*)(data + 8);
-            break;
-        }
-        case 0x05:
-        {
-            //motion
-            char* id = (char*)(data + 8);
-            break;
-        }
-        }
+        if (len == 0)
+            return { nullptr, 0 };
 
-        data += length;
+        ret += length;
+        frame += delay;
+        current_stage++;
     }
+    return { ret, frame };
 }
