@@ -23,6 +23,8 @@ namespace lotus
     {
         if (view_proj_ubo)
             view_proj_ubo->unmap();
+        if (cascade_data_ubo)
+            cascade_data_ubo->unmap();
     }
 
     void Camera::Init(const std::shared_ptr<Camera>& sp)
@@ -32,12 +34,13 @@ namespace lotus
         camera_rot.z = cos(rot_x) * sin(rot_y);
         camera_rot = glm::normalize(camera_rot);
 
-        view_proj_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(CameraData) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        view_proj_mapped = static_cast<Camera::CameraData*>(view_proj_ubo->map(0, sizeof(Camera::CameraData) * engine->renderer.getImageCount(), {}));
+        view_proj_ubo = engine->renderer.memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(CameraData)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        view_proj_mapped = static_cast<uint8_t*>(view_proj_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(CameraData)) * engine->renderer.getImageCount(), {}));
 
         if (engine->renderer.render_mode == RenderMode::Rasterization)
         {
-            cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(sizeof(cascade_data) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            cascade_data_mapped = static_cast<uint8_t*>(cascade_data_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer.getImageCount(), {}));
         }
         update = true;
     }
@@ -161,7 +164,7 @@ namespace lotus
         {
             engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this, engine](WorkerThread* thread)
             {
-                memcpy(view_proj_mapped + engine->renderer.getCurrentImage(), &camera_data, sizeof(camera_data));
+                memcpy(view_proj_mapped + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
 
                 if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
                 {
@@ -242,9 +245,7 @@ namespace lotus
                         last_split = cascade_splits[i];
                     }
                     cascade_data.inverse_view = glm::inverse(getViewMatrix());
-                    auto data = cascade_data_ubo->map(0, sizeof(cascade_data) * engine->renderer.getImageCount(), {});
-                    memcpy(static_cast<uint8_t*>(data) + (thread->engine->renderer.getCurrentImage() * sizeof(cascade_data)), &cascade_data, sizeof(cascade_data));
-                    cascade_data_ubo->unmap();
+                    memcpy(cascade_data_mapped + (thread->engine->renderer.getCurrentImage() * thread->engine->renderer.uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
                 }
             }));
         }

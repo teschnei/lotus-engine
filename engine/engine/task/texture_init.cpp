@@ -56,12 +56,12 @@ namespace lotus
         region.imageSubresource.mipLevel = 0;
         region.imageSubresource.baseArrayLayer = 0;
         region.imageSubresource.layerCount = 1;
-        region.imageOffset = vk::Offset3D(0, 0, 0);
-        region.imageExtent = vk::Extent3D(
+        region.imageOffset = vk::Offset3D{0, 0, 0};
+        region.imageExtent = vk::Extent3D{
             texture->getWidth(),
             texture->getHeight(),
             1
-        );
+        };
         command_buffer->copyBufferToImage(staging_buffer->buffer, texture->image->image, vk::ImageLayout::eTransferDstOptimal, region, thread->engine->renderer.dispatch);
 
         barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;

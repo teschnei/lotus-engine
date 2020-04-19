@@ -45,7 +45,7 @@ namespace lotus
         } camera_data;
 
         std::unique_ptr<Buffer> view_proj_ubo;
-        CameraData* view_proj_mapped{ nullptr };
+        uint8_t* view_proj_mapped{ nullptr };
 
         struct UBOFS
         {
@@ -65,7 +65,7 @@ namespace lotus
         } frustum {};
 
         std::unique_ptr<Buffer> cascade_data_ubo;
-
+        uint8_t* cascade_data_mapped{ nullptr };
 
     protected:
         virtual void tick(time_point time, duration delta) override;
