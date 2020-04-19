@@ -88,9 +88,10 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
 
         vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
-        if (engine->renderer.RTXEnabled())
+        if (engine->renderer.RaytraceEnabled())
         {
-            index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+            vertex_usage_flags |= vk::BufferUsageFlagBits::eShaderDeviceAddress;
+            index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
         }
 
         mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -107,10 +108,5 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     }
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
-    if (model->meshes.size() > 32)
-    {
-        //RTX shader groups need to be increased if this goes up more, or some kind of refactoring needs to happen to move meshes to something that uses their own resource index
-        __debugbreak();
-    }
     engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
 }

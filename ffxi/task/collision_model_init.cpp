@@ -34,37 +34,37 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
         staging_index_offset += data.indices.size() * sizeof(uint16_t);
     }
 
-    vk::DeviceSize transform_offset = 0;
+    std::vector<vk::AccelerationStructureGeometryKHR> raytrace_geometry;
+    std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> raytrace_offset_info;
+    std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> raytrace_create_info;
 
-    std::vector<vk::GeometryNV> raytrace_geometry;
-
-    for (const auto& entry : entries)
+    if (thread->engine->renderer.RaytraceEnabled())
     {
-        glm::mat3x4 transform = entry.transform;
-        memcpy(staging_map + mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + transform_offset, &transform, sizeof(float) * 12);
+        vk::DeviceSize transform_offset = 0;
 
-        FFXI::CollisionMeshData& data = mesh_data[entry.mesh_entry];
+        for (const auto& entry : entries)
+        {
+            glm::mat3x4 transform = entry.transform;
+            memcpy(staging_map + mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + transform_offset, &transform, sizeof(float) * 12);
 
-        vk::GeometryNV geo;
-        geo.flags = vk::GeometryFlagBitsNV::eOpaque;
-        geo.geometryType = vk::GeometryTypeNV::eTriangles;
-        geo.geometry.triangles.vertexData = mesh->vertex_buffer->buffer;
-        geo.geometry.triangles.vertexOffset = vertex_offsets[entry.mesh_entry];
-        geo.geometry.triangles.vertexCount = static_cast<uint32_t>(data.vertices.size() / vertex_stride);
-        geo.geometry.triangles.vertexStride = vertex_stride;
-        geo.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
+            FFXI::CollisionMeshData& data = mesh_data[entry.mesh_entry];
 
-        geo.geometry.triangles.indexData = mesh->index_buffer->buffer;
-        geo.geometry.triangles.indexOffset = index_offsets[entry.mesh_entry];
-        geo.geometry.triangles.indexCount = static_cast<uint32_t>(data.indices.size());
-        geo.geometry.triangles.indexType = vk::IndexType::eUint16;
+            raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
+                vk::Format::eR32G32B32Sfloat,
+                thread->engine->renderer.device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                vertex_stride,
+                vk::IndexType::eUint16,
+                thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer),
+                thread->engine->renderer.device->getBufferAddressKHR(mesh->transform_buffer->buffer)
+                }, vk::GeometryFlagBitsKHR::eOpaque);
 
-        geo.geometry.triangles.transformData = mesh->transform_buffer->buffer;
-        geo.geometry.triangles.transformOffset = transform_offset;
+            raytrace_offset_info.emplace_back(static_cast<uint32_t>(data.indices.size() / 3), index_offsets[entry.mesh_entry], vertex_offsets[entry.mesh_entry] / vertex_stride, transform_offset);
 
-        raytrace_geometry.push_back(geo);
+            raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eTriangles, static_cast<uint32_t>(data.indices.size() / 3),
+                vk::IndexType::eUint16, static_cast<uint32_t>(data.vertices.size() / vertex_stride), vk::Format::eR32G32B32Sfloat, true);
 
-        transform_offset += sizeof(float) * 12;
+            transform_offset += sizeof(float) * 12;
+        }
     }
 
     vk::CommandBufferAllocateInfo alloc_info = {};
@@ -96,13 +96,14 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
 
     staging_buffer->unmap();
 
-    if (thread->engine->renderer.RTXEnabled())
+    if (thread->engine->renderer.RaytraceEnabled())
     {
         vk::MemoryBarrier barrier;
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
-        model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
+        barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+        model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+            std::move(raytrace_create_info), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
     }
 
     command_buffer->end(thread->engine->renderer.dispatch);

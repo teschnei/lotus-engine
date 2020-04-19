@@ -15,7 +15,7 @@ namespace lotus
     {
         Rasterization,
         Hybrid,
-        RTX
+        Raytrace
     };
 
     class Renderer
@@ -131,7 +131,7 @@ namespace lotus
 
         vk::DispatchLoaderDynamic dispatch;
 
-        RenderMode render_mode{ RenderMode::RTX };
+        RenderMode render_mode{ RenderMode::Raytrace };
 
         /* Animation pipeline */
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> animation_descriptor_set_layout;
@@ -152,9 +152,9 @@ namespace lotus
             float _pad[3];
         };
         /* Ray tracing */
-        bool RTXEnabled();
+        bool RaytraceEnabled();
         bool RasterizationEnabled();
-        vk::PhysicalDeviceRayTracingPropertiesNV ray_tracing_properties;
+        vk::PhysicalDeviceRayTracingPropertiesKHR ray_tracing_properties;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_const;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
@@ -165,11 +165,13 @@ namespace lotus
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> rtx_render_pass;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_deferred_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_deferred_pipeline;
-        vk::DeviceSize shader_stride {};
+        vk::StridedBufferRegionKHR raygenSBT;
+        vk::StridedBufferRegionKHR missSBT;
+        vk::StridedBufferRegionKHR hitSBT;
         std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped;
 
-        struct RTXGBuffer
+        struct RaytraceGBuffer
         {
             FramebufferAttachment albedo;
             FramebufferAttachment light;
@@ -185,7 +187,7 @@ namespace lotus
         uint16_t static_acceleration_bindings_offset {0};
         std::mutex acceleration_binding_mutex;
         static constexpr uint16_t max_acceleration_binding_index{ 1024 };
-        static constexpr uint32_t shaders_per_group{ 32 };
+        static constexpr uint32_t shaders_per_group{ 1 };
 
     private:
         void createRayTracingResources();

@@ -101,9 +101,9 @@ namespace lotus
         createDeferredCommandBuffer();
     }
 
-    bool Renderer::RTXEnabled()
+    bool Renderer::RaytraceEnabled()
     {
-        return render_mode == RenderMode::Hybrid || render_mode == RenderMode::RTX;
+        return render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace;
     }
 
     bool Renderer::RasterizationEnabled()
@@ -113,35 +113,47 @@ namespace lotus
 
     void Renderer::createRayTracingResources()
     {
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
             if (!shader_binding_table)
             {
-                constexpr uint32_t shader_nonhitcount = 3;
+                constexpr uint32_t shader_raygencount = 1;
+                constexpr uint32_t shader_misscount = 2;
+                constexpr uint32_t shader_nonhitcount = shader_raygencount + shader_misscount;
                 constexpr uint32_t shader_hitcount = shaders_per_group * 6;
-                shader_stride = ray_tracing_properties.shaderGroupHandleSize + ((sizeof(shader_binding) / 16) + 1) * 16;
-                vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * ray_tracing_properties.shaderGroupHandleSize;
-                shader_binding_table = memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
+                vk::DeviceSize shader_handle_size = ray_tracing_properties.shaderGroupHandleSize;
+                vk::DeviceSize nonhit_shader_stride = shader_handle_size;
+                vk::DeviceSize hit_shader_stride = nonhit_shader_stride;
+                vk::DeviceSize shader_offset_raygen = 0;
+                vk::DeviceSize shader_offset_miss = (((nonhit_shader_stride * shader_raygencount) / engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment;
+                vk::DeviceSize shader_offset_hit = shader_offset_miss + (((nonhit_shader_stride * shader_misscount) / engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment;
+                vk::DeviceSize sbt_size = (hit_shader_stride * shader_hitcount) + shader_offset_hit;
+                shader_binding_table = engine->renderer.memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingKHR, vk::MemoryPropertyFlagBits::eHostVisible);
 
                 uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
-                std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * ray_tracing_properties.shaderGroupHandleSize);
-                device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
-                for (uint32_t i = 0; i < shader_nonhitcount; ++i)
+                std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_handle_size);
+                device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
+                for (uint32_t i = 0; i < shader_raygencount; ++i)
                 {
-                    memcpy(shader_mapped + (i * ray_tracing_properties.shaderGroupHandleSize), shader_handle_storage.data() + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
+                    memcpy(shader_mapped + shader_offset_raygen + (i * nonhit_shader_stride), shader_handle_storage.data() + (i * shader_handle_size), shader_handle_size);
                 }
-                shader_mapped += ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount;
-
+                for (uint32_t i = 0; i < shader_misscount; ++i)
+                {
+                    memcpy(shader_mapped + shader_offset_miss + (i * nonhit_shader_stride), shader_handle_storage.data() + (shader_handle_size * shader_raygencount) + (i * shader_handle_size), shader_handle_size);
+                }
                 for (uint32_t i = 0; i < shader_hitcount; ++i)
                 {
-                    memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (ray_tracing_properties.shaderGroupHandleSize * shader_nonhitcount) + (i * ray_tracing_properties.shaderGroupHandleSize), ray_tracing_properties.shaderGroupHandleSize);
-                    *(shader_mapped + (i * shader_stride) + ray_tracing_properties.shaderGroupHandleSize) = i % shaders_per_group;
+                    memcpy(shader_mapped + shader_offset_hit + (i * hit_shader_stride), shader_handle_storage.data() + (shader_handle_size * shader_nonhitcount) + (i * shader_handle_size), shader_handle_size);
                 }
                 shader_binding_table->unmap();
 
+                raygenSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_raygen, nonhit_shader_stride, nonhit_shader_stride * shader_raygencount };
+                missSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_miss, nonhit_shader_stride, nonhit_shader_stride * shader_misscount };
+                hitSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_hit, hit_shader_stride, hit_shader_stride * shader_hitcount };
+
                 std::vector<vk::DescriptorPoolSize> pool_sizes_const;
-                pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
+                pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureKHR, 1);
                 pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
                 pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
                 pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, max_acceleration_binding_index);
@@ -257,16 +269,30 @@ namespace lotus
         }
 
         vk::PhysicalDeviceFeatures physical_device_features;
-        physical_device_features.samplerAnisotropy = VK_TRUE;
-        physical_device_features.depthClamp = VK_TRUE;
+        physical_device_features.samplerAnisotropy = true;
+        physical_device_features.depthClamp = true;
 
         vk::PhysicalDeviceUniformBufferStandardLayoutFeatures buffer_layout_features;
-        buffer_layout_features.uniformBufferStandardLayout = VK_TRUE;
+        buffer_layout_features.uniformBufferStandardLayout = true;
+
+        vk::PhysicalDeviceRayTracingFeaturesKHR rt_features;
+        rt_features.rayTracing = true;
+
+        buffer_layout_features.pNext = &rt_features;
+
+        vk::PhysicalDeviceBufferDeviceAddressFeatures buffer_address_features;
+        buffer_address_features.bufferDeviceAddress = true;
+
+        rt_features.pNext = &buffer_address_features;
+
+        vk::PhysicalDeviceDescriptorIndexingFeatures indexing_features;
+        indexing_features.descriptorBindingPartiallyBound = true;
+
+        buffer_address_features.pNext = &indexing_features;
 
         std::vector<const char*> device_extensions2 = device_extensions;
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
-            device_extensions2.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
             device_extensions2.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
@@ -291,8 +317,8 @@ namespace lotus
         }
         device = physical_device.createDeviceUnique(device_create_info, nullptr, dispatch_static);
 
-        vk::defaultDispatchLoaderDynamic.init(*instance, *device);
-        dispatch = vk::defaultDispatchLoaderDynamic;
+        VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance, *device);
+        dispatch = VULKAN_HPP_DEFAULT_DISPATCHER;
 
         graphics_queue = device->getQueue(graphics_queue_idx.value(), 0);
         present_queue = device->getQueue(present_queue_idx.value(), 0);
@@ -381,7 +407,7 @@ namespace lotus
         swapchain_create_info.imageExtent = swap_extent;
         swapchain_create_info.imageArrayLayers = 1;
         swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
             swapchain_create_info.imageUsage |= vk::ImageUsageFlagBits::eStorage;
         }
@@ -657,7 +683,7 @@ namespace lotus
             gbuffer_dependency_end.srcSubpass = 0;
             gbuffer_dependency_end.dstSubpass = VK_SUBPASS_EXTERNAL;
             gbuffer_dependency_end.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            gbuffer_dependency_end.dstStageMask = vk::PipelineStageFlagBits::eRayTracingShaderNV;
+            gbuffer_dependency_end.dstStageMask = vk::PipelineStageFlagBits::eRayTracingShaderKHR;
             gbuffer_dependency_end.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
             gbuffer_dependency_end.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
@@ -679,7 +705,7 @@ namespace lotus
 
             gbuffer_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
         }
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
             vk::AttachmentDescription output_attachment;
             output_attachment.format = swapchain_image_format;
@@ -880,64 +906,64 @@ namespace lotus
 
         deferred_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
 
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
-            if (render_mode == RenderMode::RTX)
+            if (render_mode == RenderMode::Raytrace)
             {
                 vk::DescriptorSetLayoutBinding raytrace_output_binding_albedo;
                 raytrace_output_binding_albedo.binding = 0;
                 raytrace_output_binding_albedo.descriptorCount = 1;
                 raytrace_output_binding_albedo.descriptorType = vk::DescriptorType::eStorageImage;
-                raytrace_output_binding_albedo.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                raytrace_output_binding_albedo.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding raytrace_output_binding_light;
                 raytrace_output_binding_light.binding = 1;
                 raytrace_output_binding_light.descriptorCount = 1;
                 raytrace_output_binding_light.descriptorType = vk::DescriptorType::eStorageImage;
-                raytrace_output_binding_light.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                raytrace_output_binding_light.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding camera_ubo_binding;
                 camera_ubo_binding.binding = 2;
                 camera_ubo_binding.descriptorCount = 1;
                 camera_ubo_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-                camera_ubo_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                camera_ubo_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding light_binding;
                 light_binding.binding = 3;
                 light_binding.descriptorCount = 1;
                 light_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
                 light_binding.pImmutableSamplers = nullptr;
-                light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eMissNV;
+                light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR;
 
                 vk::DescriptorSetLayoutBinding acceleration_structure_binding;
                 acceleration_structure_binding.binding = 0;
                 acceleration_structure_binding.descriptorCount = 1;
-                acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
-                acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV | vk::ShaderStageFlagBits::eClosestHitNV;
+                acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
+                acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR;
 
                 vk::DescriptorSetLayoutBinding vertex_buffer_binding;
                 vertex_buffer_binding.binding = 1;
                 vertex_buffer_binding.descriptorCount = max_acceleration_binding_index;
                 vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-                vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 vk::DescriptorSetLayoutBinding index_buffer_binding;
                 index_buffer_binding.binding = 2;
                 index_buffer_binding.descriptorCount = max_acceleration_binding_index;
                 index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-                index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 vk::DescriptorSetLayoutBinding texture_bindings;
                 texture_bindings.binding = 3;
                 texture_bindings.descriptorCount = max_acceleration_binding_index;
                 texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-                texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 vk::DescriptorSetLayoutBinding mesh_info_binding;
                 mesh_info_binding.binding = 4;
                 mesh_info_binding.descriptorCount = 1;
                 mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-                mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
                 {
@@ -960,6 +986,11 @@ namespace lotus
                 rtx_layout_info_const.bindingCount = static_cast<uint32_t>(rtx_bindings_const.size());
                 rtx_layout_info_const.pBindings = rtx_bindings_const.data();
 
+                std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
+                    vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
+                vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ static_cast<uint32_t>(binding_flags.size()), binding_flags.data() };
+                rtx_layout_info_const.pNext = &layout_flags;
+
                 vk::DescriptorSetLayoutCreateInfo rtx_layout_info_dynamic;
                 rtx_layout_info_dynamic.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
                 rtx_layout_info_dynamic.bindingCount = static_cast<uint32_t>(rtx_bindings_dynamic.size());
@@ -974,72 +1005,72 @@ namespace lotus
                 raytrace_output_binding_light.binding = 0;
                 raytrace_output_binding_light.descriptorCount = 1;
                 raytrace_output_binding_light.descriptorType = vk::DescriptorType::eStorageImage;
-                raytrace_output_binding_light.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                raytrace_output_binding_light.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding light_binding;
                 light_binding.binding = 3;
                 light_binding.descriptorCount = 1;
                 light_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
                 light_binding.pImmutableSamplers = nullptr;
-                light_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV | vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eMissNV;
+                light_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR;
 
                 vk::DescriptorSetLayoutBinding position_sample_layout_binding;
                 position_sample_layout_binding.binding = 4;
                 position_sample_layout_binding.descriptorCount = 1;
                 position_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
                 position_sample_layout_binding.pImmutableSamplers = nullptr;
-                position_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                position_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding normal_sample_layout_binding;
                 normal_sample_layout_binding.binding = 5;
                 normal_sample_layout_binding.descriptorCount = 1;
                 normal_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
                 normal_sample_layout_binding.pImmutableSamplers = nullptr;
-                normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding face_normal_sample_layout_binding;
                 face_normal_sample_layout_binding.binding = 6;
                 face_normal_sample_layout_binding.descriptorCount = 1;
                 face_normal_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
                 face_normal_sample_layout_binding.pImmutableSamplers = nullptr;
-                face_normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                face_normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding material_index_sample_layout_binding;
                 material_index_sample_layout_binding.binding = 7;
                 material_index_sample_layout_binding.descriptorCount = 1;
                 material_index_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
                 material_index_sample_layout_binding.pImmutableSamplers = nullptr;
-                material_index_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+                material_index_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
                 vk::DescriptorSetLayoutBinding acceleration_structure_binding;
                 acceleration_structure_binding.binding = 0;
                 acceleration_structure_binding.descriptorCount = 1;
-                acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
-                acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV | vk::ShaderStageFlagBits::eClosestHitNV;
+                acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
+                acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR;
 
                 vk::DescriptorSetLayoutBinding vertex_buffer_binding;
                 vertex_buffer_binding.binding = 1;
                 vertex_buffer_binding.descriptorCount = max_acceleration_binding_index;
                 vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-                vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 vk::DescriptorSetLayoutBinding index_buffer_binding;
                 index_buffer_binding.binding = 2;
                 index_buffer_binding.descriptorCount = max_acceleration_binding_index;
                 index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-                index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 vk::DescriptorSetLayoutBinding texture_bindings;
                 texture_bindings.binding = 3;
                 texture_bindings.descriptorCount = max_acceleration_binding_index;
                 texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-                texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 vk::DescriptorSetLayoutBinding mesh_info_binding;
                 mesh_info_binding.binding = 4;
                 mesh_info_binding.descriptorCount = 1;
                 mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-                mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV | vk::ShaderStageFlagBits::eClosestHitNV | vk::ShaderStageFlagBits::eAnyHitNV;
+                mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
                 std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
                 {
@@ -1063,6 +1094,11 @@ namespace lotus
                 vk::DescriptorSetLayoutCreateInfo rtx_layout_info_const;
                 rtx_layout_info_const.bindingCount = static_cast<uint32_t>(rtx_bindings_const.size());
                 rtx_layout_info_const.pBindings = rtx_bindings_const.data();
+
+                std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
+                    vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
+                vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ static_cast<uint32_t>(binding_flags.size()), binding_flags.data() };
+                rtx_layout_info_const.pNext = &layout_flags;
 
                 vk::DescriptorSetLayoutCreateInfo rtx_layout_info_dynamic;
                 rtx_layout_info_dynamic.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
@@ -1457,12 +1493,12 @@ namespace lotus
             landscape_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
             //particle_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
         }
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
             {
                 //ray-tracing pipeline
                 vk::UniqueShaderModule raygen_shader_module;
-                if (render_mode == RenderMode::RTX)
+                if (render_mode == RenderMode::Raytrace)
                 {
                     raygen_shader_module = getShader("shaders/raygen.spv");
                 }
@@ -1481,141 +1517,141 @@ namespace lotus
                 auto particle_intersection_shader_module = getShader("shaders/particle_intersection.spv");
 
                 vk::PipelineShaderStageCreateInfo raygen_stage_ci;
-                raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenNV;
+                raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenKHR;
                 raygen_stage_ci.module = *raygen_shader_module;
                 raygen_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo miss_stage_ci;
-                miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissNV;
+                miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
                 miss_stage_ci.module = *miss_shader_module;
                 miss_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo shadow_miss_stage_ci;
-                shadow_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissNV;
+                shadow_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
                 shadow_miss_stage_ci.module = *shadow_miss_shader_module;
                 shadow_miss_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo closest_stage_ci;
-                closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+                closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
                 closest_stage_ci.module = *closest_hit_shader_module;
                 closest_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo color_hit_stage_ci;
-                color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+                color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
                 color_hit_stage_ci.module = *color_hit_shader_module;
                 color_hit_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo landscape_closest_stage_ci;
-                landscape_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+                landscape_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
                 landscape_closest_stage_ci.module = *landscape_closest_hit_shader_module;
                 landscape_closest_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo landscape_color_hit_stage_ci;
-                landscape_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+                landscape_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
                 landscape_color_hit_stage_ci.module = *landscape_color_hit_shader_module;
                 landscape_color_hit_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo particle_closest_stage_ci;
-                particle_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+                particle_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
                 particle_closest_stage_ci.module = *particle_closest_hit_shader_module;
                 particle_closest_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo particle_color_hit_stage_ci;
-                particle_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitNV;
+                particle_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
                 particle_color_hit_stage_ci.module = *particle_color_hit_shader_module;
                 particle_color_hit_stage_ci.pName = "main";
 
                 vk::PipelineShaderStageCreateInfo particle_intersection_stage_ci;
-                particle_intersection_stage_ci.stage = vk::ShaderStageFlagBits::eIntersectionNV;
+                particle_intersection_stage_ci.stage = vk::ShaderStageFlagBits::eIntersectionKHR;
                 particle_intersection_stage_ci.module = *particle_intersection_shader_module;
                 particle_intersection_stage_ci.pName = "main";
 
                 std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci,
                     landscape_closest_stage_ci, landscape_color_hit_stage_ci, particle_closest_stage_ci, particle_color_hit_stage_ci, particle_intersection_stage_ci };
 
-                std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_group_ci = {
+                std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
                     {
-                    vk::RayTracingShaderGroupTypeNV::eGeneral,
+                    vk::RayTracingShaderGroupTypeKHR::eGeneral,
                     0,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR
                     },
                     {
-                    vk::RayTracingShaderGroupTypeNV::eGeneral,
+                    vk::RayTracingShaderGroupTypeKHR::eGeneral,
                     1,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR
                     },
                     {
-                    vk::RayTracingShaderGroupTypeNV::eGeneral,
+                    vk::RayTracingShaderGroupTypeKHR::eGeneral,
                     2,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR
                     }
                 };
                 for (int i = 0; i < shaders_per_group; ++i)
                 {
                     shader_group_ci.emplace_back(
-                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                        VK_SHADER_UNUSED_NV,
+                        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_KHR,
                         3,
                         4,
-                        VK_SHADER_UNUSED_NV
+                        VK_SHADER_UNUSED_KHR
                     );
                 }
                 for (int i = 0; i < shaders_per_group; ++i)
                 {
                     shader_group_ci.emplace_back(
-                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                        VK_SHADER_UNUSED_NV,
-                        VK_SHADER_UNUSED_NV,
+                        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_KHR,
+                        VK_SHADER_UNUSED_KHR,
                         4,
-                        VK_SHADER_UNUSED_NV
+                        VK_SHADER_UNUSED_KHR
                     );
                 }
                 for (int i = 0; i < shaders_per_group; ++i)
                 {
                     shader_group_ci.emplace_back(
-                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                        VK_SHADER_UNUSED_NV,
+                        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_KHR,
                         5,
                         6,
-                        VK_SHADER_UNUSED_NV
+                        VK_SHADER_UNUSED_KHR
                     );
                 }
                 for (int i = 0; i < shaders_per_group; ++i)
                 {
                     shader_group_ci.emplace_back(
-                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                        VK_SHADER_UNUSED_NV,
-                        VK_SHADER_UNUSED_NV,
+                        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_KHR,
+                        VK_SHADER_UNUSED_KHR,
                         6,
-                        VK_SHADER_UNUSED_NV
+                        VK_SHADER_UNUSED_KHR
                     );
                 }
 
                 for (int i = 0; i < shaders_per_group; ++i)
                 {
                     shader_group_ci.emplace_back(
-                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                        VK_SHADER_UNUSED_NV,
+                        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_KHR,
                         7,
                         8,
-                        VK_SHADER_UNUSED_NV
+                        VK_SHADER_UNUSED_KHR
                     );
                 }
 
                 for (int i = 0; i < shaders_per_group; ++i)
                 {
                     shader_group_ci.emplace_back(
-                        vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                        VK_SHADER_UNUSED_NV,
-                        VK_SHADER_UNUSED_NV,
+                        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                        VK_SHADER_UNUSED_KHR,
+                        VK_SHADER_UNUSED_KHR,
                         8,
-                        VK_SHADER_UNUSED_NV
+                        VK_SHADER_UNUSED_KHR
                     );
                 }
 
@@ -1626,7 +1662,7 @@ namespace lotus
 
                 rtx_pipeline_layout = device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr, dispatch);
 
-                vk::RayTracingPipelineCreateInfoNV rtx_pipeline_ci;
+                vk::RayTracingPipelineCreateInfoKHR rtx_pipeline_ci;
                 rtx_pipeline_ci.maxRecursionDepth = 3;
                 rtx_pipeline_ci.stageCount = static_cast<uint32_t>(shaders_ci.size());
                 rtx_pipeline_ci.pStages = shaders_ci.data();
@@ -1634,13 +1670,14 @@ namespace lotus
                 rtx_pipeline_ci.pGroups = shader_group_ci.data();
                 rtx_pipeline_ci.layout = *rtx_pipeline_layout;
 
-                rtx_pipeline = device->createRayTracingPipelineNVUnique(nullptr, rtx_pipeline_ci, nullptr, dispatch);
+                auto result = device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr, dispatch);
+                rtx_pipeline = std::move(result.value);
             }
             {
                 //deferred pipeline
                 auto vertex_module = getShader("shaders/quad.spv");
                 vk::UniqueShaderModule fragment_module;
-                if (render_mode == RenderMode::RTX)
+                if (render_mode == RenderMode::Raytrace)
                 {
                     fragment_module = getShader("shaders/deferred_raytrace.spv");
                 }
@@ -1943,7 +1980,7 @@ namespace lotus
 
         gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
 
-        if (RTXEnabled())
+        if (RaytraceEnabled())
         {
             rtx_gbuffer.albedo.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
             rtx_gbuffer.light.image = memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -2128,7 +2165,7 @@ namespace lotus
                 buffer.end(dispatch);
             }
         }
-        else if (render_mode == RenderMode::RTX)
+        else if (render_mode == RenderMode::Raytrace)
         {
             for (int i = 0; i < deferred_command_buffers.size(); ++i)
             {
@@ -2511,7 +2548,7 @@ namespace lotus
 
         for (const auto& supported_extension : supported_extensions)
         {
-            requested_extensions.erase(supported_extension.extensionName);
+            requested_extensions.erase(std::string(supported_extension.extensionName));
         }
         return requested_extensions.empty();
     }
@@ -2591,11 +2628,11 @@ namespace lotus
                 buffer[0]->executeCommands(particle_buffers, dispatch);
             buffer[0]->endRenderPass(dispatch);
         }
-        if (render_mode == RenderMode::RTX)
+        if (render_mode == RenderMode::Raytrace)
         {
-            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline, dispatch);
+            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline, dispatch);
 
-            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
+            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
 
             vk::WriteDescriptorSet write_info_target_albedo;
             write_info_target_albedo.descriptorCount = 1;
@@ -2641,19 +2678,16 @@ namespace lotus
             write_info_light.dstArrayElement = 0;
             write_info_light.pBufferInfo = &light_buffer_info_global;
 
-            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 1,
+            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1,
                 { write_info_target_albedo, write_info_target_light, write_info_cam, write_info_light }, dispatch);
 
-            buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
-                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
-                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 3, shader_stride,
-                nullptr, 0, 0, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
+            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
         }
         else if (render_mode == RenderMode::Hybrid)
         {
-            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline, dispatch);
+            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline, dispatch);
 
-            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
+            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
 
             vk::WriteDescriptorSet write_info_target_light;
             write_info_target_light.descriptorCount = 1;
@@ -2726,12 +2760,9 @@ namespace lotus
             write_info_material_index.dstArrayElement = 0;
             write_info_material_index.pImageInfo = &material_index_info;
 
-            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 1, { write_info_target_light, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_material_index }, dispatch);
+            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1, { write_info_target_light, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_material_index }, dispatch);
 
-            buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
-                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleSize,
-                shader_binding_table->buffer, ray_tracing_properties.shaderGroupHandleSize * 3, shader_stride,
-                nullptr, 0, 0, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
+            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
         }
 
         buffer[0]->end(dispatch);
@@ -2867,7 +2898,7 @@ namespace lotus
         engine->lights.UpdateLightBuffer();
 
         std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame]};
-        std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderNV };
+        std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderKHR };
         auto buffers = engine->worker_pool.getPrimaryComputeBuffers(current_image);
         if (!buffers.empty())
         {
@@ -2881,7 +2912,7 @@ namespace lotus
 
             compute_queue.submit(submitInfo, nullptr, dispatch);
             waitSemaphores.push_back(*compute_sem);
-            waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV | vk::PipelineStageFlagBits::eVertexInput);
+            waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eVertexInput);
         }
 
         vk::SubmitInfo submitInfo = {};

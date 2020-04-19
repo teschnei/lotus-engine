@@ -406,10 +406,10 @@ namespace FFXI
             auto vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
             auto index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
 
-            if (engine->renderer.RTXEnabled())
+            if (engine->renderer.RaytraceEnabled())
             {
-                vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
-                index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+                vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+                index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
             }
 
             mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);

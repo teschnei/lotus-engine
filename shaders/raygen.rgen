@@ -1,7 +1,7 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 0, set = 1, rgba8) uniform image2D albedo;
 layout(binding = 1, set = 1, rgba8) uniform image2D light;
 layout(binding = 2, set = 1) uniform Camera
@@ -12,7 +12,7 @@ layout(binding = 2, set = 1) uniform Camera
     mat4 view_inverse;
 } camera;
 
-layout(location = 0) rayPayloadNV HitValue
+layout(location = 0) rayPayloadEXT HitValue
 {
     vec3 albedo;
     vec3 light;
@@ -20,16 +20,16 @@ layout(location = 0) rayPayloadNV HitValue
 
 void main() 
 {
-    const vec2 center = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
-    const vec2 in_uv = center / vec2(gl_LaunchSizeNV.xy);
+    const vec2 center = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    const vec2 in_uv = center / vec2(gl_LaunchSizeEXT.xy);
     vec2 d = in_uv * 2.0 - 1.0;
 
     vec4 origin = camera.view_inverse * vec4(0, 0, 0, 1);
     vec4 target = camera.proj_inverse * vec4(d.x, d.y, 1, 1);
     vec4 dir = camera.view_inverse * vec4(normalize(target.xyz), 0);
 
-    traceNV(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 1, 0, origin.xyz, 0.001, dir.xyz, 1000.0, 0);
+    traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 0, 0, origin.xyz, 0.001, dir.xyz, 1000.0, 0);
 
-    imageStore(albedo, ivec2(gl_LaunchIDNV.xy), vec4(hitValue.albedo, 0.0));
-    imageStore(light, ivec2(gl_LaunchIDNV.xy), vec4(hitValue.light, 0.0));
+    imageStore(albedo, ivec2(gl_LaunchIDEXT.xy), vec4(hitValue.albedo, 0.0));
+    imageStore(light, ivec2(gl_LaunchIDEXT.xy), vec4(hitValue.light, 0.0));
 }

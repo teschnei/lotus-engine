@@ -5,106 +5,114 @@
 #include "engine/entity/particle.h"
 #include "engine/entity/component/animation_component.h"
 
-void lotus::AccelerationStructure::PopulateAccelerationStructure(uint32_t instanceCount,
-    std::vector<vk::GeometryNV>* geometries, bool updateable)
+void lotus::AccelerationStructure::PopulateAccelerationStructure(const std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>& geometries)
 {
-    info.instanceCount = instanceCount;
-    info.geometryCount = geometries ? static_cast<uint32_t>(geometries->size()) : 0;
-    info.pGeometries = geometries ? geometries->data() : nullptr;
-    if (updateable)
-    {
-        info.flags |= vk::BuildAccelerationStructureFlagBitsNV::eAllowUpdate;
-    }
-    vk::AccelerationStructureCreateInfoNV create_info;
-    create_info.info = info;
-    create_info.compactedSize = 0;
-    acceleration_structure = engine->renderer.device->createAccelerationStructureNVUnique(create_info, nullptr, engine->renderer.dispatch);
+    vk::AccelerationStructureCreateInfoKHR info;
+    info.type = type;
+    info.flags = flags;
+    info.maxGeometryCount = geometries.size();
+    info.pGeometryInfos = geometries.data();
+    info.compactedSize = 0;
+    acceleration_structure = engine->renderer.device->createAccelerationStructureKHRUnique(info, nullptr, engine->renderer.dispatch);
 }
 
 void lotus::AccelerationStructure::PopulateBuffers()
 {
-    vk::AccelerationStructureMemoryRequirementsInfoNV memory_requirements_info;
-    memory_requirements_info.accelerationStructure = *acceleration_structure;
-    memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeNV::eBuildScratch;
+    vk::AccelerationStructureMemoryRequirementsInfoKHR memory_requirements_info{vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch, vk::AccelerationStructureBuildTypeKHR::eDevice, *acceleration_structure };
+    memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
 
-    auto memory_requirements_build = engine->renderer.device->getAccelerationStructureMemoryRequirementsNV(memory_requirements_info, engine->renderer.dispatch);
+    auto memory_requirements_build = engine->renderer.device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info, engine->renderer.dispatch);
 
-    memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeNV::eUpdateScratch;
+    memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eUpdateScratch;
 
-    auto memory_requirements_update = engine->renderer.device->getAccelerationStructureMemoryRequirementsNV(memory_requirements_info, engine->renderer.dispatch);
+    auto memory_requirements_update = engine->renderer.device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info, engine->renderer.dispatch);
 
-    memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeNV::eObject;
+    memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
 
-    auto memory_requirements_object = engine->renderer.device->getAccelerationStructureMemoryRequirementsNV(memory_requirements_info, engine->renderer.dispatch);
+    auto memory_requirements_object = engine->renderer.device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info, engine->renderer.dispatch);
 
     scratch_memory = engine->renderer.memory_manager->GetBuffer(memory_requirements_build.memoryRequirements.size > memory_requirements_update.memoryRequirements.size ?
-        memory_requirements_build.memoryRequirements.size : memory_requirements_update.memoryRequirements.size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        memory_requirements_build.memoryRequirements.size : memory_requirements_update.memoryRequirements.size, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     object_memory = engine->renderer.memory_manager->GetMemory(memory_requirements_object.memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-    vk::BindAccelerationStructureMemoryInfoNV bind_info;
+    vk::BindAccelerationStructureMemoryInfoKHR bind_info;
     bind_info.accelerationStructure = *acceleration_structure;
     bind_info.memory = object_memory->get_memory();
     bind_info.memoryOffset = object_memory->get_memory_offset();
-    engine->renderer.device->bindAccelerationStructureMemoryNV(bind_info, engine->renderer.dispatch);
-    engine->renderer.device->getAccelerationStructureHandleNV(*acceleration_structure, sizeof(handle), &handle, engine->renderer.dispatch);
+    engine->renderer.device->bindAccelerationStructureMemoryKHR(bind_info, engine->renderer.dispatch);
+    handle = engine->renderer.device->getAccelerationStructureAddressKHR(*acceleration_structure);
 }
 
 void lotus::AccelerationStructure::UpdateAccelerationStructure(vk::CommandBuffer command_buffer,
-    vk::Buffer instance_buffer, vk::DeviceSize instance_offset)
+    const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
+    const std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>& offsets)
 {
-    BuildAccelerationStructure(command_buffer, instance_buffer, instance_offset, true);
+    BuildAccelerationStructure(command_buffer, geometries, offsets, true);
 }
 
-void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command_buffer, vk::Buffer instance_buffer, vk::DeviceSize instance_offset, bool update)
+void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
+    const std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>& offsets, bool update)
 {
     vk::BufferMemoryBarrier barrier;
 
-    barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
+    barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
+    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.buffer = scratch_memory->buffer;
     barrier.size = VK_WHOLE_SIZE;
 
-    command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV,
+    command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
         {}, nullptr, barrier, nullptr, engine->renderer.dispatch);
-    command_buffer.buildAccelerationStructureNV(info, instance_buffer, instance_offset, update, *acceleration_structure, update ? *acceleration_structure : VK_NULL_HANDLE, scratch_memory->buffer, 0, engine->renderer.dispatch);
+
+    vk::DeviceOrHostAddressKHR scratch_data{engine->renderer.device->getBufferAddressKHR(scratch_memory->buffer)};
+    const auto geometry_p = geometries.data();
+    vk::AccelerationStructureBuildGeometryInfoKHR build_info{ type, flags, update, update ? *acceleration_structure : VK_NULL_HANDLE, *acceleration_structure, false, static_cast<uint32_t>(geometries.size()), &geometry_p, scratch_data };
+
+    command_buffer.buildAccelerationStructureKHR(build_info, offsets.data());
 }
 
 void lotus::AccelerationStructure::Copy(vk::CommandBuffer command_buffer, AccelerationStructure& target)
 {
-    command_buffer.copyAccelerationStructureNV(*target.acceleration_structure, *acceleration_structure, vk::CopyAccelerationStructureModeNV::eClone, engine->renderer.dispatch);
+    vk::CopyAccelerationStructureInfoKHR info{*acceleration_structure, *target.acceleration_structure, vk::CopyAccelerationStructureModeKHR::eClone};
+    command_buffer.copyAccelerationStructureKHR(info);
 }
 
-lotus::BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(Engine* _engine, class vk::CommandBuffer command_buffer, const std::vector<vk::GeometryNV>& geometry, bool updateable, bool compact, Performance performance) : AccelerationStructure(_engine)
+lotus::BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(Engine* _engine, class vk::CommandBuffer command_buffer, std::vector<vk::AccelerationStructureGeometryKHR>&& geometry,
+    std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>&& offsets, std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>&& geometry_info,
+    bool updateable, bool compact, Performance performance) : AccelerationStructure(_engine, vk::AccelerationStructureTypeKHR::eBottomLevel)
 {
-    info.type = vk::AccelerationStructureTypeNV::eBottomLevel;
     if (performance == Performance::FastBuild)
-        info.flags |= vk::BuildAccelerationStructureFlagBitsNV::ePreferFastBuild;
+        flags |= vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastBuild;
     else if (performance == Performance::FastTrace)
-        info.flags |= vk::BuildAccelerationStructureFlagBitsNV::ePreferFastTrace;
+        flags |= vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
     if (compact)
-        info.flags |= vk::BuildAccelerationStructureFlagBitsNV::eAllowCompaction;
+        flags |= vk::BuildAccelerationStructureFlagBitsKHR::eAllowCompaction;
+    if (updateable)
+        flags |= vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
     //TODO: compact
-    geometries = geometry;
-    PopulateAccelerationStructure(0, &geometries, updateable);
+    geometries = std::move(geometry);
+    geometry_offsets = std::move(offsets);
+    geometry_infos = std::move(geometry_info);
+    PopulateAccelerationStructure(geometry_infos);
     PopulateBuffers();
-    BuildAccelerationStructure(command_buffer, nullptr, 0, false);
+    BuildAccelerationStructure(command_buffer, geometries, geometry_offsets, false);
 }
 
 void lotus::BottomLevelAccelerationStructure::Update(vk::CommandBuffer buffer)
 {
-    UpdateAccelerationStructure(buffer, nullptr, 0);
+    UpdateAccelerationStructure(buffer, geometries, geometry_offsets);
 }
 
-lotus::TopLevelAccelerationStructure::TopLevelAccelerationStructure(Engine* _engine, bool _updateable) : AccelerationStructure(_engine), updateable(_updateable)
+lotus::TopLevelAccelerationStructure::TopLevelAccelerationStructure(Engine* _engine, bool _updateable) : AccelerationStructure(_engine, vk::AccelerationStructureTypeKHR::eTopLevel), updateable(_updateable)
 {
-    info.type = vk::AccelerationStructureTypeNV::eTopLevel;
     instances.reserve(Renderer::max_acceleration_binding_index);
+    if (updateable)
+        flags |= vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
 }
 
-uint32_t lotus::TopLevelAccelerationStructure::AddInstance(VkGeometryInstance instance)
+uint32_t lotus::TopLevelAccelerationStructure::AddInstance(vk::AccelerationStructureInstanceKHR instance)
 {
     uint32_t instanceid = static_cast<uint32_t>(instances.size());
     instances.push_back(instance);
@@ -120,18 +128,21 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
         uint32_t i = engine->renderer.getCurrentImage();
         if (!instance_memory)
         {
-            instance_memory = engine->renderer.memory_manager->GetBuffer(instances.size() * sizeof(VkGeometryInstance), vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            PopulateAccelerationStructure(static_cast<uint32_t>(instances.size()), nullptr, updateable);
+            instance_memory = engine->renderer.memory_manager->GetBuffer(instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            vk::AccelerationStructureCreateGeometryTypeInfoKHR info{vk::GeometryTypeKHR::eInstances, static_cast<uint32_t>(instances.size())};
+            info.allowsTransforms = true;
+            std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> infos{ info };
+            PopulateAccelerationStructure(infos);
             PopulateBuffers();
             update = false;
 
             vk::WriteDescriptorSet write_info_as;
             write_info_as.descriptorCount = 1;
-            write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
+            write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
             write_info_as.dstBinding = 0;
             write_info_as.dstArrayElement = 0;
 
-            vk::WriteDescriptorSetAccelerationStructureNV write_as;
+            vk::WriteDescriptorSetAccelerationStructureKHR write_as;
             write_as.accelerationStructureCount = 1;
             write_as.pAccelerationStructures = &*acceleration_structure;
             write_info_as.pNext = &write_as;
@@ -185,19 +196,24 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
             writes.push_back(write_info_mesh_info);
             engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
         }
-        auto data = instance_memory->map(0, instances.size() * sizeof(VkGeometryInstance), {});
-        memcpy(data, instances.data(), instances.size() * sizeof(VkGeometryInstance));
+        auto data = instance_memory->map(0, instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), {});
+        memcpy(data, instances.data(), instances.size() * sizeof(vk::AccelerationStructureInstanceKHR));
         instance_memory->unmap();
         engine->renderer.mesh_info_buffer->flush(Renderer::max_acceleration_binding_index * sizeof(Renderer::MeshInfo) * i, Renderer::max_acceleration_binding_index * sizeof(Renderer::MeshInfo));
 
         vk::MemoryBarrier barrier;
 
-        barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-        barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
+        barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
+        barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
 
-        command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV,
+        command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
             {}, barrier, nullptr, nullptr, engine->renderer.dispatch);
-        BuildAccelerationStructure(command_buffer, instance_memory->buffer, 0, update);
+        vk::AccelerationStructureGeometryKHR build_geometry{ vk::GeometryTypeKHR::eInstances,
+            vk::AccelerationStructureGeometryInstancesDataKHR{ false, engine->renderer.device->getBufferAddressKHR(instance_memory->buffer) } };
+        std::vector<vk::AccelerationStructureGeometryKHR> instance_data_vec{ build_geometry };
+        vk::AccelerationStructureBuildOffsetInfoKHR build_offset{static_cast<uint32_t>(instances.size()), 0, 0};
+        std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> instance_offset_vec{ build_offset };
+        BuildAccelerationStructure(command_buffer, instance_data_vec, instance_offset_vec, update);
         dirty = false;
     }
 }
@@ -206,7 +222,7 @@ void lotus::TopLevelAccelerationStructure::UpdateInstance(uint32_t instance_id, 
 {
     if (instance_memory)
     {
-        instances[instance_id].transform = transform;
+        memcpy(&instances[instance_id].transform, &transform, sizeof(vk::TransformMatrixKHR));
         dirty = true;
     }
 }

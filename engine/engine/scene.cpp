@@ -16,7 +16,7 @@ namespace lotus
     void Scene::render()
     {
         uint32_t image_index = engine->renderer.getCurrentImage();
-        if (engine->renderer.RTXEnabled())
+        if (engine->renderer.RaytraceEnabled())
         {
             top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(engine, true);
             Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
@@ -44,13 +44,13 @@ namespace lotus
             entity->render_all(engine, entity);
             if (auto renderable_entity = dynamic_cast<RenderableEntity*>(entity.get()))
             {
-                if (engine->renderer.RTXEnabled())
+                if (engine->renderer.RaytraceEnabled())
                 {
                     renderable_entity->populate_AS(top_level_as[image_index].get(), image_index);
                 }
             }
         }
-        if (engine->renderer.RTXEnabled())
+        if (engine->renderer.RaytraceEnabled())
         {
            engine->worker_pool.addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
         }

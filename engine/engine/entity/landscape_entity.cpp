@@ -14,14 +14,15 @@ namespace lotus
             {
                 for (uint32_t i = 0; i < count; ++i)
                 {
-                    VkGeometryInstance instance{};
+                    vk::AccelerationStructureInstanceKHR instance{};
                     //glm is column-major so we have to transpose the model matrix for RTX
-                    instance.transform = glm::mat3x4{ instance_info[offset+i].model_t };
-                    instance.accelerationStructureHandle = model->bottom_level_as->handle;
-                    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+                    auto matrix = glm::mat3x4{ instance_info[offset+i].model_t };
+                    memcpy(&instance.transform, &matrix, sizeof(matrix));
+                    instance.accelerationStructureReference = model->bottom_level_as->handle;
+                    instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
                     instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry);
-                    instance.instanceOffset = Renderer::shaders_per_group * 2;
-                    instance.instanceId = model->bottom_level_as->resource_index;
+                    instance.instanceShaderBindingTableRecordOffset = Renderer::shaders_per_group * 2;
+                    instance.instanceCustomIndex = model->bottom_level_as->resource_index;
                     model->bottom_level_as->instanceid = as->AddInstance(instance);
                 }
             }

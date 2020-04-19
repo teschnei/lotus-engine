@@ -263,8 +263,13 @@ namespace lotus
     void RenderableEntityInitTask::generateVertexBuffers(WorkerThread* thread, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
         std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer)
     {
-        std::vector<std::vector<vk::GeometryNV>> raytrace_geometry;
+        std::vector<std::vector<vk::AccelerationStructureGeometryKHR>> raytrace_geometry;
+        std::vector<std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>> raytrace_offset_info;
+        std::vector<std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>> raytrace_create_info;
+
         raytrace_geometry.resize(thread->engine->renderer.getImageCount());
+        raytrace_offset_info.resize(thread->engine->renderer.getImageCount());
+        raytrace_create_info.resize(thread->engine->renderer.getImageCount());
         const auto& animation_component = entity->animation_component;
         vertex_buffer.resize(model.meshes.size());
         for (size_t i = 0; i < model.meshes.size(); ++i)
@@ -275,38 +280,113 @@ namespace lotus
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
                 vertex_buffer[i].push_back(thread->engine->renderer.memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal));
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
-                if (thread->engine->renderer.RTXEnabled())
+                if (thread->engine->renderer.RaytraceEnabled())
                 {
-                    auto& geo = raytrace_geometry[image].emplace_back();
-                    geo.geometryType = vk::GeometryTypeNV::eTriangles;
-                    geo.geometry.triangles.vertexData = vertex_buffer[i].back()->buffer;
-                    geo.geometry.triangles.vertexOffset = 0;
-                    geo.geometry.triangles.vertexCount = mesh->getVertexCount();
-                    geo.geometry.triangles.vertexStride = vertex_size;
-                    geo.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
+                    raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
+                        vk::Format::eR32G32B32Sfloat,
+                        thread->engine->renderer.device->getBufferAddressKHR(vertex_buffer[i].back()->buffer),
+                        vertex_size,
+                        vk::IndexType::eUint16,
+                        thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                        }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
-                    geo.geometry.triangles.indexData = mesh->index_buffer->buffer;
-                    geo.geometry.triangles.indexOffset = 0;
-                    geo.geometry.triangles.indexCount = mesh->getIndexCount();
-                    geo.geometry.triangles.indexType = vk::IndexType::eUint16;
-                    if (!mesh->has_transparency)
-                    {
-                        geo.flags = vk::GeometryFlagBitsNV::eOpaque;
-                    }
+                    raytrace_offset_info[image].emplace_back(mesh->getIndexCount() / 3, 0, 0);
+
+                    raytrace_create_info[image].emplace_back(vk::GeometryTypeKHR::eTriangles, static_cast<uint32_t>(mesh->getIndexCount() / 3),
+                        vk::IndexType::eUint16, mesh->getVertexCount(), vk::Format::eR32G32B32Sfloat, false);
                 }
             }
         }
-        if (thread->engine->renderer.RTXEnabled())
+
+        if (thread->engine->renderer.RaytraceEnabled())
         {
-            vk::MemoryBarrier barrier;
-            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-            barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-            command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+            //transform skeleton with default animation before building AS to improve the bounding box accuracy
+            //make sure all vertex and index buffers are finished transferring
+            vk::MemoryBarrier transfer_barrier;
+            transfer_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+            transfer_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+            command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, transfer_barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+
+            auto component = entity->animation_component;
+            auto& skeleton = component->skeleton;
+            command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline, thread->engine->renderer.dispatch);
+
+            for (uint32_t image_index = 0; image_index < thread->engine->renderer.getImageCount(); ++image_index)
+            {
+                vk::DescriptorBufferInfo skeleton_buffer_info;
+                skeleton_buffer_info.buffer = entity->animation_component->skeleton_bone_buffer->buffer;
+                skeleton_buffer_info.offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * image_index;
+                skeleton_buffer_info.range = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size();
+
+                vk::WriteDescriptorSet skeleton_descriptor_set = {};
+
+                skeleton_descriptor_set.dstSet = nullptr;
+                skeleton_descriptor_set.dstBinding = 1;
+                skeleton_descriptor_set.dstArrayElement = 0;
+                skeleton_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                skeleton_descriptor_set.descriptorCount = 1;
+                skeleton_descriptor_set.pBufferInfo = &skeleton_buffer_info;
+
+                command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, skeleton_descriptor_set, thread->engine->renderer.dispatch);
+
+                for (size_t i = 0; i < entity->models.size(); ++i)
+                {
+                    for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
+                    {
+                        auto& mesh = entity->models[i]->meshes[j];
+                        auto& vertex_buffer = component->transformed_geometries[i].vertex_buffers[j][image_index];
+
+                        vk::DescriptorBufferInfo vertex_weights_buffer_info;
+                        vertex_weights_buffer_info.buffer = mesh->vertex_buffer->buffer;
+                        vertex_weights_buffer_info.offset = 0;
+                        vertex_weights_buffer_info.range = VK_WHOLE_SIZE;
+
+                        vk::DescriptorBufferInfo vertex_output_buffer_info;
+                        vertex_output_buffer_info.buffer = vertex_buffer->buffer;
+                        vertex_output_buffer_info.offset = 0;
+                        vertex_output_buffer_info.range = VK_WHOLE_SIZE;
+
+                        vk::WriteDescriptorSet weight_descriptor_set{};
+                        weight_descriptor_set.dstSet = nullptr;
+                        weight_descriptor_set.dstBinding = 0;
+                        weight_descriptor_set.dstArrayElement = 0;
+                        weight_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                        weight_descriptor_set.descriptorCount = 1;
+                        weight_descriptor_set.pBufferInfo = &vertex_weights_buffer_info;
+
+                        vk::WriteDescriptorSet output_descriptor_set{};
+                        output_descriptor_set.dstSet = nullptr;
+                        output_descriptor_set.dstBinding = 2;
+                        output_descriptor_set.dstArrayElement = 0;
+                        output_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                        output_descriptor_set.descriptorCount = 1;
+                        output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
+
+                        command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set }, thread->engine->renderer.dispatch);
+
+                        command_buffer.dispatch(mesh->getVertexCount(), 1, 1, thread->engine->renderer.dispatch);
+
+                        if (thread->engine->renderer.RaytraceEnabled())
+                        {
+                            vk::BufferMemoryBarrier barrier;
+                            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                            barrier.buffer = vertex_buffer->buffer;
+                            barrier.size = VK_WHOLE_SIZE;
+                            barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+                            barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
+
+                            command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
+                        }
+                    }
+                }
+            }
             for (size_t i = 0; i < thread->engine->renderer.getImageCount(); ++i)
             {
-                animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(thread->engine, command_buffer, raytrace_geometry[i], true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
+                animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(thread->engine, command_buffer, std::move(raytrace_geometry[i]),
+                    std::move(raytrace_offset_info[i]), std::move(raytrace_create_info[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
             }
         }
     }

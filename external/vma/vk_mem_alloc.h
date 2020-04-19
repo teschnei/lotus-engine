@@ -2096,6 +2096,8 @@ typedef enum VmaAllocationCreateFlagBits {
     */
     VMA_ALLOCATION_CREATE_STRATEGY_FIRST_FIT_BIT = 0x00040000,
 
+    VMA_ALLOCATION_DEVICE_ADDRESS_BIT = 0x00080000,
+
     /** Allocation strategy that tries to minimize memory usage.
     */
     VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT,
@@ -5782,7 +5784,8 @@ public:
         uint32_t frameInUseCount,
         bool isCustomPool,
         bool explicitBlockSize,
-        uint32_t algorithm);
+        uint32_t algorithm,
+        bool device_address);
     ~VmaBlockVector();
 
     VkResult CreateMinBlocks();
@@ -5855,6 +5858,7 @@ private:
     const bool m_IsCustomPool;
     const bool m_ExplicitBlockSize;
     const uint32_t m_Algorithm;
+    const bool m_DeviceAddress;
     /* There can be at most one allocation that is completely empty - a
     hysteresis to avoid pessimistic case of alternating creation and destruction
     of a VkDeviceMemory. */
@@ -6717,7 +6721,8 @@ private:
         VkBuffer dedicatedBuffer,
         VkImage dedicatedImage,
         size_t allocationCount,
-        VmaAllocation* pAllocations);
+        VmaAllocation* pAllocations,
+        bool device_address);
 
     // Tries to free pMemory as Dedicated Memory. Returns true if found and freed.
     void FreeDedicatedMemory(VmaAllocation allocation);
@@ -11203,7 +11208,8 @@ VmaPool_T::VmaPool_T(
         createInfo.frameInUseCount,
         true, // isCustomPool
         createInfo.blockSize != 0, // explicitBlockSize
-        createInfo.flags & VMA_POOL_CREATE_ALGORITHM_MASK), // algorithm
+        createInfo.flags & VMA_POOL_CREATE_ALGORITHM_MASK, // algorithm
+        false), 
     m_Id(0)
 {
 }
@@ -11226,7 +11232,8 @@ VmaBlockVector::VmaBlockVector(
     uint32_t frameInUseCount,
     bool isCustomPool,
     bool explicitBlockSize,
-    uint32_t algorithm) :
+    uint32_t algorithm,
+    bool device_address) :
     m_hAllocator(hAllocator),
     m_MemoryTypeIndex(memoryTypeIndex),
     m_PreferredBlockSize(preferredBlockSize),
@@ -11237,6 +11244,7 @@ VmaBlockVector::VmaBlockVector(
     m_IsCustomPool(isCustomPool),
     m_ExplicitBlockSize(explicitBlockSize),
     m_Algorithm(algorithm),
+    m_DeviceAddress(device_address),
     m_HasEmptyBlock(false),
     m_Blocks(VmaStlAllocator<VmaDeviceMemoryBlock*>(hAllocator->GetAllocationCallbacks())),
     m_NextBlockId(0)
@@ -11907,6 +11915,12 @@ VkResult VmaBlockVector::CreateBlock(VkDeviceSize blockSize, size_t* pNewBlockIn
     allocInfo.memoryTypeIndex = m_MemoryTypeIndex;
     allocInfo.allocationSize = blockSize;
     VkDeviceMemory mem = VK_NULL_HANDLE;
+    if (m_DeviceAddress)
+    {
+        VkMemoryAllocateFlagsInfo allocFlagsInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
+        allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+        allocInfo.pNext = &allocFlagsInfo;
+    }
     VkResult res = m_hAllocator->AllocateVulkanMemory(&allocInfo, &mem);
     if(res < 0)
     {
@@ -14040,7 +14054,8 @@ VmaAllocator_T::VmaAllocator_T(const VmaAllocatorCreateInfo* pCreateInfo) :
             pCreateInfo->frameInUseCount,
             false, // isCustomPool
             false, // explicitBlockSize
-            false); // linearAlgorithm
+            false, // linearAlgorithm
+            false);
         // No need to call m_pBlockVectors[memTypeIndex][blockVectorTypeIndex]->CreateMinBlocks here,
         // becase minBlockCount is 0.
         m_pDedicatedAllocations[memTypeIndex] = vma_new(this, AllocationVectorType)(VmaStlAllocator<VmaAllocation>(GetAllocationCallbacks()));
@@ -14251,7 +14266,8 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 dedicatedBuffer,
                 dedicatedImage,
                 allocationCount,
-                pAllocations);
+                pAllocations,
+                (finalCreateInfo.flags & VMA_ALLOCATION_DEVICE_ADDRESS_BIT) != 0);
         }
     }
     else
@@ -14287,7 +14303,8 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 dedicatedBuffer,
                 dedicatedImage,
                 allocationCount,
-                pAllocations);
+                pAllocations,
+                (finalCreateInfo.flags & VMA_ALLOCATION_DEVICE_ADDRESS_BIT) != 0);
             if(res == VK_SUCCESS)
             {
                 // Succeeded: AllocateDedicatedMemory function already filld pMemory, nothing more to do here.
@@ -14314,7 +14331,8 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
     VkBuffer dedicatedBuffer,
     VkImage dedicatedImage,
     size_t allocationCount,
-    VmaAllocation* pAllocations)
+    VmaAllocation* pAllocations,
+    bool device_address)
 {
     VMA_ASSERT(allocationCount > 0 && pAllocations);
 
@@ -14322,6 +14340,12 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
     allocInfo.memoryTypeIndex = memTypeIndex;
     allocInfo.allocationSize = size;
 
+    if (device_address)
+    {
+        VkMemoryAllocateFlagsInfo allocFlagsInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
+        allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+        allocInfo.pNext = &allocFlagsInfo;
+    }
 #if VMA_DEDICATED_ALLOCATION
     VkMemoryDedicatedAllocateInfoKHR dedicatedAllocInfo = { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR };
     if(m_UseKhrDedicatedAllocation)
@@ -14330,12 +14354,26 @@ VkResult VmaAllocator_T::AllocateDedicatedMemory(
         {
             VMA_ASSERT(dedicatedImage == VK_NULL_HANDLE);
             dedicatedAllocInfo.buffer = dedicatedBuffer;
-            allocInfo.pNext = &dedicatedAllocInfo;
+            if (allocInfo.pNext)
+            {
+                ((VkMemoryAllocateFlagsInfo*)allocInfo.pNext)->pNext = &dedicatedAllocInfo;
+            }
+            else
+            {
+                allocInfo.pNext = &dedicatedAllocInfo;
+            }
         }
         else if(dedicatedImage != VK_NULL_HANDLE)
         {
             dedicatedAllocInfo.image = dedicatedImage;
-            allocInfo.pNext = &dedicatedAllocInfo;
+            if (allocInfo.pNext)
+            {
+                ((VkMemoryAllocateFlagsInfo*)allocInfo.pNext)->pNext = &dedicatedAllocInfo;
+            }
+            else
+            {
+                allocInfo.pNext = &dedicatedAllocInfo;
+            }
         }
     }
 #endif // #if VMA_DEDICATED_ALLOCATION

@@ -54,13 +54,15 @@ namespace lotus
             const auto& model = models[i];
             if (model->bottom_level_as)
             {
-                VkGeometryInstance instance{};
-                instance.transform = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                instance.accelerationStructureHandle = model->bottom_level_as->handle;
-                instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+                vk::AccelerationStructureInstanceKHR instance{};
+                //glm is column-major so we have to transpose the model matrix for Raytrace
+                auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
+                memcpy(&instance.transform, &matrix, sizeof(matrix));
+                instance.accelerationStructureReference = model->bottom_level_as->handle;
+                instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
                 instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::Particle);
-                instance.instanceOffset = lotus::Renderer::shaders_per_group * 4;
-                instance.instanceId = resource_index;
+                instance.instanceShaderBindingTableRecordOffset = lotus::Renderer::shaders_per_group * 4;
+                instance.instanceCustomIndex = resource_index;
                 model->bottom_level_as->instanceid = as->AddInstance(instance);
             }
         }

@@ -1,5 +1,5 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 
 struct QueryInput
 {
@@ -15,7 +15,7 @@ struct QueryOutput
     float intersection_dist;
 };
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 0, std140) uniform Input
 {
     QueryInput inputs[512];
@@ -26,20 +26,20 @@ layout(binding = 2, set = 0, std140) buffer Output
     QueryOutput outputs[512];
 } query_output;
 
-layout(location = 0) rayPayloadNV HitValue
+layout(location = 0) rayPayloadEXT HitValue
 {
     float intersection_dist;
 } hitValue;
 
 void main() 
 {
-    vec3 origin = query_input.inputs[gl_LaunchIDNV.x].origin;
-    vec3 dir = query_input.inputs[gl_LaunchIDNV.x].direction;
-    float min = query_input.inputs[gl_LaunchIDNV.x].min;
-    float max = query_input.inputs[gl_LaunchIDNV.x].max;
-    int flags = query_input.inputs[gl_LaunchIDNV.x].flags;
+    vec3 origin = query_input.inputs[gl_LaunchIDEXT.x].origin;
+    vec3 dir = query_input.inputs[gl_LaunchIDEXT.x].direction;
+    float min = query_input.inputs[gl_LaunchIDEXT.x].min;
+    float max = query_input.inputs[gl_LaunchIDEXT.x].max;
+    int flags = query_input.inputs[gl_LaunchIDEXT.x].flags;
 
-    traceNV(topLevelAS, 0, flags, 0, 0, 0, origin, min, dir, max, 0);
+    traceRayEXT(topLevelAS, 0, flags, 0, 0, 0, origin, min, dir, max, 0);
 
-    query_output.outputs[gl_LaunchIDNV.x].intersection_dist = hitValue.intersection_dist;
+    query_output.outputs[gl_LaunchIDEXT.x].intersection_dist = hitValue.intersection_dist;
 }

@@ -124,11 +124,11 @@ namespace lotus
                 barrier.buffer = vertex_buffer->buffer;
                 barrier.size = VK_WHOLE_SIZE;
                 barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
+                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
 
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
+                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
             }
-            if (thread->engine->renderer.RTXEnabled())
+            if (thread->engine->renderer.RaytraceEnabled())
             {
                 component->transformed_geometries[i].bottom_level_as[image_index]->Update(*command_buffer);
             }
