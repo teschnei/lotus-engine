@@ -48,10 +48,12 @@ namespace lotus
 
         vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
 
-        vk::UniqueHandle<vk::Instance, vk::DispatchLoaderStatic> instance;
+        vk::UniqueHandle<vk::Instance, vk::DispatchLoaderDynamic> instance;
+        SDL_Window* window {nullptr};
+        vk::UniqueSurfaceKHR surface;
         vk::PhysicalDevice physical_device;
         vk::PhysicalDeviceProperties2 properties;
-        vk::UniqueHandle<vk::Device, vk::DispatchLoaderStatic> device;
+        vk::UniqueHandle<vk::Device, vk::DispatchLoaderDynamic> device;
         vk::DynamicLoader loader;
         std::unique_ptr<MemoryManager> memory_manager;
         vk::Queue graphics_queue;
@@ -86,8 +88,6 @@ namespace lotus
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
         std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
-        SDL_Window* window {nullptr};
-        vk::SurfaceKHR surface;
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
         static constexpr uint32_t shadowmap_cascades {4};
@@ -117,7 +117,8 @@ namespace lotus
             FramebufferAttachment normal;
             FramebufferAttachment face_normal;
             FramebufferAttachment albedo;
-            FramebufferAttachment particle;
+            FramebufferAttachment accumulation;
+            FramebufferAttachment revealage;
             FramebufferAttachment material;
             FramebufferAttachment depth;
 
@@ -231,7 +232,7 @@ namespace lotus
         vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index);
 
         Engine* engine;
-        VkDebugUtilsMessengerEXT debug_messenger {nullptr};
+        vk::UniqueDebugUtilsMessengerEXT debug_messenger;
         std::vector<vk::UniqueHandle<vk::Fence, vk::DispatchLoaderDynamic>> frame_fences;
         std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> image_ready_sem;
         std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> frame_finish_sem;
@@ -248,7 +249,5 @@ namespace lotus
         } quad;
 
         bool resize{ false };
-
-        vk::DispatchLoaderStatic dispatch_static{};
     };
 }

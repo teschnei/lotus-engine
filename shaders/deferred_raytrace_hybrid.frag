@@ -6,7 +6,8 @@ layout(binding = 0) uniform sampler2D positionSampler;
 layout(binding = 1) uniform sampler2D albedoSampler;
 layout(binding = 2) uniform sampler2D lightSampler;
 layout(binding = 3) uniform usampler2D materialIndexSampler;
-layout(binding = 4) uniform sampler2D particleSampler;
+layout(binding = 4) uniform sampler2D accumulationSampler;
+layout(binding = 5) uniform sampler2D revealageSampler;
 
 struct Mesh
 {
@@ -18,7 +19,7 @@ struct Mesh
     uint light_type;
 };
 
-layout(binding = 5, set = 0) uniform MeshInfo
+layout(binding = 6, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -35,7 +36,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 6) uniform Light
+layout(std430, binding = 7) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -52,7 +53,7 @@ layout(std430, binding = 6) uniform Light
     vec4 skybox_colors[8];
 } light;
 
-layout(binding = 7) uniform Camera {
+layout(binding = 8) uniform Camera {
     mat4 proj;
     mat4 view;
     mat4 proj_inverse;
@@ -67,11 +68,8 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec3 fragPos = texture(positionSampler, fragTexCoord).xyz;
-    vec4 albedo = texture(albedoSampler, fragTexCoord);
-    vec4 in_light = texture(lightSampler, fragTexCoord);
-    vec4 particle = texture(particleSampler, fragTexCoord);
-    uint material_index = texture(materialIndexSampler, fragTexCoord).r;
-    float dist = length(fragPos - camera.pos.xyz);
+    vec4 accumulation = texture(accumulationSampler, fragTexCoord);
+    float revealage = texture(revealageSampler, fragTexCoord).x;
 
     if (fragPos == vec3(0))
     {
@@ -112,40 +110,46 @@ void main() {
             float value = (max(dot_up, 0.0) - light.skybox_altitudes7) / (light.skybox_altitudes8 - light.skybox_altitudes7);
             outColor.rgb = mix(light.skybox_colors[6], light.skybox_colors[7], value).xyz;
         }
-        return;
-    }
-
-    vec3 fog = vec3(0.0);
-    float max_fog_dist = 0;
-    float min_fog_dist = 0;
-
-    if (meshInfo.m[material_index].light_type == 0)
-    {
-        fog = light.entity.fog_color.rgb;
-        max_fog_dist = light.entity.max_fog;
-        min_fog_dist = light.entity.min_fog;
     }
     else
     {
-        fog = light.landscape.fog_color.rgb;
-        max_fog_dist = light.landscape.max_fog;
-        min_fog_dist = light.landscape.min_fog;
+        vec4 albedo = texture(albedoSampler, fragTexCoord);
+        vec4 in_light = texture(lightSampler, fragTexCoord);
+        uint material_index = texture(materialIndexSampler, fragTexCoord).r;
+        float dist = length(fragPos - camera.pos.xyz);
+
+        vec3 fog = vec3(0.0);
+        float max_fog_dist = 0;
+        float min_fog_dist = 0;
+
+        if (meshInfo.m[material_index].light_type == 0)
+        {
+            fog = light.entity.fog_color.rgb;
+            max_fog_dist = light.entity.max_fog;
+            min_fog_dist = light.entity.min_fog;
+        }
+        else
+        {
+            fog = light.landscape.fog_color.rgb;
+            max_fog_dist = light.landscape.max_fog;
+            min_fog_dist = light.landscape.min_fog;
+        }
+
+        if (dist > max_fog_dist)
+        {
+            outColor = vec4(fog, 1.0);
+        }
+        else if (dist > min_fog_dist)
+        {
+            outColor = mix(albedo * in_light, vec4(fog, 1.0), (dist - min_fog_dist) / (max_fog_dist - min_fog_dist));
+        }
+        else
+        {
+            outColor = albedo * in_light;
+        }
     }
 
-    if (dist > max_fog_dist)
-    {
-        outColor = vec4(fog, 1.0);
-    }
-    else if (dist > min_fog_dist)
-    {
-        outColor = mix(albedo * in_light, vec4(fog, 1.0), (dist - min_fog_dist) / (max_fog_dist - min_fog_dist));
-    }
-    else
-    {
-        outColor = albedo * in_light;
-    }
-
-    outColor.rgb = mix(outColor.rgb, particle.rgb, particle.a);
+    outColor.rgb = mix(accumulation.rgb / max(accumulation.a, 0.00001), outColor.rgb, revealage);
 
     outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));
 }

@@ -6,8 +6,10 @@ layout(binding = 0) uniform sampler2D posSampler;
 layout(binding = 1) uniform sampler2D normalSampler;
 layout(binding = 2) uniform sampler2D albedoSampler;
 layout(binding = 3) uniform usampler2D materialSampler;
+layout(binding = 4) uniform sampler2D accumulationSampler;
+layout(binding = 5) uniform sampler2D revealageSampler;
 
-layout(binding = 4) uniform CameraUBO
+layout(binding = 6) uniform CameraUBO
 {
     mat4 proj;
     mat4 view;
@@ -28,7 +30,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 5) uniform Light
+layout(std430, binding = 7) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -45,14 +47,14 @@ layout(std430, binding = 5) uniform Light
     vec4 skybox_colors[8];
 } light;
 
-layout(binding = 6) uniform CascadeUBO
+layout(binding = 8) uniform CascadeUBO
 {
     vec4 cascade_splits;
     mat4 cascade_view_proj[4];
     mat4 inverse_view;
 } cascade_ubo;
 
-layout(binding = 7) uniform sampler2DArray shadowSampler;
+layout(binding = 9) uniform sampler2DArray shadowSampler;
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec4 eye_dir;
@@ -68,6 +70,8 @@ const mat4 bias = mat4(
 void main() {
 
     vec3 fragPos = texture(posSampler, fragTexCoord).xyz;
+    vec4 accumulation = texture(accumulationSampler, fragTexCoord);
+    float revealage = texture(revealageSampler, fragTexCoord).r;
 
     if (fragPos == vec3(0))
     {
@@ -108,91 +112,96 @@ void main() {
             float value = (max(dot_up, 0.0) - light.skybox_altitudes7) / (light.skybox_altitudes8 - light.skybox_altitudes7);
             outColor.rgb = mix(light.skybox_colors[6], light.skybox_colors[7], value).xyz;
         }
-        return;
-    }
-
-    vec3 normal = texture(normalSampler, fragTexCoord).xyz;
-    vec4 albedo = texture(albedoSampler, fragTexCoord);
-    float dist = length(fragPos - camera_ubo.eye_pos.xyz);
-
-    vec3 ambient_color = vec3(0.0);
-    vec3 specular_color = vec3(0.0);
-    vec3 diffuse_color = vec3(0.0);
-    vec3 fog = vec3(0.0);
-    float max_fog_dist = 0;
-    float min_fog_dist = 0;
-    float brightness = 0;
-
-    if (texture(materialSampler, fragTexCoord).r == 0)
-    {
-        ambient_color = light.entity.ambient_color.rgb;
-        specular_color = light.entity.specular_color.rgb;
-        diffuse_color = light.entity.diffuse_color.rgb;
-        fog = light.entity.fog_color.rgb;
-        max_fog_dist = light.entity.max_fog;
-        min_fog_dist = light.entity.min_fog;
-        brightness = light.entity.brightness;
     }
     else
     {
-        ambient_color = light.landscape.ambient_color.rgb;
-        specular_color = light.landscape.specular_color.rgb;
-        diffuse_color = light.landscape.diffuse_color.rgb;
-        fog = light.landscape.fog_color.rgb;
-        max_fog_dist = light.landscape.max_fog;
-        min_fog_dist = light.landscape.min_fog;
-        brightness = light.landscape.brightness;
-    }
+        vec3 normal = texture(normalSampler, fragTexCoord).xyz;
+        vec4 albedo = texture(albedoSampler, fragTexCoord);
+        float dist = length(fragPos - camera_ubo.eye_pos.xyz);
 
-    if (dist > max_fog_dist)
-    {
-        outColor.rgb = fog;
-        return;
-    }
+        vec3 ambient_color = vec3(0.0);
+        vec3 specular_color = vec3(0.0);
+        vec3 diffuse_color = vec3(0.0);
+        vec3 fog = vec3(0.0);
+        float max_fog_dist = 0;
+        float min_fog_dist = 0;
+        float brightness = 0;
 
-    vec3 fragViewPos = (camera_ubo.view * vec4(fragPos, 1.0)).xyz;
+        if (texture(materialSampler, fragTexCoord).r == 0)
+        {
+            ambient_color = light.entity.ambient_color.rgb;
+            specular_color = light.entity.specular_color.rgb;
+            diffuse_color = light.entity.diffuse_color.rgb;
+            fog = light.entity.fog_color.rgb;
+            max_fog_dist = light.entity.max_fog;
+            min_fog_dist = light.entity.min_fog;
+            brightness = light.entity.brightness;
+        }
+        else
+        {
+            ambient_color = light.landscape.ambient_color.rgb;
+            specular_color = light.landscape.specular_color.rgb;
+            diffuse_color = light.landscape.diffuse_color.rgb;
+            fog = light.landscape.fog_color.rgb;
+            max_fog_dist = light.landscape.max_fog;
+            min_fog_dist = light.landscape.min_fog;
+            brightness = light.landscape.brightness;
+        }
 
-    uint cascade_index = 0;
-    for (uint i = 0; i < 4 - 1; ++i)
-    {
-        if(fragViewPos.z < cascade_ubo.cascade_splits[i]) {
-            cascade_index = i + 1;
+        if (dist > max_fog_dist)
+        {
+            outColor.rgb = fog;
+        }
+        else
+        {
+            vec3 fragViewPos = (camera_ubo.view * vec4(fragPos, 1.0)).xyz;
+
+            uint cascade_index = 0;
+            for (uint i = 0; i < 4 - 1; ++i)
+            {
+                if(fragViewPos.z < cascade_ubo.cascade_splits[i]) {
+                    cascade_index = i + 1;
+                }
+            }
+
+            vec4 shadow_coord = (bias * cascade_ubo.cascade_view_proj[cascade_index]) * vec4(fragPos, 1.0);
+
+            bool shadow = false;
+            vec4 shadowCoord = shadow_coord / shadow_coord.w;
+
+            if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0)
+            {
+                float distance = texture(shadowSampler, vec3(shadowCoord.st, cascade_index)).r;
+                if (shadowCoord.w > 0 && distance < shadowCoord.z - 0.0005) {
+                    shadow = true;
+                }
+            }
+
+            vec3 normalized_normal = normalize(normal);
+
+            float dot_product = dot(-light.diffuse_dir, normalized_normal);
+
+            vec3 ambient = ambient_color;
+            vec3 diffuse = vec3(0.0);
+
+            if (!shadow)
+            {
+                //TODO: get material for specular
+                diffuse = vec3(max(dot_product, 0.0)) * diffuse_color * brightness;
+            }
+            
+            vec3 out_light = diffuse + ambient;
+            outColor.rgb = albedo.rgb * out_light;
+
+            if (dist > min_fog_dist)
+            {
+                outColor.rgb = mix(outColor.rgb, fog, (dist - min_fog_dist) / (max_fog_dist - min_fog_dist));
+            }
         }
     }
 
-    vec4 shadow_coord = (bias * cascade_ubo.cascade_view_proj[cascade_index]) * vec4(fragPos, 1.0);
+    outColor.rgb = mix(accumulation.rgb / max(accumulation.a, 0.00001), outColor.rgb, revealage);
 
-    bool shadow = false;
-    vec4 shadowCoord = shadow_coord / shadow_coord.w;
-
-    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0)
-    {
-        float distance = texture(shadowSampler, vec3(shadowCoord.st, cascade_index)).r;
-        if (shadowCoord.w > 0 && distance < shadowCoord.z - 0.0005) {
-            shadow = true;
-        }
-    }
-
-    vec3 normalized_normal = normalize(normal);
-
-    float dot_product = dot(-light.diffuse_dir, normalized_normal);
-
-    vec3 ambient = ambient_color;
-    vec3 diffuse = vec3(0.0);
-
-    if (!shadow)
-    {
-        //TODO: get material for specular
-        diffuse = vec3(max(dot_product, 0.0)) * diffuse_color * brightness;
-    }
-    
-    vec3 out_light = diffuse + ambient;
-    vec3 out_color = albedo.rgb * out_light;
-
-    if (dist > min_fog_dist)
-    {
-        out_color = mix(out_color, fog, (dist - min_fog_dist) / (max_fog_dist - min_fog_dist));
-    }
-    outColor = vec4(out_color, 1.0);
+    outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));
 }
 

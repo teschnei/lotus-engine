@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 7) uniform Camera {
+layout(binding = 8) uniform Camera {
     mat4 proj;
     mat4 view;
     mat4 proj_inverse;
