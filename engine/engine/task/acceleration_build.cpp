@@ -17,17 +17,17 @@ namespace lotus
         alloc_info.commandPool = *thread->compute_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-        command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+        command_buffer->begin(begin_info);
 
         as->Build(*command_buffer);
 
-        command_buffer->end(thread->engine->renderer.dispatch);
+        command_buffer->end();
 
         compute.primary = *command_buffer;
     }

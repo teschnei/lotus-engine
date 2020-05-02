@@ -10,7 +10,7 @@ namespace lotus
 
     Engine::~Engine()
     {
-        renderer.device->waitIdle(renderer.dispatch);
+        renderer.device->waitIdle();
     }
 
     void Engine::run()

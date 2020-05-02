@@ -16,12 +16,12 @@ namespace lotus
         alloc_info.commandPool = *thread->compute_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
         command_buffer = std::move(command_buffers[0]);
 
-        command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+        command_buffer->begin(begin_info);
 
         auto anim_component = entity->animation_component;
         auto skeleton = anim_component->skeleton.get();
@@ -42,7 +42,7 @@ namespace lotus
         copy_region.srcOffset = 0;
         copy_region.dstOffset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * thread->engine->renderer.getCurrentImage();
         copy_region.size = skeleton->bones.size() * sizeof(AnimationComponent::BufferBone);
-        command_buffer->copyBuffer(staging_buffer->buffer, anim_component->skeleton_bone_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+        command_buffer->copyBuffer(staging_buffer->buffer, anim_component->skeleton_bone_buffer->buffer, copy_region);
 
         vk::BufferMemoryBarrier barrier;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -53,8 +53,8 @@ namespace lotus
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
-        command_buffer->end(thread->engine->renderer.dispatch);
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, nullptr, barrier, nullptr);
+        command_buffer->end();
 
         compute.primary = *command_buffer;
     }

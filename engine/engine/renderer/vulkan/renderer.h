@@ -130,8 +130,6 @@ namespace lotus
 
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;
 
-        vk::DispatchLoaderDynamic dispatch;
-
         RenderMode render_mode{ RenderMode::Raytrace };
 
         /* Animation pipeline */

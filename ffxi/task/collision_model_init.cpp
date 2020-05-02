@@ -72,14 +72,14 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
     alloc_info.commandPool = *thread->compute_pool;
     alloc_info.commandBufferCount = 1;
 
-    auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+    auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
     command_buffer = std::move(command_buffers[0]);
 
     vk::CommandBufferBeginInfo begin_info = {};
     begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-    command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+    command_buffer->begin(begin_info);
 
     vk::BufferCopy copy_region;
     copy_region.srcOffset = 0;
@@ -101,12 +101,12 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
         vk::MemoryBarrier barrier;
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
         model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
             std::move(raytrace_create_info), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
     }
 
-    command_buffer->end(thread->engine->renderer.dispatch);
+    command_buffer->end();
 
     compute.primary = *command_buffer;
 }

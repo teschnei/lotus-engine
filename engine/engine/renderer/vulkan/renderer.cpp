@@ -60,7 +60,7 @@ namespace lotus
         createPhysicalDevice();
         createDevice();
 
-        memory_manager = std::make_unique<MemoryManager>(physical_device, *device, dispatch);
+        memory_manager = std::make_unique<MemoryManager>(physical_device, *device);
 
         createSwapchain();
         createRenderpasses();
@@ -82,7 +82,7 @@ namespace lotus
 
     Renderer::~Renderer()
     {
-        device->waitIdle(dispatch);
+        device->waitIdle();
         if (mesh_info_buffer)
             mesh_info_buffer->unmap();
     }
@@ -124,7 +124,7 @@ namespace lotus
                 uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
                 std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_handle_size);
-                device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), dispatch);
+                device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data());
                 for (uint32_t i = 0; i < shader_raygencount; ++i)
                 {
                     memcpy(shader_mapped + shader_offset_raygen + (i * nonhit_shader_stride), shader_handle_storage.data() + (i * shader_handle_size), shader_handle_size);
@@ -156,7 +156,7 @@ namespace lotus
                 pool_ci.pPoolSizes = pool_sizes_const.data();
                 pool_ci.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
-                rtx_descriptor_pool_const = device->createDescriptorPoolUnique(pool_ci, nullptr, dispatch);
+                rtx_descriptor_pool_const = device->createDescriptorPoolUnique(pool_ci, nullptr);
 
                 std::array<vk::DescriptorSetLayout, 3> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
 
@@ -164,7 +164,7 @@ namespace lotus
                 set_ci.descriptorPool = *rtx_descriptor_pool_const;
                 set_ci.descriptorSetCount = 3;
                 set_ci.pSetLayouts = layouts.data();
-                rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, dispatch);
+                rtx_descriptor_sets_const = device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci);
             }
         }
     }
@@ -310,7 +310,6 @@ namespace lotus
         device = physical_device.createDeviceUnique(device_create_info, nullptr);
 
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
-        dispatch = VULKAN_HPP_DEFAULT_DISPATCHER;
 
         graphics_queue = device->getQueue(graphics_queue_idx.value(), 0);
         present_queue = device->getQueue(present_queue_idx.value(), 0);
@@ -426,10 +425,10 @@ namespace lotus
         swapchain_create_info.clipped = VK_TRUE;
 
         swapchain_image_format = surface_format.format;
-        swapchain = device->createSwapchainKHRUnique(swapchain_create_info, nullptr, dispatch);
+        swapchain = device->createSwapchainKHRUnique(swapchain_create_info, nullptr);
         if (swapchain_images.empty())
         {
-            for (const auto& image : device->getSwapchainImagesKHR(*swapchain, dispatch))
+            for (const auto& image : device->getSwapchainImagesKHR(*swapchain))
             {
                 swapchain_images.emplace_back(image);
             }
@@ -450,7 +449,7 @@ namespace lotus
             for (auto& swapchain_image : swapchain_images)
             {
                 image_view_info.image = swapchain_image;
-                swapchain_image_views.push_back(device->createImageViewUnique(image_view_info, nullptr, dispatch));
+                swapchain_image_views.push_back(device->createImageViewUnique(image_view_info, nullptr));
             }
         }
     }
@@ -508,7 +507,7 @@ namespace lotus
             render_pass_info.dependencyCount = 1;
             render_pass_info.pDependencies = &dependency;
 
-            render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
+            render_pass = device->createRenderPassUnique(render_pass_info, nullptr);
 
             if (render_mode == RenderMode::Rasterization)
             {
@@ -554,7 +553,7 @@ namespace lotus
                 shadowmap_subpass_deps[1].srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
                 shadowmap_subpass_deps[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
 
-                shadowmap_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
+                shadowmap_render_pass = device->createRenderPassUnique(render_pass_info, nullptr);
             }
             vk::AttachmentDescription desc_pos;
             desc_pos.format = vk::Format::eR32G32B32A32Sfloat;
@@ -707,7 +706,7 @@ namespace lotus
             render_pass_info.subpassCount = subpasses.size();
             render_pass_info.pSubpasses = subpasses.data();
 
-            gbuffer_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
+            gbuffer_render_pass = device->createRenderPassUnique(render_pass_info, nullptr);
         }
         if (RaytraceEnabled())
         {
@@ -768,7 +767,7 @@ namespace lotus
             render_pass_info.dependencyCount = static_cast<uint32_t>(subpass_dependencies.size());
             render_pass_info.pDependencies = subpass_dependencies.data();
 
-            rtx_render_pass = device->createRenderPassUnique(render_pass_info, nullptr, dispatch);
+            rtx_render_pass = device->createRenderPassUnique(render_pass_info, nullptr);
         }
     }
 
@@ -816,7 +815,7 @@ namespace lotus
         layout_info.bindingCount = static_cast<uint32_t>(static_bindings.size());
         layout_info.pBindings = static_bindings.data();
 
-        static_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+        static_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
         if (render_mode == RenderMode::Rasterization)
         {
@@ -832,7 +831,7 @@ namespace lotus
             layout_info.bindingCount = static_cast<uint32_t>(shadowmap_bindings.size());
             layout_info.pBindings = shadowmap_bindings.data();
 
-            shadowmap_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+            shadowmap_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr);
         }
 
         vk::DescriptorSetLayoutBinding pos_sample_layout_binding;
@@ -925,7 +924,7 @@ namespace lotus
         layout_info.bindingCount = static_cast<uint32_t>(deferred_bindings.size());
         layout_info.pBindings = deferred_bindings.data();
 
-        deferred_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+        deferred_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
         if (RaytraceEnabled())
         {
@@ -1017,8 +1016,8 @@ namespace lotus
                 rtx_layout_info_dynamic.bindingCount = static_cast<uint32_t>(rtx_bindings_dynamic.size());
                 rtx_layout_info_dynamic.pBindings = rtx_bindings_dynamic.data();
 
-                rtx_descriptor_layout_const = device->createDescriptorSetLayoutUnique(rtx_layout_info_const, nullptr, dispatch);
-                rtx_descriptor_layout_dynamic = device->createDescriptorSetLayoutUnique(rtx_layout_info_dynamic, nullptr, dispatch);
+                rtx_descriptor_layout_const = device->createDescriptorSetLayoutUnique(rtx_layout_info_const, nullptr);
+                rtx_descriptor_layout_dynamic = device->createDescriptorSetLayoutUnique(rtx_layout_info_dynamic, nullptr);
             }
             else
             {
@@ -1126,8 +1125,8 @@ namespace lotus
                 rtx_layout_info_dynamic.bindingCount = static_cast<uint32_t>(rtx_bindings_dynamic.size());
                 rtx_layout_info_dynamic.pBindings = rtx_bindings_dynamic.data();
 
-                rtx_descriptor_layout_const = device->createDescriptorSetLayoutUnique(rtx_layout_info_const, nullptr, dispatch);
-                rtx_descriptor_layout_dynamic = device->createDescriptorSetLayoutUnique(rtx_layout_info_dynamic, nullptr, dispatch);
+                rtx_descriptor_layout_const = device->createDescriptorSetLayoutUnique(rtx_layout_info_const, nullptr);
+                rtx_descriptor_layout_dynamic = device->createDescriptorSetLayoutUnique(rtx_layout_info_dynamic, nullptr);
             }
 
             vk::DescriptorSetLayoutBinding position_sample_layout_binding;
@@ -1368,7 +1367,7 @@ namespace lotus
         pipeline_layout_info.pPushConstantRanges = &push_constant_range;
         pipeline_layout_info.pushConstantRangeCount = 1;
 
-        pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+        pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
         vk::GraphicsPipelineCreateInfo landscape_pipeline_info;
         landscape_pipeline_info.stageCount = static_cast<uint32_t>(landscape_shaderStages.size());
@@ -1405,9 +1404,9 @@ namespace lotus
         particle_pipeline_info.pColorBlendState = &color_blending_subpass1;
         particle_pipeline_info.subpass = 1;
 
-        main_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
-        landscape_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
-        particle_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
+        main_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
+        landscape_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
+        particle_pipeline_group.graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
 
         fragment_module = getShader("shaders/blend.spv");
 
@@ -1416,9 +1415,9 @@ namespace lotus
         shaderStages[1] = frag_shader_stage_info;
         landscape_shaderStages[1] = frag_shader_stage_info;
 
-        main_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
-        landscape_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
-        particle_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
+        main_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
+        landscape_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
+        particle_pipeline_group.blended_graphics_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
 
         landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
         landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
@@ -1452,11 +1451,11 @@ namespace lotus
 
         if (render_mode == RenderMode::Rasterization)
         {
-            deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+            deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
             deferred_pipeline_info.layout = *deferred_pipeline_layout;
 
-            deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, deferred_pipeline_info, nullptr, dispatch);
+            deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, deferred_pipeline_info, nullptr);
 
             landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(landscape_binding_descriptions.size());
             landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
@@ -1475,7 +1474,7 @@ namespace lotus
             pipeline_layout_info.pushConstantRangeCount = push_constant_ranges.size();
             pipeline_layout_info.pPushConstantRanges = push_constant_ranges.data();
 
-            shadowmap_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+            shadowmap_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
             main_pipeline_info.layout = *shadowmap_pipeline_layout;
             landscape_pipeline_info.layout = *shadowmap_pipeline_layout;
@@ -1520,9 +1519,9 @@ namespace lotus
             main_pipeline_info.pDynamicState = &dynamic_state_ci;
             landscape_pipeline_info.pDynamicState = &dynamic_state_ci;
             particle_pipeline_info.pDynamicState = &dynamic_state_ci;
-            main_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
-            landscape_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
-            //particle_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
+            main_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
+            landscape_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
+            //particle_pipeline_group.blended_shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
 
             main_pipeline_info.stageCount = 1;
             main_pipeline_info.pStages = &vert_shader_stage_info;
@@ -1530,9 +1529,9 @@ namespace lotus
             landscape_pipeline_info.pStages = &landscape_vert_shader_stage_info;
             particle_pipeline_info.stageCount = 1;
             particle_pipeline_info.pStages = &particle_vert_shader_stage_info;
-            main_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr, dispatch);
-            landscape_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr, dispatch);
-            //particle_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr, dispatch);
+            main_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
+            landscape_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
+            //particle_pipeline_group.shadowmap_pipeline = device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
         }
         if (RaytraceEnabled())
         {
@@ -1701,7 +1700,7 @@ namespace lotus
                 rtx_pipeline_layout_ci.pSetLayouts = rtx_descriptor_layouts.data();
                 rtx_pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(rtx_descriptor_layouts.size());
 
-                rtx_pipeline_layout = device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr, dispatch);
+                rtx_pipeline_layout = device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr);
 
                 vk::RayTracingPipelineCreateInfoKHR rtx_pipeline_ci;
                 rtx_pipeline_ci.maxRecursionDepth = 3;
@@ -1711,7 +1710,7 @@ namespace lotus
                 rtx_pipeline_ci.pGroups = shader_group_ci.data();
                 rtx_pipeline_ci.layout = *rtx_pipeline_layout;
 
-                auto result = device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr, dispatch);
+                auto result = device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr);
                 rtx_pipeline = std::move(result.value);
             }
             {
@@ -1808,7 +1807,7 @@ namespace lotus
                 pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
                 pipeline_layout_info.pSetLayouts = descriptor_layouts.data();
 
-                rtx_deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr, dispatch);
+                rtx_deferred_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
                 vk::GraphicsPipelineCreateInfo pipeline_info;
                 pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
@@ -1825,7 +1824,7 @@ namespace lotus
                 pipeline_info.subpass = 0;
                 pipeline_info.basePipelineHandle = nullptr;
 
-                rtx_deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr, dispatch);
+                rtx_deferred_pipeline = device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr);
             }
         }
     }
@@ -1846,7 +1845,7 @@ namespace lotus
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
 
-        depth_image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        depth_image_view = device->createImageViewUnique(image_view_info, nullptr);
     }
 
     void Renderer::createFramebuffers()
@@ -1866,7 +1865,7 @@ namespace lotus
             framebuffer_info.height = swapchain_extent.height;
             framebuffer_info.layers = 1;
 
-            frame_buffers.push_back(device->createFramebufferUnique(framebuffer_info, nullptr, dispatch));
+            frame_buffers.push_back(device->createFramebufferUnique(framebuffer_info, nullptr));
         }
     }
 
@@ -1876,12 +1875,12 @@ namespace lotus
         fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
         for (uint32_t i = 0; i < max_pending_frames; ++i)
         {
-            frame_fences.push_back(device->createFenceUnique(fenceInfo, nullptr, dispatch));
-            image_ready_sem.push_back(device->createSemaphoreUnique({}, nullptr, dispatch));
-            frame_finish_sem.push_back(device->createSemaphoreUnique({}, nullptr, dispatch));
+            frame_fences.push_back(device->createFenceUnique(fenceInfo, nullptr));
+            image_ready_sem.push_back(device->createSemaphoreUnique({}, nullptr));
+            frame_finish_sem.push_back(device->createSemaphoreUnique({}, nullptr));
         }
-        gbuffer_sem = device->createSemaphoreUnique({}, nullptr, dispatch);
-        compute_sem = device->createSemaphoreUnique({}, nullptr, dispatch);
+        gbuffer_sem = device->createSemaphoreUnique({}, nullptr);
+        compute_sem = device->createSemaphoreUnique({}, nullptr);
     }
 
     void Renderer::createCommandPool()
@@ -1891,7 +1890,7 @@ namespace lotus
         vk::CommandPoolCreateInfo pool_info = {};
         pool_info.queueFamilyIndex = graphics_queue.value();
 
-        command_pool = device->createCommandPoolUnique(pool_info, nullptr, dispatch);
+        command_pool = device->createCommandPoolUnique(pool_info, nullptr);
     }
 
     void Renderer::createShadowmapResources()
@@ -1912,7 +1911,7 @@ namespace lotus
             image_view_info.subresourceRange.levelCount = 1;
             image_view_info.subresourceRange.baseArrayLayer = 0;
             image_view_info.subresourceRange.layerCount = shadowmap_cascades;
-            shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+            shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr);
 
             for (uint32_t i = 0; i < shadowmap_cascades; ++i)
             {
@@ -1920,7 +1919,7 @@ namespace lotus
                 image_view_info.subresourceRange.baseArrayLayer = i;
                 image_view_info.subresourceRange.layerCount = 1;
 
-                cascade.shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+                cascade.shadowmap_image_view = device->createImageViewUnique(image_view_info, nullptr);
 
                 std::array<vk::ImageView, 1> attachments = {
                     *cascade.shadowmap_image_view
@@ -1934,7 +1933,7 @@ namespace lotus
                 framebuffer_info.height = shadowmap_dimension;
                 framebuffer_info.layers = 1;
 
-                cascade.shadowmap_frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr, dispatch);
+                cascade.shadowmap_frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr);
             }
 
             vk::SamplerCreateInfo sampler_info = {};
@@ -1951,7 +1950,7 @@ namespace lotus
             sampler_info.compareOp = vk::CompareOp::eAlways;
             sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 
-            shadowmap_sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
+            shadowmap_sampler = device->createSamplerUnique(sampler_info, nullptr);
         }
     }
 
@@ -1975,27 +1974,27 @@ namespace lotus
         image_view_info.subresourceRange.levelCount = 1;
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
-        gbuffer.position.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.position.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.normal.image->image;
-        gbuffer.normal.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.normal.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.face_normal.image->image;
-        gbuffer.face_normal.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.face_normal.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.albedo.image->image;
         image_view_info.format = vk::Format::eR8G8B8A8Unorm;
-        gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.accumulation.image->image;
         image_view_info.format = vk::Format::eR16G16B16A16Sfloat;
-        gbuffer.accumulation.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.accumulation.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.revealage.image->image;
         image_view_info.format = vk::Format::eR16Sfloat;
-        gbuffer.revealage.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.revealage.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.material.image->image;
         image_view_info.format = vk::Format::eR16Uint;
-        gbuffer.material.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.material.image_view = device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.depth.image->image;
         image_view_info.format = getDepthFormat();
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-        gbuffer.depth.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+        gbuffer.depth.image_view = device->createImageViewUnique(image_view_info, nullptr);
 
         std::vector<vk::ImageView> attachments = { *gbuffer.position.image_view, *gbuffer.normal.image_view, *gbuffer.face_normal.image_view,
             *gbuffer.albedo.image_view, *gbuffer.accumulation.image_view, *gbuffer.revealage.image_view, *gbuffer.material.image_view, *gbuffer.depth.image_view };
@@ -2008,7 +2007,7 @@ namespace lotus
         framebuffer_info.height = swapchain_extent.height;
         framebuffer_info.layers = 1;
 
-        gbuffer.frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr, dispatch);
+        gbuffer.frame_buffer = device->createFramebufferUnique(framebuffer_info, nullptr);
 
         vk::SamplerCreateInfo sampler_info = {};
         sampler_info.magFilter = vk::Filter::eNearest;
@@ -2024,7 +2023,7 @@ namespace lotus
         sampler_info.compareOp = vk::CompareOp::eAlways;
         sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 
-        gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
+        gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr);
 
         if (RaytraceEnabled())
         {
@@ -2040,10 +2039,10 @@ namespace lotus
             image_view_info.subresourceRange.levelCount = 1;
             image_view_info.subresourceRange.baseArrayLayer = 0;
             image_view_info.subresourceRange.layerCount = 1;
-            rtx_gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+            rtx_gbuffer.albedo.image_view = device->createImageViewUnique(image_view_info, nullptr);
             image_view_info.image = rtx_gbuffer.light.image->image;
             image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
-            rtx_gbuffer.light.image_view = device->createImageViewUnique(image_view_info, nullptr, dispatch);
+            rtx_gbuffer.light.image_view = device->createImageViewUnique(image_view_info, nullptr);
 
             vk::SamplerCreateInfo sampler_info = {};
             sampler_info.magFilter = vk::Filter::eNearest;
@@ -2059,7 +2058,7 @@ namespace lotus
             sampler_info.compareOp = vk::CompareOp::eAlways;
             sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 
-            rtx_gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr, dispatch);
+            rtx_gbuffer.sampler = device->createSamplerUnique(sampler_info, nullptr);
         }
 
         mesh_info_buffer = memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
@@ -2073,7 +2072,7 @@ namespace lotus
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = getImageCount();
 
-        deferred_command_buffers = device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, dispatch);
+        deferred_command_buffers = device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
         if (render_mode == RenderMode::Rasterization)
         {
@@ -2083,7 +2082,7 @@ namespace lotus
                 vk::CommandBufferBeginInfo begin_info = {};
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
 
-                buffer.begin(begin_info, dispatch);
+                buffer.begin(begin_info);
 
                 std::array<vk::ClearValue, 2> clearValues;
                 clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -2096,7 +2095,7 @@ namespace lotus
                 renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
-                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
                 vk::DescriptorImageInfo pos_info;
                 pos_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -2220,17 +2219,17 @@ namespace lotus
                 descriptorWrites[9].descriptorCount = 1;
                 descriptorWrites[9].pImageInfo = &shadowmap_image_info;
 
-                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites, dispatch);
+                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
 
                 buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
 
                 vk::DeviceSize offsets = 0;
-                buffer.bindVertexBuffers(0, quad.vertex_buffer->buffer, offsets, dispatch);
-                buffer.bindIndexBuffer(quad.index_buffer->buffer, offsets, vk::IndexType::eUint32, dispatch);
-                buffer.drawIndexed(6, 1, 0, 0, 0, dispatch);
+                buffer.bindVertexBuffers(0, quad.vertex_buffer->buffer, offsets);
+                buffer.bindIndexBuffer(quad.index_buffer->buffer, offsets, vk::IndexType::eUint32);
+                buffer.drawIndexed(6, 1, 0, 0, 0);
 
-                buffer.endRenderPass(dispatch);
-                buffer.end(dispatch);
+                buffer.endRenderPass();
+                buffer.end();
             }
         }
         else if (render_mode == RenderMode::Raytrace)
@@ -2255,7 +2254,7 @@ namespace lotus
                 renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
-                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
                 buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
 
@@ -2339,7 +2338,7 @@ namespace lotus
                 renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
                 renderpass_info.renderArea.extent = swapchain_extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
-                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline, dispatch);
+                buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
                 buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
 
@@ -2453,11 +2452,11 @@ namespace lotus
                 descriptorWrites[8].descriptorCount = 1;
                 descriptorWrites[8].pBufferInfo = &camera_buffer_info;
 
-                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites, dispatch);
+                buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites);
 
                 buffer.draw(3, 1, 0, 0);
 
-                buffer.endRenderPass(dispatch);
+                buffer.endRenderPass();
 
                 buffer.end();
             }
@@ -2535,7 +2534,7 @@ namespace lotus
         layout_info.bindingCount = static_cast<uint32_t>(descriptor_bindings.size());
         layout_info.pBindings = descriptor_bindings.data();
 
-        animation_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr, dispatch);
+        animation_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
         //pipeline layout
         vk::PipelineLayoutCreateInfo pipeline_layout_ci;
@@ -2551,7 +2550,7 @@ namespace lotus
         pipeline_layout_ci.pPushConstantRanges = &push_constants;
         pipeline_layout_ci.pushConstantRangeCount = 1;
 
-        animation_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_ci, nullptr, dispatch);
+        animation_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_ci, nullptr);
 
         //pipeline
         vk::ComputePipelineCreateInfo pipeline_ci;
@@ -2566,12 +2565,12 @@ namespace lotus
 
         pipeline_ci.stage = animation_shader_stage_info;
 
-        animation_pipeline = device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr, dispatch);
+        animation_pipeline = device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
     }
 
     void Renderer::recreateRenderer()
     {
-        device->waitIdle(dispatch);
+        device->waitIdle();
         swapchain_image_views.clear();
         swapchain_images.clear();
 
@@ -2617,7 +2616,7 @@ namespace lotus
         create_info.codeSize = buffer.size();
         create_info.pCode = reinterpret_cast<const uint32_t*>(buffer.data());
 
-        return device->createShaderModuleUnique(create_info, nullptr, dispatch);
+        return device->createShaderModuleUnique(create_info, nullptr);
     }
 
     bool Renderer::extensionsSupported(vk::PhysicalDevice device)
@@ -2648,12 +2647,12 @@ namespace lotus
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = 1;
 
-        auto buffer = device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, dispatch);
+        auto buffer = device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-        buffer[0]->begin(begin_info, dispatch);
+        buffer[0]->begin(begin_info);
 
         vk::RenderPassBeginInfo renderpass_info = {};
         renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
@@ -2676,10 +2675,10 @@ namespace lotus
                 for (uint32_t i = 0; i < shadowmap_cascades; ++i)
                 {
                     renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
-                    buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, sizeof(uint32_t), i, dispatch);
-                    buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
-                    buffer[0]->executeCommands(shadowmap_buffers, dispatch);
-                    buffer[0]->endRenderPass(dispatch);
+                    buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, sizeof(uint32_t), i);
+                    buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);
+                    buffer[0]->executeCommands(shadowmap_buffers);
+                    buffer[0]->endRenderPass();
                 }
             }
 
@@ -2699,21 +2698,21 @@ namespace lotus
             renderpass_info.pClearValues = clearValues.data();
             renderpass_info.renderArea.extent = swapchain_extent;
 
-            buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers, dispatch);
+            buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);
             auto secondary_buffers = engine->worker_pool.getSecondaryGraphicsBuffers(image_index);
             if (!secondary_buffers.empty())
-                buffer[0]->executeCommands(secondary_buffers, dispatch);
+                buffer[0]->executeCommands(secondary_buffers);
             buffer[0]->nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
             auto particle_buffers = engine->worker_pool.getParticleGraphicsBuffers(image_index);
             if (!particle_buffers.empty())
-                buffer[0]->executeCommands(particle_buffers, dispatch);
-            buffer[0]->endRenderPass(dispatch);
+                buffer[0]->executeCommands(particle_buffers);
+            buffer[0]->endRenderPass();
         }
         if (render_mode == RenderMode::Raytrace)
         {
-            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline, dispatch);
+            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
-            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
+            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {});
 
             vk::WriteDescriptorSet write_info_target_albedo;
             write_info_target_albedo.descriptorCount = 1;
@@ -2760,15 +2759,15 @@ namespace lotus
             write_info_light.pBufferInfo = &light_buffer_info_global;
 
             buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1,
-                { write_info_target_albedo, write_info_target_light, write_info_cam, write_info_light }, dispatch);
+                { write_info_target_albedo, write_info_target_light, write_info_cam, write_info_light });
 
-            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
+            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1);
         }
         else if (render_mode == RenderMode::Hybrid)
         {
-            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline, dispatch);
+            buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
-            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {}, dispatch);
+            buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {});
 
             vk::WriteDescriptorSet write_info_target_light;
             write_info_target_light.descriptorCount = 1;
@@ -2841,12 +2840,12 @@ namespace lotus
             write_info_material_index.dstArrayElement = 0;
             write_info_material_index.pImageInfo = &material_index_info;
 
-            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1, { write_info_target_light, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_material_index }, dispatch);
+            buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1, { write_info_target_light, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_material_index });
 
-            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1, dispatch);
+            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1);
         }
 
-        buffer[0]->end(dispatch);
+        buffer[0]->end();
         render_commandbuffers[image_index] = std::move(buffer[0]);
         return *render_commandbuffers[image_index];
     }
@@ -2951,10 +2950,10 @@ namespace lotus
             return;
 
         engine->worker_pool.deleteFinished();
-        device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max(), dispatch);
+        device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
 
         auto prev_image = current_image;
-        auto [result, value] = device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr, dispatch);
+        auto [result, value] = device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
         current_image = value;
 
         if (result == vk::Result::eErrorOutOfDateKHR)
@@ -2991,7 +2990,7 @@ namespace lotus
             submitInfo.signalSemaphoreCount = 1;
             submitInfo.pSignalSemaphores = compute_signal_sems;
 
-            compute_queue.submit(submitInfo, nullptr, dispatch);
+            compute_queue.submit(submitInfo, nullptr);
             waitSemaphores.push_back(*compute_sem);
             waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eVertexInput);
         }
@@ -3011,7 +3010,7 @@ namespace lotus
         submitInfo.pSignalSemaphores = gbuffer_semaphores;
         submitInfo.signalSemaphoreCount = 1;
 
-        graphics_queue.submit(submitInfo, nullptr, dispatch);
+        graphics_queue.submit(submitInfo, nullptr);
 
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = gbuffer_semaphores;
@@ -3024,7 +3023,7 @@ namespace lotus
 
         device->resetFences(*frame_fences[current_frame]);
 
-        graphics_queue.submit(submitInfo, *frame_fences[current_frame], dispatch);
+        graphics_queue.submit(submitInfo, *frame_fences[current_frame]);
 
         vk::PresentInfoKHR presentInfo = {};
 
@@ -3039,7 +3038,7 @@ namespace lotus
 
         try
         {
-            present_queue.presentKHR(presentInfo, dispatch);
+            present_queue.presentKHR(presentInfo);
         }
         catch (vk::OutOfDateKHRError& )
         {
@@ -3060,7 +3059,7 @@ namespace lotus
     {
         for (vk::Format format : {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint})
         {
-            vk::FormatProperties props = physical_device.getFormatProperties(format, dispatch);
+            vk::FormatProperties props = physical_device.getFormatProperties(format);
 
             if ((props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) == vk::FormatFeatureFlagBits::eDepthStencilAttachment)
             {

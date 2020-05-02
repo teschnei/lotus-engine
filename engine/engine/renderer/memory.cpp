@@ -37,8 +37,8 @@ namespace lotus
         vmaFreeMemory(manager->allocator, allocation);
     }
 
-    MemoryManager::MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _device, vk::DispatchLoaderDynamic _dispatch): device(_device),
-                                 physical_device(_physical_device), dispatch(_dispatch), allocator(VK_NULL_HANDLE)
+    MemoryManager::MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _device): device(_device),
+                                 physical_device(_physical_device), allocator(VK_NULL_HANDLE)
     {
         VmaAllocatorCreateInfo vma_ci = {};
         vma_ci.device = device;

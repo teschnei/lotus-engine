@@ -23,7 +23,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             vk::DeviceSize staging_buffer_size = 0;
             for (int i = 0; i < vertex_buffers.size(); ++i)
@@ -43,7 +43,7 @@ namespace lotus
             vk::CommandBufferBeginInfo begin_info = {};
             begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-            command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+            command_buffer->begin(begin_info);
 
             for (int i = 0; i < vertex_buffers.size(); ++i)
             {
@@ -57,10 +57,10 @@ namespace lotus
                 vk::BufferCopy copy_region;
                 copy_region.srcOffset = staging_buffer_offset;
                 copy_region.size = vertex_buffer.size();
-                command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+                command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region);
                 copy_region.size = index_buffer.size();
                 copy_region.srcOffset = vertex_buffer.size() + staging_buffer_offset;
-                command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+                command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region);
 
                 if (thread->engine->renderer.RaytraceEnabled() && !model->weighted)
                 {
@@ -88,7 +88,7 @@ namespace lotus
                 vk::MemoryBarrier barrier;
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
                 model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(raytrace_create_info), false, model->lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
 
@@ -145,10 +145,10 @@ namespace lotus
                         writes.push_back(write_info_index);
                         writes.push_back(write_info_texture);
                     }
-                    thread->engine->renderer.device->updateDescriptorSets(writes, nullptr, thread->engine->renderer.dispatch);
+                    thread->engine->renderer.device->updateDescriptorSets(writes, nullptr);
                 }
             }
-            command_buffer->end(thread->engine->renderer.dispatch);
+            command_buffer->end();
 
             graphics.primary = *command_buffer;
         }

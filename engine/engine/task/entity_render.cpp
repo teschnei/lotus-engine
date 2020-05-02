@@ -54,15 +54,15 @@ namespace lotus
         alloc_info.commandPool = *thread->compute_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-        command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+        command_buffer->begin(begin_info);
 
-        command_buffer->bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline, thread->engine->renderer.dispatch);
+        command_buffer->bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline);
 
         vk::DescriptorBufferInfo skeleton_buffer_info;
         skeleton_buffer_info.buffer = entity->animation_component->skeleton_bone_buffer->buffer;
@@ -78,7 +78,7 @@ namespace lotus
         skeleton_descriptor_set.descriptorCount = 1;
         skeleton_descriptor_set.pBufferInfo = &skeleton_buffer_info;
 
-        command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, skeleton_descriptor_set, thread->engine->renderer.dispatch);
+        command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, skeleton_descriptor_set);
 
         //transform skeleton with current animation   
         for (size_t i = 0; i < entity->models.size(); ++i)
@@ -114,9 +114,9 @@ namespace lotus
                 output_descriptor_set.descriptorCount = 1;
                 output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, {weight_descriptor_set, output_descriptor_set}, thread->engine->renderer.dispatch);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, {weight_descriptor_set, output_descriptor_set});
 
-                command_buffer->dispatch(mesh->getVertexCount(), 1, 1, thread->engine->renderer.dispatch);
+                command_buffer->dispatch(mesh->getVertexCount(), 1, 1);
 
                 vk::BufferMemoryBarrier barrier;
                 barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -126,14 +126,14 @@ namespace lotus
                 barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
 
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr, thread->engine->renderer.dispatch);
+                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
             }
             if (thread->engine->renderer.RaytraceEnabled())
             {
                 component->transformed_geometries[i].bottom_level_as[image_index]->Update(*command_buffer);
             }
         }
-        command_buffer->end(thread->engine->renderer.dispatch);
+        command_buffer->end();
 
         compute.primary = *command_buffer;
     }

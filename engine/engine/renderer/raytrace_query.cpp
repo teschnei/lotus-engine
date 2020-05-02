@@ -99,14 +99,14 @@ namespace lotus
             rtx_layout_info.bindingCount = static_cast<uint32_t>(rtx_bindings.size());
             rtx_layout_info.pBindings = rtx_bindings.data();
 
-            rtx_descriptor_layout = engine->renderer.device->createDescriptorSetLayoutUnique(rtx_layout_info, nullptr, engine->renderer.dispatch);
+            rtx_descriptor_layout = engine->renderer.device->createDescriptorSetLayoutUnique(rtx_layout_info, nullptr);
 
             std::vector<vk::DescriptorSetLayout> rtx_descriptor_layouts = { *rtx_descriptor_layout};
             vk::PipelineLayoutCreateInfo rtx_pipeline_layout_ci;
             rtx_pipeline_layout_ci.pSetLayouts = rtx_descriptor_layouts.data();
             rtx_pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(rtx_descriptor_layouts.size());
 
-            rtx_pipeline_layout = engine->renderer.device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr, engine->renderer.dispatch);
+            rtx_pipeline_layout = engine->renderer.device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr);
 
             vk::RayTracingPipelineCreateInfoKHR rtx_pipeline_ci;
             rtx_pipeline_ci.maxRecursionDepth = 1;
@@ -116,7 +116,7 @@ namespace lotus
             rtx_pipeline_ci.pGroups = shader_group_ci.data();
             rtx_pipeline_ci.layout = *rtx_pipeline_layout;
 
-            auto result = engine->renderer.device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr, engine->renderer.dispatch);
+            auto result = engine->renderer.device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr);
             rtx_pipeline = std::move(result.value);
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
@@ -130,21 +130,21 @@ namespace lotus
             pool_ci.pPoolSizes = pool_sizes_const.data();
             pool_ci.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
-            rtx_descriptor_pool = engine->renderer.device->createDescriptorPoolUnique(pool_ci, nullptr, engine->renderer.dispatch);
+            rtx_descriptor_pool = engine->renderer.device->createDescriptorPoolUnique(pool_ci, nullptr);
 
             vk::DescriptorSetAllocateInfo set_ci;
             set_ci.descriptorPool = *rtx_descriptor_pool;
             set_ci.descriptorSetCount = 1;
             set_ci.pSetLayouts = &*rtx_descriptor_layout;
             {
-                auto sets = engine->renderer.device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, engine->renderer.dispatch);
+                auto sets = engine->renderer.device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci);
                 rtx_descriptor_set = std::move(sets[0]);
             }
 
             uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
             std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_stride);
-            engine->renderer.device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), engine->renderer.dispatch);
+            engine->renderer.device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data());
             for (uint32_t i = 0; i < shader_raygencount; ++i)
             {
                 memcpy(shader_mapped + shader_offset_raygen + (i * shader_stride), shader_handle_storage.data() + (i * shader_stride), shader_stride);
@@ -166,12 +166,12 @@ namespace lotus
         auto [graphics_queue_idx, present_queue_idx, compute_queue_idx] = engine->renderer.getQueueFamilies(engine->renderer.physical_device);
         raytrace_query_queue = engine->renderer.device->getQueue(compute_queue_idx.value(), 1);
         vk::FenceCreateInfo fence_info;
-        fence = engine->renderer.device->createFenceUnique(fence_info, nullptr, engine->renderer.dispatch);
+        fence = engine->renderer.device->createFenceUnique(fence_info, nullptr);
 
         vk::CommandPoolCreateInfo pool_info = {};
         pool_info.queueFamilyIndex = compute_queue_idx.value();
 
-        command_pool = engine->renderer.device->createCommandPoolUnique(pool_info, nullptr, engine->renderer.dispatch);
+        command_pool = engine->renderer.device->createCommandPoolUnique(pool_info, nullptr);
     }
 
     void Raytracer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback)
@@ -211,13 +211,13 @@ namespace lotus
                     alloc_info.level = vk::CommandBufferLevel::ePrimary;
                     alloc_info.commandBufferCount = 1;
 
-                    auto buffer = engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, engine->renderer.dispatch);
+                    auto buffer = engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
                     vk::CommandBufferBeginInfo begin_info = {};
                     begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-                    buffer[0]->begin(begin_info, engine->renderer.dispatch);
-                    buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline, engine->renderer.dispatch);
+                    buffer[0]->begin(begin_info);
+                    buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
                     vk::WriteDescriptorSet write_info_as;
                     write_info_as.descriptorCount = 1;
@@ -258,7 +258,7 @@ namespace lotus
                     write_info_output.dstSet = *rtx_descriptor_set;
 
                     std::vector<vk::WriteDescriptorSet> writes = { write_info_as, write_info_input, write_info_output };
-                    engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
+                    engine->renderer.device->updateDescriptorSets(writes, nullptr);
 
                     vk::MemoryBarrier barrier;
 
@@ -266,20 +266,20 @@ namespace lotus
                     barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
 
                     buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eRayTracingShaderKHR,
-                        {}, barrier, nullptr, nullptr, engine->renderer.dispatch);
+                        {}, barrier, nullptr, nullptr);
 
-                    buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {}, engine->renderer.dispatch);
+                    buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {});
                     buffer[0]->traceRaysKHR(raygenSBT,
                         missSBT,
                         hitSBT,
                         {},
                         processing_queries.size(), 1, 1);
-                    buffer[0]->end(engine->renderer.dispatch);
+                    buffer[0]->end();
                     vk::SubmitInfo submit_info = {};
                     submit_info.pCommandBuffers = &*buffer[0];
                     submit_info.commandBufferCount = 1;
-                    raytrace_query_queue.submit(submit_info, *fence, engine->renderer.dispatch);
-                    engine->renderer.device->waitForFences(*fence, true, std::numeric_limits<uint64_t>::max(), engine->renderer.dispatch);
+                    raytrace_query_queue.submit(submit_info, *fence);
+                    engine->renderer.device->waitForFences(*fence, true, std::numeric_limits<uint64_t>::max());
                     engine->renderer.device->resetFences(*fence);
 
                     RaytraceOutput* output_mapped = static_cast<RaytraceOutput*>(output_buffer->map(0, output_buffer_size, {}));

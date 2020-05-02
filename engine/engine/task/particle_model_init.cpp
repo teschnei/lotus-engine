@@ -24,7 +24,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             auto& mesh = model->meshes[0];
 
@@ -41,7 +41,7 @@ namespace lotus
             vk::CommandBufferBeginInfo begin_info = {};
             begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-            command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+            command_buffer->begin(begin_info);
 
             memcpy(staging_buffer_data, vertex_buffer.data(), vertex_buffer.size());
             memcpy(staging_buffer_data + vertex_buffer.size(), index_buffer.data(), index_buffer.size() * sizeof(uint16_t));
@@ -49,10 +49,10 @@ namespace lotus
             vk::BufferCopy copy_region;
             copy_region.srcOffset = 0;
             copy_region.size = vertex_buffer.size();
-            command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+            command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region);
             copy_region.size = index_buffer.size() * sizeof(uint16_t);
             copy_region.srcOffset = vertex_buffer.size();
-            command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+            command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region);
 
             if (thread->engine->renderer.RaytraceEnabled())
             {
@@ -77,11 +77,11 @@ namespace lotus
                 vk::MemoryBarrier barrier;
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
+                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
                 model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(raytrace_create_info), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
             }
-            command_buffer->end(thread->engine->renderer.dispatch);
+            command_buffer->end();
 
             graphics.primary = *command_buffer;
         }
