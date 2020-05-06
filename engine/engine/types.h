@@ -15,6 +15,6 @@ namespace lotus
         Long
     };
 
-    #define DEBUG_BREAK() std::raise(SIGINT);
-    #define DEBUG_BREAK_IF(x) if (x) std::raise(SIGINT);
+    #define DEBUG_BREAK() assert(false);
+    #define DEBUG_BREAK_IF(x) if (x) assert(x);
 }

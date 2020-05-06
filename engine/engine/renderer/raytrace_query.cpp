@@ -8,81 +8,85 @@ namespace lotus
 {
     Raytracer::Raytracer(Engine* _engine) : engine(_engine)
     {
-        if (engine->renderer.RTXEnabled())
+        if (engine->renderer.RaytraceEnabled())
         {
             auto rayquery_shader_module = engine->renderer.getShader("shaders/rayquery.spv");
             auto query_miss_shader_module = engine->renderer.getShader("shaders/query_miss.spv");
             auto query_closest_hit_module = engine->renderer.getShader("shaders/query_closest_hit.spv");
 
             vk::PipelineShaderStageCreateInfo rayquery_stage_ci;
-            rayquery_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenNV;
+            rayquery_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenKHR;
             rayquery_stage_ci.module = *rayquery_shader_module;
             rayquery_stage_ci.pName = "main";
 
             vk::PipelineShaderStageCreateInfo ray_miss_stage_ci;
-            ray_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissNV;
+            ray_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
             ray_miss_stage_ci.module = *query_miss_shader_module;
             ray_miss_stage_ci.pName = "main";
 
             vk::PipelineShaderStageCreateInfo ray_closest_hit_stage_ci;
-            ray_closest_hit_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitNV;
+            ray_closest_hit_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
             ray_closest_hit_stage_ci.module = *query_closest_hit_module;
             ray_closest_hit_stage_ci.pName = "main";
 
+            constexpr uint32_t shader_raygencount = 1;
+            constexpr uint32_t shader_misscount = 1;
+            constexpr uint32_t shader_nonhitcount = shader_raygencount + shader_misscount;
+            constexpr uint32_t shader_hitcount = Renderer::shaders_per_group * 6;
             std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { rayquery_stage_ci, ray_miss_stage_ci, ray_closest_hit_stage_ci };
 
-            std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_group_ci = {
+            std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
                 {
-                vk::RayTracingShaderGroupTypeNV::eGeneral,
+                vk::RayTracingShaderGroupTypeKHR::eGeneral,
                 0,
-                VK_SHADER_UNUSED_NV,
-                VK_SHADER_UNUSED_NV,
-                VK_SHADER_UNUSED_NV
+                VK_SHADER_UNUSED_KHR,
+                VK_SHADER_UNUSED_KHR,
+                VK_SHADER_UNUSED_KHR
                 },
                 {
-                vk::RayTracingShaderGroupTypeNV::eGeneral,
+                vk::RayTracingShaderGroupTypeKHR::eGeneral,
                 1,
-                VK_SHADER_UNUSED_NV,
-                VK_SHADER_UNUSED_NV,
-                VK_SHADER_UNUSED_NV
+                VK_SHADER_UNUSED_KHR,
+                VK_SHADER_UNUSED_KHR,
+                VK_SHADER_UNUSED_KHR
                 }
             };
 
-            for (int i = 0; i < 64; ++i)
+            for (int i = 0; i < shader_hitcount; ++i)
             {
                 shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_NV,
+                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_KHR,
                     2,
-                    VK_SHADER_UNUSED_NV,
-                    VK_SHADER_UNUSED_NV
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR
                 );
             }
 
-            constexpr uint32_t shader_nonhitcount = 2;
-            constexpr uint32_t shader_hitcount = 64;
-            auto shader_size = engine->renderer.ray_tracing_properties.shaderGroupHandleSize;
-            size_t shader_stride = shader_size;
-            vk::DeviceSize sbt_size = shader_stride * shader_hitcount + shader_nonhitcount * shader_size;
-            shader_binding_table = engine->renderer.memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingNV, vk::MemoryPropertyFlagBits::eHostVisible);
+            vk::DeviceSize shader_stride = engine->renderer.ray_tracing_properties.shaderGroupHandleSize;
+            vk::DeviceSize shader_offset_raygen = 0;
+            vk::DeviceSize shader_offset_miss = (((shader_stride * shader_raygencount) / engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment;
+            vk::DeviceSize shader_offset_hit = shader_offset_miss + (((shader_stride * shader_misscount) / engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer.ray_tracing_properties.shaderGroupBaseAlignment;
+            vk::DeviceSize sbt_size = (shader_stride * shader_hitcount) + shader_offset_hit;
+            shader_binding_table = engine->renderer.memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingKHR, vk::MemoryPropertyFlagBits::eHostVisible);
 
             vk::DescriptorSetLayoutBinding acceleration_structure_binding;
             acceleration_structure_binding.binding = 0;
             acceleration_structure_binding.descriptorCount = 1;
-            acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
-            acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+            acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
+            acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
             vk::DescriptorSetLayoutBinding input_ubo_binding;
             input_ubo_binding.binding = 1;
             input_ubo_binding.descriptorCount = 1;
             input_ubo_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-            input_ubo_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+            input_ubo_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
             vk::DescriptorSetLayoutBinding output_buffer_binding;
             output_buffer_binding.binding = 2;
             output_buffer_binding.descriptorCount = 1;
             output_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-            output_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenNV;
+            output_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
             std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings
             {
@@ -95,16 +99,16 @@ namespace lotus
             rtx_layout_info.bindingCount = static_cast<uint32_t>(rtx_bindings.size());
             rtx_layout_info.pBindings = rtx_bindings.data();
 
-            rtx_descriptor_layout = engine->renderer.device->createDescriptorSetLayoutUnique(rtx_layout_info, nullptr, engine->renderer.dispatch);
+            rtx_descriptor_layout = engine->renderer.device->createDescriptorSetLayoutUnique(rtx_layout_info, nullptr);
 
             std::vector<vk::DescriptorSetLayout> rtx_descriptor_layouts = { *rtx_descriptor_layout};
             vk::PipelineLayoutCreateInfo rtx_pipeline_layout_ci;
             rtx_pipeline_layout_ci.pSetLayouts = rtx_descriptor_layouts.data();
             rtx_pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(rtx_descriptor_layouts.size());
 
-            rtx_pipeline_layout = engine->renderer.device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr, engine->renderer.dispatch);
+            rtx_pipeline_layout = engine->renderer.device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr);
 
-            vk::RayTracingPipelineCreateInfoNV rtx_pipeline_ci;
+            vk::RayTracingPipelineCreateInfoKHR rtx_pipeline_ci;
             rtx_pipeline_ci.maxRecursionDepth = 1;
             rtx_pipeline_ci.stageCount = static_cast<uint32_t>(shaders_ci.size());
             rtx_pipeline_ci.pStages = shaders_ci.data();
@@ -112,10 +116,11 @@ namespace lotus
             rtx_pipeline_ci.pGroups = shader_group_ci.data();
             rtx_pipeline_ci.layout = *rtx_pipeline_layout;
 
-            rtx_pipeline = engine->renderer.device->createRayTracingPipelineNVUnique(nullptr, rtx_pipeline_ci, nullptr, engine->renderer.dispatch);
+            auto result = engine->renderer.device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr);
+            rtx_pipeline = std::move(result.value);
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
-            pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureNV, 1);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureKHR, 1);
             pool_sizes_const.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
             pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, 1);
 
@@ -125,42 +130,48 @@ namespace lotus
             pool_ci.pPoolSizes = pool_sizes_const.data();
             pool_ci.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
-            rtx_descriptor_pool = engine->renderer.device->createDescriptorPoolUnique(pool_ci, nullptr, engine->renderer.dispatch);
+            rtx_descriptor_pool = engine->renderer.device->createDescriptorPoolUnique(pool_ci, nullptr);
 
             vk::DescriptorSetAllocateInfo set_ci;
             set_ci.descriptorPool = *rtx_descriptor_pool;
             set_ci.descriptorSetCount = 1;
             set_ci.pSetLayouts = &*rtx_descriptor_layout;
             {
-                auto sets = engine->renderer.device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci, engine->renderer.dispatch);
+                auto sets = engine->renderer.device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci);
                 rtx_descriptor_set = std::move(sets[0]);
             }
 
             uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
-            std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_size);
-            engine->renderer.device->getRayTracingShaderGroupHandlesNV(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data(), engine->renderer.dispatch);
-            for (uint32_t i = 0; i < shader_nonhitcount; ++i)
+            std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_stride);
+            engine->renderer.device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data());
+            for (uint32_t i = 0; i < shader_raygencount; ++i)
             {
-                memcpy(shader_mapped + (i * shader_size), shader_handle_storage.data() + (i * shader_size), shader_size);
+                memcpy(shader_mapped + shader_offset_raygen + (i * shader_stride), shader_handle_storage.data() + (i * shader_stride), shader_stride);
             }
-            shader_mapped += shader_size * shader_nonhitcount;
-
+            for (uint32_t i = 0; i < shader_misscount; ++i)
+            {
+                memcpy(shader_mapped + shader_offset_miss + (i * shader_stride), shader_handle_storage.data() + (shader_stride * shader_raygencount) + (i * shader_stride), shader_stride);
+            }
             for (uint32_t i = 0; i < shader_hitcount; ++i)
             {
-                memcpy(shader_mapped + (i * shader_stride), shader_handle_storage.data() + (shader_size * shader_nonhitcount) + (i * shader_size), shader_size);
+                memcpy(shader_mapped + shader_offset_hit + (i * shader_stride), shader_handle_storage.data() + (shader_stride * shader_nonhitcount) + (i * shader_stride), shader_stride);
             }
             shader_binding_table->unmap();
+
+            raygenSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_raygen, shader_stride, shader_stride * shader_raygencount };
+            missSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_miss, shader_stride, shader_stride * shader_misscount };
+            hitSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_hit, shader_stride, shader_stride * shader_hitcount };
         }
         auto [graphics_queue_idx, present_queue_idx, compute_queue_idx] = engine->renderer.getQueueFamilies(engine->renderer.physical_device);
         raytrace_query_queue = engine->renderer.device->getQueue(compute_queue_idx.value(), 1);
         vk::FenceCreateInfo fence_info;
-        fence = engine->renderer.device->createFenceUnique(fence_info, nullptr, engine->renderer.dispatch);
+        fence = engine->renderer.device->createFenceUnique(fence_info, nullptr);
 
         vk::CommandPoolCreateInfo pool_info = {};
         pool_info.queueFamilyIndex = compute_queue_idx.value();
 
-        command_pool = engine->renderer.device->createCommandPoolUnique(pool_info, nullptr, engine->renderer.dispatch);
+        command_pool = engine->renderer.device->createCommandPoolUnique(pool_info, nullptr);
     }
 
     void Raytracer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback)
@@ -170,7 +181,7 @@ namespace lotus
 
     void Raytracer::runQueries(uint32_t image)
     {
-        if (engine->renderer.RTXEnabled())
+        if (engine->renderer.RaytraceEnabled())
         {
             if (engine->game->scene->top_level_as[image])
             {
@@ -200,22 +211,22 @@ namespace lotus
                     alloc_info.level = vk::CommandBufferLevel::ePrimary;
                     alloc_info.commandBufferCount = 1;
 
-                    auto buffer = engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, engine->renderer.dispatch);
+                    auto buffer = engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
                     vk::CommandBufferBeginInfo begin_info = {};
                     begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-                    buffer[0]->begin(begin_info, engine->renderer.dispatch);
-                    buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline, engine->renderer.dispatch);
+                    buffer[0]->begin(begin_info);
+                    buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
                     vk::WriteDescriptorSet write_info_as;
                     write_info_as.descriptorCount = 1;
-                    write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureNV;
+                    write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
                     write_info_as.dstBinding = 0;
                     write_info_as.dstArrayElement = 0;
                     write_info_as.dstSet = *rtx_descriptor_set;
 
-                    vk::WriteDescriptorSetAccelerationStructureNV write_as;
+                    vk::WriteDescriptorSetAccelerationStructureKHR write_as;
                     write_as.accelerationStructureCount = 1;
                     write_as.pAccelerationStructures = &*engine->game->scene->top_level_as[image]->acceleration_structure;
                     write_info_as.pNext = &write_as;
@@ -247,20 +258,28 @@ namespace lotus
                     write_info_output.dstSet = *rtx_descriptor_set;
 
                     std::vector<vk::WriteDescriptorSet> writes = { write_info_as, write_info_input, write_info_output };
-                    engine->renderer.device->updateDescriptorSets(writes, nullptr, engine->renderer.dispatch);
+                    engine->renderer.device->updateDescriptorSets(writes, nullptr);
 
-                    buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {}, engine->renderer.dispatch);
-                    auto shader_size = engine->renderer.ray_tracing_properties.shaderGroupHandleSize;
-                    buffer[0]->traceRaysNV(shader_binding_table->buffer, 0,
-                        shader_binding_table->buffer, shader_size, shader_size,
-                        shader_binding_table->buffer, shader_size, shader_size,
-                        nullptr, 0, 0, processing_queries.size(), 1, 1, engine->renderer.dispatch);
-                    buffer[0]->end(engine->renderer.dispatch);
+                    vk::MemoryBarrier barrier;
+
+                    barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR;
+                    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
+
+                    buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eRayTracingShaderKHR,
+                        {}, barrier, nullptr, nullptr);
+
+                    buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {});
+                    buffer[0]->traceRaysKHR(raygenSBT,
+                        missSBT,
+                        hitSBT,
+                        {},
+                        processing_queries.size(), 1, 1);
+                    buffer[0]->end();
                     vk::SubmitInfo submit_info = {};
                     submit_info.pCommandBuffers = &*buffer[0];
                     submit_info.commandBufferCount = 1;
-                    raytrace_query_queue.submit(submit_info, *fence, engine->renderer.dispatch);
-                    engine->renderer.device->waitForFences(*fence, true, std::numeric_limits<uint64_t>::max(), engine->renderer.dispatch);
+                    raytrace_query_queue.submit(submit_info, *fence);
+                    engine->renderer.device->waitForFences(*fence, true, std::numeric_limits<uint64_t>::max());
                     engine->renderer.device->resetFences(*fence);
 
                     RaytraceOutput* output_mapped = static_cast<RaytraceOutput*>(output_buffer->map(0, output_buffer_size, {}));

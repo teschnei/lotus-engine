@@ -1,5 +1,5 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : require
 
@@ -12,7 +12,7 @@ struct Vertex
     float _pad;
 };
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 0) buffer Vertices
 {
     vec4 v[];
@@ -69,28 +69,23 @@ layout(std430, binding = 3, set = 1) uniform Light
     vec4 skybox_colors[8];
 } light;
 
-layout(location = 0) rayPayloadInNV HitValue
+layout(location = 0) rayPayloadInEXT HitValue
 {
     vec3 albedo;
     vec3 light;
 } hitValue;
 
-layout(location = 1) rayPayloadNV Shadow 
+layout(location = 1) rayPayloadEXT Shadow 
 {
     bool shadowed;
     vec3 color;
 } shadow;
 
-layout(shaderRecordNV) buffer Block
-{
-    uint geometry_index;
-} block;
-
-hitAttributeNV vec3 attribs;
+hitAttributeEXT vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -112,7 +107,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
     Vertex v;
 
     vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
@@ -128,7 +123,7 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
-    if (gl_HitTNV > light.landscape.max_fog)
+    if (gl_HitTEXT > light.landscape.max_fog)
     {
         hitValue.albedo = light.landscape.fog_color.rgb;
         hitValue.light = vec3(1.0);
@@ -142,7 +137,7 @@ void main()
     const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec3 normal = v0.norm * barycentrics.x + v1.norm * barycentrics.y + v2.norm * barycentrics.z;
-    vec3 transformed_normal = mat3(gl_ObjectToWorldNV) * normal;
+    vec3 transformed_normal = mat3(gl_ObjectToWorldEXT) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
 
     float dot_product = dot(-light.diffuse_dir, normalized_normal);
@@ -150,16 +145,16 @@ void main()
     vec3 primitive_color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].tex_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].tex_offset;
     vec3 texture_color = texture(textures[resource_index], uv).xyz;
 
     shadow.shadowed = true;
     shadow.color = light.landscape.diffuse_color.rgb * light.landscape.brightness;
     if (dot_product > 0)
     {
-        vec3 transformed_v0 = mat3(gl_ObjectToWorldNV) * v0.pos;
-        vec3 transformed_v1 = mat3(gl_ObjectToWorldNV) * v1.pos;
-        vec3 transformed_v2 = mat3(gl_ObjectToWorldNV) * v2.pos;
+        vec3 transformed_v0 = mat3(gl_ObjectToWorldEXT) * v0.pos;
+        vec3 transformed_v1 = mat3(gl_ObjectToWorldEXT) * v1.pos;
+        vec3 transformed_v2 = mat3(gl_ObjectToWorldEXT) * v2.pos;
         vec3 vertex_vec1 = normalize(vec3(transformed_v1 - transformed_v0));
         vec3 vertex_vec2 = normalize(vec3(transformed_v2 - transformed_v0));
 
@@ -168,8 +163,8 @@ void main()
         if ((dot(cross_vec, normalized_normal)) < 0)
             cross_vec = -cross_vec;
 
-        vec3 origin = gl_WorldRayOriginNV + gl_WorldRayDirectionNV * gl_HitTNV + cross_vec * 0.001;
-        traceNV(topLevelAS, gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV, 0x01 | 0x02 | 0x10 , 16, 1, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
+        vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
+        traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
     }
     vec3 ambient = light.landscape.ambient_color.rgb;
     vec3 diffuse = vec3(0);
@@ -182,9 +177,9 @@ void main()
     vec3 out_color = primitive_color * texture_color;
     //todo: split these
     out_color = out_light * out_color;
-    if (gl_HitTNV > light.landscape.min_fog)
+    if (gl_HitTEXT > light.landscape.min_fog)
     {
-        out_color = mix(out_color, light.landscape.fog_color.rgb, (gl_HitTNV - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
+        out_color = mix(out_color, light.landscape.fog_color.rgb, (gl_HitTEXT - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
     }
     hitValue.albedo = out_color;
     hitValue.light = vec3(1.0);

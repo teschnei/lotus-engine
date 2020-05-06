@@ -37,8 +37,8 @@ namespace lotus
         vmaFreeMemory(manager->allocator, allocation);
     }
 
-    MemoryManager::MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _device, vk::DispatchLoaderDynamic _dispatch): device(_device),
-                                 physical_device(_physical_device), dispatch(_dispatch), allocator(VK_NULL_HANDLE)
+    MemoryManager::MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _device): device(_device),
+                                 physical_device(_physical_device), allocator(VK_NULL_HANDLE)
     {
         VmaAllocatorCreateInfo vma_ci = {};
         vma_ci.device = device;
@@ -64,6 +64,9 @@ namespace lotus
 
         VmaAllocationCreateInfo vma_ci = {};
         vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
+        //TODO: temporarily always allocate (to ensure we get a block with allocation_device_address_bit) until vma is updated
+        if (usage | vk::BufferUsageFlagBits::eShaderDeviceAddress)
+            vma_ci.flags |= VMA_ALLOCATION_DEVICE_ADDRESS_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
         VkBuffer buffer;
         VmaAllocation allocation;
@@ -105,11 +108,13 @@ namespace lotus
         return std::make_unique<Image>(this, image, allocation, alloc_info, alloc_info.size);
     }
 
-    std::unique_ptr<GenericMemory> MemoryManager::GetMemory(const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryflags)
+    std::unique_ptr<GenericMemory> MemoryManager::GetMemory(const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryflags, vk::MemoryAllocateFlags allocateflags)
     {
         std::lock_guard lg(allocation_mutex);
         VmaAllocationCreateInfo vma_ci = {};
         vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
+        if (allocateflags | vk::MemoryAllocateFlagBits::eDeviceAddress)
+            vma_ci.flags |= VMA_ALLOCATION_DEVICE_ADDRESS_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
         VmaAllocation allocation;
         VmaAllocationInfo alloc_info;

@@ -65,6 +65,9 @@ namespace lotus
         vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic> rtx_descriptor_set;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_pipeline;
+        vk::StridedBufferRegionKHR raygenSBT;
+        vk::StridedBufferRegionKHR missSBT;
+        vk::StridedBufferRegionKHR hitSBT;
         vk::UniqueHandle<vk::Fence, vk::DispatchLoaderDynamic> fence;
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
         std::unique_ptr<Buffer> input_buffer;

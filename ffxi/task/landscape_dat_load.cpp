@@ -17,7 +17,7 @@ LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _
 
 void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 {
-    FFXI::DatParser parser{dat, thread->engine->renderer.render_mode == lotus::RenderMode::RTX};
+    FFXI::DatParser parser{dat, thread->engine->renderer.render_mode == lotus::RenderMode::Raytrace};
 
     FFXI::MZB* mzb{ nullptr };
     std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;

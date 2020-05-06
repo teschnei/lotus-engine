@@ -78,10 +78,10 @@ namespace FFXI
         vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
 
-        if (engine->renderer.RTXEnabled())
+        if (engine->renderer.RaytraceEnabled())
         {
-            vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
-            index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+            vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+            index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
         }
 
         auto mesh = std::make_unique<lotus::Mesh>(); 

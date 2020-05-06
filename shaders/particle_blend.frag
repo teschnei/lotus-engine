@@ -28,7 +28,8 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
 layout(location = 3) in vec3 normal;
 
-layout(location = 0) out vec4 outParticle;
+layout(location = 0) out vec4 outAccumulation;
+layout(location = 1) out float outRevealage;
 
 layout(push_constant) uniform PushConstant
 {
@@ -38,10 +39,15 @@ layout(push_constant) uniform PushConstant
 void main() {
     vec4 tex = texture(texSampler, fragTexCoord);
     vec4 particle_color = meshInfo.m[entity.index + push.mesh_index].color;
-    outParticle.rgb = particle_color.rgb + tex.rgb;
-    float tex_a = (tex.r + tex.g + tex.b) / 3.0;
+    float tex_a = (tex.r + tex.g + tex.b) * (1.0 / 3.0);
     if (tex_a < 1.f/16.f)
         discard;
-    outParticle.a = ((tex.r + tex.g + tex.b) / 3.0) * particle_color.a * 2;
+    float alpha = tex_a;
+    float a = min(1.0, alpha) * 8.0 + 0.01;
+    float b = -(1.0 - gl_FragCoord.z) * 0.95 + 1.0;
+    float w = clamp(a * a * a * 1e8 * b * b * b, 1e-2, 3e2);
+    outAccumulation.rgb = tex.rgb * w;
+    outAccumulation.a = alpha * w;
+    outRevealage = alpha;
 }
 

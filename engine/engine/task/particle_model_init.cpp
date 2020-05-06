@@ -16,13 +16,15 @@ namespace lotus
     {
         if (!vertex_buffer.empty())
         {
-            std::vector<vk::GeometryNV> raytrace_geometry;
+            std::vector<vk::AccelerationStructureGeometryKHR> raytrace_geometry;
+            std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> raytrace_offset_info;
+            std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> raytrace_create_info;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             auto& mesh = model->meshes[0];
 
@@ -39,7 +41,7 @@ namespace lotus
             vk::CommandBufferBeginInfo begin_info = {};
             begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-            command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+            command_buffer->begin(begin_info);
 
             memcpy(staging_buffer_data, vertex_buffer.data(), vertex_buffer.size());
             memcpy(staging_buffer_data + vertex_buffer.size(), index_buffer.data(), index_buffer.size() * sizeof(uint16_t));
@@ -47,43 +49,39 @@ namespace lotus
             vk::BufferCopy copy_region;
             copy_region.srcOffset = 0;
             copy_region.size = vertex_buffer.size();
-            command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+            command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region);
             copy_region.size = index_buffer.size() * sizeof(uint16_t);
             copy_region.srcOffset = vertex_buffer.size();
-            command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region, thread->engine->renderer.dispatch);
+            command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region);
 
-            if (thread->engine->renderer.RTXEnabled())
+            if (thread->engine->renderer.RaytraceEnabled())
             {
-                auto& geo = raytrace_geometry.emplace_back();
-                geo.geometryType = vk::GeometryTypeNV::eTriangles;
-                geo.geometry.triangles.vertexData = mesh->vertex_buffer->buffer;
-                geo.geometry.triangles.vertexOffset = 0;
-                geo.geometry.triangles.vertexCount = static_cast<uint32_t>(vertex_buffer.size() / vertex_stride);
-                geo.geometry.triangles.vertexStride = vertex_stride;
-                geo.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
+                raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
+                    vk::Format::eR32G32B32Sfloat,
+                    thread->engine->renderer.device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                    vertex_stride,
+                    vk::IndexType::eUint16,
+                    thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                    }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
-                geo.geometry.triangles.indexData = mesh->index_buffer->buffer;
-                geo.geometry.triangles.indexOffset = 0;
-                geo.geometry.triangles.indexCount = static_cast<uint32_t>(index_buffer.size());
-                geo.geometry.triangles.indexType = vk::IndexType::eUint16;
+                raytrace_offset_info.emplace_back(static_cast<uint32_t>(index_buffer.size()/3), 0, 0);
 
-                if (!mesh->has_transparency)
-                {
-                    geo.flags = vk::GeometryFlagBitsNV::eOpaque;
-                }
+                raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eTriangles, static_cast<uint32_t>(index_buffer.size() / 3),
+                    vk::IndexType::eUint16, static_cast<uint32_t>(vertex_buffer.size() / vertex_stride), vk::Format::eR32G32B32Sfloat, false);
             }
 
             staging_buffer->unmap();
 
-            if (thread->engine->renderer.RTXEnabled())
+            if (thread->engine->renderer.RaytraceEnabled())
             {
                 vk::MemoryBarrier barrier;
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteNV | vk::AccessFlagBits::eAccelerationStructureReadNV;
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildNV, {}, barrier, nullptr, nullptr, thread->engine->renderer.dispatch);
-                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, raytrace_geometry, false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
+                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
+                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+                    std::move(raytrace_create_info), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
             }
-            command_buffer->end(thread->engine->renderer.dispatch);
+            command_buffer->end();
 
             graphics.primary = *command_buffer;
         }

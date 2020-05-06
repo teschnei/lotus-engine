@@ -30,7 +30,7 @@ namespace lotus
 
         if (thread->engine->renderer.RasterizationEnabled())
         {
-            entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+            entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
             
             for (size_t i = 0; i < entity->command_buffers.size(); ++i)
             {
@@ -45,9 +45,9 @@ namespace lotus
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
                 begin_info.pInheritanceInfo = &inherit_info;
 
-                command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+                command_buffer->begin(begin_info);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.particle_pipeline_group.graphics_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.particle_pipeline_group.graphics_pipeline);
 
                 vk::DescriptorBufferInfo camera_buffer_info;
                 camera_buffer_info.buffer = thread->engine->camera->view_proj_ubo->buffer;
@@ -99,15 +99,15 @@ namespace lotus
                 descriptorWrites[3].descriptorCount = 1;
                 descriptorWrites[3].pBufferInfo = &material_index_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites);
 
                 drawModel(thread, *command_buffer, false, *thread->engine->renderer.pipeline_layout, i);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.particle_pipeline_group.blended_graphics_pipeline, thread->engine->renderer.dispatch);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.particle_pipeline_group.blended_graphics_pipeline);
 
                 drawModel(thread, *command_buffer, true, *thread->engine->renderer.pipeline_layout, i);
 
-                command_buffer->end(thread->engine->renderer.dispatch);
+                command_buffer->end();
             }
         }
     }
@@ -121,13 +121,13 @@ namespace lotus
             {
                 //TODO: material_index can only work with one model (or one mesh)
                 if (model->meshes.size() > 1)
-                    __debugbreak();
+                    DEBUG_BREAK();
                 for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
                 {
                     Mesh* mesh = model->meshes[mesh_i].get();
                     if (mesh->has_transparency == transparency)
                     {
-                        buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, { 0 }, thread->engine->renderer.dispatch);
+                        buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, { 0 });
                         drawMesh(thread, buffer, *mesh, layout, mesh_i);
                     }
                 }
@@ -156,13 +156,13 @@ namespace lotus
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pImageInfo = &image_info;
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites, thread->engine->renderer.dispatch);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites);
 
         buffer.pushConstants<uint32_t>(layout, vk::ShaderStageFlagBits::eFragment, 0, mesh_index);
 
-        buffer.bindIndexBuffer(mesh.index_buffer->buffer, 0, vk::IndexType::eUint16, thread->engine->renderer.dispatch);
+        buffer.bindIndexBuffer(mesh.index_buffer->buffer, 0, vk::IndexType::eUint16);
 
-        buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0, thread->engine->renderer.dispatch);
+        buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0);
     }
 
     ParticleEntityReInitTask::ParticleEntityReInitTask(const std::shared_ptr<Particle>& entity) : ParticleEntityInitTask(entity)

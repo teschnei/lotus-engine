@@ -24,13 +24,13 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info, thread->engine->renderer.dispatch);
+        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-        command_buffer->begin(begin_info, thread->engine->renderer.dispatch);
+        command_buffer->begin(begin_info);
 
         vk::ImageMemoryBarrier barrier;
         barrier.oldLayout = vk::ImageLayout::eUndefined;
@@ -46,7 +46,7 @@ namespace lotus
         barrier.srcAccessMask = {};
         barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, nullptr, barrier, thread->engine->renderer.dispatch);
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, nullptr, barrier);
 
         vk::BufferImageCopy region;
         region.bufferOffset = 0;
@@ -62,7 +62,7 @@ namespace lotus
             texture->getHeight(),
             1
         };
-        command_buffer->copyBufferToImage(staging_buffer->buffer, texture->image->image, vk::ImageLayout::eTransferDstOptimal, region, thread->engine->renderer.dispatch);
+        command_buffer->copyBufferToImage(staging_buffer->buffer, texture->image->image, vk::ImageLayout::eTransferDstOptimal, region);
 
         barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
         barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -77,9 +77,9 @@ namespace lotus
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, nullptr, nullptr, barrier, thread->engine->renderer.dispatch);
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, nullptr, nullptr, barrier);
 
-        command_buffer->end(thread->engine->renderer.dispatch);
+        command_buffer->end();
 
         graphics.primary = *command_buffer;
 

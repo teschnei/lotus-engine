@@ -1,5 +1,5 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
 
 struct Vertex
@@ -37,27 +37,22 @@ layout(binding = 4, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-layout(location = 0) rayPayloadInNV HitValue
+layout(location = 0) rayPayloadInEXT HitValue
 {
     vec3 color;
 } hitValue;
 
-layout(location = 1) rayPayloadInNV Shadow
+layout(location = 1) rayPayloadInEXT Shadow
 {
     bool shadowed;
     vec3 color;
 } shadow;
 
-layout(shaderRecordNV) buffer Block
-{
-    uint geometry_index;
-} block;
-
-hitAttributeNV vec3 attribs;
+hitAttributeEXT vec3 attribs;
 
 uvec3 getIndex(uint primitive_id)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
     uvec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -82,7 +77,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
     Vertex v;
 
     vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
@@ -107,11 +102,11 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     vec4 mesh_color = v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z;
-    vec4 model_color = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].color;
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexNV+block.geometry_index].tex_offset;
+    vec4 model_color = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].color;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].tex_offset;
     vec4 color = texture(textures[resource_index], uv) * mesh_color * model_color;
     float a = (color.r + color.g + color.b) / 3.0;
 
     shadow.color *= (1 - a);
-    ignoreIntersectionNV();
+    ignoreIntersectionEXT();
 }

@@ -17,27 +17,29 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
         auto& model = models[model_offset];
         if (!model->meshes.empty() && model->bottom_level_as)
         {
-            lotus::VkGeometryInstance instance{};
-            //glm is column-major so we have to transpose the model matrix for RTX
-            instance.transform = glm::mat3x4{ instance_info.model_t };
-            instance.accelerationStructureHandle = model->bottom_level_as->handle;
-            instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+            vk::AccelerationStructureInstanceKHR instance{};
+            //glm is column-major so we have to transpose the model matrix for Raytrace
+            auto matrix = glm::mat3x4{ instance_info.model_t };
+            memcpy(&instance.transform, &matrix, sizeof(matrix));
+            instance.accelerationStructureReference = model->bottom_level_as->handle;
+            instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
             instance.mask = static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry);
-            instance.instanceOffset = lotus::Renderer::shaders_per_group * 2;
-            instance.instanceId = model->bottom_level_as->resource_index;
+            instance.instanceShaderBindingTableRecordOffset = lotus::Renderer::shaders_per_group * 2;
+            instance.instanceCustomIndex = model->bottom_level_as->resource_index;
             model->bottom_level_as->instanceid = as->AddInstance(instance);
         }
     }
     for (const auto& collision_model : collision_models)
     {
-        lotus::VkGeometryInstance instance{};
-        //glm is column-major so we have to transpose the model matrix for RTX
-        instance.transform = glm::mat3x4{1.f};
-        instance.accelerationStructureHandle = collision_model->bottom_level_as->handle;
-        instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
+        vk::AccelerationStructureInstanceKHR instance{};
+        //glm is column-major so we have to transpose the model matrix for Raytrace
+        auto matrix = glm::mat3x4{1.f};
+        memcpy(&instance.transform, &matrix, sizeof(matrix));
+        instance.accelerationStructureReference = collision_model->bottom_level_as->handle;
+        instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
         instance.mask = static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelCollision);
-        instance.instanceOffset = 0;
-        instance.instanceId = 0;
+        instance.instanceShaderBindingTableRecordOffset = 0;
+        instance.instanceCustomIndex = 0;
         collision_model->bottom_level_as->instanceid = as->AddInstance(instance);
     }
 }
