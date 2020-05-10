@@ -1,18 +1,10 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
 
 layout(binding = 1) uniform sampler2D texSampler;
-
-struct Mesh
-{
-    int vec_index_offset;
-    int tex_offset;
-    float specular1;
-    float specular2;
-    vec4 color;
-    uint light_type;
-    uint indices;
-};
 
 layout(binding = 3, set = 0) uniform MeshInfo
 {

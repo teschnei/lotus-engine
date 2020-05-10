@@ -44,7 +44,7 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
             model = lotus::Model::getModel("rin ");
         particle->models.push_back(std::move(model));
         particle->setScale(generator->scale);
-        particle->setPos(pos + glm::vec3(259.f, -87.f, 99.f));
+        particle->setPos(pos + entity->getPos());
         particle->setRot(generator->rot + gen_rot_add);
         gen_rot_add += generator->gen_rot_add;
         particle->color = glm::vec4{ (generator->color & 0xFF) / 255.f, ((generator->color & 0xFF00) >> 8) / 255.0, ((generator->color & 0xFF0000) >> 16) / 255.0, ((generator->color & 0xFF000000) >> 24) / 255.0 };

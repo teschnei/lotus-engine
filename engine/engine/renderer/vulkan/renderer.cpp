@@ -40,7 +40,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine) : render_mode{RenderMode::Raytrace}, engine(_engine)
+    Renderer::Renderer(Engine* _engine) : render_mode{RenderMode::Hybrid}, engine(_engine)
     {
         SDL_Init(SDL_INIT_VIDEO);
         window = SDL_CreateWindow(engine->settings.app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, engine->config->renderer.screen_width, engine->config->renderer.screen_height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -1072,13 +1072,13 @@ namespace lotus
                 vertex_buffer_binding.binding = 1;
                 vertex_buffer_binding.descriptorCount = max_acceleration_binding_index;
                 vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-                vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
+                vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
                 vk::DescriptorSetLayoutBinding index_buffer_binding;
                 index_buffer_binding.binding = 2;
                 index_buffer_binding.descriptorCount = max_acceleration_binding_index;
                 index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-                index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
+                index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
                 vk::DescriptorSetLayoutBinding texture_bindings;
                 texture_bindings.binding = 3;
@@ -1090,7 +1090,7 @@ namespace lotus
                 mesh_info_binding.binding = 4;
                 mesh_info_binding.descriptorCount = 1;
                 mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-                mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
+                mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
                 std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
                 {

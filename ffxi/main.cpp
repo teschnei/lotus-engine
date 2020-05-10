@@ -37,13 +37,13 @@ public:
         */
         scene->AddEntity<FFXILandscapeEntity>(path + R"(\ROM\342\73.dat)");
         //costumeid 3111 (arciela 3074)
-        //auto iroha = scene->AddEntity<Actor>(path + R"(\ROM\310\3.dat)");
-        auto iroha = scene->AddEntity<Actor>(path + R"(\ROM\309\105.dat)");
-        iroha->setPos(glm::vec3(259.f, -87.f, 99.f));
-        auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(iroha));
+        //auto player = scene->AddEntity<Actor>(path + R"(\ROM\310\3.dat)");
+        auto player = scene->AddEntity<Actor>(path + R"(\ROM\309\105.dat)");
+        player->setPos(glm::vec3(259.f, -87.f, 99.f));
+        auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
         engine->set_camera(camera.get());
-        iroha->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input);
-        iroha->addComponent<ParticleTester>(&engine->input);
+        player->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input);
+        player->addComponent<ParticleTester>(&engine->input);
         //TODO: move this back to core.cpp after camera is figured out
         engine->renderer.generateCommandBuffers();
         engine->lights.light.diffuse_dir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
