@@ -40,7 +40,7 @@ namespace FFXI
             case 0xA1:
             {
                 if (infoa1->ddsType[0] != '3')
-                    __debugbreak();
+                    DEBUG_BREAK();
                 name = std::string(infoa1->id, 16);
                 width = infoa1->imgx;
                 height = infoa1->imgy;
@@ -50,10 +50,10 @@ namespace FFXI
                 break;
             }
             case 0x01:
-                __debugbreak();
+                DEBUG_BREAK();
                 break;
             case 0x81:
-                __debugbreak();
+                DEBUG_BREAK();
                 break;
             case 0xB1:
             {
@@ -77,10 +77,10 @@ namespace FFXI
                 break;
             }
             case 0x05:
-                __debugbreak();
+                DEBUG_BREAK();
                 break;
             case 0x91:
-                __debugbreak();
+                DEBUG_BREAK();
                 break;
         }
     }

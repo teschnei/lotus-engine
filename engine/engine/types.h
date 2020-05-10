@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <csignal>
 
 using namespace std::literals::chrono_literals;
 namespace lotus
@@ -13,4 +14,7 @@ namespace lotus
         Short,
         Long
     };
+
+    #define DEBUG_BREAK() assert(false);
+    #define DEBUG_BREAK_IF(x) if (x) assert(x);
 }

@@ -121,7 +121,7 @@ namespace lotus
             {
                 //TODO: material_index can only work with one model (or one mesh)
                 if (model->meshes.size() > 1)
-                    __debugbreak();
+                    DEBUG_BREAK();
                 for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
                 {
                     Mesh* mesh = model->meshes[mesh_i].get();

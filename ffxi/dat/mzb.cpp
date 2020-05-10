@@ -31,7 +31,7 @@ namespace FFXI
         float fRotX,fRotY,fRotZ;
         float fScaleX,fScaleY,fScaleZ;
         float fa,fb,fc,fd;				//0, 10, 100, 1000
-        unsigned int i1, i2, i3, i4;
+        uint32_t i1, i2, i3, i4;
     };
 
     //observed in dat 116
@@ -41,7 +41,7 @@ namespace FFXI
         float fRotX,fRotY,fRotZ;
         float fScaleX,fScaleY,fScaleZ;
         float fa,fb,fc,fd;				//0, 10, 100, 1000
-        unsigned int i1, i2, i3, i4, i5, i6;
+        uint32_t i1, i2, i3, i4, i5, i6;
     };
 
     enum class FrustumResult

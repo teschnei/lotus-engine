@@ -14,7 +14,7 @@ void lotus::AccelerationStructure::PopulateAccelerationStructure(const std::vect
     info.pGeometryInfos = geometries.data();
     info.compactedSize = 0;
     acceleration_structure = engine->renderer.device->createAccelerationStructureKHRUnique(info, nullptr);
-}
+    }
 
 void lotus::AccelerationStructure::PopulateBuffers()
 {
@@ -68,7 +68,7 @@ void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer 
 
     vk::DeviceOrHostAddressKHR scratch_data{engine->renderer.device->getBufferAddressKHR(scratch_memory->buffer)};
     const auto geometry_p = geometries.data();
-    vk::AccelerationStructureBuildGeometryInfoKHR build_info{ type, flags, update, update ? *acceleration_structure : VK_NULL_HANDLE, *acceleration_structure, false, static_cast<uint32_t>(geometries.size()), &geometry_p, scratch_data };
+    vk::AccelerationStructureBuildGeometryInfoKHR build_info( type, flags, update, update ? *acceleration_structure : nullptr, *acceleration_structure, false, static_cast<uint32_t>(geometries.size()), &geometry_p, scratch_data );
 
     command_buffer.buildAccelerationStructureKHR(build_info, offsets.data());
 }

@@ -212,7 +212,7 @@ namespace FFXI
                 }
                 if (offset_list.size() != header->pieces)
                 {
-                    __debugbreak();
+                    DEBUG_BREAK();
                 }
             }
             offset += header->offsetBlockHeader;
@@ -231,7 +231,7 @@ namespace FFXI
 
             if (block_header->numModel > 50)
             {
-                __debugbreak();
+                DEBUG_BREAK();
             }
             for (int model_index = 0; model_index < block_header->numModel; ++model_index)
             {

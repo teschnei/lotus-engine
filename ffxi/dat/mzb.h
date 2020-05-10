@@ -15,7 +15,7 @@ namespace FFXI
         float fRotX,fRotY,fRotZ;
         float fScaleX,fScaleY,fScaleZ;
         float fa,fb,fc,fd;				//0, 10, 100, 1000
-        long  fe,ff,fg,fh,fi,fj,fk,fl;
+        uint32_t  fe,ff,fg,fh,fi,fj,fk,fl;
     };
     static_assert(sizeof(SMZBBlock100) == 0x64);
 
