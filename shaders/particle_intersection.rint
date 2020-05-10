@@ -1,7 +1,140 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
+
+struct Vertex
+{
+    vec3 pos;
+    vec3 norm;
+    vec2 uv;
+};
+
+layout(binding = 1, set = 0) buffer Vertices
+{
+    Vertex v[];
+} vertices[1024];
+
+layout(binding = 2, set = 0) buffer Indices
+{
+    int i[];
+} indices[1024];
+
+layout(binding = 4, set = 0) uniform MeshInfo
+{
+    Mesh m[1024];
+} meshInfo;
+
+hitAttributeEXT block {
+    vec2 bary_coord;
+    uint primitive_id;
+} attribs;
+
+ivec3 getIndex(uint base_index, uint resource_index)
+{
+    ivec3 ret;
+    if (base_index % 2 == 0)
+    {
+        ret.x = indices[resource_index].i[base_index / 2] & 0xFFFF;
+        ret.y = (indices[resource_index].i[base_index / 2] >> 16) & 0xFFFF;
+        ret.z = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
+    }
+    else
+    {
+        ret.x = (indices[resource_index].i[base_index / 2] >> 16) & 0xFFFF;
+        ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
+        ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
+    }
+    return ret;
+}
+
+uint vertexSize = 3;
+
+Vertex unpackVertex(uint index, uint resource_index)
+{
+    Vertex v = vertices[resource_index].v[index];
+
+    return v;
+}
+
+mat4 lookAt(vec3 eye, vec3 center, vec3 up)
+{
+    vec3 f = vec3(normalize(center - eye));
+    vec3 s = vec3(normalize(cross(f, up)));
+    vec3 u = vec3(cross(s, f));
+
+    mat4 Result = mat4(1);
+    Result[0][0] = s.x;
+    Result[1][0] = s.y;
+    Result[2][0] = s.z;
+    Result[0][1] = u.x;
+    Result[1][1] = u.y;
+    Result[2][1] = u.z;
+    Result[0][2] =-f.x;
+    Result[1][2] =-f.y;
+    Result[2][2] =-f.z;
+    Result[3][0] =-dot(s, eye);
+    Result[3][1] =-dot(u, eye);
+    Result[3][2] = dot(f, eye);
+
+    return Result;
+}
 
 void main()
 {
+    Mesh mesh_info = meshInfo.m[gl_InstanceCustomIndexEXT + gl_GeometryIndexEXT];
+    uint resource_index = mesh_info.vec_index_offset;
+    for (uint i = 0; i < mesh_info.indices; i += 3)
+    {
+        ivec3 triangle_indices = getIndex(i, resource_index);
+
+        mat4x3 transform = gl_ObjectToWorldEXT;
+        /*
+        if (mesh_info.billboard > 0)
+        {
+            mat4 scale = mat4(vec4(mesh_info.scale.x, 0, 0, 0), vec4(0, mesh_info.scale.y, 0, 0), vec4(0, 0, mesh_info.scale.z, 0), vec4(0,0,0,1));
+            mat4 pos = mat4(1.0);
+            pos[3] = vec4(transform[3], 1.0);
+            mat4 rot = mat4(transpose(mat3(lookAt(gl_WorldRayOriginEXT, normalize(gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT), vec3(0, -1.0, 0)))));
+            transform = mat4x3(pos * rot * scale);
+        }
+        */
+
+        vec3 v0 = transform * vec4(unpackVertex(triangle_indices.x, resource_index).pos, 1.0);
+        vec3 v1 = transform * vec4(unpackVertex(triangle_indices.y, resource_index).pos, 1.0);
+        vec3 v2 = transform * vec4(unpackVertex(triangle_indices.z, resource_index).pos, 1.0);
+
+        vec3 e1 = v1 - v0;
+        vec3 e2 = v2 - v0;
+
+        vec3 h = cross(gl_WorldRayDirectionEXT, e2);
+        float a = dot(e1, h);
+
+        if (a > -0.00001 && a < 0.00001)
+            continue;
+
+        float f = 1/a;
+        vec3 s = gl_WorldRayOriginEXT - v0;
+        float u = f * dot(s, h);
+
+        if (u < 0.0 || u > 1.0)
+            continue;
+
+        vec3 q = cross(s, e1);
+        float v = f * dot(gl_WorldRayDirectionEXT, q);
+
+        if (v < 0.0 || u + v > 1.0)
+            continue;
+
+        float t = f * dot(e2, q);
+
+        if (t > gl_RayTminEXT && t < gl_RayTmaxEXT)
+        {
+            attribs.bary_coord = vec2(u, v);
+            attribs.primitive_id = i / 3;
+            reportIntersectionEXT(t, 0u);
+        }
+    }
 }

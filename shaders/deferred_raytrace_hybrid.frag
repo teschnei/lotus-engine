@@ -1,6 +1,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
 
 layout(binding = 0) uniform sampler2D positionSampler;
 layout(binding = 1) uniform sampler2D albedoSampler;
@@ -8,16 +11,6 @@ layout(binding = 2) uniform sampler2D lightSampler;
 layout(binding = 3) uniform usampler2D materialIndexSampler;
 layout(binding = 4) uniform sampler2D accumulationSampler;
 layout(binding = 5) uniform sampler2D revealageSampler;
-
-struct Mesh
-{
-    uint vec_index_offset;
-    uint tex_offset;
-    float specular_exponent;
-    float specular_intensity;
-    vec4 color;
-    uint light_type;
-};
 
 layout(binding = 6, set = 0) uniform MeshInfo
 {

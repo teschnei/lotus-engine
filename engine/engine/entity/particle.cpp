@@ -44,7 +44,7 @@ namespace lotus
     {
         auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
         auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
-        engine->worker_pool.addWork(std::make_unique<EntityRenderTask>(re_sp, 1000-distance));
+        engine->worker_pool.addWork(std::make_unique<EntityRenderTask>(re_sp));
     }
     
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)

@@ -36,6 +36,12 @@ layout(location = 0) rayPayloadInEXT HitValue
     vec3 light;
 } hitValue;
 
+layout(location = 1) rayPayloadInEXT Shadow 
+{
+    vec4 light;
+    vec4 shadow;
+} shadow;
+
 hitAttributeEXT block {
     vec2 bary_coord;
     uint primitive_id;
@@ -98,8 +104,6 @@ void main()
     vec4 color = texture(textures[resource_index], uv); /* * mesh_color * model_color; */
     float a = (color.r + color.g + color.b) / 3.0;
 
-    if (a < 1.f/16.f)
-    {
-        ignoreIntersectionEXT();
-    }
+    shadow.light.rgb = mix(shadow.light.rgb, color.rgb, a);
+    ignoreIntersectionEXT();
 }

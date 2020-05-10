@@ -147,8 +147,11 @@ namespace lotus
             float specular_exponent;
             float specular_intensity;
             glm::vec4 color;
+            glm::vec3 scale;
+            uint32_t billboard;
             uint32_t light_type;
-            float _pad[3];
+            uint32_t indices;
+            float _pad[2];
         };
         /* Ray tracing */
         bool RaytraceEnabled();

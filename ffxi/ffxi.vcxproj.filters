@@ -226,6 +226,9 @@
     <GLSLValidate Include="..\shaders\particle_intersection.rint">
       <Filter>shaders</Filter>
     </GLSLValidate>
+    <GLSLValidate Include="..\shaders\particle_shadow_color_hit.rahit">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
     <GLSLValidate Include="..\shaders\miss.rmiss">
       <Filter>shaders</Filter>
     </GLSLValidate>
@@ -262,5 +265,10 @@
     <GLSLValidate Include="..\shaders\raygen_hybrid.rgen">
       <Filter>shaders</Filter>
     </GLSLValidate>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\common.glsl">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

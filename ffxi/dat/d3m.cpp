@@ -77,11 +77,22 @@ namespace FFXI
 
         vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
+        vk::BufferUsageFlags aabbs_usage_flags = vk::BufferUsageFlagBits::eTransferDst;
 
         if (engine->renderer.RaytraceEnabled())
         {
             vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
             index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+            aabbs_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+        }
+
+        //assume every particle billboards (since it's set per generator, not per model)
+        float max_dist = 0;
+        for (const auto& vertex : d3m->vertex_buffer)
+        {
+            auto len = glm::length(vertex.pos);
+            if (len > max_dist)
+                max_dist = len;
         }
 
         auto mesh = std::make_unique<lotus::Mesh>(); 
@@ -91,6 +102,7 @@ namespace FFXI
 
         mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(d3m->num_triangles * 3 * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->aabbs_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(d3m->num_triangles * 3);
         mesh->setVertexCount(d3m->num_triangles * 3);
         mesh->setVertexInputAttributeDescription(D3M::Vertex::getAttributeDescriptions());
@@ -98,6 +110,6 @@ namespace FFXI
 
         model->meshes.push_back(std::move(mesh));
 
-        engine->worker_pool.addWork(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex)));
+        engine->worker_pool.addWork(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex), max_dist));
     }
 }

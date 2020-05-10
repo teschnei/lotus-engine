@@ -2,6 +2,9 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
 
 struct Vertex
 {
@@ -24,16 +27,6 @@ layout(binding = 2, set = 0) buffer Indices
 } indices[1024];
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
-
-struct Mesh
-{
-    uint vec_index_offset;
-    uint tex_offset;
-    float specular1;
-    float specular2;
-    vec4 color;
-    uint light_type;
-};
 
 layout(binding = 4, set = 0) uniform MeshInfo
 {
@@ -77,8 +70,8 @@ layout(location = 0) rayPayloadInEXT HitValue
 
 layout(location = 1) rayPayloadEXT Shadow 
 {
-    bool shadowed;
-    vec3 color;
+    vec4 light;
+    vec4 shadow;
 } shadow;
 
 hitAttributeEXT vec3 attribs;
@@ -148,8 +141,8 @@ void main()
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].tex_offset;
     vec3 texture_color = texture(textures[resource_index], uv).xyz;
 
-    shadow.shadowed = true;
-    shadow.color = light.landscape.diffuse_color.rgb * light.landscape.brightness;
+    shadow.light = vec4(light.landscape.diffuse_color.rgb * light.landscape.brightness, 1.0);
+    shadow.shadow = vec4(0.0);
     if (dot_product > 0)
     {
         vec3 transformed_v0 = mat3(gl_ObjectToWorldEXT) * v0.pos;
@@ -164,14 +157,11 @@ void main()
             cross_vec = -cross_vec;
 
         vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
-        traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
+        traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
     }
     vec3 ambient = light.landscape.ambient_color.rgb;
     vec3 diffuse = vec3(0);
-    if (!shadow.shadowed)
-    {
-        diffuse = vec3(max(dot_product, 0.0)) * shadow.color;
-    }
+    diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
 
     vec3 out_light = diffuse + ambient;
     vec3 out_color = primitive_color * texture_color;

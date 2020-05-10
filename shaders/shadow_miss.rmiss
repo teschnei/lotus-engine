@@ -1,13 +1,14 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 
-layout(location = 1) rayPayloadInNV Shadow 
+layout(location = 1) rayPayloadInEXT Shadow 
 {
-    bool shadowed;
-    vec3 color;
+    vec4 light;
+    vec4 shadow;
 } shadow;
 
 void main()
 {
-    shadow.shadowed = false;
+    shadow.shadow = shadow.light;
+    shadow.shadow.a = 1.0;
 }

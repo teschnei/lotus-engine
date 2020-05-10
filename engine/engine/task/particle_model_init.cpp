@@ -6,8 +6,8 @@
 
 namespace lotus
 {
-    ParticleModelInitTask::ParticleModelInitTask(int _image_index, std::shared_ptr<Model> _model, std::vector<uint8_t>&& _vertex_buffer, uint32_t _vertex_stride) :
-        WorkItem(), image_index(_image_index), model(std::move(_model)), vertex_buffer(std::move(_vertex_buffer)), vertex_stride(_vertex_stride)
+    ParticleModelInitTask::ParticleModelInitTask(int _image_index, std::shared_ptr<Model> _model, std::vector<uint8_t>&& _vertex_buffer, uint32_t _vertex_stride, float _aabb_dist) :
+        WorkItem(), image_index(_image_index), model(std::move(_model)), vertex_buffer(std::move(_vertex_buffer)), vertex_stride(_vertex_stride), aabb_dist(_aabb_dist)
     {
         priority = -1;
     }
@@ -26,12 +26,13 @@ namespace lotus
 
             auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
+            //assumes only 1 mesh
             auto& mesh = model->meshes[0];
 
             auto index_buffer = std::vector<uint16_t>(mesh->getIndexCount());
             std::iota(index_buffer.begin(), index_buffer.end(), 0);
 
-            vk::DeviceSize staging_buffer_size = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t));
+            vk::DeviceSize staging_buffer_size = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t)) + sizeof(vk::AabbPositionsKHR);
 
             staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
@@ -43,8 +44,12 @@ namespace lotus
 
             command_buffer->begin(begin_info);
 
+            //particles may billboard, so the AABB must be able to contain any transformation matrix
+            vk::AabbPositionsKHR aabbs_positions{ -aabb_dist, -aabb_dist, -aabb_dist, aabb_dist, aabb_dist, aabb_dist };
+
             memcpy(staging_buffer_data, vertex_buffer.data(), vertex_buffer.size());
             memcpy(staging_buffer_data + vertex_buffer.size(), index_buffer.data(), index_buffer.size() * sizeof(uint16_t));
+            memcpy(staging_buffer_data + vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t)), &aabbs_positions, sizeof(vk::AabbPositionsKHR));
 
             vk::BufferCopy copy_region;
             copy_region.srcOffset = 0;
@@ -53,20 +58,20 @@ namespace lotus
             copy_region.size = index_buffer.size() * sizeof(uint16_t);
             copy_region.srcOffset = vertex_buffer.size();
             command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region);
+            copy_region.size = sizeof(vk::AabbPositionsKHR);
+            copy_region.srcOffset = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t));
+            command_buffer->copyBuffer(staging_buffer->buffer, mesh->aabbs_buffer->buffer, copy_region);
 
             if (thread->engine->renderer.RaytraceEnabled())
             {
-                raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
-                    vk::Format::eR32G32B32Sfloat,
-                    thread->engine->renderer.device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
-                    vertex_stride,
-                    vk::IndexType::eUint16,
-                    thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eAabbs, vk::AccelerationStructureGeometryAabbsDataKHR{
+                    thread->engine->renderer.device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
+                    sizeof(vk::AabbPositionsKHR)
                     }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
-                raytrace_offset_info.emplace_back(static_cast<uint32_t>(index_buffer.size()/3), 0, 0);
+                raytrace_offset_info.emplace_back(1, 0);
 
-                raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eTriangles, static_cast<uint32_t>(index_buffer.size() / 3),
+                raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eAabbs, 1,
                     vk::IndexType::eUint16, static_cast<uint32_t>(vertex_buffer.size() / vertex_stride), vk::Format::eR32G32B32Sfloat, false);
             }
 

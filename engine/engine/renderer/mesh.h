@@ -47,6 +47,7 @@ namespace lotus
 
         std::unique_ptr<Buffer> vertex_buffer;
         std::unique_ptr<Buffer> index_buffer;
+        std::unique_ptr<Buffer> aabbs_buffer;
 
         std::shared_ptr<Texture> texture;
 

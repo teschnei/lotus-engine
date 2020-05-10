@@ -28,6 +28,11 @@ namespace FFXI
     } DATHEAD;
 #pragma pack(pop)
 
+    DatParser::DatParser()
+    {
+
+    }
+
     DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
     {
         std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };

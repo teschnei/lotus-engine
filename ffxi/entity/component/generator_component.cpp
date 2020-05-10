@@ -198,8 +198,6 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
                     prev_key = key;
                     prev = value;
                 }
-                auto color = particle_pointer->color;
-                particle_pointer->color.a = glm::mix(prev, next, a);
             }
             if (!generator->kf_u.empty())
             {

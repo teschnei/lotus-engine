@@ -53,11 +53,12 @@ namespace FFXI
     {
     public:
         DatParser(const std::string& filepath, bool rtx);
+        DatParser();
 
         std::unique_ptr<DatChunk> root;
 
     private:
-        bool rtx;
+        bool rtx{ false };
         std::vector<uint8_t> buffer;
     };
 }

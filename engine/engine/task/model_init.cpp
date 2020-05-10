@@ -108,7 +108,7 @@ namespace lotus
                         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
                         for (int image = 0; image < thread->engine->renderer.getImageCount(); ++image)
                         {
-                            thread->engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, model->light_offset };
+                            thread->engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, glm::vec3{1.f}, 0, model->light_offset, (uint32_t)mesh->getIndexCount() };
                         }
                     }
                     model->bottom_level_as->resource_index = index;

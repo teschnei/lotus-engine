@@ -11,6 +11,7 @@ struct Mesh
     float specular2;
     vec4 color;
     uint light_type;
+    uint indices;
 };
 
 layout(binding = 3, set = 0) uniform MeshInfo

@@ -88,6 +88,7 @@
     <GLSLValidate Include="..\shaders\particle_closest_hit.rchit" />
     <GLSLValidate Include="..\shaders\particle_color_hit.rahit" />
     <GLSLValidate Include="..\shaders\particle_intersection.rint" />
+    <GLSLValidate Include="..\shaders\particle_shadow_color_hit.rahit" />
     <GLSLValidate Include="..\shaders\miss.rmiss" />
     <GLSLValidate Include="..\shaders\raygen.rgen" />
     <GLSLValidate Include="..\shaders\raygen_hybrid.rgen" />
@@ -99,6 +100,9 @@
     <GLSLValidate Include="..\shaders\query_closest_hit.rchit" />
     <GLSLValidate Include="..\shaders\query_miss.rmiss" />
     <GLSLValidate Include="..\shaders\rayquery.rgen" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\shaders\common.glsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
