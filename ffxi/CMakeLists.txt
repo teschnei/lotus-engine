@@ -13,10 +13,9 @@ target_include_directories(ffxi PRIVATE "../external/stb" )
 target_link_libraries( ffxi engine ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES} $<$<PLATFORM_ID:Linux>:-ldl> )
 
 if (MSVC)
-  add_custom_command( TARGET ffxi POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${SDL2_DLL} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../textures ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/textures
-  )
+    #these files never change, so they can be copied at generation time rather than build time
+    file( COPY ${SDL2_DLL} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    file( COPY ../textures DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endif()
 
 add_subdirectory(dat)

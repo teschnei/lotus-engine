@@ -50,15 +50,11 @@ bool ThirdPersonFFXICameraComponent::handleInput(const SDL_Event& event)
     }
     else if (event.type == SDL_MOUSEWHEEL)
     {
-        if (event.wheel.y > 0)
+        if (event.wheel.y != 0)
         {
             float dist = camera->getDistance();
-            camera->setDistance(dist - event.wheel.y);
-        }
-        else if (event.wheel.y < 0)
-        {
-            float dist = camera->getDistance();
-            camera->setDistance(dist - event.wheel.y);
+            dist = std::clamp(dist - event.wheel.y, 1.f, 10.f);
+            camera->setDistance(dist);
         }
     }
     return false;
