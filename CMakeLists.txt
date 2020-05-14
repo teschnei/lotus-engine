@@ -1,5 +1,5 @@
-cmake_minimum_required( VERSION 3.2 FATAL_ERROR )
-cmake_policy( VERSION 3.2 )
+cmake_minimum_required( VERSION 3.13 FATAL_ERROR )
+cmake_policy( VERSION 3.13 )
 
 project( ffxi )
 
@@ -17,21 +17,6 @@ include( "cmake/compiler.cmake" )
 find_package( Vulkan REQUIRED )
 find_package( GLM REQUIRED )
 find_package( SDL2 REQUIRED )
-
-###############################
-## includes
-###############################
-include_directories( "engine" )
-include_directories( "ffxi" )
-
-include_directories( "external" )
-include_directories( "external/stb" )
-include_directories( "external/vma" )
-
-include_directories( ${Vulkan_INCLUDE_DIR} )
-include_directories( ${SDL2_INCLUDE_DIR} )
-include_directories( ${GLM_INCLUDE_DIR} )
-
 
 ###############################
 ## output

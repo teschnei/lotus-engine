@@ -1,0 +1,15 @@
+target_sources(ffxi
+    PRIVATE
+    generator_component.cpp
+    generator_component.h
+    scheduler_component.cpp
+    scheduler_component.h
+    third_person_ffxi_camera_component.cpp
+    third_person_ffxi_camera_component.h
+    third_person_ffxi_entity_input.cpp
+    third_person_ffxi_entity_input.h
+    third_person_ffxiv_camera_component.cpp
+    third_person_ffxiv_camera_component.h
+    third_person_ffxiv_entity_input.cpp
+    third_person_ffxiv_entity_input.h
+    )

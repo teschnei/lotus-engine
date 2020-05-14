@@ -1,0 +1,9 @@
+target_sources(ffxi
+    PRIVATE
+    actor_dat_load.cpp
+    actor_dat_load.h
+    collision_model_init.cpp
+    collision_model_init.h
+    landscape_dat_load.cpp
+    landscape_dat_load.h
+    )

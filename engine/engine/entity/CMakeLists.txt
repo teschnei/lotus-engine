@@ -1,0 +1,21 @@
+target_sources(engine
+    PRIVATE
+    camera.cpp
+    camera.h
+    deformable_entity.cpp
+    deformable_entity.h
+    entity.cpp
+    entity.h
+    free_flying_camera.cpp
+    free_flying_camera.h
+    landscape_entity.cpp
+    landscape_entity.h
+    particle.cpp
+    particle.h
+    renderable_entity.cpp
+    renderable_entity.h
+    third_person_boom_camera.cpp
+    third_person_boom_camera.h
+    )
+
+add_subdirectory(component)

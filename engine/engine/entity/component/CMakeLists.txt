@@ -1,0 +1,16 @@
+target_sources(engine
+    PRIVATE
+    animation_component.cpp
+    animation_component.h
+    component.cpp
+    component.h
+    free_flying_camera_component.cpp
+    free_flying_camera_component.h
+    input_component.cpp
+    input_component.h
+    third_person_camera_component.cpp
+    third_person_camera_component.h
+    third_person_entity_input_component.cpp
+    third_person_entity_input_component.h
+    tick_component.h
+    )
