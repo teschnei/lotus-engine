@@ -52,9 +52,7 @@ bool ThirdPersonFFXICameraComponent::handleInput(const SDL_Event& event)
     {
         if (event.wheel.y != 0)
         {
-            float dist = camera->getDistance();
-            dist = std::clamp(dist - event.wheel.y, 1.f, 10.f);
-            camera->setDistance(dist);
+            camera->setDistance(std::clamp(camera->getDistance() - event.wheel.y, 1.f, 10.f));
         }
     }
     return false;
