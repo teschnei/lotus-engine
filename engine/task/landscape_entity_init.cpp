@@ -52,7 +52,7 @@ namespace lotus
                 command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.graphics_pipeline);
 
                 vk::DescriptorBufferInfo buffer_info;
-                buffer_info.buffer = thread->engine->camera->view_proj_ubo->buffer;
+                buffer_info.buffer = thread->engine->renderer.camera_buffers.view_proj_ubo->buffer;
                 buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData));
                 buffer_info.range = sizeof(Camera::CameraData);
 
@@ -111,7 +111,7 @@ namespace lotus
                 buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = thread->engine->camera->cascade_data_ubo->buffer;
+                cascade_buffer_info.buffer = thread->engine->renderer.camera_buffers.cascade_data_ubo->buffer;
                 cascade_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(thread->engine->camera->cascade_data));
                 cascade_buffer_info.range = sizeof(thread->engine->camera->cascade_data);
 

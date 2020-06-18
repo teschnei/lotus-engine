@@ -21,10 +21,6 @@ namespace lotus
 
     Camera::~Camera()
     {
-        if (view_proj_ubo)
-            view_proj_ubo->unmap();
-        if (cascade_data_ubo)
-            cascade_data_ubo->unmap();
     }
 
     void Camera::Init(const std::shared_ptr<Camera>& sp)
@@ -34,14 +30,6 @@ namespace lotus
         camera_rot.z = cos(rot_x) * sin(rot_y);
         camera_rot = glm::normalize(camera_rot);
 
-        view_proj_ubo = engine->renderer.memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(CameraData)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        view_proj_mapped = static_cast<uint8_t*>(view_proj_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(CameraData)) * engine->renderer.getImageCount(), {}));
-
-        if (engine->renderer.render_mode == RenderMode::Rasterization)
-        {
-            cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            cascade_data_mapped = static_cast<uint8_t*>(cascade_data_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer.getImageCount(), {}));
-        }
         update = true;
     }
 
@@ -95,6 +83,15 @@ namespace lotus
         camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
         camera_data.view_inverse = glm::inverse(camera_data.view);
         update = true;
+    }
+
+    void Camera::updateBuffers(uint8_t* view_proj, uint8_t* cascade_data)
+    {
+        memcpy(view_proj + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
+        if (engine->renderer.render_mode == RenderMode::Rasterization)
+        {
+            memcpy(cascade_data + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
+        }
     }
 
     void Camera::tick(time_point time, duration delta)
@@ -164,8 +161,6 @@ namespace lotus
         {
             engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this, engine](WorkerThread* thread)
             {
-                memcpy(view_proj_mapped + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
-
                 if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
                 {
                     glm::vec3 lightDir = thread->engine->lights.light.diffuse_dir;
@@ -245,7 +240,6 @@ namespace lotus
                         last_split = cascade_splits[i];
                     }
                     cascade_data.inverse_view = glm::inverse(getViewMatrix());
-                    memcpy(cascade_data_mapped + (thread->engine->renderer.getCurrentImage() * thread->engine->renderer.uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
                 }
             }));
         }

@@ -33,7 +33,7 @@ namespace lotus
         Renderer(Engine* engine);
         ~Renderer();
 
-        void generateCommandBuffers();
+        void Init();
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain_images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
@@ -132,6 +132,14 @@ namespace lotus
 
         RenderMode render_mode{ RenderMode::Raytrace };
 
+        struct
+        {
+            std::unique_ptr<Buffer> view_proj_ubo;
+            uint8_t* view_proj_mapped{ nullptr };
+            std::unique_ptr<Buffer> cascade_data_ubo;
+            uint8_t* cascade_data_mapped{ nullptr };
+        } camera_buffers;
+
         /* Animation pipeline */
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> animation_descriptor_set_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> animation_pipeline_layout;
@@ -215,6 +223,9 @@ namespace lotus
 
         void recreateRenderer();
         void recreateStaticCommandBuffers();
+
+        void initializeCameraBuffers();
+        void generateCommandBuffers();
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;

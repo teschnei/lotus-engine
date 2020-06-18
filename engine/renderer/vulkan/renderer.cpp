@@ -7,6 +7,7 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/config.h"
+#include "engine/entity/camera.h"
 
 constexpr size_t shadowmap_dimension = 2048;
 
@@ -63,6 +64,21 @@ namespace lotus
         memory_manager = std::make_unique<MemoryManager>(physical_device, *device);
 
         createSwapchain();
+    }
+
+    Renderer::~Renderer()
+    {
+        device->waitIdle();
+        if (mesh_info_buffer)
+            mesh_info_buffer->unmap();
+        if (camera_buffers.view_proj_ubo)
+            camera_buffers.view_proj_ubo->unmap();
+        if (camera_buffers.cascade_data_ubo)
+            camera_buffers.cascade_data_ubo->unmap();
+    }
+
+    void Renderer::Init()
+    {
         createRenderpasses();
         createDescriptorSetLayout();
         createGraphicsPipeline();
@@ -76,15 +92,11 @@ namespace lotus
         createRayTracingResources();
         createAnimationResources();
 
+        initializeCameraBuffers();
+        generateCommandBuffers();
+
         render_commandbuffers.resize(getImageCount());
         raytracer = std::make_unique<Raytracer>(engine);
-    }
-
-    Renderer::~Renderer()
-    {
-        device->waitIdle();
-        if (mesh_info_buffer)
-            mesh_info_buffer->unmap();
     }
 
     void Renderer::generateCommandBuffers()
@@ -2134,7 +2146,7 @@ namespace lotus
                 revealage_info.sampler = *gbuffer.sampler;
 
                 vk::DescriptorBufferInfo camera_buffer_info;
-                camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
+                camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
                 camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
@@ -2200,7 +2212,7 @@ namespace lotus
                 shadowmap_image_info.sampler = *shadowmap_sampler;
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = engine->camera->cascade_data_ubo->buffer;
+                cascade_buffer_info.buffer = camera_buffers.cascade_data_ubo->buffer;
                 cascade_buffer_info.offset = i * uniform_buffer_align_up(sizeof(engine->camera->cascade_data));
                 cascade_buffer_info.range = sizeof(engine->camera->cascade_data);
 
@@ -2389,7 +2401,7 @@ namespace lotus
                 light_buffer_info.range = sizeof(engine->lights.light);
 
                 vk::DescriptorBufferInfo camera_buffer_info;
-                camera_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
+                camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
                 camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
@@ -2603,6 +2615,18 @@ namespace lotus
         });
     }
 
+    void Renderer::initializeCameraBuffers()
+    {
+        camera_buffers.view_proj_ubo = engine->renderer.memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        camera_buffers.view_proj_mapped = static_cast<uint8_t*>(camera_buffers.view_proj_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData)) * engine->renderer.getImageCount(), {}));
+
+        if (engine->renderer.render_mode == RenderMode::Rasterization)
+        {
+            camera_buffers.cascade_data_ubo = engine->renderer.memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(Camera::cascade_data)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            camera_buffers.cascade_data_mapped = static_cast<uint8_t*>(camera_buffers.cascade_data_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(Camera::cascade_data)) * engine->renderer.getImageCount(), {}));
+        }
+    }
+
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)
     {
         std::ifstream file(file_name, std::ios::ate | std::ios::binary);
@@ -2741,7 +2765,7 @@ namespace lotus
             write_info_target_light.pImageInfo = &target_image_info_light;
 
             vk::DescriptorBufferInfo cam_buffer_info;
-            cam_buffer_info.buffer = engine->camera->view_proj_ubo->buffer;
+            cam_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
             cam_buffer_info.offset = uniform_buffer_align_up(sizeof(Camera::CameraData)) * getCurrentImage();
             cam_buffer_info.range = sizeof(Camera::CameraData);
 
@@ -2981,6 +3005,7 @@ namespace lotus
 
         engine->worker_pool.waitIdle();
         engine->worker_pool.startProcessing(current_image);
+        engine->camera->updateBuffers(camera_buffers.view_proj_mapped, camera_buffers.cascade_data_mapped);
         engine->lights.UpdateLightBuffer();
 
         std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame]};

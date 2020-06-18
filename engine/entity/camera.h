@@ -35,6 +35,8 @@ namespace lotus
 
         glm::vec3 getRotationVector() { return camera_rot; }
 
+        void updateBuffers(uint8_t* view_proj, uint8_t* cascade_data);
+
         struct CameraData
         {
             glm::mat4 proj{};
@@ -43,9 +45,6 @@ namespace lotus
             glm::mat4 view_inverse{};
             glm::vec4 eye_pos;
         } camera_data;
-
-        std::unique_ptr<Buffer> view_proj_ubo;
-        uint8_t* view_proj_mapped{ nullptr };
 
         struct UBOFS
         {
@@ -63,9 +62,6 @@ namespace lotus
             glm::vec4 near;
             glm::vec4 far;
         } frustum {};
-
-        std::unique_ptr<Buffer> cascade_data_ubo;
-        uint8_t* cascade_data_mapped{ nullptr };
 
     protected:
         virtual void tick(time_point time, duration delta) override;
