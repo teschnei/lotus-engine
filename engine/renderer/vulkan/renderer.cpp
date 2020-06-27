@@ -2466,6 +2466,7 @@ namespace lotus
     void Renderer::recreateRenderer()
     {
         gpu->device->waitIdle();
+        engine->worker_pool.reset();
         swapchain_image_views.clear();
         swapchain_images.clear();
 
@@ -2478,6 +2479,7 @@ namespace lotus
         createGBufferResources();
         createDeferredCommandBuffer();
         createRayTracingResources();
+        createAnimationResources();
         //recreate command buffers
         recreateStaticCommandBuffers();
     }
@@ -2486,11 +2488,11 @@ namespace lotus
     {
         engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
         {
-                if (auto ren = std::dynamic_pointer_cast<RenderableEntity>(entity))
-                {
-                    ren->command_buffers.clear();
-                    ren->shadowmap_buffers.clear();
-                }
+            if (auto ren = std::dynamic_pointer_cast<RenderableEntity>(entity))
+            {
+                ren->command_buffers.clear();
+                ren->shadowmap_buffers.clear();
+            }
             auto work = entity->recreate_command_buffers(entity);
             if (work)
                 engine->worker_pool.addWork(std::move(work));

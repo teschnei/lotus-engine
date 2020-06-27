@@ -10,10 +10,10 @@ namespace lotus
         VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
     };
 
-    GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, const std::vector<const char*>& validation_layers, bool raytrace_enabled) : instance(_instance), surface(_surface), config(_config)
+    GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, const std::vector<const char*>& layers, bool raytrace_enabled) : instance(_instance), surface(_surface), config(_config)
     {
         createPhysicalDevice();
-        createDevice(validation_layers, raytrace_enabled);
+        createDevice(layers, raytrace_enabled);
 
         memory_manager = std::make_unique<MemoryManager>(physical_device, *device);
     }
@@ -42,7 +42,7 @@ namespace lotus
         physical_device.getProperties2(&properties);
     }
 
-    void GPU::createDevice(const std::vector<const char*>& validation_layers, bool raytrace_enabled)
+    void GPU::createDevice(const std::vector<const char*>& layers, bool raytrace_enabled)
     {
         std::tie(graphics_queue_index, present_queue_index, compute_queue_index) = getQueueFamilies(physical_device);
         //deduplicate queues
@@ -111,9 +111,9 @@ namespace lotus
         device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size());
         device_create_info.ppEnabledExtensionNames = device_extensions2.data();
 
-        if (!validation_layers.empty()) {
-            device_create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
-            device_create_info.ppEnabledLayerNames = validation_layers.data();
+        if (!layers.empty()) {
+            device_create_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
+            device_create_info.ppEnabledLayerNames = layers.data();
         } else {
             device_create_info.enabledLayerCount = 0;
         }

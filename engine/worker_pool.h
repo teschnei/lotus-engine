@@ -86,6 +86,7 @@ namespace lotus
         void deleteFinished();
         void startProcessing(int image);
         void waitIdle();
+        void reset();
 
     private:
         std::vector<std::unique_ptr<WorkerThread>> threads;

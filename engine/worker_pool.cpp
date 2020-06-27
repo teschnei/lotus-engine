@@ -153,4 +153,16 @@ namespace lotus
         });
 #endif
     }
+
+    void WorkerPool::reset()
+    {
+        waitIdle();
+        work.clear();
+        pending_work.clear();
+        finished_work.clear();
+        for (auto& work_vec : processing_work)
+        {
+            work_vec.clear();
+        }
+    }
 }
