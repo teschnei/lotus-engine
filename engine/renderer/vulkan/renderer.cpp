@@ -7,6 +7,7 @@
 #include "engine/game.h"
 #include "engine/config.h"
 #include "engine/entity/camera.h"
+#include "engine/entity/renderable_entity.h"
 
 constexpr size_t shadowmap_dimension = 2048;
 
@@ -1953,6 +1954,8 @@ namespace lotus
             rtx_gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
         }
 
+        if (mesh_info_buffer_mapped)
+            mesh_info_buffer->unmap();
         mesh_info_buffer = gpu->memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
         mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
     }
@@ -2483,6 +2486,11 @@ namespace lotus
     {
         engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
         {
+                if (auto ren = std::dynamic_pointer_cast<RenderableEntity>(entity))
+                {
+                    ren->command_buffers.clear();
+                    ren->shadowmap_buffers.clear();
+                }
             auto work = entity->recreate_command_buffers(entity);
             if (work)
                 engine->worker_pool.addWork(std::move(work));

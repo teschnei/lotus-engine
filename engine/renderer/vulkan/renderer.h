@@ -173,7 +173,7 @@ namespace lotus
         vk::StridedBufferRegionKHR missSBT;
         vk::StridedBufferRegionKHR hitSBT;
         std::unique_ptr<Buffer> mesh_info_buffer;
-        MeshInfo* mesh_info_buffer_mapped;
+        MeshInfo* mesh_info_buffer_mapped{ nullptr };
 
         struct RaytraceGBuffer
         {
