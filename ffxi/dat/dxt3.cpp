@@ -103,7 +103,7 @@ namespace FFXI
         texture_data.resize(imageSize);
         memcpy(texture_data.data(), dxt3->pixels.data(), imageSize);
 
-        texture->image = engine->renderer.memory_manager->GetImage(texture->getWidth(), texture->getHeight(), dxt3->format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        texture->image = engine->renderer.gpu->memory_manager->GetImage(texture->getWidth(), texture->getHeight(), dxt3->format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = texture->image->image;
@@ -115,7 +115,7 @@ namespace FFXI
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
 
-        texture->image_view = engine->renderer.device->createImageViewUnique(image_view_info, nullptr);
+        texture->image_view = engine->renderer.gpu->device->createImageViewUnique(image_view_info, nullptr);
 
         vk::SamplerCreateInfo sampler_info = {};
         sampler_info.magFilter = vk::Filter::eLinear;
@@ -131,7 +131,7 @@ namespace FFXI
         sampler_info.compareOp = vk::CompareOp::eAlways;
         sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
 
-        texture->sampler = engine->renderer.device->createSamplerUnique(sampler_info, nullptr);
+        texture->sampler = engine->renderer.gpu->device->createSamplerUnique(sampler_info, nullptr);
 
         engine->worker_pool.addWork(std::make_unique<lotus::TextureInitTask>(engine->renderer.getCurrentImage(), texture, dxt3->format, vk::ImageTiling::eOptimal, std::move(texture_data)));
     }

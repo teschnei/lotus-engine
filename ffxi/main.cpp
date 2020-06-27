@@ -24,7 +24,7 @@
 class Game : public lotus::Game
 {
 public:
-    Game(const lotus::Engine::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>())
+    Game(const lotus::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>())
     {
         scene = std::make_unique<lotus::Scene>(engine.get());
         default_texture = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
@@ -56,7 +56,7 @@ public:
 
 int main(int argc, char* argv[]) {
 
-    lotus::Engine::Settings settings;
+    lotus::Settings settings;
     settings.app_name = "core-test";
     settings.app_version = VK_MAKE_VERSION(1, 0, 0);
     settings.renderer_settings.landscape_vertex_input_attribute_descriptions = FFXI::MMB::Vertex::getAttributeDescriptions();

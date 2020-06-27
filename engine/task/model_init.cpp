@@ -23,7 +23,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             vk::DeviceSize staging_buffer_size = 0;
             for (int i = 0; i < vertex_buffers.size(); ++i)
@@ -33,7 +33,7 @@ namespace lotus
                 staging_buffer_size += vertex_buffer.size() + index_buffer.size();
             }
 
-            staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
 
             vk::DeviceSize staging_buffer_offset = 0;
@@ -66,10 +66,10 @@ namespace lotus
                 {
                     raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
-                        thread->engine->renderer.device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                        thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
                         vertex_stride,
                         vk::IndexType::eUint16,
-                        thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                        thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer) 
                         }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
                     raytrace_offset_info.emplace_back(static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t))/3), 0, 0);
@@ -145,7 +145,7 @@ namespace lotus
                         writes.push_back(write_info_index);
                         writes.push_back(write_info_texture);
                     }
-                    thread->engine->renderer.device->updateDescriptorSets(writes, nullptr);
+                    thread->engine->renderer.gpu->device->updateDescriptorSets(writes, nullptr);
                 }
             }
             command_buffer->end();

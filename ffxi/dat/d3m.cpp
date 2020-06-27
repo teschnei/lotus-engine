@@ -100,9 +100,9 @@ namespace FFXI
 
         mesh->texture = lotus::Texture::getTexture(d3m->texture_name);
 
-        mesh->vertex_buffer = engine->renderer.memory_manager->GetBuffer(vertices.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->index_buffer = engine->renderer.memory_manager->GetBuffer(d3m->num_triangles * 3 * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->aabbs_buffer = engine->renderer.memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->vertex_buffer = engine->renderer.gpu->memory_manager->GetBuffer(vertices.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->index_buffer = engine->renderer.gpu->memory_manager->GetBuffer(d3m->num_triangles * 3 * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->aabbs_buffer = engine->renderer.gpu->memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(d3m->num_triangles * 3);
         mesh->setVertexCount(d3m->num_triangles * 3);
         mesh->setVertexInputAttributeDescription(D3M::Vertex::getAttributeDescriptions());

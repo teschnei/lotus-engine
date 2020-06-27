@@ -58,7 +58,7 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 
     if (mzb)
     {
-        entity->instance_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
+        entity->instance_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
             vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         std::map<std::string, std::vector<lotus::LandscapeEntity::InstanceInfo>> temp_map;

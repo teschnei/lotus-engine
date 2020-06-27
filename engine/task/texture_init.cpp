@@ -13,7 +13,7 @@ namespace lotus
 
     void TextureInitTask::Process(WorkerThread* thread)
     {
-        staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(texture_data.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(texture_data.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         void* data = staging_buffer->map(0, texture_data.size(), {});
         memcpy(data, texture_data.data(), texture_data.size());
@@ -24,7 +24,7 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};

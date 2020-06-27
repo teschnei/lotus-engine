@@ -10,16 +10,18 @@
 
 namespace lotus
 {
+    struct Settings
+    {
+        std::string app_name;
+        uint32_t app_version;
+        Renderer::Settings renderer_settings;
+    };
+
     class Game;
+
     class Engine
     {
     public:
-        struct Settings
-        {
-            std::string app_name;
-            uint32_t app_version;
-            Renderer::Settings renderer_settings;
-        };
         Engine(Game* game, Settings settings, std::unique_ptr<Config> config);
         ~Engine();
 

@@ -12,8 +12,8 @@ namespace lotus
 
     void ParticleEntityInitTask::Process(WorkerThread* thread)
     {
-        entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
@@ -30,7 +30,7 @@ namespace lotus
 
         if (thread->engine->renderer.RasterizationEnabled())
         {
-            entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
             
             for (size_t i = 0; i < entity->command_buffers.size(); ++i)
             {

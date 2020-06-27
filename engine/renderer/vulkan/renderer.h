@@ -4,8 +4,9 @@
 #include <optional>
 #include <cstdint>
 #include <glm/glm.hpp>
-#include <SDL2/SDL.h>
-#include <engine/renderer/raytrace_query.h>
+#include "window.h"
+#include "gpu.h"
+#include "engine/renderer/raytrace_query.h"
 
 namespace lotus
 {
@@ -38,7 +39,6 @@ namespace lotus
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain_images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
         void setCurrentImage(int _current_image) { current_image = _current_image; }
-        std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
         size_t uniform_buffer_align_up(size_t in_size) const;
         size_t storage_buffer_align_up(size_t in_size) const;
         size_t align_up(size_t in_size, size_t alignment) const;
@@ -49,16 +49,11 @@ namespace lotus
         vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
 
         vk::UniqueHandle<vk::Instance, vk::DispatchLoaderDynamic> instance;
-        SDL_Window* window {nullptr};
+
+        std::unique_ptr<Window> window;
         vk::UniqueSurfaceKHR surface;
-        vk::PhysicalDevice physical_device;
-        vk::PhysicalDeviceProperties2 properties;
-        vk::UniqueHandle<vk::Device, vk::DispatchLoaderDynamic> device;
-        vk::DynamicLoader loader;
-        std::unique_ptr<MemoryManager> memory_manager;
-        vk::Queue graphics_queue;
-        vk::Queue present_queue;
-        vk::Queue compute_queue;
+        std::unique_ptr<GPU> gpu;
+
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> swapchain;
         vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> old_swapchain;
         uint32_t old_swapchain_image{ 0 };
@@ -164,7 +159,6 @@ namespace lotus
         /* Ray tracing */
         bool RaytraceEnabled();
         bool RasterizationEnabled();
-        vk::PhysicalDeviceRayTracingPropertiesKHR ray_tracing_properties;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_const;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
@@ -205,8 +199,6 @@ namespace lotus
 
     private:
         void createInstance(const std::string& app_name, uint32_t app_version);
-        void createPhysicalDevice();
-        void createDevice();
         void createSwapchain();
         void createRenderpasses();
         void createDescriptorSetLayout();
@@ -229,8 +221,6 @@ namespace lotus
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;
-        vk::Format getDepthFormat() const;
-        bool extensionsSupported(vk::PhysicalDevice device);
 
         struct swapChainInfo
         {

@@ -24,7 +24,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             //assumes only 1 mesh
             auto& mesh = model->meshes[0];
@@ -34,7 +34,7 @@ namespace lotus
 
             vk::DeviceSize staging_buffer_size = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t)) + sizeof(vk::AabbPositionsKHR);
 
-            staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
 
             command_buffer = std::move(command_buffers[0]);
@@ -65,7 +65,7 @@ namespace lotus
             if (thread->engine->renderer.RaytraceEnabled())
             {
                 raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eAabbs, vk::AccelerationStructureGeometryAabbsDataKHR{
-                    thread->engine->renderer.device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
+                    thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
                     sizeof(vk::AabbPositionsKHR)
                     }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 

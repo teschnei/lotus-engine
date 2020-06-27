@@ -16,7 +16,7 @@ namespace lotus
         alloc_info.commandPool = *thread->compute_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
         command_buffer = std::move(command_buffers[0]);
@@ -25,7 +25,7 @@ namespace lotus
 
         auto anim_component = entity->animation_component;
         auto skeleton = anim_component->skeleton.get();
-        staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(sizeof(AnimationComponent::BufferBone) * skeleton->bones.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(sizeof(AnimationComponent::BufferBone) * skeleton->bones.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         AnimationComponent::BufferBone* buffer = static_cast<AnimationComponent::BufferBone*>(staging_buffer->map(0, VK_WHOLE_SIZE, {}));
         for (size_t i = 0; i < skeleton->bones.size(); ++i)
         {

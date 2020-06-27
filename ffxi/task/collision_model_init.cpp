@@ -16,7 +16,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
 
     CollisionMesh* mesh = static_cast<CollisionMesh*>(model->meshes[0].get());
 
-    staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + mesh->transform_buffer->getSize(),
+    staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + mesh->transform_buffer->getSize(),
         vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
     uint8_t* staging_map = static_cast<uint8_t*>(staging_buffer->map(0, VK_WHOLE_SIZE, {}));
@@ -51,11 +51,11 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
 
             raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                 vk::Format::eR32G32B32Sfloat,
-                thread->engine->renderer.device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
                 vertex_stride,
                 vk::IndexType::eUint16,
-                thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer),
-                thread->engine->renderer.device->getBufferAddressKHR(mesh->transform_buffer->buffer)
+                thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer),
+                thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->transform_buffer->buffer)
                 }, vk::GeometryFlagBitsKHR::eOpaque);
 
             raytrace_offset_info.emplace_back(static_cast<uint32_t>(data.indices.size() / 3), index_offsets[entry.mesh_entry], vertex_offsets[entry.mesh_entry] / vertex_stride, transform_offset);
@@ -72,7 +72,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
     alloc_info.commandPool = *thread->compute_pool;
     alloc_info.commandBufferCount = 1;
 
-    auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+    auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
     command_buffer = std::move(command_buffers[0]);
 

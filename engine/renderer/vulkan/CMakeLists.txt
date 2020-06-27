@@ -2,7 +2,13 @@ target_sources(engine
     PRIVATE
     #deferred_pass.cpp
     #deferred_pass.h
+    gpu.cpp
+    gpu.h
+    swapchain.cpp
+    swapchain.h
     renderer.cpp
     renderer.h
+    window.cpp
+    window.h
     vulkan_inc.h
     )

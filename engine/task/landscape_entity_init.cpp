@@ -14,8 +14,8 @@ namespace lotus
 
     void LandscapeEntityInitTask::Process(WorkerThread* thread)
     {
-        entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
@@ -31,8 +31,8 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
 
-        entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
-        entity->shadowmap_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->shadowmap_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
         if (thread->engine->renderer.RasterizationEnabled())
         {
@@ -205,7 +205,7 @@ namespace lotus
     {
         vk::DeviceSize buffer_size = sizeof(LandscapeEntity::InstanceInfo) * instance_info.size();
 
-        staging_buffer = thread->engine->renderer.memory_manager->GetBuffer(buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         void* data = staging_buffer->map(0, buffer_size, {});
         memcpy(data, instance_info.data(), buffer_size);
@@ -218,7 +218,7 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};

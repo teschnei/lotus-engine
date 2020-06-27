@@ -13,7 +13,7 @@ void lotus::AccelerationStructure::PopulateAccelerationStructure(const std::vect
     info.maxGeometryCount = geometries.size();
     info.pGeometryInfos = geometries.data();
     info.compactedSize = 0;
-    acceleration_structure = engine->renderer.device->createAccelerationStructureKHRUnique(info, nullptr);
+    acceleration_structure = engine->renderer.gpu->device->createAccelerationStructureKHRUnique(info, nullptr);
     }
 
 void lotus::AccelerationStructure::PopulateBuffers()
@@ -21,27 +21,27 @@ void lotus::AccelerationStructure::PopulateBuffers()
     vk::AccelerationStructureMemoryRequirementsInfoKHR memory_requirements_info{vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch, vk::AccelerationStructureBuildTypeKHR::eDevice, *acceleration_structure };
     memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
 
-    auto memory_requirements_build = engine->renderer.device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info);
+    auto memory_requirements_build = engine->renderer.gpu->device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info);
 
     memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eUpdateScratch;
 
-    auto memory_requirements_update = engine->renderer.device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info);
+    auto memory_requirements_update = engine->renderer.gpu->device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info);
 
     memory_requirements_info.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
 
-    auto memory_requirements_object = engine->renderer.device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info);
+    auto memory_requirements_object = engine->renderer.gpu->device->getAccelerationStructureMemoryRequirementsKHR(memory_requirements_info);
 
-    scratch_memory = engine->renderer.memory_manager->GetBuffer(memory_requirements_build.memoryRequirements.size > memory_requirements_update.memoryRequirements.size ?
+    scratch_memory = engine->renderer.gpu->memory_manager->GetBuffer(memory_requirements_build.memoryRequirements.size > memory_requirements_update.memoryRequirements.size ?
         memory_requirements_build.memoryRequirements.size : memory_requirements_update.memoryRequirements.size, vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-    object_memory = engine->renderer.memory_manager->GetMemory(memory_requirements_object.memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+    object_memory = engine->renderer.gpu->memory_manager->GetMemory(memory_requirements_object.memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     vk::BindAccelerationStructureMemoryInfoKHR bind_info;
     bind_info.accelerationStructure = *acceleration_structure;
     bind_info.memory = object_memory->get_memory();
     bind_info.memoryOffset = object_memory->get_memory_offset();
-    engine->renderer.device->bindAccelerationStructureMemoryKHR(bind_info);
-    handle = engine->renderer.device->getAccelerationStructureAddressKHR(*acceleration_structure);
+    engine->renderer.gpu->device->bindAccelerationStructureMemoryKHR(bind_info);
+    handle = engine->renderer.gpu->device->getAccelerationStructureAddressKHR(*acceleration_structure);
 }
 
 void lotus::AccelerationStructure::UpdateAccelerationStructure(vk::CommandBuffer command_buffer,
@@ -66,7 +66,7 @@ void lotus::AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer 
     command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
         {}, nullptr, barrier, nullptr);
 
-    vk::DeviceOrHostAddressKHR scratch_data{engine->renderer.device->getBufferAddressKHR(scratch_memory->buffer)};
+    vk::DeviceOrHostAddressKHR scratch_data{engine->renderer.gpu->device->getBufferAddressKHR(scratch_memory->buffer)};
     const auto geometry_p = geometries.data();
     vk::AccelerationStructureBuildGeometryInfoKHR build_info( type, flags, update, update ? *acceleration_structure : nullptr, *acceleration_structure, false, static_cast<uint32_t>(geometries.size()), &geometry_p, scratch_data );
 
@@ -128,7 +128,7 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
         uint32_t i = engine->renderer.getCurrentImage();
         if (!instance_memory)
         {
-            instance_memory = engine->renderer.memory_manager->GetBuffer(instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            instance_memory = engine->renderer.gpu->memory_manager->GetBuffer(instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), vk::BufferUsageFlagBits::eRayTracingKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             vk::AccelerationStructureCreateGeometryTypeInfoKHR info{vk::GeometryTypeKHR::eInstances, static_cast<uint32_t>(instances.size())};
             info.allowsTransforms = true;
             std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> infos{ info };
@@ -194,7 +194,7 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
                 writes.push_back(write_info_texture);
             writes.push_back(write_info_as);
             writes.push_back(write_info_mesh_info);
-            engine->renderer.device->updateDescriptorSets(writes, nullptr);
+            engine->renderer.gpu->device->updateDescriptorSets(writes, nullptr);
         }
         auto data = instance_memory->map(0, instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), {});
         memcpy(data, instances.data(), instances.size() * sizeof(vk::AccelerationStructureInstanceKHR));
@@ -209,7 +209,7 @@ void lotus::TopLevelAccelerationStructure::Build(vk::CommandBuffer command_buffe
         command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
             {}, barrier, nullptr, nullptr);
         vk::AccelerationStructureGeometryKHR build_geometry{ vk::GeometryTypeKHR::eInstances,
-            vk::AccelerationStructureGeometryInstancesDataKHR{ false, engine->renderer.device->getBufferAddressKHR(instance_memory->buffer) } };
+            vk::AccelerationStructureGeometryInstancesDataKHR{ false, engine->renderer.gpu->device->getBufferAddressKHR(instance_memory->buffer) } };
         std::vector<vk::AccelerationStructureGeometryKHR> instance_data_vec{ build_geometry };
         vk::AccelerationStructureBuildOffsetInfoKHR build_offset{static_cast<uint32_t>(instances.size()), 0, 0};
         std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> instance_offset_vec{ build_offset };

@@ -23,7 +23,7 @@ namespace lotus
                 alloc_info.commandPool = *thread->graphics_pool;
                 alloc_info.commandBufferCount = 1;
 
-                auto command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+                auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
                 animation_component->transformed_geometries.push_back({});
                 vk::CommandBufferBeginInfo begin_info = {};
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
@@ -43,8 +43,8 @@ namespace lotus
             }
         }
 
-        entity->uniform_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
@@ -58,8 +58,8 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
 
-        entity->command_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
-        entity->shadowmap_buffers = thread->engine->renderer.device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->shadowmap_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
         auto deformable = dynamic_cast<DeformableEntity*>(entity.get());
 
@@ -279,17 +279,17 @@ namespace lotus
             for (uint32_t image = 0; image < thread->engine->renderer.getImageCount(); ++image)
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                vertex_buffer[i].push_back(thread->engine->renderer.memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                vertex_buffer[i].push_back(thread->engine->renderer.gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
                 if (thread->engine->renderer.RaytraceEnabled())
                 {
                     raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
-                        thread->engine->renderer.device->getBufferAddressKHR(vertex_buffer[i].back()->buffer),
+                        thread->engine->renderer.gpu->device->getBufferAddressKHR(vertex_buffer[i].back()->buffer),
                         vertex_size,
                         vk::IndexType::eUint16,
-                        thread->engine->renderer.device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                        thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer) 
                         }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
                     raytrace_offset_info[image].emplace_back(mesh->getIndexCount() / 3, 0, 0);
