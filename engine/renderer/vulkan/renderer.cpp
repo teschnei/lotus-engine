@@ -2464,6 +2464,15 @@ namespace lotus
         animation_pipeline = gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
     }
 
+    void Renderer::resizeRenderer()
+    {
+        recreateRenderer();
+        if (engine->camera)
+        {
+            engine->camera->setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, 0.01f, 1000.f);
+        }
+    }
+
     void Renderer::recreateRenderer()
     {
         gpu->device->waitIdle();
@@ -2822,7 +2831,7 @@ namespace lotus
 
         if (result == vk::Result::eErrorOutOfDateKHR)
         {
-            recreateRenderer();
+            resizeRenderer();
             return;
         }
         engine->worker_pool.clearProcessed(current_image);
@@ -2908,13 +2917,13 @@ namespace lotus
         catch (vk::OutOfDateKHRError& )
         {
             resize = false;
-            recreateRenderer();
+            resizeRenderer();
         }
 
         if (resize)
         {
             resize = false;
-            recreateRenderer();
+            resizeRenderer();
         }
 
         current_frame = (current_frame + 1) % max_pending_frames;

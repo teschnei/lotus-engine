@@ -213,6 +213,7 @@ namespace lotus
         void createQuad();
         void createAnimationResources();
 
+        void resizeRenderer();
         void recreateRenderer();
         void recreateStaticCommandBuffers();
 
