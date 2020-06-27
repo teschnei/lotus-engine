@@ -1954,10 +1954,11 @@ namespace lotus
             rtx_gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
         }
 
-        if (mesh_info_buffer_mapped)
-            mesh_info_buffer->unmap();
-        mesh_info_buffer = gpu->memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
-        mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
+        if (!mesh_info_buffer_mapped)
+        {
+            mesh_info_buffer = gpu->memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
+            mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
+        }
     }
 
     void Renderer::createDeferredCommandBuffer()
@@ -2486,6 +2487,7 @@ namespace lotus
 
     void Renderer::recreateStaticCommandBuffers()
     {
+        //delete all the existing buffers first, single-threadedly (the destructor uses the pool it was created on)
         engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
         {
             if (auto ren = std::dynamic_pointer_cast<RenderableEntity>(entity))
@@ -2493,6 +2495,9 @@ namespace lotus
                 ren->command_buffers.clear();
                 ren->shadowmap_buffers.clear();
             }
+        });
+        engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
+        {
             auto work = entity->recreate_command_buffers(entity);
             if (work)
                 engine->worker_pool.addWork(std::move(work));
