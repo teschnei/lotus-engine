@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <filesystem>
 #include "engine/types.h"
 #include "dat_chunk.h"
 
@@ -52,7 +53,7 @@ namespace FFXI
     class DatParser
     {
     public:
-        DatParser(const std::string& filepath, bool rtx);
+        DatParser(const std::filesystem::path& filepath, bool rtx);
         DatParser();
 
         std::unique_ptr<DatChunk> root;

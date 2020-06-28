@@ -15,11 +15,9 @@
 #include "engine/entity/component/tick_component.h"
 #include "entity/component/scheduler_component.h"
 
-#include "fs.h"
-
 ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input) : InputComponent(_entity, _engine, _input),
-    parser_system( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path + fs::path2str("/ROM/0/0.DAT"), engine->renderer.RaytraceEnabled() ),
-    parser( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path + fs::path2str("/ROM/10/9.DAT"), engine->renderer.RaytraceEnabled() )
+    parser_system( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path / "ROM/0/0.DAT", engine->renderer.RaytraceEnabled() ),
+    parser( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path / "ROM/10/9.DAT", engine->renderer.RaytraceEnabled() )
 {
     ParseDir(parser.root.get());
 }

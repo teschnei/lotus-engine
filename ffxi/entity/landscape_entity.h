@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include "engine/entity/landscape_entity.h"
 #include "engine/renderer/mesh.h"
 #include "dat/mzb.h"
@@ -26,7 +27,7 @@ public:
         glm::vec4 skybox_colors[8];
     };
     FFXILandscapeEntity(lotus::Engine* engine) : LandscapeEntity(engine) {}
-    void Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::string& dat);
+    void Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat);
     virtual void populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index) override;
     FFXI::QuadTree quadtree{glm::vec3{}, glm::vec3{}};
     std::vector<std::pair<uint32_t, InstanceInfo>> model_vec;

@@ -11,7 +11,7 @@
 #include "engine/task/landscape_entity_init.h"
 #include "engine/renderer/acceleration_structure.h"
 
-LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _entity, const std::string& _dat) : entity(_entity), dat(_dat)
+LandscapeDatLoad::LandscapeDatLoad(const std::shared_ptr<FFXILandscapeEntity>& _entity, const std::filesystem::path& _dat) : entity(_entity), dat(_dat)
 {
 }
 

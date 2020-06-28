@@ -9,7 +9,7 @@
 #include "engine/core.h"
 #include "engine/task/renderable_entity_init.h"
 
-ActorDatLoad::ActorDatLoad(const std::shared_ptr<Actor>& _entity, const std::string& _dat) : entity(_entity), dat(_dat)
+ActorDatLoad::ActorDatLoad(const std::shared_ptr<Actor>& _entity, const std::filesystem::path& _dat) : entity(_entity), dat(_dat)
 {
 }
 
