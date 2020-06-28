@@ -2826,14 +2826,16 @@ namespace lotus
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
 
         auto prev_image = current_image;
-        auto [result, value] = gpu->device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
-        current_image = value;
-
-        if (result == vk::Result::eErrorOutOfDateKHR)
+        try
+        {
+            current_image = gpu->device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+        }
+        catch (vk::OutOfDateKHRError&)
         {
             resizeRenderer();
             return;
         }
+
         engine->worker_pool.clearProcessed(current_image);
         if (old_swapchain && old_swapchain_image == current_image)
         {
@@ -2914,7 +2916,7 @@ namespace lotus
         {
             gpu->present_queue.presentKHR(presentInfo);
         }
-        catch (vk::OutOfDateKHRError& )
+        catch (vk::OutOfDateKHRError&)
         {
             resize = false;
             resizeRenderer();
