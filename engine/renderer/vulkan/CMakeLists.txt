@@ -4,8 +4,6 @@ target_sources(engine
     #deferred_pass.h
     gpu.cpp
     gpu.h
-    swapchain.cpp
-    swapchain.h
     renderer.cpp
     renderer.h
     window.cpp

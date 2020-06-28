@@ -160,7 +160,7 @@ namespace lotus
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = entity->uniform_buffer->buffer;
-                buffer_info.offset = i * sizeof(RenderableEntity::UniformBufferObject);
+                buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
                 buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo cascade_buffer_info;

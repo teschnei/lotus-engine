@@ -85,12 +85,12 @@ namespace lotus
         update = true;
     }
 
-    void Camera::updateBuffers(uint8_t* view_proj, uint8_t* cascade_data)
+    void Camera::updateBuffers(uint8_t* view_proj_mapped, uint8_t* cascade_data_mapped)
     {
-        memcpy(view_proj + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
+        memcpy(view_proj_mapped + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
         if (engine->renderer.render_mode == RenderMode::Rasterization)
         {
-            memcpy(cascade_data + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
+            memcpy(cascade_data_mapped + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
         }
     }
 
