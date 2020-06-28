@@ -38,7 +38,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
     std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> raytrace_offset_info;
     std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> raytrace_create_info;
 
-    if (thread->engine->renderer.RaytraceEnabled())
+    if (thread->engine->config->renderer.RaytraceEnabled())
     {
         vk::DeviceSize transform_offset = 0;
 
@@ -96,7 +96,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
 
     staging_buffer->unmap();
 
-    if (thread->engine->renderer.RaytraceEnabled())
+    if (thread->engine->config->renderer.RaytraceEnabled())
     {
         vk::MemoryBarrier barrier;
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;

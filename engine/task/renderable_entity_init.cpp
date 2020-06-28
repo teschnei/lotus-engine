@@ -63,7 +63,7 @@ namespace lotus
 
         auto deformable = dynamic_cast<DeformableEntity*>(entity.get());
 
-        if (thread->engine->renderer.RasterizationEnabled())
+        if (thread->engine->config->renderer.RasterizationEnabled())
         {
             for (size_t i = 0; i < entity->command_buffers.size(); ++i)
             {
@@ -142,7 +142,7 @@ namespace lotus
             }
         }
 
-        if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
+        if (thread->engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             for (size_t i = 0; i < entity->shadowmap_buffers.size(); ++i)
             {
@@ -282,7 +282,7 @@ namespace lotus
                 vertex_buffer[i].push_back(thread->engine->renderer.gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
-                if (thread->engine->renderer.RaytraceEnabled())
+                if (thread->engine->config->renderer.RaytraceEnabled())
                 {
                     raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
@@ -300,7 +300,7 @@ namespace lotus
             }
         }
 
-        if (thread->engine->renderer.RaytraceEnabled())
+        if (thread->engine->config->renderer.RaytraceEnabled())
         {
             //transform skeleton with default animation before building AS to improve the bounding box accuracy
             //make sure all vertex and index buffers are finished transferring
@@ -368,7 +368,7 @@ namespace lotus
 
                         command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
-                        if (thread->engine->renderer.RaytraceEnabled())
+                        if (thread->engine->config->renderer.RaytraceEnabled())
                         {
                             vk::BufferMemoryBarrier barrier;
                             barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

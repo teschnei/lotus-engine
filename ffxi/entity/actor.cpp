@@ -88,7 +88,7 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
 
         vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
-        if (engine->renderer.RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             vertex_usage_flags |= vk::BufferUsageFlagBits::eShaderDeviceAddress;
             index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;

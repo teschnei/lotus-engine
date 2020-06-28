@@ -34,7 +34,7 @@ namespace lotus
         entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         entity->shadowmap_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
-        if (thread->engine->renderer.RasterizationEnabled())
+        if (thread->engine->config->renderer.RasterizationEnabled())
         {
             for (int i = 0; i < entity->command_buffers.size(); ++i)
             {
@@ -89,7 +89,7 @@ namespace lotus
             }
         }
 
-        if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
+        if (thread->engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             for (size_t i = 0; i < entity->shadowmap_buffers.size(); ++i)
             {

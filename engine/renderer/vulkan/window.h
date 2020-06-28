@@ -17,9 +17,9 @@ namespace lotus
         vk::UniqueSurfaceKHR createSurface(vk::Instance instance);
 
         SDL_Window* window {nullptr};
-        vk::UniqueSurfaceKHR surface;
 
-        std::vector<const char*> getRequiredExtensions();
+        std::vector<const char*> getRequiredExtensions() const;
+        std::pair<int, int> getWindowDimensions() const;
     private:
         Settings* settings;
         Config* config;

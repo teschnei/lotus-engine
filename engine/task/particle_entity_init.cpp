@@ -28,7 +28,7 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
 
-        if (thread->engine->renderer.RasterizationEnabled())
+        if (thread->engine->config->renderer.RasterizationEnabled())
         {
             entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
             

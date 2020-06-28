@@ -6,6 +6,8 @@ target_sources(engine
     gpu.h
     renderer.cpp
     renderer.h
+    swapchain.cpp
+    swapchain.h
     window.cpp
     window.h
     vulkan_inc.h

@@ -62,7 +62,7 @@ namespace lotus
                 copy_region.srcOffset = vertex_buffer.size() + staging_buffer_offset;
                 command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region);
 
-                if (thread->engine->renderer.RaytraceEnabled() && !model->weighted)
+                if (thread->engine->config->renderer.RaytraceEnabled() && !model->weighted)
                 {
                     raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
@@ -82,7 +82,7 @@ namespace lotus
             }
             staging_buffer->unmap();
 
-            if (thread->engine->renderer.RaytraceEnabled() && !model->weighted)
+            if (thread->engine->config->renderer.RaytraceEnabled() && !model->weighted)
             {
                 //TODO: test if just buffermemorybarrier is faster
                 vk::MemoryBarrier barrier;

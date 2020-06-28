@@ -23,7 +23,7 @@ namespace lotus
         {
             updateAnimationVertices(thread, image_index, deformable);
         }
-        if (thread->engine->renderer.RasterizationEnabled())
+        if (thread->engine->config->renderer.RasterizationEnabled())
         {
             if (dynamic_cast<Particle*>(entity.get()))
             {
@@ -128,7 +128,7 @@ namespace lotus
 
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
             }
-            if (thread->engine->renderer.RaytraceEnabled())
+            if (thread->engine->config->renderer.RaytraceEnabled())
             {
                 component->transformed_geometries[i].bottom_level_as[image_index]->Update(*command_buffer);
             }

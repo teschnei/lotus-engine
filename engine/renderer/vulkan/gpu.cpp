@@ -2,6 +2,7 @@
 
 #include <set>
 #include "renderer.h"
+#include "engine/config.h"
 
 namespace lotus
 {
@@ -10,10 +11,10 @@ namespace lotus
         VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
     };
 
-    GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, const std::vector<const char*>& layers, bool raytrace_enabled) : instance(_instance), surface(_surface), config(_config)
+    GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, const std::vector<const char*>& layers) : instance(_instance), surface(_surface), config(_config)
     {
         createPhysicalDevice();
-        createDevice(layers, raytrace_enabled);
+        createDevice(layers);
 
         memory_manager = std::make_unique<MemoryManager>(physical_device, *device);
     }
@@ -42,11 +43,15 @@ namespace lotus
         physical_device.getProperties2(&properties);
     }
 
-    void GPU::createDevice(const std::vector<const char*>& layers, bool raytrace_enabled)
+    void GPU::createDevice(const std::vector<const char*>& layers)
     {
-        std::tie(graphics_queue_index, present_queue_index, compute_queue_index) = getQueueFamilies(physical_device);
+        auto [graphics, present, compute] = getQueueFamilies(physical_device);
+        graphics_queue_index = graphics.value();
+        present_queue_index = present.value();
+        compute_queue_index = compute.value();
+
         //deduplicate queues
-        std::set<uint32_t> queues = { graphics_queue_index.value(), present_queue_index.value(), compute_queue_index.value() };
+        std::set<uint32_t> queues = { graphics_queue_index, present_queue_index, compute_queue_index };
 
         std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
         float queue_priority = 0.f;
@@ -56,7 +61,7 @@ namespace lotus
         {
             vk::DeviceQueueCreateInfo create_info;
             create_info.queueFamilyIndex = queue;
-            if (queue == compute_queue_index.value())
+            if (queue == compute_queue_index)
             {
                 create_info.pQueuePriorities = queue_priority_compute;
                 create_info.queueCount = 2;
@@ -93,7 +98,7 @@ namespace lotus
         buffer_address_features.pNext = &indexing_features;
 
         std::vector<const char*> device_extensions2 = device_extensions;
-        if (raytrace_enabled)
+        if (config->renderer.RaytraceEnabled())
         {
             device_extensions2.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
             device_extensions2.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
@@ -121,9 +126,9 @@ namespace lotus
 
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
 
-        graphics_queue = device->getQueue(graphics_queue_index.value(), 0);
-        present_queue = device->getQueue(present_queue_index.value(), 0);
-        compute_queue = device->getQueue(compute_queue_index.value(), 0);
+        graphics_queue = device->getQueue(graphics_queue_index, 0);
+        present_queue = device->getQueue(present_queue_index, 0);
+        compute_queue = device->getQueue(compute_queue_index, 0);
     }
 
     std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<std::uint32_t>> GPU::getQueueFamilies(vk::PhysicalDevice device) const
@@ -195,13 +200,13 @@ namespace lotus
         switch (type)
         {
         case QueueType::Graphics:
-            pool_info.queueFamilyIndex = graphics_queue_index.value();
+            pool_info.queueFamilyIndex = graphics_queue_index;
             break;
         case QueueType::Present:
-            pool_info.queueFamilyIndex = present_queue_index.value();
+            pool_info.queueFamilyIndex = present_queue_index;
             break;
         case QueueType::Compute:
-            pool_info.queueFamilyIndex = compute_queue_index.value();
+            pool_info.queueFamilyIndex = compute_queue_index;
             break;
         }
         return device->createCommandPoolUnique(pool_info);

@@ -88,7 +88,7 @@ namespace lotus
     void Camera::updateBuffers(uint8_t* view_proj_mapped, uint8_t* cascade_data_mapped)
     {
         memcpy(view_proj_mapped + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
-        if (engine->renderer.render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             memcpy(cascade_data_mapped + (engine->renderer.getCurrentImage() * engine->renderer.uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
         }
@@ -161,7 +161,7 @@ namespace lotus
         {
             engine->worker_pool.addWork(std::make_unique<LambdaWorkItem>([this, engine](WorkerThread* thread)
             {
-                if (thread->engine->renderer.render_mode == RenderMode::Rasterization)
+                if (thread->engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
                 {
                     glm::vec3 lightDir = thread->engine->lights.light.diffuse_dir;
                     float cascade_splits[lotus::Renderer::shadowmap_cascades];

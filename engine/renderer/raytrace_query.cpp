@@ -8,7 +8,7 @@ namespace lotus
 {
     Raytracer::Raytracer(Engine* _engine) : engine(_engine)
     {
-        if (engine->renderer.RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             auto rayquery_shader_module = engine->renderer.getShader("shaders/rayquery.spv");
             auto query_miss_shader_module = engine->renderer.getShader("shaders/query_miss.spv");
@@ -163,12 +163,12 @@ namespace lotus
             missSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_miss, shader_stride, shader_stride * shader_misscount };
             hitSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_hit, shader_stride, shader_stride * shader_hitcount };
         }
-        raytrace_query_queue = engine->renderer.gpu->device->getQueue(engine->renderer.gpu->compute_queue_index.value(), 1);
+        raytrace_query_queue = engine->renderer.gpu->device->getQueue(engine->renderer.gpu->compute_queue_index, 1);
         vk::FenceCreateInfo fence_info;
         fence = engine->renderer.gpu->device->createFenceUnique(fence_info, nullptr);
 
         vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = engine->renderer.gpu->compute_queue_index.value();
+        pool_info.queueFamilyIndex = engine->renderer.gpu->compute_queue_index;
 
         command_pool = engine->renderer.gpu->device->createCommandPoolUnique(pool_info, nullptr);
     }
@@ -180,7 +180,7 @@ namespace lotus
 
     void Raytracer::runQueries(uint32_t image)
     {
-        if (engine->renderer.RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             if (engine->game->scene->top_level_as[image])
             {

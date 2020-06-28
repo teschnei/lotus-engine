@@ -15,7 +15,7 @@ ActorDatLoad::ActorDatLoad(const std::shared_ptr<Actor>& _entity, const std::fil
 
 void ActorDatLoad::Process(lotus::WorkerThread* thread)
 {
-    FFXI::DatParser parser{ dat, thread->engine->renderer.RaytraceEnabled() };
+    FFXI::DatParser parser{ dat, thread->engine->config->renderer.RaytraceEnabled() };
 
     std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
     auto skel = std::make_unique<lotus::Skeleton>();

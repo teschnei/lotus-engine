@@ -23,7 +23,7 @@ namespace lotus
         return vk::UniqueSurfaceKHR(vksurface, vk::ObjectDestroy( instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER ));
     }
 
-    std::vector<const char*> Window::getRequiredExtensions()
+    std::vector<const char*> Window::getRequiredExtensions() const
     {
         uint32_t extensionCount = 0;
 
@@ -34,5 +34,11 @@ namespace lotus
         SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensions.data());
 
         return extensions;
+    }
+    std::pair<int, int> Window::getWindowDimensions() const
+    {
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+        return { width, height };
     }
 }

@@ -36,7 +36,7 @@ namespace lotus
         return VK_FALSE;
     }
 
-    Renderer::Renderer(Engine* _engine) : render_mode{RenderMode::Hybrid}, engine(_engine)
+    Renderer::Renderer(Engine* _engine) : engine(_engine)
     {
         window = std::make_unique<Window>(&engine->settings, engine->config.get());
 
@@ -47,7 +47,7 @@ namespace lotus
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 
         surface = window->createSurface(*instance);
-        gpu = std::make_unique<GPU>(*instance, *surface, engine->config.get(), validation_layers, RaytraceEnabled());
+        gpu = std::make_unique<GPU>(*instance, *surface, engine->config.get(), validation_layers);
 
         if (enableValidationLayers)
         {
@@ -99,19 +99,9 @@ namespace lotus
         createDeferredCommandBuffer();
     }
 
-    bool Renderer::RaytraceEnabled()
-    {
-        return render_mode == RenderMode::Hybrid || render_mode == RenderMode::Raytrace;
-    }
-
-    bool Renderer::RasterizationEnabled()
-    {
-        return render_mode == RenderMode::Rasterization || render_mode == RenderMode::Hybrid;
-    }
-
     void Renderer::createRayTracingResources()
     {
-        if (RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             if (!shader_binding_table)
             {
@@ -217,137 +207,14 @@ namespace lotus
 
     void Renderer::createSwapchain()
     {
-        if (swapchain)
-        {
-            old_swapchain = std::move(swapchain);
-            old_swapchain_image = getCurrentImage();
-            swapchain.reset();
-        }
-        auto swap_chain_info = getSwapChainInfo(gpu->physical_device);
-        vk::SurfaceFormatKHR surface_format;
-        if (swap_chain_info.formats.size() == 1 && swap_chain_info.formats[0].format == vk::Format::eUndefined)
-        {
-            surface_format = { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
-        }
-        else
-        {
-            if (auto found_format = std::find_if(swap_chain_info.formats.begin(), swap_chain_info.formats.end(), [](const auto& format)
-            {
-                    return format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
-            }); found_format != swap_chain_info.formats.end())
-            {
-                surface_format = *found_format;
-            }
-            else
-            {
-                surface_format = swap_chain_info.formats[0];
-            }
-        }
-
-        vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
-        for (const auto& available_present_mode : swap_chain_info.present_modes)
-        {
-            if (available_present_mode == vk::PresentModeKHR::eMailbox)
-            {
-                present_mode = available_present_mode;
-                break;
-            }
-            else if (available_present_mode == vk::PresentModeKHR::eImmediate)
-            {
-                present_mode = available_present_mode;
-            }
-        }
-
-        vk::Extent2D swap_extent;
-        if (swap_chain_info.capabilities.currentExtent.width == -1)
-        {
-            swap_extent = swap_chain_info.capabilities.currentExtent;
-        }
-        else
-        {
-            int width, height;
-            SDL_GetWindowSize(window->window, &width, &height);
-
-            swap_extent = vk::Extent2D
-            {
-                std::clamp(static_cast<uint32_t>(width), swap_chain_info.capabilities.minImageExtent.width, swap_chain_info.capabilities.maxImageExtent.width),
-                std::clamp(static_cast<uint32_t>(height), swap_chain_info.capabilities.minImageExtent.height, swap_chain_info.capabilities.maxImageExtent.height)
-            };
-        }
-        uint32_t image_count = swap_chain_info.capabilities.minImageCount + 1;
-        if (swap_chain_info.capabilities.maxImageCount > 0)
-            image_count = std::min(image_count, swap_chain_info.capabilities.maxImageCount);
-
-        vk::SwapchainCreateInfoKHR swapchain_create_info;
-        swapchain_create_info.surface = *surface;
-        swapchain_create_info.minImageCount = image_count;
-        swapchain_create_info.imageFormat = surface_format.format;
-        swapchain_create_info.imageColorSpace = surface_format.colorSpace;
-        swapchain_create_info.imageExtent = swap_extent;
-        swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-        if (RaytraceEnabled())
-        {
-            swapchain_create_info.imageUsage |= vk::ImageUsageFlagBits::eStorage;
-        }
-
-        if (old_swapchain)
-        {
-            swapchain_create_info.oldSwapchain = *old_swapchain;
-        }
-
-        uint32_t queueIndices[] = { gpu->graphics_queue_index.value(), gpu->present_queue_index.value() };
-        if (gpu->graphics_queue_index.value() != gpu->present_queue_index.value())
-        {
-            swapchain_create_info.imageSharingMode = vk::SharingMode::eConcurrent;
-            swapchain_create_info.queueFamilyIndexCount = 2;
-            swapchain_create_info.pQueueFamilyIndices = queueIndices;
-        }
-        else
-        {
-            swapchain_create_info.imageSharingMode = vk::SharingMode::eExclusive;
-        }
-
-        swapchain_create_info.preTransform = swap_chain_info.capabilities.currentTransform;
-        swapchain_create_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-        swapchain_create_info.presentMode = present_mode;
-        swapchain_create_info.clipped = VK_TRUE;
-
-        swapchain_image_format = surface_format.format;
-        swapchain = gpu->device->createSwapchainKHRUnique(swapchain_create_info, nullptr);
-        if (swapchain_images.empty())
-        {
-            for (const auto& image : gpu->device->getSwapchainImagesKHR(*swapchain))
-            {
-                swapchain_images.emplace_back(image);
-            }
-        }
-        swapchain_extent = swap_extent;
-
-        vk::ImageViewCreateInfo image_view_info;
-        image_view_info.viewType = vk::ImageViewType::e2D;
-        image_view_info.format = swapchain_image_format;
-        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        image_view_info.subresourceRange.baseMipLevel = 0;
-        image_view_info.subresourceRange.levelCount = 1;
-        image_view_info.subresourceRange.baseArrayLayer = 0;
-        image_view_info.subresourceRange.layerCount = 1;
-
-        if (swapchain_image_views.empty())
-        {
-            for (auto& swapchain_image : swapchain_images)
-            {
-                image_view_info.image = swapchain_image;
-                swapchain_image_views.push_back(gpu->device->createImageViewUnique(image_view_info, nullptr));
-            }
-        }
+        swapchain = std::make_unique<Swapchain>(engine->config.get(), gpu.get(), window.get(), *surface);
     }
 
     void Renderer::createRenderpasses()
     {
         {
             vk::AttachmentDescription color_attachment;
-            color_attachment.format = swapchain_image_format;
+            color_attachment.format = swapchain->image_format;
             color_attachment.samples = vk::SampleCountFlagBits::e1;
             color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
             color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -398,7 +265,7 @@ namespace lotus
 
             render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
 
-            if (render_mode == RenderMode::Rasterization)
+            if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
             {
                 depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
                 depth_attachment_ref.attachment = 0;
@@ -597,10 +464,10 @@ namespace lotus
 
             gbuffer_render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
         }
-        if (RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             vk::AttachmentDescription output_attachment;
-            output_attachment.format = swapchain_image_format;
+            output_attachment.format = swapchain->image_format;
             output_attachment.samples = vk::SampleCountFlagBits::e1;
             output_attachment.loadOp = vk::AttachmentLoadOp::eClear;
             output_attachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -706,7 +573,7 @@ namespace lotus
 
         static_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
-        if (render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             vk::DescriptorSetLayoutBinding cascade_matrices;
             cascade_matrices.binding = 3;
@@ -791,7 +658,7 @@ namespace lotus
             light_deferred_layout_binding
         };
 
-        if (render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             vk::DescriptorSetLayoutBinding lightsource_deferred_layout_binding;
             lightsource_deferred_layout_binding.binding = 8;
@@ -815,9 +682,9 @@ namespace lotus
 
         deferred_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
-        if (RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
-            if (render_mode == RenderMode::Raytrace)
+            if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Raytrace)
             {
                 vk::DescriptorSetLayoutBinding raytrace_output_binding_albedo;
                 raytrace_output_binding_albedo.binding = 0;
@@ -1166,14 +1033,14 @@ namespace lotus
         vk::Viewport viewport;
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float)swapchain_extent.width;
-        viewport.height = (float)swapchain_extent.height;
+        viewport.width = (float)swapchain->extent.width;
+        viewport.height = (float)swapchain->extent.height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         vk::Rect2D scissor;
         scissor.offset = vk::Offset2D{0, 0};
-        scissor.extent = swapchain_extent;
+        scissor.extent = swapchain->extent;
 
         vk::PipelineViewportStateCreateInfo viewport_state;
         viewport_state.viewportCount = 1;
@@ -1314,7 +1181,7 @@ namespace lotus
         vertex_module = getShader("shaders/deferred.spv");
         vert_shader_stage_info.module = *vertex_module;
 
-        if (render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             fragment_module = getShader("shaders/deferred_raster.spv");
         }
@@ -1338,7 +1205,7 @@ namespace lotus
         pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(deferred_descriptor_layouts.size());
         pipeline_layout_info.pSetLayouts = deferred_descriptor_layouts.data();
 
-        if (render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             deferred_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
@@ -1422,12 +1289,12 @@ namespace lotus
             landscape_pipeline_group.shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
             //particle_pipeline_group.shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
         }
-        if (RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             {
                 //ray-tracing pipeline
                 vk::UniqueShaderModule raygen_shader_module;
-                if (render_mode == RenderMode::Raytrace)
+                if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Raytrace)
                 {
                     raygen_shader_module = getShader("shaders/raygen.spv");
                 }
@@ -1612,7 +1479,7 @@ namespace lotus
                 //deferred pipeline
                 auto vertex_module = getShader("shaders/quad.spv");
                 vk::UniqueShaderModule fragment_module;
-                if (render_mode == RenderMode::Raytrace)
+                if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Raytrace)
                 {
                     fragment_module = getShader("shaders/deferred_raytrace.spv");
                 }
@@ -1645,14 +1512,14 @@ namespace lotus
                 vk::Viewport viewport;
                 viewport.x = 0.0f;
                 viewport.y = 0.0f;
-                viewport.width = (float)swapchain_extent.width;
-                viewport.height = (float)swapchain_extent.height;
+                viewport.width = (float)swapchain->extent.width;
+                viewport.height = (float)swapchain->extent.height;
                 viewport.minDepth = 0.0f;
                 viewport.maxDepth = 1.0f;
 
                 vk::Rect2D scissor;
                 scissor.offset = vk::Offset2D{0, 0};
-                scissor.extent = swapchain_extent;
+                scissor.extent = swapchain->extent;
 
                 vk::PipelineViewportStateCreateInfo viewport_state;
                 viewport_state.viewportCount = 1;
@@ -1728,7 +1595,7 @@ namespace lotus
     {
         auto format = gpu->getDepthFormat();
 
-        depth_image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        depth_image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.viewType = vk::ImageViewType::e2D;
@@ -1746,7 +1613,7 @@ namespace lotus
     void Renderer::createFramebuffers()
     {
         frame_buffers.clear();
-        for (auto& swapchain_image_view : swapchain_image_views) {
+        for (auto& swapchain_image_view : swapchain->image_views) {
             std::array<vk::ImageView, 2> attachments = {
                 *swapchain_image_view,
                 *depth_image_view
@@ -1756,8 +1623,8 @@ namespace lotus
             framebuffer_info.renderPass = *render_pass;
             framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
             framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = swapchain_extent.width;
-            framebuffer_info.height = swapchain_extent.height;
+            framebuffer_info.width = swapchain->extent.width;
+            framebuffer_info.height = swapchain->extent.height;
             framebuffer_info.layers = 1;
 
             frame_buffers.push_back(gpu->device->createFramebufferUnique(framebuffer_info, nullptr));
@@ -1781,14 +1648,14 @@ namespace lotus
     void Renderer::createCommandPool()
     {
         vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = gpu->graphics_queue_index.value();
+        pool_info.queueFamilyIndex = gpu->graphics_queue_index;
 
         command_pool = gpu->device->createCommandPoolUnique(pool_info, nullptr);
     }
 
     void Renderer::createShadowmapResources()
     {
-        if (render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
 
             auto format = gpu->getDepthFormat();
@@ -1849,14 +1716,14 @@ namespace lotus
 
     void Renderer::createGBufferResources()
     {
-        gbuffer.position.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.normal.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.face_normal.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.accumulation.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.revealage.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.material.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR16Uint, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.depth.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, gpu->getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.position.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.normal.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.face_normal.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.accumulation.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.revealage.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.material.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16Uint, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.depth.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, gpu->getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = gbuffer.position.image->image;
@@ -1896,8 +1763,8 @@ namespace lotus
         framebuffer_info.renderPass = *gbuffer_render_pass;
         framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebuffer_info.pAttachments = attachments.data();
-        framebuffer_info.width = swapchain_extent.width;
-        framebuffer_info.height = swapchain_extent.height;
+        framebuffer_info.width = swapchain->extent.width;
+        framebuffer_info.height = swapchain->extent.height;
         framebuffer_info.layers = 1;
 
         gbuffer.frame_buffer = gpu->device->createFramebufferUnique(framebuffer_info, nullptr);
@@ -1918,10 +1785,10 @@ namespace lotus
 
         gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        if (RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
-            rtx_gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
-            rtx_gbuffer.light.image = gpu->memory_manager->GetImage(swapchain_extent.width, swapchain_extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            rtx_gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            rtx_gbuffer.light.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
             vk::ImageViewCreateInfo image_view_info;
             image_view_info.image = rtx_gbuffer.albedo.image->image;
@@ -1970,7 +1837,7 @@ namespace lotus
 
         deferred_command_buffers = gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
-        if (render_mode == RenderMode::Rasterization)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             for (int i = 0; i < deferred_command_buffers.size(); ++i)
             {
@@ -1989,7 +1856,7 @@ namespace lotus
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
                 renderpass_info.pClearValues = clearValues.data();
                 renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
-                renderpass_info.renderArea.extent = swapchain_extent;
+                renderpass_info.renderArea.extent = swapchain->extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
@@ -2128,7 +1995,7 @@ namespace lotus
                 buffer.end();
             }
         }
-        else if (render_mode == RenderMode::Raytrace)
+        else if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Raytrace)
         {
             for (int i = 0; i < deferred_command_buffers.size(); ++i)
             {
@@ -2148,7 +2015,7 @@ namespace lotus
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
                 renderpass_info.pClearValues = clear_values.data();
                 renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
-                renderpass_info.renderArea.extent = swapchain_extent;
+                renderpass_info.renderArea.extent = swapchain->extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
@@ -2212,7 +2079,7 @@ namespace lotus
                 buffer.end();
             }
         }
-        else if (render_mode == RenderMode::Hybrid)
+        else if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Hybrid)
         {
             for (int i = 0; i < deferred_command_buffers.size(); ++i)
             {
@@ -2232,7 +2099,7 @@ namespace lotus
                 renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
                 renderpass_info.pClearValues = clear_values.data();
                 renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
-                renderpass_info.renderArea.extent = swapchain_extent;
+                renderpass_info.renderArea.extent = swapchain->extent;
                 renderpass_info.framebuffer = *frame_buffers[i];
                 buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
@@ -2469,7 +2336,7 @@ namespace lotus
         recreateRenderer();
         if (engine->camera)
         {
-            engine->camera->setPerspective(glm::radians(70.f), engine->renderer.swapchain_extent.width / (float)engine->renderer.swapchain_extent.height, 0.01f, 1000.f);
+            engine->camera->setPerspective(glm::radians(70.f), engine->renderer.swapchain->extent.width / (float)engine->renderer.swapchain->extent.height, 0.01f, 1000.f);
         }
     }
 
@@ -2477,10 +2344,8 @@ namespace lotus
     {
         gpu->device->waitIdle();
         engine->worker_pool.reset();
-        swapchain_image_views.clear();
-        swapchain_images.clear();
+        swapchain->recreateSwapchain(current_image);
 
-        createSwapchain();
         createRenderpasses();
         createDepthImage();
         //can skip this if scissor/viewport are dynamic
@@ -2518,7 +2383,7 @@ namespace lotus
         camera_buffers.view_proj_ubo = engine->renderer.gpu->memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         camera_buffers.view_proj_mapped = static_cast<uint8_t*>(camera_buffers.view_proj_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData)) * engine->renderer.getImageCount(), {}));
 
-        if (engine->renderer.render_mode == RenderMode::Rasterization)
+        if (engine->renderer.engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
             camera_buffers.cascade_data_ubo = engine->renderer.gpu->memory_manager->GetBuffer(engine->renderer.uniform_buffer_align_up(sizeof(Camera::cascade_data)) * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             camera_buffers.cascade_data_mapped = static_cast<uint8_t*>(camera_buffers.cascade_data_ubo->map(0, engine->renderer.uniform_buffer_align_up(sizeof(Camera::cascade_data)) * engine->renderer.getImageCount(), {}));
@@ -2547,14 +2412,6 @@ namespace lotus
         return gpu->device->createShaderModuleUnique(create_info, nullptr);
     }
 
-    Renderer::swapChainInfo Renderer::getSwapChainInfo(vk::PhysicalDevice device) const
-    {
-        return {device.getSurfaceCapabilitiesKHR(*surface),
-            device.getSurfaceFormatsKHR(*surface),
-            device.getSurfacePresentModesKHR(*surface)
-        };
-    }
-
     vk::CommandBuffer Renderer::getRenderCommandbuffer(uint32_t image_index)
     {
         vk::CommandBufferAllocateInfo alloc_info = {};
@@ -2572,9 +2429,9 @@ namespace lotus
         vk::RenderPassBeginInfo renderpass_info = {};
         renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
 
-        if (RasterizationEnabled())
+        if (engine->config->renderer.RasterizationEnabled())
         {
-            if (render_mode == RenderMode::Rasterization)
+            if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
             {
                 renderpass_info.renderPass = *shadowmap_render_pass;
                 renderpass_info.renderArea.extent = vk::Extent2D{ shadowmap_dimension, shadowmap_dimension };
@@ -2611,7 +2468,7 @@ namespace lotus
 
             renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
             renderpass_info.pClearValues = clearValues.data();
-            renderpass_info.renderArea.extent = swapchain_extent;
+            renderpass_info.renderArea.extent = swapchain->extent;
 
             buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);
             auto secondary_buffers = engine->worker_pool.getSecondaryGraphicsBuffers(image_index);
@@ -2623,7 +2480,7 @@ namespace lotus
                 buffer[0]->executeCommands(particle_buffers);
             buffer[0]->endRenderPass();
         }
-        if (render_mode == RenderMode::Raytrace)
+        if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Raytrace)
         {
             buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
@@ -2676,9 +2533,9 @@ namespace lotus
             buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1,
                 { write_info_target_albedo, write_info_target_light, write_info_cam, write_info_light });
 
-            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1);
+            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain->extent.width, swapchain->extent.height, 1);
         }
-        else if (render_mode == RenderMode::Hybrid)
+        else if (engine->config->renderer.render_mode == Config::Renderer::RenderMode::Hybrid)
         {
             buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
@@ -2757,7 +2614,7 @@ namespace lotus
 
             buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1, { write_info_target_light, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_material_index });
 
-            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain_extent.width, swapchain_extent.height, 1);
+            buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain->extent.width, swapchain->extent.height, 1);
         }
 
         buffer[0]->end();
@@ -2828,7 +2685,7 @@ namespace lotus
         auto prev_image = current_image;
         try
         {
-            current_image = gpu->device->acquireNextImageKHR(*swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
         }
         catch (vk::OutOfDateKHRError&)
         {
@@ -2837,10 +2694,7 @@ namespace lotus
         }
 
         engine->worker_pool.clearProcessed(current_image);
-        if (old_swapchain && old_swapchain_image == current_image)
-        {
-            old_swapchain.reset();
-        }
+        swapchain->checkOldSwapchain(current_image);
         engine->worker_pool.waitIdle();
         if (raytracer->hasQueries())
         {
@@ -2882,20 +2736,20 @@ namespace lotus
         submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
         submitInfo.pCommandBuffers = buffers.data();
 
-        vk::Semaphore gbuffer_semaphores[] = { *gbuffer_sem };
-        submitInfo.pSignalSemaphores = gbuffer_semaphores;
-        submitInfo.signalSemaphoreCount = 1;
+        std::vector<vk::Semaphore> gbuffer_semaphores = { *gbuffer_sem };
+        submitInfo.pSignalSemaphores = gbuffer_semaphores.data();
+        submitInfo.signalSemaphoreCount = gbuffer_semaphores.size();
 
         gpu->graphics_queue.submit(submitInfo, nullptr);
 
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = gbuffer_semaphores;
+        submitInfo.waitSemaphoreCount = gbuffer_semaphores.size();
+        submitInfo.pWaitSemaphores = gbuffer_semaphores.data();
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
 
-        vk::Semaphore signalSemaphores[] = { *frame_finish_sem[current_frame] };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
+        std::vector<vk::Semaphore> signalSemaphores = { *frame_finish_sem[current_frame] };
+        submitInfo.signalSemaphoreCount = signalSemaphores.size();
+        submitInfo.pSignalSemaphores = signalSemaphores.data();
 
         gpu->device->resetFences(*frame_fences[current_frame]);
 
@@ -2903,12 +2757,12 @@ namespace lotus
 
         vk::PresentInfoKHR presentInfo = {};
 
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
+        presentInfo.waitSemaphoreCount = signalSemaphores.size();
+        presentInfo.pWaitSemaphores = signalSemaphores.data();
 
-        vk::SwapchainKHR swap_chains[] = {*swapchain};
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swap_chains;
+        std::vector<vk::SwapchainKHR> swap_chains = {*swapchain->swapchain};
+        presentInfo.swapchainCount = swap_chains.size();
+        presentInfo.pSwapchains = swap_chains.data();
 
         presentInfo.pImageIndices = &current_image;
 

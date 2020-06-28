@@ -79,7 +79,7 @@ namespace FFXI
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
         vk::BufferUsageFlags aabbs_usage_flags = vk::BufferUsageFlagBits::eTransferDst;
 
-        if (engine->renderer.RaytraceEnabled())
+        if (engine->config->renderer.RaytraceEnabled())
         {
             vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
             index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;

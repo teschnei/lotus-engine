@@ -62,7 +62,7 @@ namespace lotus
             copy_region.srcOffset = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t));
             command_buffer->copyBuffer(staging_buffer->buffer, mesh->aabbs_buffer->buffer, copy_region);
 
-            if (thread->engine->renderer.RaytraceEnabled())
+            if (thread->engine->config->renderer.RaytraceEnabled())
             {
                 raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eAabbs, vk::AccelerationStructureGeometryAabbsDataKHR{
                     thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
@@ -77,7 +77,7 @@ namespace lotus
 
             staging_buffer->unmap();
 
-            if (thread->engine->renderer.RaytraceEnabled())
+            if (thread->engine->config->renderer.RaytraceEnabled())
             {
                 vk::MemoryBarrier barrier;
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;

@@ -13,8 +13,7 @@ namespace lotus
     class GPU
     {
     public:
-        //TODO: move raytrace_enabled into config
-        GPU(vk::Instance instance, vk::SurfaceKHR surface, Config* config, const std::vector<const char*>& layers, bool raytrace_enabled);
+        GPU(vk::Instance instance, vk::SurfaceKHR surface, Config* config, const std::vector<const char*>& layers);
 
         vk::PhysicalDevice physical_device;
         vk::PhysicalDeviceProperties2 properties;
@@ -23,9 +22,9 @@ namespace lotus
         vk::Queue graphics_queue;
         vk::Queue present_queue;
         vk::Queue compute_queue;
-        std::optional<uint32_t> graphics_queue_index;
-        std::optional<uint32_t> present_queue_index;
-        std::optional<uint32_t> compute_queue_index;
+        uint32_t graphics_queue_index;
+        uint32_t present_queue_index;
+        uint32_t compute_queue_index;
         std::unique_ptr<MemoryManager> memory_manager;
 
         vk::Format getDepthFormat() const;
@@ -43,7 +42,7 @@ namespace lotus
         Config* config{ nullptr };
 
         void createPhysicalDevice();
-        void createDevice(const std::vector<const char*>& layers, bool raytrace_enabled);
+        void createDevice(const std::vector<const char*>& layers);
         std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
         bool extensionsSupported(vk::PhysicalDevice device);
     };

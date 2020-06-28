@@ -6,18 +6,12 @@
 #include <glm/glm.hpp>
 #include "window.h"
 #include "gpu.h"
+#include "swapchain.h"
 #include "engine/renderer/raytrace_query.h"
 
 namespace lotus
 {
     class Engine;
-
-    enum class RenderMode
-    {
-        Rasterization,
-        Hybrid,
-        Raytrace
-    };
 
     class Renderer
     {
@@ -36,7 +30,7 @@ namespace lotus
 
         void Init();
 
-        uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain_images.size()); }
+        uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
         void setCurrentImage(int _current_image) { current_image = _current_image; }
         size_t uniform_buffer_align_up(size_t in_size) const;
@@ -53,14 +47,8 @@ namespace lotus
         std::unique_ptr<Window> window;
         vk::UniqueSurfaceKHR surface;
         std::unique_ptr<GPU> gpu;
+        std::unique_ptr<Swapchain> swapchain;
 
-        vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> swapchain;
-        vk::UniqueHandle<vk::SwapchainKHR, vk::DispatchLoaderDynamic> old_swapchain;
-        uint32_t old_swapchain_image{ 0 };
-        vk::Extent2D swapchain_extent{};
-        vk::Format swapchain_image_format{};
-        std::vector<vk::Image> swapchain_images;
-        std::vector<vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic>> swapchain_image_views;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> gbuffer_render_pass;
@@ -125,8 +113,6 @@ namespace lotus
 
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;
 
-        RenderMode render_mode{ RenderMode::Raytrace };
-
         struct
         {
             std::unique_ptr<Buffer> view_proj_ubo;
@@ -157,8 +143,6 @@ namespace lotus
             float _pad[2];
         };
         /* Ray tracing */
-        bool RaytraceEnabled();
-        bool RasterizationEnabled();
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_const;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
@@ -222,15 +206,6 @@ namespace lotus
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;
-
-        struct swapChainInfo
-        {
-            vk::SurfaceCapabilitiesKHR capabilities;
-            std::vector<vk::SurfaceFormatKHR> formats;
-            std::vector<vk::PresentModeKHR> present_modes;
-        };
-
-        swapChainInfo getSwapChainInfo(vk::PhysicalDevice device) const;
 
         vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index);
 
