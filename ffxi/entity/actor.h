@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include "engine/entity/deformable_entity.h"
 
 namespace FFXI {
@@ -11,7 +12,7 @@ class Actor : public lotus::DeformableEntity
 {
 public:
     explicit Actor(lotus::Engine* engine);
-    void Init(const std::shared_ptr<Actor>& sp, const std::string& dat);
+    void Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat);
 
     float speed{ 4.f };
 };

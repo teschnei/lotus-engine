@@ -5,12 +5,12 @@
 class ActorDatLoad : public lotus::WorkItem
 {
 public:
-    ActorDatLoad(const std::shared_ptr<Actor>& entity, const std::string& dat);
+    ActorDatLoad(const std::shared_ptr<Actor>& entity, const std::filesystem::path& dat);
     virtual ~ActorDatLoad() override = default;
     virtual void Process(lotus::WorkerThread*) override;
 
 private:
     std::shared_ptr<Actor> entity;
-    std::string dat;
+    std::filesystem::path dat;
 };
 

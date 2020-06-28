@@ -33,12 +33,12 @@ namespace FFXI
 
     }
 
-    DatParser::DatParser(const std::string& filepath, bool _rtx) : rtx(_rtx)
+    DatParser::DatParser(const std::filesystem::path& filepath, bool _rtx) : rtx(_rtx)
     {
         std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };
 
         if (!dat.good())
-            throw std::runtime_error("dat not found: " + filepath);
+            throw std::runtime_error("dat not found: " + filepath.string());
 
         size_t file_size = (size_t)dat.tellg();
         buffer.resize(file_size);

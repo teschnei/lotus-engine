@@ -35,10 +35,10 @@ public:
         (i < 256 ? i + 6420 : i + 85335) // Actor
         (i < 256 ? i + 6720 : i + 86235) // Event
         */
-        scene->AddEntity<FFXILandscapeEntity>(path + R"(\ROM\342\73.dat)");
+        scene->AddEntity<FFXILandscapeEntity>(path / "ROM/342/73.DAT");
         //costumeid 3111 (arciela 3074)
-        //auto player = scene->AddEntity<Actor>(path + R"(\ROM\310\3.dat)");
-        auto player = scene->AddEntity<Actor>(path + R"(\ROM\309\105.dat)");
+        //auto player = scene->AddEntity<Actor>(path / "/ROM/310/3.DAT");
+        auto player = scene->AddEntity<Actor>(path / "ROM/309/105.DAT");
         player->setPos(glm::vec3(259.f, -87.f, 99.f));
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
         engine->set_camera(camera.get());

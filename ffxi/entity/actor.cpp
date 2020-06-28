@@ -10,7 +10,7 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
 }
 
-void Actor::Init(const std::shared_ptr<Actor>& sp, const std::string& dat)
+void Actor::Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat)
 {
     engine->worker_pool.addWork(std::make_unique<ActorDatLoad>(sp, dat));
 }
