@@ -5,6 +5,8 @@
 #include <winreg.h>
 #endif
 
+#include "fs.h"
+
 FFXIConfig::FFXIConfig(): lotus::Config()
 {
     if (ffxi.ffxi_install_path.empty())
@@ -25,8 +27,13 @@ FFXIConfig::FFXIConfig(): lotus::Config()
             if (res == ERROR_SUCCESS)
             {
                 value.resize(size - 1);
-                ffxi.ffxi_install_path = value;
+                ffxi.ffxi_install_path = fs::path2str(value);
             }
+        }
+#else
+        const char *path = getenv("FFXI_PATH");
+        if (path) {
+           ffxi.ffxi_install_path = fs::path2str(path);
         }
 #endif
     }

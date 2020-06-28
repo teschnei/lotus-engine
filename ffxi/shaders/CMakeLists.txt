@@ -1,7 +1,9 @@
+find_program(GLSL_VALIDATOR_EXE glslangValidator)
+
 function(compile_spirv INPUT OUTPUT)
     add_custom_command(
         OUTPUT ${OUTPUT}
-        COMMAND glslangValidator.exe -V "${INPUT}" -o "${OUTPUT}"
+        COMMAND "${GLSL_VALIDATOR_EXE}" -V "${INPUT}" -o "${OUTPUT}"
         MAIN_DEPENDENCY ${INPUT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
