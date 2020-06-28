@@ -30,6 +30,11 @@ FFXIConfig::FFXIConfig(): lotus::Config()
                 ffxi.ffxi_install_path = fs::path2str(value);
             }
         }
+#else
+        const char *path = getenv("FFXI_PATH");
+        if (path) {
+           ffxi.ffxi_install_path = fs::path2str(path);
+        }
 #endif
     }
 }
