@@ -10,12 +10,12 @@ namespace FFXI
         uint8_t flg;
         char id[16];
         uint32_t dwnazo1;
-        long  imgx, imgy;
+        int32_t  imgx, imgy;
         uint32_t dwnazo2[6];
         uint32_t widthbyte;
         char ddsType[4];
-        unsigned int size;
-        unsigned int noBlock;
+        uint32_t size;
+        uint32_t noBlock;
     } IMGINFOA1;
 
     typedef struct
@@ -23,7 +23,7 @@ namespace FFXI
         glm::u8  flg;
         char id[16];
         glm::u32 dwnazo1;			//nazo = unknown
-        long  imgx, imgy;
+        int32_t  imgx, imgy;
         glm::u32 dwnazo2[6];
         glm::u32 widthbyte;
         glm::u32 unk;				//B1-extra unk, 01-no unk
