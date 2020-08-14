@@ -1,7 +1,7 @@
 #include "camera.h"
 
 // todo: find better way to do this..
-#if !(GLM_VERSION > 997)
+#if !(GLM_VERSION > 998)
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
 #else
