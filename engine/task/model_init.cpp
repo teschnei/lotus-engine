@@ -1,7 +1,8 @@
 #include "model_init.h"
 #include <utility>
-#include "../worker_thread.h"
-#include "../core.h"
+#include "engine/worker_thread.h"
+#include "engine/core.h"
+#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 
 namespace lotus
 {
@@ -23,7 +24,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             vk::DeviceSize staging_buffer_size = 0;
             for (int i = 0; i < vertex_buffers.size(); ++i)
@@ -33,7 +34,7 @@ namespace lotus
                 staging_buffer_size += vertex_buffer.size() + index_buffer.size();
             }
 
-            staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            staging_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
 
             vk::DeviceSize staging_buffer_offset = 0;
@@ -66,10 +67,10 @@ namespace lotus
                 {
                     raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
-                        thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                        thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
                         vertex_stride,
                         vk::IndexType::eUint16,
-                        thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                        thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer) 
                         }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
                     raytrace_offset_info.emplace_back(static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t))/3), 0, 0);
@@ -84,12 +85,13 @@ namespace lotus
 
             if (thread->engine->config->renderer.RaytraceEnabled() && !model->weighted)
             {
+                RendererRaytraceBase* renderer = static_cast<RendererRaytraceBase*>(thread->engine->renderer.get());
                 //TODO: test if just buffermemorybarrier is faster
                 vk::MemoryBarrier barrier;
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
-                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(renderer, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(raytrace_create_info), false, model->lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
 
                 if (model->lifetime == Lifetime::Long && model->rendered)
@@ -98,22 +100,22 @@ namespace lotus
                     std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
                     std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
                     //TODO: move these into some kind of thread-safe implementation
-                    std::lock_guard lg{ thread->engine->renderer.acceleration_binding_mutex };
-                    uint16_t index = thread->engine->renderer.static_acceleration_bindings_offset;
+                    std::lock_guard lg{ renderer->acceleration_binding_mutex };
+                    uint16_t index = renderer->static_acceleration_bindings_offset;
                     for (size_t i = 0; i < model->meshes.size(); ++i)
                     {
                         auto& mesh = model->meshes[i];
                         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
                         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
                         descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-                        for (int image = 0; image < thread->engine->renderer.getImageCount(); ++image)
+                        for (int image = 0; image < thread->engine->renderer->getImageCount(); ++image)
                         {
-                            thread->engine->renderer.mesh_info_buffer_mapped[image * Renderer::max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, glm::vec3{1.f}, 0, model->light_offset, (uint32_t)mesh->getIndexCount() };
+                            renderer->mesh_info_buffer_mapped[image * renderer->max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, glm::vec3{1.f}, 0, model->light_offset, (uint32_t)mesh->getIndexCount() };
                         }
                     }
                     model->bottom_level_as->resource_index = index;
 
-                    thread->engine->renderer.static_acceleration_bindings_offset = index + model->meshes.size();
+                    renderer->static_acceleration_bindings_offset = index + model->meshes.size();
                     vk::WriteDescriptorSet write_info_vertex;
                     write_info_vertex.descriptorType = vk::DescriptorType::eStorageBuffer;
                     write_info_vertex.dstArrayElement = index;
@@ -136,16 +138,16 @@ namespace lotus
                     write_info_texture.pImageInfo = descriptor_texture_info.data();
 
                     std::vector<vk::WriteDescriptorSet> writes;
-                    for (size_t i = 0; i < thread->engine->renderer.getImageCount(); ++i)
+                    for (size_t i = 0; i < thread->engine->renderer->getImageCount(); ++i)
                     {
-                        write_info_vertex.dstSet = *thread->engine->renderer.rtx_descriptor_sets_const[i];
-                        write_info_index.dstSet = *thread->engine->renderer.rtx_descriptor_sets_const[i];
-                        write_info_texture.dstSet = *thread->engine->renderer.rtx_descriptor_sets_const[i];
+                        write_info_vertex.dstSet = *renderer->rtx_descriptor_sets_const[i];
+                        write_info_index.dstSet = *renderer->rtx_descriptor_sets_const[i];
+                        write_info_texture.dstSet = *renderer->rtx_descriptor_sets_const[i];
                         writes.push_back(write_info_vertex);
                         writes.push_back(write_info_index);
                         writes.push_back(write_info_texture);
                     }
-                    thread->engine->renderer.gpu->device->updateDescriptorSets(writes, nullptr);
+                    thread->engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
                 }
             }
             command_buffer->end();

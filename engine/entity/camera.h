@@ -46,13 +46,6 @@ namespace lotus
             glm::vec4 eye_pos;
         } camera_data;
 
-        struct UBOFS
-        {
-            glm::vec4 cascade_splits;
-            glm::mat4 cascade_view_proj[Renderer::shadowmap_cascades];
-            glm::mat4 inverse_view;
-        } cascade_data {};
-
         struct Frustum
         {
             glm::vec4 left;

@@ -5,20 +5,21 @@
 #include "core.h"
 #include "renderer/vulkan/renderer.h"
 #include "task/acceleration_build.h"
+#include "renderer/vulkan/renderer_raytrace_base.h"
 
 namespace lotus
 {
     Scene::Scene(Engine* _engine) : engine(_engine)
     {
-        top_level_as.resize(engine->renderer.getImageCount());
+        top_level_as.resize(engine->renderer->getImageCount());
     }
 
     void Scene::render()
     {
-        uint32_t image_index = engine->renderer.getCurrentImage();
+        uint32_t image_index = engine->renderer->getCurrentImage();
         if (engine->config->renderer.RaytraceEnabled())
         {
-            top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(engine, true);
+            top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), true);
             Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
             {
                 //TODO: review if this is needed
@@ -52,7 +53,7 @@ namespace lotus
         }
         if (engine->config->renderer.RaytraceEnabled())
         {
-           engine->worker_pool.addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
+           engine->worker_pool->addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
         }
     }
 

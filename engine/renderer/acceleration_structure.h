@@ -9,12 +9,12 @@ namespace lotus
     class DeformableEntity;
     class Model;
     class Particle;
-    class Engine;
+    class RendererRaytraceBase;
 
     class AccelerationStructure
     {
     protected:
-        AccelerationStructure(Engine* _engine, vk::AccelerationStructureTypeKHR _type) : engine(_engine), type(_type) {}
+        AccelerationStructure(RendererRaytraceBase* _renderer, vk::AccelerationStructureTypeKHR _type) : renderer(_renderer), type(_type) {}
 
         void PopulateAccelerationStructure(const std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>& geometries);
         void PopulateBuffers();
@@ -25,7 +25,7 @@ namespace lotus
         const vk::AccelerationStructureTypeKHR type;
         vk::BuildAccelerationStructureFlagsKHR flags;
 
-        Engine* engine;
+        RendererRaytraceBase* renderer;
     public:
         void UpdateAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometry,
             const std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>& offsets);
@@ -43,7 +43,7 @@ namespace lotus
             FastTrace,
             FastBuild
         };
-        BottomLevelAccelerationStructure(Engine* _engine, vk::CommandBuffer command_buffer, std::vector<vk::AccelerationStructureGeometryKHR>&& geometry,
+        BottomLevelAccelerationStructure(RendererRaytraceBase* _renderer, vk::CommandBuffer command_buffer, std::vector<vk::AccelerationStructureGeometryKHR>&& geometry,
             std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>&& geometry_offsets, std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>&& geometry_infos,
             bool updateable, bool compact, Performance performance);
         void Update(vk::CommandBuffer buffer);
@@ -58,7 +58,7 @@ namespace lotus
     class TopLevelAccelerationStructure : public AccelerationStructure
     {
     public:
-        TopLevelAccelerationStructure(Engine* _engine, bool updateable);
+        TopLevelAccelerationStructure(RendererRaytraceBase* _renderer, bool updateable);
 
         uint32_t AddInstance(vk::AccelerationStructureInstanceKHR instance);
         void Build(vk::CommandBuffer command_buffer);

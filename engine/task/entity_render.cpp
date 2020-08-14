@@ -17,7 +17,7 @@ namespace lotus
 
     void EntityRenderTask::Process(WorkerThread* thread)
     {
-        auto image_index = thread->engine->renderer.getCurrentImage();
+        auto image_index = thread->engine->renderer->getCurrentImage();
         updateUniformBuffer(thread, image_index, entity.get());
         if (auto deformable = dynamic_cast<DeformableEntity*>(entity.get()))
         {
@@ -39,7 +39,7 @@ namespace lotus
 
     void EntityRenderTask::updateUniformBuffer(WorkerThread* thread, int image_index, RenderableEntity* entity)
     {
-        RenderableEntity::UniformBufferObject* ubo = reinterpret_cast<RenderableEntity::UniformBufferObject*>(entity->uniform_buffer_mapped + (image_index * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject))));
+        RenderableEntity::UniformBufferObject* ubo = reinterpret_cast<RenderableEntity::UniformBufferObject*>(entity->uniform_buffer_mapped + (image_index * thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject))));
         ubo->model = entity->getModelMatrix();
         ubo->modelIT = glm::transpose(glm::inverse(glm::mat3(ubo->model)));
     }
@@ -54,7 +54,7 @@ namespace lotus
         alloc_info.commandPool = *thread->compute_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};
@@ -62,7 +62,7 @@ namespace lotus
 
         command_buffer->begin(begin_info);
 
-        command_buffer->bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline);
+        command_buffer->bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer->animation_pipeline);
 
         vk::DescriptorBufferInfo skeleton_buffer_info;
         skeleton_buffer_info.buffer = entity->animation_component->skeleton_bone_buffer->buffer;
@@ -78,7 +78,7 @@ namespace lotus
         skeleton_descriptor_set.descriptorCount = 1;
         skeleton_descriptor_set.pBufferInfo = &skeleton_buffer_info;
 
-        command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, skeleton_descriptor_set);
+        command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
         //transform skeleton with current animation   
         for (size_t i = 0; i < entity->models.size(); ++i)
@@ -114,7 +114,7 @@ namespace lotus
                 output_descriptor_set.descriptorCount = 1;
                 output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, {weight_descriptor_set, output_descriptor_set});
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer->animation_pipeline_layout, 0, {weight_descriptor_set, output_descriptor_set});
 
                 command_buffer->dispatch(mesh->getVertexCount(), 1, 1);
 

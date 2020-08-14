@@ -12,7 +12,7 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 
 void Actor::Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat)
 {
-    engine->worker_pool.addWork(std::make_unique<ActorDatLoad>(sp, dat));
+    engine->worker_pool->addWork(std::make_unique<ActorDatLoad>(sp, dat));
 }
 
 FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2* _sk2) : ModelLoader(), os2s(_os2s), sk2(_sk2)
@@ -94,8 +94,8 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
             index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
         }
 
-        mesh->vertex_buffer = engine->renderer.gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->index_buffer = engine->renderer.gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(mesh_indices.size());
         mesh->setVertexCount(os2_vertices.size());
         mesh->setVertexInputAttributeDescription(FFXI::OS2::Vertex::getAttributeDescriptions());
@@ -108,5 +108,5 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     }
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
-    engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
+    engine->worker_pool->addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
 }

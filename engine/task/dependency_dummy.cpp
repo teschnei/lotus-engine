@@ -9,5 +9,5 @@ lotus::DependencyDummyTask::DependencyDummyTask(std::vector<std::unique_ptr<Work
 
 void lotus::DependencyDummyTask::Process(WorkerThread* thread)
 {
-    thread->engine->worker_pool.addWork(children);
+    thread->engine->worker_pool->addWork(children);
 }

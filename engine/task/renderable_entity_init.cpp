@@ -2,6 +2,7 @@
 #include "engine/worker_thread.h"
 #include "engine/core.h"
 #include "engine/renderer/vulkan/renderer.h"
+#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 #include "engine/entity/deformable_entity.h"
 #include "engine/entity/component/animation_component.h"
 
@@ -23,7 +24,7 @@ namespace lotus
                 alloc_info.commandPool = *thread->graphics_pool;
                 alloc_info.commandBufferCount = 1;
 
-                auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+                auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
                 animation_component->transformed_geometries.push_back({});
                 vk::CommandBufferBeginInfo begin_info = {};
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
@@ -43,11 +44,11 @@ namespace lotus
             }
         }
 
-        entity->uniform_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
-        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
+        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer->getImageCount(), {}));
+        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer->getImageCount(), {}));
         createStaticCommandBuffers(thread);
     }
 
@@ -56,21 +57,22 @@ namespace lotus
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
         alloc_info.commandPool = *thread->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
+        alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer->getImageCount());
 
-        entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
-        entity->shadowmap_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        thread->engine->renderer->drawEntity(entity.get());
+        /*
+        entity->command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->shadowmap_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
         auto deformable = dynamic_cast<DeformableEntity*>(entity.get());
-
         if (thread->engine->config->renderer.RasterizationEnabled())
         {
             for (size_t i = 0; i < entity->command_buffers.size(); ++i)
             {
                 auto& command_buffer = entity->command_buffers[i];
                 vk::CommandBufferInheritanceInfo inheritInfo = {};
-                inheritInfo.renderPass = *thread->engine->renderer.gbuffer_render_pass;
-                inheritInfo.framebuffer = *thread->engine->renderer.gbuffer.frame_buffer;
+                inheritInfo.renderPass = *thread->engine->renderer->gbuffer_render_pass;
+                inheritInfo.framebuffer = *thread->engine->renderer->gbuffer.frame_buffer;
 
                 vk::CommandBufferBeginInfo beginInfo = {};
                 beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -78,26 +80,26 @@ namespace lotus
 
                 command_buffer->begin(beginInfo);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.graphics_pipeline);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->main_pipeline_group.graphics_pipeline);
 
                 vk::DescriptorBufferInfo camera_buffer_info;
-                camera_buffer_info.buffer = thread->engine->renderer.camera_buffers.view_proj_ubo->buffer;
-                camera_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData));
+                camera_buffer_info.buffer = thread->engine->renderer->camera_buffers.view_proj_ubo->buffer;
+                camera_buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
                 vk::DescriptorBufferInfo model_buffer_info;
                 model_buffer_info.buffer = entity->uniform_buffer->buffer;
-                model_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+                model_buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
                 model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo mesh_info;
-                mesh_info.buffer = thread->engine->renderer.mesh_info_buffer->buffer;
+                mesh_info.buffer = thread->engine->renderer->mesh_info_buffer->buffer;
                 mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
                 mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
 
                 vk::DescriptorBufferInfo material_index_info;
                 material_index_info.buffer = entity->mesh_index_buffer->buffer;
-                material_index_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t));
+                material_index_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t));
                 material_index_info.range = sizeof(uint32_t);
 
                 std::array<vk::WriteDescriptorSet, 4> descriptorWrites = {};
@@ -130,13 +132,13 @@ namespace lotus
                 descriptorWrites[3].descriptorCount = 1;
                 descriptorWrites[3].pBufferInfo = &material_index_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->pipeline_layout, 0, descriptorWrites);
 
-                drawModel(thread, *command_buffer, deformable, false, *thread->engine->renderer.pipeline_layout, i);
+                drawModel(thread, *command_buffer, deformable, false, *thread->engine->renderer->pipeline_layout, i);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.blended_graphics_pipeline);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->main_pipeline_group.blended_graphics_pipeline);
 
-                drawModel(thread, *command_buffer, deformable, true, *thread->engine->renderer.pipeline_layout, i);
+                drawModel(thread, *command_buffer, deformable, true, *thread->engine->renderer->pipeline_layout, i);
 
                 command_buffer->end();
             }
@@ -148,9 +150,9 @@ namespace lotus
             {
                 auto& command_buffer = entity->shadowmap_buffers[i];
                 vk::CommandBufferInheritanceInfo inheritInfo = {};
-                inheritInfo.renderPass = *thread->engine->renderer.shadowmap_render_pass;
+                inheritInfo.renderPass = *thread->engine->renderer->shadowmap_render_pass;
                 //used in multiple framebuffers so we can't give the hint
-                //inheritInfo.framebuffer = *thread->engine->renderer.shadowmap_frame_buffer;
+                //inheritInfo.framebuffer = *thread->engine->renderer->shadowmap_frame_buffer;
 
                 vk::CommandBufferBeginInfo beginInfo = {};
                 beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -160,12 +162,12 @@ namespace lotus
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = entity->uniform_buffer->buffer;
-                buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+                buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
                 buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = thread->engine->renderer.camera_buffers.cascade_data_ubo->buffer;
-                cascade_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(thread->engine->camera->cascade_data));
+                cascade_buffer_info.buffer = thread->engine->renderer->camera_buffers.cascade_data_ubo->buffer;
+                cascade_buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(thread->engine->camera->cascade_data));
                 cascade_buffer_info.range = sizeof(thread->engine->camera->cascade_data);
 
                 std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
@@ -184,18 +186,18 @@ namespace lotus
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pBufferInfo = &cascade_buffer_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline_layout, 0, descriptorWrites);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->shadowmap_pipeline_layout, 0, descriptorWrites);
 
                 command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.shadowmap_pipeline);
-                drawModel(thread, *command_buffer, deformable, false, *thread->engine->renderer.shadowmap_pipeline_layout, i);
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.main_pipeline_group.blended_shadowmap_pipeline);
-                drawModel(thread, *command_buffer, deformable, true, *thread->engine->renderer.shadowmap_pipeline_layout, i);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->main_pipeline_group.shadowmap_pipeline);
+                drawModel(thread, *command_buffer, deformable, false, *thread->engine->renderer->shadowmap_pipeline_layout, i);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->main_pipeline_group.blended_shadowmap_pipeline);
+                drawModel(thread, *command_buffer, deformable, true, *thread->engine->renderer->shadowmap_pipeline_layout, i);
 
                 command_buffer->end();
             }
-        }
+        }*/
     }
 
     void RenderableEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image)
@@ -267,29 +269,29 @@ namespace lotus
         std::vector<std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>> raytrace_offset_info;
         std::vector<std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>> raytrace_create_info;
 
-        raytrace_geometry.resize(thread->engine->renderer.getImageCount());
-        raytrace_offset_info.resize(thread->engine->renderer.getImageCount());
-        raytrace_create_info.resize(thread->engine->renderer.getImageCount());
+        raytrace_geometry.resize(thread->engine->renderer->getImageCount());
+        raytrace_offset_info.resize(thread->engine->renderer->getImageCount());
+        raytrace_create_info.resize(thread->engine->renderer->getImageCount());
         const auto& animation_component = entity->animation_component;
         vertex_buffer.resize(model.meshes.size());
         for (size_t i = 0; i < model.meshes.size(); ++i)
         {
             const auto& mesh = model.meshes[i];
 
-            for (uint32_t image = 0; image < thread->engine->renderer.getImageCount(); ++image)
+            for (uint32_t image = 0; image < thread->engine->renderer->getImageCount(); ++image)
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                vertex_buffer[i].push_back(thread->engine->renderer.gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                vertex_buffer[i].push_back(thread->engine->renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
                 if (thread->engine->config->renderer.RaytraceEnabled())
                 {
                     raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
-                        thread->engine->renderer.gpu->device->getBufferAddressKHR(vertex_buffer[i].back()->buffer),
+                        thread->engine->renderer->gpu->device->getBufferAddressKHR(vertex_buffer[i].back()->buffer),
                         vertex_size,
                         vk::IndexType::eUint16,
-                        thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer) 
+                        thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer) 
                         }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
                     raytrace_offset_info[image].emplace_back(mesh->getIndexCount() / 3, 0, 0);
@@ -311,9 +313,9 @@ namespace lotus
 
             auto component = entity->animation_component;
             auto& skeleton = component->skeleton;
-            command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline);
+            command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *thread->engine->renderer->animation_pipeline);
 
-            for (uint32_t image_index = 0; image_index < thread->engine->renderer.getImageCount(); ++image_index)
+            for (uint32_t image_index = 0; image_index < thread->engine->renderer->getImageCount(); ++image_index)
             {
                 vk::DescriptorBufferInfo skeleton_buffer_info;
                 skeleton_buffer_info.buffer = entity->animation_component->skeleton_bone_buffer->buffer;
@@ -329,7 +331,7 @@ namespace lotus
                 skeleton_descriptor_set.descriptorCount = 1;
                 skeleton_descriptor_set.pBufferInfo = &skeleton_buffer_info;
 
-                command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, skeleton_descriptor_set);
+                command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
                 for (size_t i = 0; i < entity->models.size(); ++i)
                 {
@@ -364,7 +366,7 @@ namespace lotus
                         output_descriptor_set.descriptorCount = 1;
                         output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
 
-                        command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer.animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set });
+                        command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *thread->engine->renderer->animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set });
 
                         command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
@@ -383,9 +385,9 @@ namespace lotus
                     }
                 }
             }
-            for (size_t i = 0; i < thread->engine->renderer.getImageCount(); ++i)
+            for (size_t i = 0; i < thread->engine->renderer->getImageCount(); ++i)
             {
-                animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(thread->engine, command_buffer, std::move(raytrace_geometry[i]),
+                animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(thread->engine->renderer.get()), command_buffer, std::move(raytrace_geometry[i]),
                     std::move(raytrace_offset_info[i]), std::move(raytrace_create_info[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
             }
         }

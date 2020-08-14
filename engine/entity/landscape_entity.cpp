@@ -1,4 +1,5 @@
 #include "landscape_entity.h"
+#include "engine/core.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task/landscape_entity_init.h"
 #include "engine/renderer/vulkan/renderer.h"
@@ -14,16 +15,9 @@ namespace lotus
             {
                 for (uint32_t i = 0; i < count; ++i)
                 {
-                    vk::AccelerationStructureInstanceKHR instance{};
                     //glm is column-major so we have to transpose the model matrix for RTX
                     auto matrix = glm::mat3x4{ instance_info[offset+i].model_t };
-                    memcpy(&instance.transform, &matrix, sizeof(matrix));
-                    instance.accelerationStructureReference = model->bottom_level_as->handle;
-                    instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-                    instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry);
-                    instance.instanceShaderBindingTableRecordOffset = Renderer::shaders_per_group * 2;
-                    instance.instanceCustomIndex = model->bottom_level_as->resource_index;
-                    model->bottom_level_as->instanceid = as->AddInstance(instance);
+                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->bottom_level_as->resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry), 2);
                 }
             }
         }

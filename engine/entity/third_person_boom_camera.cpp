@@ -15,7 +15,7 @@ namespace lotus
     {
         focus = _focus;
         Camera::Init(sp);
-        Input* input = &engine->input;
+        Input* input = engine->input.get();
         addComponent<ThirdPersonCameraComponent>(input, focus);
 
         glm::quat yaw = glm::angleAxis(rot_x, glm::vec3(0.f, 1.f, 0.f));
@@ -73,7 +73,7 @@ namespace lotus
         if (update)
         {
             glm::vec3 boom_source = focus.lock()->getPos() + glm::vec3{0.f, -0.5f, 0.f};
-            engine->renderer.raytracer->query(Raytracer::ObjectFlags::LevelCollision, boom_source, glm::vec3{ 1.f, 0.f, 0.f } * rot, 0.f, distance, [this, boom_source](float new_distance)
+            engine->renderer->raytracer->query(Raytracer::ObjectFlags::LevelCollision, boom_source, glm::vec3{ 1.f, 0.f, 0.f } * rot, 0.f, distance, [this, boom_source](float new_distance)
             {
                 glm::vec3 boom{ new_distance - 0.05f, 0.f, 0.f };
                 glm::vec3 new_pos = boom * rot;

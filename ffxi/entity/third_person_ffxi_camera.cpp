@@ -12,7 +12,7 @@ void ThirdPersonFFXICamera::Init(const std::shared_ptr<ThirdPersonFFXICamera>& s
 {
     focus = _focus;
     Camera::Init(sp);
-    lotus::Input* input = &engine->input;
+    lotus::Input* input = engine->input.get();
     addComponent<ThirdPersonFFXICameraComponent>(input, focus);
 
     glm::quat yaw = glm::angleAxis(rot_x, glm::vec3(0.f, 1.f, 0.f));

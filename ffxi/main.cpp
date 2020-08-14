@@ -42,10 +42,10 @@ public:
         player->setPos(glm::vec3(259.f, -87.f, 99.f));
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
         engine->set_camera(camera.get());
-        player->addComponent<ThirdPersonEntityFFXIInputComponent>(&engine->input);
-        player->addComponent<ParticleTester>(&engine->input);
-        engine->lights.light.diffuse_dir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
-        engine->camera->setPerspective(glm::radians(70.f), engine->renderer.swapchain->extent.width / (float)engine->renderer.swapchain->extent.height, 0.01f, 1000.f);
+        player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
+        player->addComponent<ParticleTester>(engine->input.get());
+        engine->lights->light.diffuse_dir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
+        engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
         //engine->camera->setPos(glm::vec3(259.f, -90.f, 82.f));
     }
     virtual void tick(lotus::time_point time, lotus::duration delta) override

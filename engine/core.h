@@ -31,11 +31,11 @@ namespace lotus
         Game* game;
         std::unique_ptr<Config> config;
         Settings settings;
-        Renderer renderer;
-        Input input;
+        std::unique_ptr<Renderer> renderer;
+        std::unique_ptr<Input> input;
         Camera* camera {nullptr};
-        WorkerPool worker_pool{ this };
-        LightManager lights{ this };
+        std::unique_ptr<WorkerPool> worker_pool;
+        std::unique_ptr<LightManager> lights;
 
         void set_camera(Camera* _camera) { camera = _camera; }
         time_point getSimulationTime() { return simulation_time; }

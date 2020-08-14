@@ -13,7 +13,7 @@ namespace lotus
     void FreeFlyingCamera::Init(const std::shared_ptr<FreeFlyingCamera>& sp)
     {
         Camera::Init(sp);
-        Input* input = &engine->input;
+        Input* input = engine->input.get();
         addComponent<FreeFlyingCameraComponent>(input);
     }
 }

@@ -23,13 +23,16 @@ add_library( engine
     worker_thread.h
     work_item.cpp
     work_item.h
-)
+ "renderer/vulkan/renderer_raytrace_base.h" "renderer/vulkan/renderer_raytrace_base.cpp")
 
 target_include_directories(engine PUBLIC "../" )
 target_include_directories(engine PUBLIC "../external/vma" )
 
 target_link_libraries(engine $<$<PLATFORM_ID:Linux>:-ldl>)
 target_link_libraries(engine Vulkan::Vulkan SDL::SDL2 GLM::GLM)
+
+set_property(TARGET engine PROPERTY CXX_STANDARD 20)
+set_property(TARGET engine PROPERTY CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(entity)
 add_subdirectory(renderer)

@@ -15,7 +15,7 @@ namespace lotus
             threads.push_back(std::make_unique<WorkerThread>(engine, this));
         }
 #endif
-        processing_work.resize(engine->renderer.getImageCount());
+        processing_work.resize(engine->renderer->getImageCount());
     }
 
     WorkerPool::~WorkerPool()

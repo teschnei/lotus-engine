@@ -8,7 +8,7 @@ namespace lotus
 {
     AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton, size_t _vertex_stride) : Component(_entity, _engine), skeleton(std::move(_skeleton)), vertex_stride(_vertex_stride)
     {
-        skeleton_bone_buffer = engine->renderer.gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        skeleton_bone_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         //TODO: remove me
         playAnimation("idl0");
@@ -59,7 +59,7 @@ namespace lotus
 
     void AnimationComponent::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
-        engine->worker_pool.addWork(std::make_unique<TransformSkeletonTask>(std::static_pointer_cast<DeformableEntity>(sp)));
+        engine->worker_pool->addWork(std::make_unique<TransformSkeletonTask>(std::static_pointer_cast<DeformableEntity>(sp)));
     }
 
     void AnimationComponent::playAnimation(std::string name, float speed, std::optional<std::string> _next_anim)

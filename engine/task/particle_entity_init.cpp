@@ -12,11 +12,11 @@ namespace lotus
 
     void ParticleEntityInitTask::Process(WorkerThread* thread)
     {
-        entity->uniform_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
-        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
+        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer->getImageCount(), {}));
+        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer->getImageCount(), {}));
 
         createStaticCommandBuffers(thread);
     }
@@ -26,19 +26,20 @@ namespace lotus
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
         alloc_info.commandPool = *thread->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
+        alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer->getImageCount());
 
+        /*
         if (thread->engine->config->renderer.RasterizationEnabled())
         {
-            entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            entity->command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
             
             for (size_t i = 0; i < entity->command_buffers.size(); ++i)
             {
                 auto& command_buffer = entity->command_buffers[i];
 
                 vk::CommandBufferInheritanceInfo inherit_info = {};
-                inherit_info.renderPass = *thread->engine->renderer.gbuffer_render_pass;
-                inherit_info.framebuffer = *thread->engine->renderer.gbuffer.frame_buffer;
+                inherit_info.renderPass = *thread->engine->renderer->gbuffer_render_pass;
+                inherit_info.framebuffer = *thread->engine->renderer->gbuffer.frame_buffer;
                 inherit_info.subpass = 1;
 
                 vk::CommandBufferBeginInfo begin_info = {};
@@ -47,26 +48,26 @@ namespace lotus
 
                 command_buffer->begin(begin_info);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.particle_pipeline_group.graphics_pipeline);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->particle_pipeline_group.graphics_pipeline);
 
                 vk::DescriptorBufferInfo camera_buffer_info;
-                camera_buffer_info.buffer = thread->engine->renderer.camera_buffers.view_proj_ubo->buffer;
-                camera_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData));
+                camera_buffer_info.buffer = thread->engine->renderer->camera_buffers.view_proj_ubo->buffer;
+                camera_buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
                 camera_buffer_info.range = sizeof(Camera::CameraData);
 
                 vk::DescriptorBufferInfo model_buffer_info;
                 model_buffer_info.buffer = entity->uniform_buffer->buffer;
-                model_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+                model_buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
                 model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo mesh_info;
-                mesh_info.buffer = thread->engine->renderer.mesh_info_buffer->buffer;
+                mesh_info.buffer = thread->engine->renderer->mesh_info_buffer->buffer;
                 mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
                 mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
 
                 vk::DescriptorBufferInfo material_index_info;
                 material_index_info.buffer = entity->mesh_index_buffer->buffer;
-                material_index_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t));
+                material_index_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t));
                 material_index_info.range = sizeof(uint32_t);
 
                 std::array<vk::WriteDescriptorSet, 4> descriptorWrites = {};
@@ -99,17 +100,18 @@ namespace lotus
                 descriptorWrites[3].descriptorCount = 1;
                 descriptorWrites[3].pBufferInfo = &material_index_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->pipeline_layout, 0, descriptorWrites);
 
-                drawModel(thread, *command_buffer, false, *thread->engine->renderer.pipeline_layout, i);
+                drawModel(thread, *command_buffer, false, *thread->engine->renderer->pipeline_layout, i);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.particle_pipeline_group.blended_graphics_pipeline);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->particle_pipeline_group.blended_graphics_pipeline);
 
-                drawModel(thread, *command_buffer, true, *thread->engine->renderer.pipeline_layout, i);
+                drawModel(thread, *command_buffer, true, *thread->engine->renderer->pipeline_layout, i);
 
                 command_buffer->end();
             }
         }
+        */
     }
 
     void ParticleEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout layout, size_t image)

@@ -58,7 +58,7 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 
     if (mzb)
     {
-        entity->instance_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
+        entity->instance_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
             vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         std::map<std::string, std::vector<lotus::LandscapeEntity::InstanceInfo>> temp_map;
@@ -90,7 +90,7 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 
         entity->collision_models.push_back(lotus::Model::LoadModel<FFXI::CollisionLoader>(thread->engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries)));
 
-        thread->engine->worker_pool.addWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
+        thread->engine->worker_pool->addWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
     }
     for (const auto& chunk : parser.root->children)
     {

@@ -1,8 +1,9 @@
 #include "particle_model_init.h"
 #include <utility>
 #include <numeric>
-#include "../worker_thread.h"
-#include "../core.h"
+#include "engine/worker_thread.h"
+#include "engine/core.h"
+#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 
 namespace lotus
 {
@@ -24,7 +25,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
             //assumes only 1 mesh
             auto& mesh = model->meshes[0];
@@ -34,7 +35,7 @@ namespace lotus
 
             vk::DeviceSize staging_buffer_size = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t)) + sizeof(vk::AabbPositionsKHR);
 
-            staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            staging_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
 
             command_buffer = std::move(command_buffers[0]);
@@ -65,7 +66,7 @@ namespace lotus
             if (thread->engine->config->renderer.RaytraceEnabled())
             {
                 raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eAabbs, vk::AccelerationStructureGeometryAabbsDataKHR{
-                    thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
+                    thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
                     sizeof(vk::AabbPositionsKHR)
                     }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
@@ -83,7 +84,7 @@ namespace lotus
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
-                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+                model->bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(thread->engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(raytrace_create_info), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
             }
             command_buffer->end();

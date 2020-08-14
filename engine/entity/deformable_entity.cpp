@@ -1,4 +1,5 @@
 #include "deformable_entity.h"
+#include "engine/core.h"
 #include "engine/entity/component/animation_component.h"
 #include "engine/renderer/raytrace_query.h"
 
@@ -30,22 +31,8 @@ namespace lotus
             }
             if (blas)
             {
-                vk::AccelerationStructureInstanceKHR instance{};
                 auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                memcpy(&instance.transform, &matrix, sizeof(matrix));
-                instance.accelerationStructureReference = blas->handle;
-                instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-                if (std::none_of(model->meshes.begin(), model->meshes.end(), [](auto& mesh)
-                {
-                    return mesh->has_transparency;
-                }))
-                {
-                    //instance.flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
-                }
-                instance.mask = static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities);
-                instance.instanceShaderBindingTableRecordOffset = 0;
-                instance.instanceCustomIndex = blas->resource_index;
-                blas->instanceid = as->AddInstance(instance);
+                engine->renderer->populateAccelerationStructure(as, blas, matrix, blas->resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities), 0);
             }
         }
     }

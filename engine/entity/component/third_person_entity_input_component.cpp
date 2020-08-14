@@ -83,7 +83,7 @@ namespace lotus
             glm::vec3 offset{ forward_offset, 0.f, right_offset };
             auto pos = entity->getPos();
             auto rot = entity->getRot();
-            engine->renderer.raytracer->query(Raytracer::ObjectFlags::LevelCollision, pos, glm::normalize(offset * rot), 0.f, ms * speed, [this, pos, rot, offset](float new_distance)
+            engine->renderer->raytracer->query(Raytracer::ObjectFlags::LevelCollision, pos, glm::normalize(offset * rot), 0.f, ms * speed, [this, pos, rot, offset](float new_distance)
             {
                 entity->setPos(pos + offset * new_distance * rot);
             });

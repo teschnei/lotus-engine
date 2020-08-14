@@ -2,6 +2,7 @@
 #include "engine/core.h"
 #include "engine/worker_thread.h"
 #include "engine/renderer/acceleration_structure.h"
+#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 #include "entity/landscape_entity.h"
 
 CollisionModelInitTask::CollisionModelInitTask(std::shared_ptr<lotus::Model> _model, std::vector<FFXI::CollisionMeshData> _mesh_data, std::vector<FFXI::CollisionEntry> _entries, uint32_t _vertex_stride) :
@@ -16,7 +17,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
 
     CollisionMesh* mesh = static_cast<CollisionMesh*>(model->meshes[0].get());
 
-    staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + mesh->transform_buffer->getSize(),
+    staging_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + mesh->transform_buffer->getSize(),
         vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
     uint8_t* staging_map = static_cast<uint8_t*>(staging_buffer->map(0, VK_WHOLE_SIZE, {}));
@@ -51,11 +52,11 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
 
             raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                 vk::Format::eR32G32B32Sfloat,
-                thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
                 vertex_stride,
                 vk::IndexType::eUint16,
-                thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer),
-                thread->engine->renderer.gpu->device->getBufferAddressKHR(mesh->transform_buffer->buffer)
+                thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer),
+                thread->engine->renderer->gpu->device->getBufferAddressKHR(mesh->transform_buffer->buffer)
                 }, vk::GeometryFlagBitsKHR::eOpaque);
 
             raytrace_offset_info.emplace_back(static_cast<uint32_t>(data.indices.size() / 3), index_offsets[entry.mesh_entry], vertex_offsets[entry.mesh_entry] / vertex_stride, transform_offset);
@@ -72,7 +73,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
     alloc_info.commandPool = *thread->compute_pool;
     alloc_info.commandBufferCount = 1;
 
-    auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+    auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
     command_buffer = std::move(command_buffers[0]);
 
@@ -102,7 +103,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
         command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
-        model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(thread->engine, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+        model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(static_cast<lotus::RendererRaytraceBase*>(thread->engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
             std::move(raytrace_create_info), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
     }
 

@@ -412,8 +412,8 @@ namespace FFXI
                 index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
             }
 
-            mesh->vertex_buffer = engine->renderer.gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-            mesh->index_buffer = engine->renderer.gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
             vertices.push_back(std::move(vertices_uint8));
             indices.push_back(std::move(indices_uint8));
@@ -421,6 +421,6 @@ namespace FFXI
             model->meshes.push_back(std::move(mesh));
         }
         model->lifetime = lotus::Lifetime::Long;
-        engine->worker_pool.addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer.getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(MMB::Vertex)));
+        engine->worker_pool->addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(MMB::Vertex)));
     }
 }

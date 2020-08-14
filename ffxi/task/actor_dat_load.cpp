@@ -73,5 +73,5 @@ void ActorDatLoad::Process(lotus::WorkerThread* thread)
 
     entity->models.push_back(lotus::Model::LoadModel<FFXIActorLoader>(thread->engine, "iroha_test", os2s, pSk2));
 
-    thread->engine->worker_pool.addWork(std::make_unique<lotus::RenderableEntityInitTask>(entity));
+    thread->engine->worker_pool->addWork(std::make_unique<lotus::RenderableEntityInitTask>(entity));
 }

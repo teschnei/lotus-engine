@@ -21,7 +21,7 @@ namespace lotus
                 break;
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-                    engine->renderer.resized();
+                    engine->renderer->resized();
                 break;
             default:
                 HandleInputEvent(event);

@@ -5,7 +5,7 @@
 
 void FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat)
 {
-    engine->worker_pool.addWork(std::make_unique<LandscapeDatLoad>(sp, dat));
+    engine->worker_pool->addWork(std::make_unique<LandscapeDatLoad>(sp, dat));
 }
 
 void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index)
@@ -17,30 +17,16 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
         auto& model = models[model_offset];
         if (!model->meshes.empty() && model->bottom_level_as)
         {
-            vk::AccelerationStructureInstanceKHR instance{};
             //glm is column-major so we have to transpose the model matrix for Raytrace
             auto matrix = glm::mat3x4{ instance_info.model_t };
-            memcpy(&instance.transform, &matrix, sizeof(matrix));
-            instance.accelerationStructureReference = model->bottom_level_as->handle;
-            instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-            instance.mask = static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry);
-            instance.instanceShaderBindingTableRecordOffset = lotus::Renderer::shaders_per_group * 2;
-            instance.instanceCustomIndex = model->bottom_level_as->resource_index;
-            model->bottom_level_as->instanceid = as->AddInstance(instance);
+            engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->bottom_level_as->resource_index, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry), 2);
         }
     }
     for (const auto& collision_model : collision_models)
     {
-        vk::AccelerationStructureInstanceKHR instance{};
         //glm is column-major so we have to transpose the model matrix for Raytrace
         auto matrix = glm::mat3x4{1.f};
-        memcpy(&instance.transform, &matrix, sizeof(matrix));
-        instance.accelerationStructureReference = collision_model->bottom_level_as->handle;
-        instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-        instance.mask = static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelCollision);
-        instance.instanceShaderBindingTableRecordOffset = 0;
-        instance.instanceCustomIndex = 0;
-        collision_model->bottom_level_as->instanceid = as->AddInstance(instance);
+        engine->renderer->populateAccelerationStructure(as, collision_model->bottom_level_as.get(), matrix, 0, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelCollision), 0);
     }
 }
 
@@ -54,7 +40,7 @@ void FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr<Entity>&
 
     float a = (float)((current_time - time1->first)) / (time2->first - time1->first);
 
-    auto& light = engine->lights.light;
+    auto& light = engine->lights->light;
     if (current_time > 360 && current_time < 1080)
     {
         light.entity.diffuse_color = glm::mix(time1->second.sunlight_diffuse_entity, time2->second.sunlight_diffuse_entity, a);

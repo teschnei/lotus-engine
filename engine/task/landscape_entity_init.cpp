@@ -14,11 +14,11 @@ namespace lotus
 
     void LandscapeEntityInitTask::Process(WorkerThread* thread)
     {
-        entity->uniform_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->uniform_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        entity->mesh_index_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer.getImageCount(), {}));
-        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer.uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer.getImageCount(), {}));
+        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * thread->engine->renderer->getImageCount(), {}));
+        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, thread->engine->renderer->uniform_buffer_align_up(sizeof(uint32_t)) * thread->engine->renderer->getImageCount(), {}));
 
         populateInstanceBuffer(thread);
         createCommandBuffers(thread);
@@ -29,10 +29,12 @@ namespace lotus
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
         alloc_info.commandPool = *thread->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer.getImageCount());
+        alloc_info.commandBufferCount = static_cast<uint32_t>(thread->engine->renderer->getImageCount());
 
-        entity->command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
-        entity->shadowmap_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        thread->engine->renderer->drawEntity(entity.get());
+        /*
+        entity->command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->shadowmap_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
 
         if (thread->engine->config->renderer.RasterizationEnabled())
         {
@@ -40,8 +42,8 @@ namespace lotus
             {
                 auto& command_buffer = entity->command_buffers[i];
                 vk::CommandBufferInheritanceInfo inheritInfo = {};
-                inheritInfo.renderPass = *thread->engine->renderer.gbuffer_render_pass;
-                inheritInfo.framebuffer = *thread->engine->renderer.gbuffer.frame_buffer;
+                inheritInfo.renderPass = *thread->engine->renderer->gbuffer_render_pass;
+                inheritInfo.framebuffer = *thread->engine->renderer->gbuffer.frame_buffer;
 
                 vk::CommandBufferBeginInfo beginInfo = {};
                 beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -49,15 +51,15 @@ namespace lotus
 
                 command_buffer->begin(beginInfo);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.graphics_pipeline);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->landscape_pipeline_group.graphics_pipeline);
 
                 vk::DescriptorBufferInfo buffer_info;
-                buffer_info.buffer = thread->engine->renderer.camera_buffers.view_proj_ubo->buffer;
-                buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(Camera::CameraData));
+                buffer_info.buffer = thread->engine->renderer->camera_buffers.view_proj_ubo->buffer;
+                buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
                 buffer_info.range = sizeof(Camera::CameraData);
 
                 vk::DescriptorBufferInfo mesh_info;
-                mesh_info.buffer = thread->engine->renderer.mesh_info_buffer->buffer;
+                mesh_info.buffer = thread->engine->renderer->mesh_info_buffer->buffer;
                 mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
                 mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
 
@@ -77,13 +79,13 @@ namespace lotus
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pBufferInfo = &mesh_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.pipeline_layout, 0, descriptorWrites);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->pipeline_layout, 0, descriptorWrites);
 
-                drawModel(thread, *command_buffer, false, *thread->engine->renderer.pipeline_layout);
+                drawModel(thread, *command_buffer, false, *thread->engine->renderer->pipeline_layout);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.blended_graphics_pipeline);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->landscape_pipeline_group.blended_graphics_pipeline);
 
-                drawModel(thread, *command_buffer, true, *thread->engine->renderer.pipeline_layout);
+                drawModel(thread, *command_buffer, true, *thread->engine->renderer->pipeline_layout);
 
                 command_buffer->end();
             }
@@ -95,9 +97,9 @@ namespace lotus
             {
                 auto& command_buffer = entity->shadowmap_buffers[i];
                 vk::CommandBufferInheritanceInfo inheritInfo = {};
-                inheritInfo.renderPass = *thread->engine->renderer.shadowmap_render_pass;
+                inheritInfo.renderPass = *thread->engine->renderer->shadowmap_render_pass;
                 //used in multiple framebuffers so we can't give the hint
-                //inheritInfo.framebuffer = *thread->engine->renderer.shadowmap_frame_buffer;
+                //inheritInfo.framebuffer = *thread->engine->renderer->shadowmap_frame_buffer;
 
                 vk::CommandBufferBeginInfo beginInfo = {};
                 beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -107,12 +109,12 @@ namespace lotus
 
                 vk::DescriptorBufferInfo buffer_info;
                 buffer_info.buffer = entity->uniform_buffer->buffer;
-                buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+                buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
                 buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
                 vk::DescriptorBufferInfo cascade_buffer_info;
-                cascade_buffer_info.buffer = thread->engine->renderer.camera_buffers.cascade_data_ubo->buffer;
-                cascade_buffer_info.offset = i * thread->engine->renderer.uniform_buffer_align_up(sizeof(thread->engine->camera->cascade_data));
+                cascade_buffer_info.buffer = thread->engine->renderer->camera_buffers.cascade_data_ubo->buffer;
+                cascade_buffer_info.offset = i * thread->engine->renderer->uniform_buffer_align_up(sizeof(thread->engine->camera->cascade_data));
                 cascade_buffer_info.range = sizeof(thread->engine->camera->cascade_data);
 
                 std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
@@ -131,18 +133,18 @@ namespace lotus
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pBufferInfo = &cascade_buffer_info;
 
-                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.shadowmap_pipeline_layout, 0, descriptorWrites);
+                command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->shadowmap_pipeline_layout, 0, descriptorWrites);
 
                 command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.shadowmap_pipeline);
-                drawModel(thread, *command_buffer, false, *thread->engine->renderer.shadowmap_pipeline_layout);
-                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer.landscape_pipeline_group.blended_shadowmap_pipeline);
-                drawModel(thread, *command_buffer, true, *thread->engine->renderer.shadowmap_pipeline_layout);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->landscape_pipeline_group.shadowmap_pipeline);
+                drawModel(thread, *command_buffer, false, *thread->engine->renderer->shadowmap_pipeline_layout);
+                command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *thread->engine->renderer->landscape_pipeline_group.blended_shadowmap_pipeline);
+                drawModel(thread, *command_buffer, true, *thread->engine->renderer->shadowmap_pipeline_layout);
 
                 command_buffer->end();
             }
-        }
+        }*/
     }
 
     void LandscapeEntityInitTask::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, bool transparency, vk::PipelineLayout layout)
@@ -205,7 +207,7 @@ namespace lotus
     {
         vk::DeviceSize buffer_size = sizeof(LandscapeEntity::InstanceInfo) * instance_info.size();
 
-        staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        staging_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         void* data = staging_buffer->map(0, buffer_size, {});
         memcpy(data, instance_info.data(), buffer_size);
@@ -218,7 +220,7 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};

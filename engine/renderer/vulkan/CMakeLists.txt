@@ -1,7 +1,5 @@
 target_sources(engine
     PRIVATE
-    #deferred_pass.cpp
-    #deferred_pass.h
     gpu.cpp
     gpu.h
     renderer.cpp
@@ -12,3 +10,7 @@ target_sources(engine
     window.h
     vulkan_inc.h
     )
+
+#add_subdirectory(hybrid)
+#add_subdirectory(raster)
+add_subdirectory(raytrace)

@@ -16,7 +16,7 @@ namespace lotus
         alloc_info.commandPool = *thread->compute_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = thread->engine->renderer.gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
         command_buffer = std::move(command_buffers[0]);
@@ -25,7 +25,7 @@ namespace lotus
 
         auto anim_component = entity->animation_component;
         auto skeleton = anim_component->skeleton.get();
-        staging_buffer = thread->engine->renderer.gpu->memory_manager->GetBuffer(sizeof(AnimationComponent::BufferBone) * skeleton->bones.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        staging_buffer = thread->engine->renderer->gpu->memory_manager->GetBuffer(sizeof(AnimationComponent::BufferBone) * skeleton->bones.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         AnimationComponent::BufferBone* buffer = static_cast<AnimationComponent::BufferBone*>(staging_buffer->map(0, VK_WHOLE_SIZE, {}));
         for (size_t i = 0; i < skeleton->bones.size(); ++i)
         {
@@ -40,7 +40,7 @@ namespace lotus
 
         vk::BufferCopy copy_region;
         copy_region.srcOffset = 0;
-        copy_region.dstOffset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * thread->engine->renderer.getCurrentImage();
+        copy_region.dstOffset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * thread->engine->renderer->getCurrentImage();
         copy_region.size = skeleton->bones.size() * sizeof(AnimationComponent::BufferBone);
         command_buffer->copyBuffer(staging_buffer->buffer, anim_component->skeleton_bone_buffer->buffer, copy_region);
 
@@ -48,7 +48,7 @@ namespace lotus
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.buffer = anim_component->skeleton_bone_buffer->buffer;
-        barrier.offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * thread->engine->renderer.getCurrentImage();
+        barrier.offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * thread->engine->renderer->getCurrentImage();
         barrier.size = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size();
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
