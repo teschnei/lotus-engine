@@ -978,7 +978,7 @@ namespace lotus
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = getImageCount();
 
-        deferred_command_buffers = gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        deferred_command_buffers = gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         for (int i = 0; i < deferred_command_buffers.size(); ++i)
         {
@@ -1199,7 +1199,7 @@ namespace lotus
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = 1;
 
-        auto buffer = gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto buffer = gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;

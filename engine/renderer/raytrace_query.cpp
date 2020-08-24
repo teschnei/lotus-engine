@@ -138,7 +138,7 @@ namespace lotus
             set_ci.descriptorSetCount = 1;
             set_ci.pSetLayouts = &*rtx_descriptor_layout;
             {
-                auto sets = engine->renderer->gpu->device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci);
+                auto sets = engine->renderer->gpu->device->allocateDescriptorSetsUnique(set_ci);
                 rtx_descriptor_set = std::move(sets[0]);
             }
 
@@ -211,7 +211,7 @@ namespace lotus
                     alloc_info.level = vk::CommandBufferLevel::ePrimary;
                     alloc_info.commandBufferCount = 1;
 
-                    auto buffer = engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+                    auto buffer = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
                     vk::CommandBufferBeginInfo begin_info = {};
                     begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;

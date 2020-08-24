@@ -31,6 +31,8 @@ bool ParticleTester::handleInput(const SDL_Event& event)
         case SDL_SCANCODE_R:
             entity->addComponent<SchedulerComponent>(schedulers["tgt0"]);
             return true;
+        default:
+            return false;
         }
     }
     return false;

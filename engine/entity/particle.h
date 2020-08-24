@@ -18,7 +18,7 @@ namespace lotus
         duration getLifetime() { return lifetime; }
         time_point getSpawnTime() { return spawn_time; }
 
-        virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
+        virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
 
         uint64_t resource_index{ 0 };
 

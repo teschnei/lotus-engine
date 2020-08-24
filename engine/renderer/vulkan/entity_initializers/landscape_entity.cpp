@@ -37,8 +37,8 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
         
-        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
-        entity->shadowmap_buffers = renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        entity->shadowmap_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         for (int i = 0; i < entity->command_buffers.size(); ++i)
         {
@@ -158,7 +158,7 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
         
-        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         for (int i = 0; i < entity->command_buffers.size(); ++i)
         {
@@ -237,7 +237,7 @@ namespace lotus
         alloc_info.commandPool = *thread->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
-        auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
         command_buffer = std::move(command_buffers[0]);
 
         vk::CommandBufferBeginInfo begin_info = {};

@@ -73,7 +73,7 @@ void CollisionModelInitTask::Process(lotus::WorkerThread* thread)
     alloc_info.commandPool = *thread->compute_pool;
     alloc_info.commandBufferCount = 1;
 
-    auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+    auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
     command_buffer = std::move(command_buffers[0]);
 

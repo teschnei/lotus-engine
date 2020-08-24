@@ -110,7 +110,7 @@ namespace lotus
             set_ci.descriptorPool = *rtx_descriptor_pool_const;
             set_ci.descriptorSetCount = 3;
             set_ci.pSetLayouts = layouts.data();
-            rtx_descriptor_sets_const = gpu->device->allocateDescriptorSetsUnique<std::allocator<vk::UniqueHandle<vk::DescriptorSet, vk::DispatchLoaderDynamic>>>(set_ci);
+            rtx_descriptor_sets_const = gpu->device->allocateDescriptorSetsUnique(set_ci);
         }
     }
 
@@ -811,7 +811,7 @@ namespace lotus
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = getImageCount();
 
-        deferred_command_buffers = gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        deferred_command_buffers = gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         for (int i = 0; i < deferred_command_buffers.size(); ++i)
         {
@@ -1037,7 +1037,7 @@ namespace lotus
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = 1;
 
-        auto buffer = gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+        auto buffer = gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         vk::CommandBufferBeginInfo begin_info = {};
         begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;

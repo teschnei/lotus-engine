@@ -25,7 +25,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
             //assumes only 1 mesh
             auto& mesh = model->meshes[0];

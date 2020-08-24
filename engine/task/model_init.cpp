@@ -24,7 +24,7 @@ namespace lotus
             alloc_info.commandPool = *thread->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
-            auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique<std::allocator<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>>>(alloc_info);
+            auto command_buffers = thread->engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
             vk::DeviceSize staging_buffer_size = 0;
             for (int i = 0; i < vertex_buffers.size(); ++i)
