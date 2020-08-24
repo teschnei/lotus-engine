@@ -2,6 +2,8 @@ target_sources(engine
     PRIVATE
     animation_component.cpp
     animation_component.h
+    camera_cascades_component.cpp
+    camera_cascades_component.h
     component.cpp
     component.h
     free_flying_camera_component.cpp

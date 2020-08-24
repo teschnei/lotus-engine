@@ -13,8 +13,32 @@ namespace lotus
 {
     class Engine;
     class Entity;
+    class RenderableEntity;
+    class WorkerThread;
     class TopLevelAccelerationStructure;
     class BottomLevelAccelerationStructure;
+
+    class RendererRaytrace;
+    class RendererRasterization;
+    class RendererHybrid;
+
+    class EntityInitializer
+    {
+    public:
+        EntityInitializer(Entity* _entity) : entity(_entity) {}
+        virtual ~EntityInitializer() {}
+
+        virtual void initEntity(RendererRaytrace* renderer, WorkerThread* thread) = 0;
+        virtual void drawEntity(RendererRaytrace* renderer, WorkerThread* thread) = 0;
+
+        virtual void initEntity(RendererRasterization* renderer, WorkerThread* thread) = 0;
+        virtual void drawEntity(RendererRasterization* renderer, WorkerThread* thread) = 0;
+
+        virtual void initEntity(RendererHybrid* renderer, WorkerThread* thread) = 0;
+        virtual void drawEntity(RendererHybrid* renderer, WorkerThread* thread) = 0;
+    protected:
+        Entity* entity;
+    };
 
     class Renderer
     {
@@ -41,8 +65,10 @@ namespace lotus
         size_t align_up(size_t in_size, size_t alignment) const;
 
         virtual void drawFrame() = 0;
-        virtual void drawEntity(Entity*) = 0;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) = 0;
+
+        virtual void initEntity(EntityInitializer*, WorkerThread*) = 0;
+        virtual void drawEntity(EntityInitializer*, WorkerThread*) = 0;
 
         void resized() { resize = true; }
 

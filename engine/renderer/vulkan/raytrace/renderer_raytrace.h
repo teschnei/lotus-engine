@@ -18,9 +18,11 @@ namespace lotus
 
         virtual void Init() override;
 
-        virtual void drawFrame();
-        virtual void drawEntity(Entity*) {};
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t);
+        virtual void drawFrame() override;
+        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) override;
+
+        virtual void initEntity(EntityInitializer*, WorkerThread*) override;
+        virtual void drawEntity(EntityInitializer*, WorkerThread*) override;
 
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> static_descriptor_set_layout;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> deferred_descriptor_set_layout;

@@ -12,5 +12,6 @@ target_sources(engine
     )
 
 #add_subdirectory(hybrid)
-#add_subdirectory(raster)
+add_subdirectory(raster)
 add_subdirectory(raytrace)
+add_subdirectory(entity_initializers)
