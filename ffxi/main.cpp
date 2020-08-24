@@ -12,6 +12,7 @@
 #include "dat/os2.h"
 #include "dat/d3m.h"
 #include "engine/entity/free_flying_camera.h"
+#include "engine/entity/component/camera_cascades_component.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
 #include "entity/third_person_ffxi_camera.h"
 #include "config.h"
@@ -41,6 +42,10 @@ public:
         auto player = scene->AddEntity<Actor>(path / "ROM/309/105.DAT");
         player->setPos(glm::vec3(259.f, -87.f, 99.f));
         auto camera = scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
+        if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
+        {
+            camera->addComponent<lotus::CameraCascadesComponent>();
+        }
         engine->set_camera(camera.get());
         player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
         player->addComponent<ParticleTester>(engine->input.get());

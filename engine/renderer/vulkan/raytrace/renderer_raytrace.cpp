@@ -1,7 +1,6 @@
 #include "renderer_raytrace.h"
 #include <glm/glm.hpp>
 #include <fstream>
-#include <iostream>
 
 #include "engine/core.h"
 #include "engine/game.h"
@@ -117,66 +116,64 @@ namespace lotus
 
     void RendererRaytrace::createRenderpasses()
     {
-        {
-            vk::AttachmentDescription output_attachment;
-            output_attachment.format = swapchain->image_format;
-            output_attachment.samples = vk::SampleCountFlagBits::e1;
-            output_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-            output_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-            output_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-            output_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-            output_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            output_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+        vk::AttachmentDescription output_attachment;
+        output_attachment.format = swapchain->image_format;
+        output_attachment.samples = vk::SampleCountFlagBits::e1;
+        output_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+        output_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+        output_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        output_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        output_attachment.initialLayout = vk::ImageLayout::eUndefined;
+        output_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-            vk::AttachmentDescription depth_attachment;
-            depth_attachment.format = gpu->getDepthFormat();
-            depth_attachment.samples = vk::SampleCountFlagBits::e1;
-            depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-            depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-            depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-            depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-            depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        vk::AttachmentDescription depth_attachment;
+        depth_attachment.format = gpu->getDepthFormat();
+        depth_attachment.samples = vk::SampleCountFlagBits::e1;
+        depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+        depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+        depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
+        depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-            vk::AttachmentReference deferred_output_attachment_ref;
-            deferred_output_attachment_ref.attachment = 0;
-            deferred_output_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+        vk::AttachmentReference deferred_output_attachment_ref;
+        deferred_output_attachment_ref.attachment = 0;
+        deferred_output_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
-            vk::AttachmentReference deferred_depth_attachment_ref;
-            deferred_depth_attachment_ref.attachment = 1;
-            deferred_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        vk::AttachmentReference deferred_depth_attachment_ref;
+        deferred_depth_attachment_ref.attachment = 1;
+        deferred_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-            std::vector<vk::AttachmentReference> deferred_color_attachment_refs = { deferred_output_attachment_ref };
+        std::vector<vk::AttachmentReference> deferred_color_attachment_refs = { deferred_output_attachment_ref };
 
-            vk::SubpassDescription rtx_subpass;
-            rtx_subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-            rtx_subpass.colorAttachmentCount = static_cast<uint32_t>(deferred_color_attachment_refs.size());
-            rtx_subpass.pColorAttachments = deferred_color_attachment_refs.data();
-            rtx_subpass.pDepthStencilAttachment = &deferred_depth_attachment_ref;
+        vk::SubpassDescription rtx_subpass;
+        rtx_subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+        rtx_subpass.colorAttachmentCount = static_cast<uint32_t>(deferred_color_attachment_refs.size());
+        rtx_subpass.pColorAttachments = deferred_color_attachment_refs.data();
+        rtx_subpass.pDepthStencilAttachment = &deferred_depth_attachment_ref;
 
-            vk::SubpassDependency dependency_initial;
-            dependency_initial.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependency_initial.dstSubpass = 0;
-            dependency_initial.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-            dependency_initial.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            dependency_initial.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-            dependency_initial.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
-            dependency_initial.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+        vk::SubpassDependency dependency_initial;
+        dependency_initial.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency_initial.dstSubpass = 0;
+        dependency_initial.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+        dependency_initial.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        dependency_initial.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+        dependency_initial.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+        dependency_initial.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 
-            std::vector<vk::AttachmentDescription> gbuffer_attachments = { output_attachment, depth_attachment };
-            std::vector<vk::SubpassDescription> subpasses = { rtx_subpass };
-            std::vector<vk::SubpassDependency> subpass_dependencies = { dependency_initial };
+        std::vector<vk::AttachmentDescription> gbuffer_attachments = { output_attachment, depth_attachment };
+        std::vector<vk::SubpassDescription> subpasses = { rtx_subpass };
+        std::vector<vk::SubpassDependency> subpass_dependencies = { dependency_initial };
 
-            vk::RenderPassCreateInfo render_pass_info;
-            render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
-            render_pass_info.pAttachments = gbuffer_attachments.data();
-            render_pass_info.subpassCount = static_cast<uint32_t>(subpasses.size());
-            render_pass_info.pSubpasses = subpasses.data();
-            render_pass_info.dependencyCount = static_cast<uint32_t>(subpass_dependencies.size());
-            render_pass_info.pDependencies = subpass_dependencies.data();
+        vk::RenderPassCreateInfo render_pass_info;
+        render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
+        render_pass_info.pAttachments = gbuffer_attachments.data();
+        render_pass_info.subpassCount = static_cast<uint32_t>(subpasses.size());
+        render_pass_info.pSubpasses = subpasses.data();
+        render_pass_info.dependencyCount = static_cast<uint32_t>(subpass_dependencies.size());
+        render_pass_info.pDependencies = subpass_dependencies.data();
 
-            rtx_render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
-        }
+        rtx_render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
     }
 
     void RendererRaytrace::createDescriptorSetLayout()
@@ -1136,7 +1133,7 @@ namespace lotus
 
         engine->worker_pool->waitIdle();
         engine->worker_pool->startProcessing(current_image);
-        engine->camera->updateBuffers(camera_buffers.view_proj_mapped, nullptr);
+        engine->camera->updateBuffers(camera_buffers.view_proj_mapped);
         engine->lights->UpdateLightBuffer();
 
         std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame]};
@@ -1217,7 +1214,7 @@ namespace lotus
         current_frame = (current_frame + 1) % max_pending_frames;
     }
 
-    void lotus::RendererRaytrace::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint64_t resource_index, uint32_t mask, uint32_t shader_binding_offset)
+    void RendererRaytrace::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint64_t resource_index, uint32_t mask, uint32_t shader_binding_offset)
     {
         vk::AccelerationStructureInstanceKHR instance{};
         memcpy(&instance.transform, &mat, sizeof(mat));
@@ -1227,5 +1224,15 @@ namespace lotus
         instance.instanceShaderBindingTableRecordOffset = shaders_per_group * shader_binding_offset;
         instance.instanceCustomIndex = resource_index;
         blas->instanceid = tlas->AddInstance(instance);
+    }
+
+    void RendererRaytrace::initEntity(EntityInitializer* initializer, WorkerThread* thread)
+    {
+        initializer->initEntity(this, thread);
+    }
+
+    void RendererRaytrace::drawEntity(EntityInitializer* initializer, WorkerThread* thread)
+    {
+        initializer->drawEntity(this, thread);
     }
 }

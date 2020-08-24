@@ -32,7 +32,8 @@ namespace lotus
             else
             {
                 graphics.secondary = *entity->command_buffers[image_index];
-                graphics.shadow = *entity->shadowmap_buffers[image_index];
+                if (!entity->shadowmap_buffers.empty())
+                    graphics.shadow = *entity->shadowmap_buffers[image_index];
             }
         }
     }

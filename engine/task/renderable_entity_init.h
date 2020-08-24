@@ -1,7 +1,7 @@
 #pragma once
-#include "../work_item.h"
-#include "../entity/renderable_entity.h"
-#include <engine/renderer/vulkan/vulkan_inc.h>
+#include "engine/work_item.h"
+#include "engine/renderer/vulkan/renderer.h"
+#include "engine/entity/renderable_entity.h"
 
 namespace lotus
 {
@@ -12,13 +12,8 @@ namespace lotus
         RenderableEntityInitTask(const std::shared_ptr<RenderableEntity>& entity);
         virtual void Process(WorkerThread*) override;
     protected:
-        void createStaticCommandBuffers(WorkerThread* thread);
-        void drawModel(WorkerThread* thread, vk::CommandBuffer buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout, size_t image);
-        void drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout, uint32_t material_index);
-        void generateVertexBuffers(WorkerThread* thread, vk::CommandBuffer buffer, DeformableEntity* deformable, const Model& mesh, std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
+        std::unique_ptr<EntityInitializer> initializer;
         std::shared_ptr<RenderableEntity> entity;
-        std::vector<std::unique_ptr<Buffer>> staging_buffers;
-        vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic> command_buffer;
     };
 
 

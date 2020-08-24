@@ -1,8 +1,8 @@
 #include "core.h"
 #include "game.h"
 #include "renderer/vulkan/window.h"
-//#include "renderer/vulkan/hybrid/renderer_hybrid.h"
-//#include "renderer/vulkan/raster/renderer_rasterization.h"
+#include "renderer/vulkan/hybrid/renderer_hybrid.h"
+#include "renderer/vulkan/raster/renderer_rasterization.h"
 #include "renderer/vulkan/raytrace/renderer_raytrace.h"
 
 namespace lotus
@@ -11,7 +11,7 @@ namespace lotus
     {
         if (config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
         {
-            //renderer = std::make_unique<RendererRasterization>(this);
+            renderer = std::make_unique<RendererRasterization>(this);
         }
         else if (config->renderer.render_mode == Config::Renderer::RenderMode::Raytrace)
         {
@@ -19,7 +19,7 @@ namespace lotus
         }
         else if (config->renderer.render_mode == Config::Renderer::RenderMode::Hybrid)
         {
-            //renderer = std::make_unique<RendererHybrid>(this);
+            renderer = std::make_unique<RendererHybrid>(this);
         }
 
         input = std::make_unique<Input>(this, renderer->window->window);

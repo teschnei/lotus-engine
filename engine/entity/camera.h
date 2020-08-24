@@ -32,9 +32,11 @@ namespace lotus
         float getRotX() const { return rot_x; }
         float getRotY() const { return rot_y; }
 
+        bool updated() { return update; }
+
         glm::vec3 getRotationVector() { return camera_rot; }
 
-        void updateBuffers(uint8_t* view_proj, uint8_t* cascade_data);
+        void updateBuffers(uint8_t* view_proj);
 
         struct CameraData
         {
