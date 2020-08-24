@@ -39,7 +39,7 @@ namespace lotus
             uint8_t* view_proj_mapped{ nullptr };
         } camera_buffers;
 
-        /* Ray tracing */
+        ///* Ray tracing */
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_pipeline_layout;

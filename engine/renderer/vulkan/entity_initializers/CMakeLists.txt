@@ -1,0 +1,9 @@
+target_sources(engine
+    PRIVATE
+    landscape_entity.cpp
+    landscape_entity.h
+    particle_entity.cpp
+    particle_entity.h
+    renderable_entity.cpp
+    renderable_entity.h
+    )

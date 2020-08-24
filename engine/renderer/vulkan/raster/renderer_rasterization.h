@@ -98,7 +98,7 @@ namespace lotus
             float _pad[2];
         };
 
-        std::unique_ptr<Buffer> mesh_info_buffer;
+        //std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped{ nullptr };
 
         struct UBOFS
