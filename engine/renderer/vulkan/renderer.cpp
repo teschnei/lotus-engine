@@ -9,8 +9,6 @@
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
 
-constexpr size_t shadowmap_dimension = 2048;
-
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace lotus

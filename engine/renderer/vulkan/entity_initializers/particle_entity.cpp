@@ -160,17 +160,17 @@ namespace lotus
             model_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
             model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-            //vk::DescriptorBufferInfo mesh_info;
-            //mesh_info.buffer = renderer->mesh_info_buffer->buffer;
-            //mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
-            //mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
+            vk::DescriptorBufferInfo mesh_info;
+            mesh_info.buffer = renderer->mesh_info_buffer->buffer;
+            mesh_info.offset = sizeof(RendererHybrid::MeshInfo) * RendererHybrid::max_acceleration_binding_index * i;
+            mesh_info.range = sizeof(RendererHybrid::MeshInfo) * RendererHybrid::max_acceleration_binding_index;
 
             vk::DescriptorBufferInfo material_index_info;
             material_index_info.buffer = entity->mesh_index_buffer->buffer;
             material_index_info.offset = i * renderer->uniform_buffer_align_up(sizeof(uint32_t));
             material_index_info.range = sizeof(uint32_t);
 
-            std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
+            std::array<vk::WriteDescriptorSet, 4> descriptorWrites = {};
 
             descriptorWrites[0].dstSet = nullptr;
             descriptorWrites[0].dstBinding = 0;
@@ -186,19 +186,19 @@ namespace lotus
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pBufferInfo = &model_buffer_info;
 
-            //descriptorWrites[2].dstSet = nullptr;
-            //descriptorWrites[2].dstBinding = 3;
-            //descriptorWrites[2].dstArrayElement = 0;
-            //descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
-            //descriptorWrites[2].descriptorCount = 1;
-            //descriptorWrites[2].pBufferInfo = &mesh_info;
-
             descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 4;
+            descriptorWrites[2].dstBinding = 3;
             descriptorWrites[2].dstArrayElement = 0;
             descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &material_index_info;
+            descriptorWrites[2].pBufferInfo = &mesh_info;
+
+            descriptorWrites[3].dstSet = nullptr;
+            descriptorWrites[3].dstBinding = 4;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pBufferInfo = &material_index_info;
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 

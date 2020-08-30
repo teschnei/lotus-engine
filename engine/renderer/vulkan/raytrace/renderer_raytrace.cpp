@@ -847,7 +847,12 @@ namespace lotus
             light_info.imageView = *rtx_gbuffer.light.image_view;
             light_info.sampler = *rtx_gbuffer.sampler;
 
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {2};
+            vk::DescriptorBufferInfo camera_buffer_info;
+            camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
+            camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
+            camera_buffer_info.range = sizeof(Camera::CameraData);
+
+            std::vector<vk::WriteDescriptorSet> descriptorWrites {3};
 
             descriptorWrites[0].dstSet = nullptr;
             descriptorWrites[0].dstBinding = 0;
@@ -862,6 +867,13 @@ namespace lotus
             descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &light_info;
+
+            descriptorWrites[2].dstSet = nullptr;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[2].dstBinding = 8;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pBufferInfo = &camera_buffer_info;
 
             buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites);
 

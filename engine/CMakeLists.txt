@@ -1,8 +1,5 @@
 project( engine )
 
-file( GLOB_RECURSE SOURCE *.cpp *.hpp *.c )
-file( GLOB_RECURSE HEADERS *.h )
-
 add_library( engine
     config.cpp
     config.h
@@ -23,7 +20,7 @@ add_library( engine
     worker_thread.h
     work_item.cpp
     work_item.h
- "renderer/vulkan/renderer_raytrace_base.h" "renderer/vulkan/renderer_raytrace_base.cpp")
+ )
 
 target_include_directories(engine PUBLIC "../" )
 target_include_directories(engine PUBLIC "../external/vma" )

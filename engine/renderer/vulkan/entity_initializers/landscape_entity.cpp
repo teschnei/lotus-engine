@@ -180,12 +180,12 @@ namespace lotus
             buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
             buffer_info.range = sizeof(Camera::CameraData);
 
-            //vk::DescriptorBufferInfo mesh_info;
-            //mesh_info.buffer = renderer->mesh_info_buffer->buffer;
-            //mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
-            //mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
+            vk::DescriptorBufferInfo mesh_info;
+            mesh_info.buffer = renderer->mesh_info_buffer->buffer;
+            mesh_info.offset = sizeof(RendererHybrid::MeshInfo) * RendererHybrid::max_acceleration_binding_index * i;
+            mesh_info.range = sizeof(RendererHybrid::MeshInfo) * RendererHybrid::max_acceleration_binding_index;
 
-            std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
+            std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
             descriptorWrites[0].dstSet = nullptr;
             descriptorWrites[0].dstBinding = 0;
@@ -194,12 +194,12 @@ namespace lotus
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &buffer_info;
 
-            //descriptorWrites[1].dstSet = nullptr;
-            //descriptorWrites[1].dstBinding = 3;
-            //descriptorWrites[1].dstArrayElement = 0;
-            //descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-            //descriptorWrites[1].descriptorCount = 1;
-            //descriptorWrites[1].pBufferInfo = &mesh_info;
+            descriptorWrites[1].dstSet = nullptr;
+            descriptorWrites[1].dstBinding = 3;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = &mesh_info;
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 

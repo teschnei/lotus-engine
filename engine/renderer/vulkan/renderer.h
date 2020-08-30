@@ -87,7 +87,6 @@ namespace lotus
         {
             std::unique_ptr<Image> image;
             vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> image_view;
-            vk::Format format;
         };
 
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;

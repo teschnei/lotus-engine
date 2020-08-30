@@ -25,10 +25,10 @@ namespace lotus
         std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped{ nullptr };
 
-        struct shader_binding
-        {
-            uint32_t geometry_instance;
-        };
+//        struct shader_binding
+//        {
+//            uint32_t geometry_instance;
+//        };
         vk::StridedBufferRegionKHR raygenSBT;
         vk::StridedBufferRegionKHR missSBT;
         vk::StridedBufferRegionKHR hitSBT;

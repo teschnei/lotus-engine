@@ -7,6 +7,7 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
+#include "engine/renderer/vulkan/task/renderer_init.h"
 
 namespace lotus
 {
@@ -42,6 +43,8 @@ namespace lotus
 
         render_commandbuffers.resize(getImageCount());
         raytracer = std::make_unique<Raytracer>(engine);
+
+        engine->worker_pool->addWork(std::make_unique<RendererHybridInitTask>(this));
     }
 
     void RendererHybrid::generateCommandBuffers()
@@ -1395,6 +1398,22 @@ namespace lotus
 
             buffer.begin(begin_info);
 
+            vk::ImageMemoryBarrier light_barrier;
+            light_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            light_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            light_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+            light_barrier.subresourceRange.baseMipLevel = 0;
+            light_barrier.subresourceRange.levelCount = 1;
+            light_barrier.subresourceRange.baseArrayLayer = 0;
+            light_barrier.subresourceRange.layerCount = 1;
+            light_barrier.image = rtx_gbuffer.light.image->image;
+            light_barrier.oldLayout = vk::ImageLayout::eGeneral;
+            light_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            light_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+            light_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+            buffer.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, light_barrier);
+
             std::array<vk::ClearValue, 2> clear_values;
             clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clear_values[1].depthStencil = 1.f;
@@ -1582,6 +1601,22 @@ namespace lotus
         buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
         buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {});
+
+        vk::ImageMemoryBarrier light_barrier;
+        light_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        light_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        light_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        light_barrier.subresourceRange.baseMipLevel = 0;
+        light_barrier.subresourceRange.levelCount = 1;
+        light_barrier.subresourceRange.baseArrayLayer = 0;
+        light_barrier.subresourceRange.layerCount = 1;
+        light_barrier.image = rtx_gbuffer.light.image->image;
+        light_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        light_barrier.newLayout = vk::ImageLayout::eGeneral;
+        light_barrier.srcAccessMask = {};
+        light_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+
+        buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, {}, light_barrier);
 
         vk::WriteDescriptorSet write_info_target_light;
         write_info_target_light.descriptorCount = 1;
