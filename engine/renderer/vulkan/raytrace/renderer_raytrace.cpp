@@ -822,6 +822,25 @@ namespace lotus
 
             buffer.begin(begin_info);
 
+            vk::ImageMemoryBarrier albedo_barrier;
+            albedo_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            albedo_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            albedo_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+            albedo_barrier.subresourceRange.baseMipLevel = 0;
+            albedo_barrier.subresourceRange.levelCount = 1;
+            albedo_barrier.subresourceRange.baseArrayLayer = 0;
+            albedo_barrier.subresourceRange.layerCount = 1;
+            albedo_barrier.image = rtx_gbuffer.albedo.image->image;
+            albedo_barrier.oldLayout = vk::ImageLayout::eGeneral;
+            albedo_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            albedo_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+            albedo_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+            vk::ImageMemoryBarrier light_barrier = albedo_barrier;
+            light_barrier.image = rtx_gbuffer.light.image->image;
+
+            buffer.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, {albedo_barrier, light_barrier});
+
             std::array<vk::ClearValue, 2> clear_values;
             clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
             clear_values[1].depthStencil = 1.f;
@@ -1060,6 +1079,25 @@ namespace lotus
         buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
 
         buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {});
+
+        vk::ImageMemoryBarrier albedo_barrier;
+        albedo_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        albedo_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        albedo_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        albedo_barrier.subresourceRange.baseMipLevel = 0;
+        albedo_barrier.subresourceRange.levelCount = 1;
+        albedo_barrier.subresourceRange.baseArrayLayer = 0;
+        albedo_barrier.subresourceRange.layerCount = 1;
+        albedo_barrier.image = rtx_gbuffer.albedo.image->image;
+        albedo_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        albedo_barrier.newLayout = vk::ImageLayout::eGeneral;
+        albedo_barrier.srcAccessMask = {};
+        albedo_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+
+        vk::ImageMemoryBarrier light_barrier = albedo_barrier;
+        albedo_barrier.image = rtx_gbuffer.light.image->image;
+
+        buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, {}, { light_barrier, albedo_barrier });
 
         vk::WriteDescriptorSet write_info_target_albedo;
         write_info_target_albedo.descriptorCount = 1;
