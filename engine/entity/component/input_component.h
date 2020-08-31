@@ -1,6 +1,6 @@
 #pragma once
 #include "component.h"
-#include <SDL2/SDL.h>
+#include "engine/renderer/sdl_inc.h"
 
 namespace lotus
 {

@@ -23,7 +23,7 @@ namespace lotus
     {
         auto physical_devices = instance.enumeratePhysicalDevices();
 
-        physical_device = *std::find_if(physical_devices.begin(), physical_devices.end(), [this](auto& device) {
+        auto physical_device_pointer = std::find_if(physical_devices.begin(), physical_devices.end(), [this](auto& device) {
             auto [graphics, present, compute] = getQueueFamilies(device);
             auto extensions_supported = extensionsSupported(device);
             auto formats = device.getSurfaceFormatsKHR(surface);
@@ -32,10 +32,12 @@ namespace lotus
             return graphics && present && compute && extensions_supported && !formats.empty() && !present_modes.empty() && supported_features.samplerAnisotropy;
         });
 
-        if (!physical_device)
+        if (physical_device_pointer == physical_devices.end())
         {
             throw std::runtime_error("Unable to find a suitable Vulkan GPU");
         }
+
+        physical_device = *physical_device_pointer;
 
         ray_tracing_properties.maxRecursionDepth = 0;
         ray_tracing_properties.shaderGroupHandleSize = 0;
@@ -175,7 +177,7 @@ namespace lotus
 
         for (const auto& supported_extension : supported_extensions)
         {
-            requested_extensions.erase(std::string(supported_extension.extensionName));
+            requested_extensions.erase(supported_extension.extensionName);
         }
         return requested_extensions.empty();
     }

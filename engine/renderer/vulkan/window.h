@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <engine/renderer/sdl_inc.h>
 #include "vulkan_inc.h"
 
 namespace lotus

@@ -65,6 +65,7 @@ namespace lotus
     void ThirdPersonBoomCamera::setPos(glm::vec3 pos)
     {
         Entity::setPos(pos);
+        camera_data.eye_pos = glm::vec4(pos, 0);
         update = true;
     }
 
@@ -78,6 +79,7 @@ namespace lotus
                 glm::vec3 boom{ new_distance - 0.05f, 0.f, 0.f };
                 glm::vec3 new_pos = boom * rot;
                 Entity::setPos(new_pos + boom_source);
+                camera_data.eye_pos = glm::vec4(pos, 0);
                 look(boom_source);
             });
         }

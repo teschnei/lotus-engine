@@ -12,6 +12,7 @@ target_sources(engine
     model.h
     raytrace_query.cpp
     raytrace_query.h
+    sdl_inc.h
     skeleton.cpp
     skeleton.h
     texture.cpp

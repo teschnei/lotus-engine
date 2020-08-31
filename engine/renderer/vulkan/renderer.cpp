@@ -50,7 +50,7 @@ namespace lotus
         if (enableValidationLayers)
         {
             vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-            debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+            debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
             debugCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
             debugCreateInfo.pfnUserCallback = debugCallback;
             debug_messenger = instance->createDebugUtilsMessengerEXTUnique(debugCreateInfo);

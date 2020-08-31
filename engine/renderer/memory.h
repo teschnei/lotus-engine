@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <mutex>
 
+#undef MemoryBarrier
+
 namespace lotus
 {
     class MemoryManager;
