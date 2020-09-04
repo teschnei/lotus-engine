@@ -47,6 +47,7 @@ namespace lotus
             duration sim_delta = new_sim_time - simulation_time;
             simulation_time = new_sim_time;
             input->GetInput();
+            worker_pool->checkBackgroundWork();
             game->tick_all(simulation_time, sim_delta);
             renderer->drawFrame();
         }

@@ -13,8 +13,9 @@ namespace lotus
         WorkItem(WorkItem&&) = default;
         WorkItem& operator=(const WorkItem&) = delete;
         WorkItem& operator=(WorkItem&&) = default;
-        virtual void Process(WorkerThread*) = 0;
         virtual ~WorkItem() = default;
+
+        virtual void Process(WorkerThread*) = 0;
 
         float priority = 0;
         bool operator>(const WorkItem& o) const { return priority > o.priority; }

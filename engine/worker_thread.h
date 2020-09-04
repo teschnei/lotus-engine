@@ -1,5 +1,4 @@
 #pragma once
-#include <thread>
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "work_item.h"
 
@@ -17,8 +16,7 @@ namespace lotus
         WorkerThread& operator=(WorkerThread&&) = delete;
         ~WorkerThread() = default;
 
-        void WorkLoop();
-        bool Busy() const { return work != nullptr; }
+        bool Busy() const;
         void Exit();
         void Join();
 
@@ -29,10 +27,7 @@ namespace lotus
 
         WorkerPool* pool{ nullptr };
         Engine* engine{ nullptr };
-    private:
-#ifndef SINGLETHREAD
-        std::thread thread{ &WorkerThread::WorkLoop, this };
-#endif
+    protected:
         std::unique_ptr<WorkItem> work;
         bool active{ true };
     };

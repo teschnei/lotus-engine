@@ -50,7 +50,7 @@ namespace lotus
         //if (glm::dot(engine->camera.getPos() - pos, engine->camera.getRotationVector()) > 0)
         {
             auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
-            engine->worker_pool->addWork(std::make_unique<EntityRenderTask>(re_sp));
+            engine->worker_pool->addForegroundWork(std::make_unique<EntityRenderTask>(re_sp));
         }
     }
 

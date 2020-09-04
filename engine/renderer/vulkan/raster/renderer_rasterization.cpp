@@ -1179,7 +1179,7 @@ namespace lotus
         {
             auto work = entity->recreate_command_buffers(entity);
             if (work)
-                engine->worker_pool->addWork(std::move(work));
+                engine->worker_pool->addForegroundWork(std::move(work));
         });
     }
 

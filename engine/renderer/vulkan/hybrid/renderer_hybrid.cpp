@@ -44,7 +44,7 @@ namespace lotus
         render_commandbuffers.resize(getImageCount());
         raytracer = std::make_unique<Raytracer>(engine);
 
-        engine->worker_pool->addWork(std::make_unique<RendererHybridInitTask>(this));
+        engine->worker_pool->addForegroundWork(std::make_unique<RendererHybridInitTask>(this));
     }
 
     void RendererHybrid::generateCommandBuffers()
@@ -1718,6 +1718,7 @@ namespace lotus
         }
 
         engine->worker_pool->clearProcessed(current_image);
+        engine->worker_pool->clearBackgroundWork(current_image);
         swapchain->checkOldSwapchain(current_image);
         engine->worker_pool->waitIdle();
         if (raytracer->hasQueries())

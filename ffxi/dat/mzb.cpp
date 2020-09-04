@@ -352,6 +352,6 @@ namespace FFXI
         model->meshes.push_back(std::move(mesh));
         model->lifetime = lotus::Lifetime::Long;
 
-        engine->worker_pool->addWork(std::make_unique<CollisionModelInitTask>(model, std::move(meshes), std::move(entries), sizeof(float) * 3));
+        engine->worker_pool->addForegroundWork(std::make_unique<CollisionModelInitTask>(model, std::move(meshes), std::move(entries), sizeof(float) * 3));
     }
 }

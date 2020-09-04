@@ -90,7 +90,7 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 
         entity->collision_models.push_back(lotus::Model::LoadModel<FFXI::CollisionLoader>(thread->engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries)));
 
-        thread->engine->worker_pool->addWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
+        thread->engine->worker_pool->addForegroundWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
     }
     for (const auto& chunk : parser.root->children)
     {

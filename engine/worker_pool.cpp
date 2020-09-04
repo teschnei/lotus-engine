@@ -2,19 +2,16 @@
 #include "core.h"
 #include "work_item.h"
 #include <algorithm>
+#include <iostream>
 
 namespace lotus
 {
-    WorkerPool::WorkerPool(Engine* _engine) : engine(_engine)
+    WorkerPool::WorkerPool(Engine* _engine) : engine(_engine), main_thread(_engine, this)
     {
-#ifdef SINGLETHREAD
-        threads.push_back(std::make_unique<WorkerThread>(engine, this));
-#else
-        for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
+        for (size_t i = 0; i < std::thread::hardware_concurrency() - 1; ++i)
         {
-            threads.push_back(std::make_unique<WorkerThread>(engine, this));
+            threads.push_back(std::make_unique<WorkerThreadConcurrent>(engine, this));
         }
-#endif
         processing_work.resize(engine->renderer->getImageCount());
     }
 
@@ -33,31 +30,47 @@ namespace lotus
         }
     }
 
-    void WorkerPool::addWork(std::unique_ptr<WorkItem> work_item)
+    void WorkerPool::addForegroundWork(std::unique_ptr<WorkItem> work_item)
     {
         std::lock_guard lg(work_mutex);
         work.push(std::move(work_item));
         work_cv.notify_one();
     }
 
-    void WorkerPool::waitForWork(std::unique_ptr<WorkItem>* item)
-    {
-        std::unique_lock lk(work_mutex);
-        if (work.empty() && !exit)
-        {
-            work_cv.wait(lk, [this] {return !work.empty() || exit; });
-        }
-        if (!work.empty())
-            *item = work.top_and_pop();
-        else
-            *item = nullptr;
-    }
-
-    void WorkerPool::workFinished(std::unique_ptr<WorkItem>* work_item)
+    void WorkerPool::addBackgroundWork(std::unique_ptr<BackgroundWork> work_item)
     {
         std::lock_guard lg(work_mutex);
-        pending_work.push_back(std::move(*work_item));
-        idle_cv.notify_all();
+        background_work.push(std::move(work_item));
+        work_cv.notify_one();
+    }
+
+    std::unique_ptr<WorkItem> WorkerPool::waitForWork()
+    {
+        std::unique_lock lk(work_mutex);
+        if (work.empty() && background_work.empty() && !exit)
+        {
+            work_cv.wait(lk, [this] {return !work.empty() || !background_work.empty() || exit; });
+        }
+        if (!background_work.empty())
+            return background_work.top_and_pop();
+        else if (!work.empty())
+            return work.top_and_pop();
+        else
+            return {};
+    }
+
+    void WorkerPool::workFinished(std::unique_ptr<WorkItem>&& work_item)
+    {
+        std::lock_guard lg(work_mutex);
+        if (auto bg = dynamic_cast<BackgroundWork*>(work_item.get()))
+        {
+            pending_background_work.push_back(std::move(work_item));
+        }
+        else
+        {
+            pending_work.push_back(std::move(work_item));
+            idle_cv.notify_all();
+        }
     }
 
     std::vector<vk::CommandBuffer> WorkerPool::getPrimaryGraphicsBuffers(int image)
@@ -134,16 +147,14 @@ namespace lotus
 
     void WorkerPool::waitIdle()
     {
-#ifdef SINGLETHREAD
+        std::unique_lock lk(work_mutex);
+        time_point wait_start = sim_clock::now();
+        if (work.empty() && std::none_of(threads.begin(), threads.end(), [](const auto& thread) {return thread->Busy(); })) return;
         while (!work.empty())
         {
-            auto work_item = waitForWork();
-            work_item->Process(threads[0].get());
-            workFinished(std::move(work_item));
+            auto new_work = work.top_and_pop();
+            ProcessMainThread(lk, std::move(new_work));
         }
-#else
-        std::unique_lock lk(work_mutex);
-        if (work.empty() && std::none_of(threads.begin(), threads.end(), [](const auto& thread) {return thread->Busy(); })) return;
         idle_cv.wait(lk, [this]
         {
             return work.empty() && std::none_of(threads.begin(), threads.end(), [](const auto& thread)
@@ -151,7 +162,8 @@ namespace lotus
                 return thread->Busy();
             });
         });
-#endif
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(sim_clock::now() - wait_start);
+        std::cout << "elapsed:" << elapsed.count() << std::endl;
     }
 
     void WorkerPool::reset()
@@ -164,5 +176,28 @@ namespace lotus
         {
             work_vec.clear();
         }
+    }
+
+    void WorkerPool::checkBackgroundWork()
+    {
+        for (const auto& work : pending_background_work)
+        {
+            static_cast<BackgroundWork*>(work.get())->Callback(engine);
+        }
+    }
+
+    void WorkerPool::clearBackgroundWork(int image)
+    {
+        //move any finished background work into the processing work vector, where it will stay until the next time this image is used
+        processing_work[image].insert(processing_work[image].end(), std::make_move_iterator(pending_background_work.begin()), std::make_move_iterator(pending_background_work.end()));
+        pending_background_work.clear();
+    }
+
+    void WorkerPool::ProcessMainThread(std::unique_lock<std::mutex>& lock, std::unique_ptr<WorkItem>&& work_item)
+    {
+        lock.unlock();
+        work_item->Process(&main_thread);
+        workFinished(std::move(work_item));
+        lock.lock();
     }
 }

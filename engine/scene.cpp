@@ -53,7 +53,7 @@ namespace lotus
         }
         if (engine->config->renderer.RaytraceEnabled())
         {
-           engine->worker_pool->addWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
+           engine->worker_pool->addForegroundWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
         }
     }
 

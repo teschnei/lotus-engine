@@ -12,7 +12,7 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 
 void Actor::Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat)
 {
-    engine->worker_pool->addWork(std::make_unique<ActorDatLoad>(sp, dat));
+    engine->worker_pool->addForegroundWork(std::make_unique<ActorDatLoad>(sp, dat));
 }
 
 FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2* _sk2) : ModelLoader(), os2s(_os2s), sk2(_sk2)
@@ -108,5 +108,5 @@ void FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     }
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
-    engine->worker_pool->addWork(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
+    engine->worker_pool->addForegroundWork(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
 }

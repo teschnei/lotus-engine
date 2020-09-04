@@ -110,6 +110,6 @@ namespace FFXI
 
         model->meshes.push_back(std::move(mesh));
 
-        engine->worker_pool->addWork(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex), max_dist));
+        engine->worker_pool->addForegroundWork(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex), max_dist));
     }
 }

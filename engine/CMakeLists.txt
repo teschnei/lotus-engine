@@ -1,6 +1,8 @@
 project( engine )
 
 add_library( engine
+    background_work.h
+    background_work.cpp
     config.cpp
     config.h
     core.cpp
@@ -18,6 +20,8 @@ add_library( engine
     worker_pool.h
     worker_thread.cpp
     worker_thread.h
+    worker_thread_concurrent.cpp
+    worker_thread_concurrent.h
     work_item.cpp
     work_item.h
  )

@@ -16,7 +16,7 @@ namespace lotus
     {
         lifetime = _lifetime;
         spawn_time = engine->getSimulationTime();
-        engine->worker_pool->addWork(std::make_unique<ParticleEntityInitTask>(sp));
+        engine->worker_pool->addForegroundWork(std::make_unique<ParticleEntityInitTask>(sp));
     }
 
     void Particle::tick(time_point time, duration delta)
@@ -44,7 +44,7 @@ namespace lotus
     {
         auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
         auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
-        engine->worker_pool->addWork(std::make_unique<EntityRenderTask>(re_sp));
+        engine->worker_pool->addForegroundWork(std::make_unique<EntityRenderTask>(re_sp));
     }
     
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)

@@ -5,7 +5,7 @@
 
 void FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat)
 {
-    engine->worker_pool->addWork(std::make_unique<LandscapeDatLoad>(sp, dat));
+    engine->worker_pool->addForegroundWork(std::make_unique<LandscapeDatLoad>(sp, dat));
 }
 
 void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index)

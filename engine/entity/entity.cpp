@@ -1,14 +1,8 @@
 #include "entity.h"
 #include <glm/gtx/euler_angles.hpp>
 
-// todo: find better way to do this..
-#if !(GLM_VERSION > 998)
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
-#else
-#include <glm/gtx/matrix_transform.hpp>
-#include <glm/gtx/matrix_access.hpp>
-#endif
 
 namespace lotus
 {

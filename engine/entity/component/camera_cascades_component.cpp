@@ -14,7 +14,7 @@ namespace lotus
         if (static_cast<Camera*>(entity)->updated())
         {
             auto camera = std::static_pointer_cast<Camera>(sp);
-            engine->worker_pool->addWork(std::make_unique<LambdaWorkItem>([camera, engine](WorkerThread* thread)
+            engine->worker_pool->addForegroundWork(std::make_unique<LambdaWorkItem>([camera, engine](WorkerThread* thread)
             {
                 auto renderer = static_cast<RendererRasterization*>(thread->engine->renderer.get());
                 glm::vec3 lightDir = thread->engine->lights->light.diffuse_dir;

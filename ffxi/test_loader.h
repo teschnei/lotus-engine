@@ -60,6 +60,6 @@ public:
 
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        engine->worker_pool->addWork(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, std::move(texture_data)));
+        engine->worker_pool->addForegroundWork(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, std::move(texture_data)));
     }
 };
