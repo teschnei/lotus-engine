@@ -32,15 +32,8 @@ namespace lotus
 
     void WorkerPool::addForegroundWork(std::unique_ptr<WorkItem> work_item)
     {
-        std::lock_guard lg(work_mutex);
+        std::scoped_lock lg(work_mutex);
         work.push(std::move(work_item));
-        work_cv.notify_one();
-    }
-
-    void WorkerPool::addBackgroundWork(std::unique_ptr<BackgroundWork> work_item)
-    {
-        std::lock_guard lg(work_mutex);
-        background_work.push(std::move(work_item));
         work_cv.notify_one();
     }
 
@@ -61,7 +54,7 @@ namespace lotus
 
     void WorkerPool::workFinished(std::unique_ptr<WorkItem>&& work_item)
     {
-        std::lock_guard lg(work_mutex);
+        std::scoped_lock lg(work_mutex);
         if (auto bg = dynamic_cast<BackgroundWork*>(work_item.get()))
         {
             pending_background_work.push_back(std::move(work_item));
@@ -148,7 +141,6 @@ namespace lotus
     void WorkerPool::waitIdle()
     {
         std::unique_lock lk(work_mutex);
-        time_point wait_start = sim_clock::now();
         if (work.empty() && std::none_of(threads.begin(), threads.end(), [](const auto& thread) {return thread->Busy(); })) return;
         while (!work.empty())
         {
@@ -162,8 +154,6 @@ namespace lotus
                 return thread->Busy();
             });
         });
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(sim_clock::now() - wait_start);
-        std::cout << "elapsed:" << elapsed.count() << std::endl;
     }
 
     void WorkerPool::reset()
@@ -180,17 +170,34 @@ namespace lotus
 
     void WorkerPool::checkBackgroundWork()
     {
-        for (const auto& work : pending_background_work)
         {
-            static_cast<BackgroundWork*>(work.get())->Callback(engine);
+            std::scoped_lock lg(work_mutex);
+            for (const auto& work : pending_background_work)
+            {
+                if (auto bg = static_cast<BackgroundWork*>(work.get()); bg->Processed())
+                {
+                    bg->Callback(engine);
+                }
+            }
+        }
+        {
+            std::scoped_lock lg(group_mutex);
+            std::erase_if(workgroups, [](auto& group)
+            {
+                return group->Finished();
+            });
         }
     }
 
     void WorkerPool::clearBackgroundWork(int image)
     {
         //move any finished background work into the processing work vector, where it will stay until the next time this image is used
-        processing_work[image].insert(processing_work[image].end(), std::make_move_iterator(pending_background_work.begin()), std::make_move_iterator(pending_background_work.end()));
-        pending_background_work.clear();
+        auto finished = std::remove_if(pending_background_work.begin(), pending_background_work.end(), [](const auto& work)
+        {
+           return static_cast<BackgroundWork*>(work.get())->Finished();
+        });
+        processing_work[image].insert(processing_work[image].end(), std::make_move_iterator(finished), std::make_move_iterator(pending_background_work.end()));
+        pending_background_work.erase(finished, pending_background_work.end());
     }
 
     void WorkerPool::ProcessMainThread(std::unique_lock<std::mutex>& lock, std::unique_ptr<WorkItem>&& work_item)

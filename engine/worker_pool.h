@@ -3,6 +3,7 @@
 #include "worker_thread.h"
 #include "worker_thread_concurrent.h"
 #include "work_item.h"
+#include "workgroup.h"
 #include "background_work.h"
 #include <vector>
 #include <thread>
@@ -72,24 +73,41 @@ namespace lotus
         template<typename Container>
         void addForegroundWork(Container& c)
         {
-            std::lock_guard lg(work_mutex);
+            std::scoped_lock lg(work_mutex);
             for (auto& item : c)
             {
                 work.push(std::move(item));
             }
+            work_cv.notify_all();
+        }
+        template<typename Callback>
+        void addBackgroundWork(std::unique_ptr<WorkItem> work_item, Callback cb)
+        {
+            std::scoped_lock lg(work_mutex);
+            background_work.emplace(std::move(work_item), cb);
             work_cv.notify_one();
         }
-        void addBackgroundWork(std::unique_ptr<BackgroundWork>);
         template<typename Container>
         void addBackgroundWork(Container& c)
         {
-            std::lock_guard lg(work_mutex);
+            std::scoped_lock lg(work_mutex);
             for (auto& item : c)
             {
                 background_work.push(std::move(item));
             }
-            work_cv.notify_one();
+            work_cv.notify_all();
         }
+        template<typename Container, typename Callback>
+        void addBackgroundWork(Container& c, Callback cb)
+        {
+            std::unique_lock lg(group_mutex);
+            auto work = std::make_unique<WorkGroup>(c, cb);
+            auto wg = work.get();
+            workgroups.push_back(std::move(work));
+            lg.unlock();
+            wg->QueueItems(this);
+        }
+
         std::unique_ptr<WorkItem> waitForWork();
         void workFinished(std::unique_ptr<WorkItem>&&);
         std::vector<vk::CommandBuffer> getPrimaryGraphicsBuffers(int image);
@@ -117,7 +135,9 @@ namespace lotus
         std::vector<std::unique_ptr<WorkItem>> finished_work;
         WorkItemQueue<std::unique_ptr<BackgroundWork>, std::vector<std::unique_ptr<BackgroundWork>>, WorkCompare> background_work;
         std::vector<std::unique_ptr<WorkItem>> pending_background_work;
+        std::vector<std::unique_ptr<WorkGroup>> workgroups;
         std::mutex work_mutex;
+        std::mutex group_mutex;
         std::condition_variable work_cv;
         std::condition_variable idle_cv;
         bool exit{ false };

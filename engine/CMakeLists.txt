@@ -16,6 +16,8 @@ add_library( engine
     scene.cpp
     scene.h
     types.h
+    workgroup.h
+    workgroup.cpp
     worker_pool.cpp
     worker_pool.h
     worker_thread.cpp

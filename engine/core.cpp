@@ -31,6 +31,7 @@ namespace lotus
 
     Engine::~Engine()
     {
+        worker_pool->waitIdle();
         renderer->gpu->device->waitIdle();
     }
 

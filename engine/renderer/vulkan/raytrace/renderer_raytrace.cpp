@@ -1173,6 +1173,7 @@ namespace lotus
         }
 
         engine->worker_pool->clearProcessed(current_image);
+        engine->worker_pool->clearBackgroundWork(current_image);
         swapchain->checkOldSwapchain(current_image);
         engine->worker_pool->waitIdle();
         if (raytracer->hasQueries())

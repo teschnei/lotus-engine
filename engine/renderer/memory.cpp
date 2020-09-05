@@ -55,7 +55,7 @@ namespace lotus
     std::unique_ptr<Buffer> MemoryManager::GetBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags memoryflags)
     {
-        std::lock_guard lg(allocation_mutex);
+        std::scoped_lock lg(allocation_mutex);
         VkBufferCreateInfo buffer_create_info = {};
         buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_create_info.size = size;
@@ -80,7 +80,7 @@ namespace lotus
     std::unique_ptr<Image> MemoryManager::GetImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
         vk::MemoryPropertyFlags memoryflags, uint32_t arrayLayers)
     {
-        std::lock_guard lg(allocation_mutex);
+        std::scoped_lock lg(allocation_mutex);
         VkImageCreateInfo image_info = {};
         image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -110,7 +110,7 @@ namespace lotus
 
     std::unique_ptr<GenericMemory> MemoryManager::GetMemory(const vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryflags, vk::MemoryAllocateFlags allocateflags)
     {
-        std::lock_guard lg(allocation_mutex);
+        std::scoped_lock lg(allocation_mutex);
         VmaAllocationCreateInfo vma_ci = {};
         vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
         if (allocateflags | vk::MemoryAllocateFlagBits::eDeviceAddress)

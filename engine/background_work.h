@@ -10,13 +10,15 @@ namespace lotus
     class BackgroundWork : public WorkItem
     {
     public:
-        BackgroundWork(std::unique_ptr<WorkItem> work, std::function<void(Engine*)>);
+        BackgroundWork(std::unique_ptr<WorkItem>&& work, std::function<void(Engine*)>);
+        bool Processed() { return processed; };
         bool Finished() { return finished; };
         virtual void Process(WorkerThread*) override;
         void Callback(Engine*);
     private:
         std::unique_ptr<WorkItem> work;
         std::function<void(Engine*)> callback;
+        bool processed {false};
         bool finished {false};
     };
 }
