@@ -319,7 +319,7 @@ namespace FFXI
 
     CollisionLoader::CollisionLoader(std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries) : ModelLoader(), meshes(meshes), entries(entries) {}
 
-    void CollisionLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    std::vector<std::unique_ptr<lotus::WorkItem>> CollisionLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
         model->rendered = false;
         auto mesh = std::make_unique<CollisionMesh>();
@@ -352,6 +352,8 @@ namespace FFXI
         model->meshes.push_back(std::move(mesh));
         model->lifetime = lotus::Lifetime::Long;
 
-        engine->worker_pool->addForegroundWork(std::make_unique<CollisionModelInitTask>(model, std::move(meshes), std::move(entries), sizeof(float) * 3));
+        std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+        ret.push_back(std::make_unique<CollisionModelInitTask>(model, std::move(meshes), std::move(entries), sizeof(float) * 3));
+        return ret;
     }
 }

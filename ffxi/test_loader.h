@@ -12,7 +12,7 @@
 class TestTextureLoader : public lotus::TextureLoader
 {
 public:
-    virtual void LoadTexture(std::shared_ptr<lotus::Texture>& texture) override
+    virtual std::vector<std::unique_ptr<lotus::WorkItem>> LoadTexture(std::shared_ptr<lotus::Texture>& texture) override
     {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load("textures/texture.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -60,6 +60,8 @@ public:
 
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        engine->worker_pool->addForegroundWork(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, std::move(texture_data)));
+        std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+        ret.push_back(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, std::move(texture_data)));
+        return ret;
     }
 };

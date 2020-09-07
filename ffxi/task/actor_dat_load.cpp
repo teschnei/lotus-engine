@@ -28,8 +28,9 @@ void ActorDatLoad::Process(lotus::WorkerThread* thread)
         {
             if (dxt3->width > 0)
             {
-                auto texture = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, dxt3->name, dxt3);
+                auto [texture, work] = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, dxt3->name, dxt3);
                 texture_map[dxt3->name] = std::move(texture);
+                AddWork(work);
             }
         }
         else if (auto sk2 = dynamic_cast<FFXI::SK2*>(chunk.get()))
@@ -71,7 +72,10 @@ void ActorDatLoad::Process(lotus::WorkerThread* thread)
 
     entity->addSkeleton(std::move(skel), sizeof(FFXI::OS2::Vertex));
 
-    entity->models.push_back(lotus::Model::LoadModel<FFXIActorLoader>(thread->engine, "iroha_test", os2s, pSk2));
+    auto [model, work] = lotus::Model::LoadModel<FFXIActorLoader>(thread->engine, "iroha_test", os2s, pSk2);
 
-    thread->engine->worker_pool->addForegroundWork(std::make_unique<lotus::RenderableEntityInitTask>(entity));
+    entity->models.push_back(model);
+    AddWork(work);
+
+    AddWork(std::make_unique<lotus::RenderableEntityInitTask>(entity));
 }

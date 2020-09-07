@@ -8,10 +8,10 @@ ThirdPersonFFXIVCamera::ThirdPersonFFXIVCamera(lotus::Engine* engine) : lotus::T
     
 }
 
-void ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, std::weak_ptr<Entity>& _focus)
+std::vector<std::unique_ptr<lotus::WorkItem>> ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, std::weak_ptr<Entity>& _focus)
 {
     focus = _focus;
-    Camera::Init(sp);
+    auto work = Camera::Init(sp);
     lotus::Input* input = engine->input.get();
     addComponent<ThirdPersonFFXIVCameraComponent>(input, focus);
 
@@ -19,4 +19,5 @@ void ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>&
     glm::quat yaw = glm::angleAxis(rot_y, glm::vec3(0.f, 0.f, 1.f));
     rot = glm::normalize(yaw * pitch);
     update = true;
+    return work;
 }

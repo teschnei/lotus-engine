@@ -12,7 +12,8 @@ namespace lotus
         //TODO: when to clean up dead weak_ptrs?
         //TODO: figure out how to get engine out of this call
         template<typename ModelLoader, typename... Args>
-        static std::shared_ptr<Model> LoadModel(Engine* engine, const std::string& modelname, Args... args)
+        [[nodiscard("Work must be queued in order to be processed")]]
+        static std::pair<std::shared_ptr<Model>, std::vector<std::unique_ptr<WorkItem>>> LoadModel(Engine* engine, const std::string& modelname, Args... args)
         {
             if (!modelname.empty())
             {
@@ -20,20 +21,20 @@ namespace lotus
                 {
                     auto ptr = found->second.lock();
                     if (ptr)
-                        return ptr;
+                        return {ptr, std::vector<std::unique_ptr<WorkItem>>()};
                 }
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));
             ModelLoader loader{args...};
             loader.setEngine(engine);
-            loader.LoadModel(new_model);
+            auto work = loader.LoadModel(new_model);
             if (!modelname.empty())
             {
-                return model_map.emplace(modelname, new_model).first->second.lock();
+                return {model_map.emplace(modelname, new_model).first->second.lock(), std::move(work)};
             }
             else
             {
-                return new_model;
+                return {new_model, std::move(work)};
             }
         }
 
@@ -79,7 +80,7 @@ namespace lotus
         ModelLoader() {}
         void setEngine(Engine* _engine) { engine = _engine; }
         virtual ~ModelLoader() = default;
-        virtual void LoadModel(std::shared_ptr<Model>&) = 0;
+        virtual std::vector<std::unique_ptr<WorkItem>> LoadModel(std::shared_ptr<Model>&) = 0;
     protected:
         Engine* engine {nullptr};
     };

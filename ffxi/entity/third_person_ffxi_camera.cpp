@@ -2,16 +2,17 @@
 
 #include "component/third_person_ffxi_camera_component.h"
 #include "engine/core.h"
+#include "engine/work_item.h"
 
 ThirdPersonFFXICamera::ThirdPersonFFXICamera(lotus::Engine* engine) : lotus::ThirdPersonBoomCamera(engine)
 {
     
 }
 
-void ThirdPersonFFXICamera::Init(const std::shared_ptr<ThirdPersonFFXICamera>& sp, std::weak_ptr<Entity>& _focus)
+std::vector<std::unique_ptr<lotus::WorkItem>> ThirdPersonFFXICamera::Init(const std::shared_ptr<ThirdPersonFFXICamera>& sp, std::weak_ptr<Entity>& _focus)
 {
     focus = _focus;
-    Camera::Init(sp);
+    auto work = Camera::Init(sp);
     lotus::Input* input = engine->input.get();
     addComponent<ThirdPersonFFXICameraComponent>(input, focus);
 
@@ -23,4 +24,5 @@ void ThirdPersonFFXICamera::Init(const std::shared_ptr<ThirdPersonFFXICamera>& s
     glm::vec3 new_pos = boom * rot;
     Camera::setPos(new_pos + boom_source);
     update = true;
+    return work;
 }

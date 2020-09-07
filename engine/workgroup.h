@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <ranges>
 #include "background_work.h"
 
 namespace lotus
@@ -14,7 +15,7 @@ namespace lotus
         template<typename Container, typename Callback>
         WorkGroup(Container& _work, Callback cb) : callback(cb), work_size(_work.size())
         {
-            std::transform(_work.begin(), _work.end(), std::back_inserter(work), [this](auto& work_item)
+            std::ranges::transform(_work, std::back_inserter(work), [this](auto& work_item)
             {
                 return std::make_unique<BackgroundWork>(std::move(work_item), [this](Engine* engine)
                 {

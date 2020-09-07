@@ -39,8 +39,9 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
         {
             if (dxt3->width > 0)
             {
-                auto texture = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, dxt3->name, dxt3);
+                auto [texture, work] = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(thread->engine, dxt3->name, dxt3);
                 texture_map[dxt3->name] = std::move(texture);
+                AddWork(work);
             }
         }
         else if (auto mzb_chunk = dynamic_cast<FFXI::MZB*>(chunk.get()))
@@ -50,8 +51,9 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
         else if (auto mmb = dynamic_cast<FFXI::MMB*>(chunk.get()))
         {
             std::string name(mmb->name, 16);
-
-            entity->models.push_back(lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb));
+            auto [model, work] = lotus::Model::LoadModel<FFXI::MMBLoader>(thread->engine, name, mmb);
+            entity->models.push_back(model);
+            AddWork(work);
             model_map[name] = entity->models.size() - 1;
         }
     }
@@ -88,9 +90,11 @@ void LandscapeDatLoad::Process(lotus::WorkerThread* thread)
 
         entity->quadtree = *mzb->quadtree;
 
-        entity->collision_models.push_back(lotus::Model::LoadModel<FFXI::CollisionLoader>(thread->engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries)));
+        auto [model, work] = lotus::Model::LoadModel<FFXI::CollisionLoader>(thread->engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries));
+        entity->collision_models.push_back(model);
+        AddWork(work);
 
-        thread->engine->worker_pool->addForegroundWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
+        AddWork(std::make_unique<lotus::LandscapeEntityInitTask>(entity, std::move(instance_info)));
     }
     for (const auto& chunk : parser.root->children)
     {

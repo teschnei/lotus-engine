@@ -6,7 +6,7 @@ namespace lotus
     {
         //temporary spot to quickly change rendering mode
         //TODO: parse config from file
-        renderer.render_mode = Renderer::RenderMode::Raytrace;
+        renderer.render_mode = Renderer::RenderMode::Rasterization;
     }
     bool Config::Renderer::RaytraceEnabled()
     {

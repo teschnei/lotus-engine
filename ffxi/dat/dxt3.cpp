@@ -85,7 +85,7 @@ namespace FFXI
         }
     }
 
-    void DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture>& texture) 
+    std::vector<std::unique_ptr<lotus::WorkItem>> DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture>& texture)
     {
         uint32_t stride = 4;
         if (dxt3->format == vk::Format::eBc2UnormBlock)
@@ -133,7 +133,8 @@ namespace FFXI
 
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        engine->worker_pool->addForegroundWork(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, dxt3->format, vk::ImageTiling::eOptimal, std::move(texture_data)));
+        std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+        ret.push_back(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, dxt3->format, vk::ImageTiling::eOptimal, std::move(texture_data)));
+        return ret;
     }
-        
 }

@@ -15,11 +15,12 @@ namespace lotus
         void render();
         void tick_all(time_point time, duration delta);
         template <typename T, typename... Args>
-        std::shared_ptr<T> AddEntity(Args... args)
+        [[nodiscard("Work must be queued in order to be processed")]]
+        std::pair<std::shared_ptr<T>, std::vector<std::unique_ptr<WorkItem>>> AddEntity(Args... args)
         {
             auto sp = std::static_pointer_cast<T>(new_entities.emplace_back(std::make_shared<T>(engine)));
-            sp->Init(sp, args...);
-            return sp;
+            auto work = sp->Init(sp, args...);
+            return {sp, std::move(work)};
         }
         template<typename F>
         void forEachEntity(F func)

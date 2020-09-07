@@ -3,6 +3,7 @@
 #include "work_item.h"
 #include <algorithm>
 #include <iostream>
+#include <ranges>
 
 namespace lotus
 {
@@ -135,13 +136,13 @@ namespace lotus
     void WorkerPool::startProcessing(int image)
     {
         std::swap(pending_work, processing_work[image]);
-        std::sort(processing_work[image].rbegin(), processing_work[image].rend(), WorkCompare());
+        std::ranges::sort(processing_work[image], WorkCompare());
     }
 
     void WorkerPool::waitIdle()
     {
         std::unique_lock lk(work_mutex);
-        if (work.empty() && std::none_of(threads.begin(), threads.end(), [](const auto& thread) {return thread->Busy(); })) return;
+        if (work.empty() && std::ranges::none_of(threads, [](const auto& thread) {return thread->Busy(); })) return;
         while (!work.empty())
         {
             auto new_work = work.top_and_pop();
@@ -149,7 +150,7 @@ namespace lotus
         }
         idle_cv.wait(lk, [this]
         {
-            return work.empty() && std::none_of(threads.begin(), threads.end(), [](const auto& thread)
+            return work.empty() && std::ranges::none_of(threads, [](const auto& thread)
             {
                 return thread->Busy();
             });
@@ -161,6 +162,7 @@ namespace lotus
         waitIdle();
         work.clear();
         pending_work.clear();
+        pending_background_work.clear();
         finished_work.clear();
         for (auto& work_vec : processing_work)
         {
@@ -191,13 +193,17 @@ namespace lotus
 
     void WorkerPool::clearBackgroundWork(int image)
     {
+        std::scoped_lock lk(work_mutex);
         //move any finished background work into the processing work vector, where it will stay until the next time this image is used
-        auto finished = std::remove_if(pending_background_work.begin(), pending_background_work.end(), [](const auto& work)
+        pending_background_work.erase(std::remove_if(pending_background_work.begin(), pending_background_work.end(), [this, image](auto& work)
         {
-           return static_cast<BackgroundWork*>(work.get())->Finished();
-        });
-        processing_work[image].insert(processing_work[image].end(), std::make_move_iterator(finished), std::make_move_iterator(pending_background_work.end()));
-        pending_background_work.erase(finished, pending_background_work.end());
+            if (auto bg_work = static_cast<BackgroundWork*>(work.get()); bg_work->Finished())
+            {
+                processing_work[image].insert(processing_work[image].end(), std::move(bg_work->GetWork()));
+                return true;
+            }
+            return false;
+        }), pending_background_work.end());
     }
 
     void WorkerPool::ProcessMainThread(std::unique_lock<std::mutex>& lock, std::unique_ptr<WorkItem>&& work_item)

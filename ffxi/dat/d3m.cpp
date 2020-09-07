@@ -69,7 +69,7 @@ namespace FFXI
         }
     }
 
-    void D3MLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    std::vector<std::unique_ptr<lotus::WorkItem>> D3MLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
         model->lifetime = lotus::Lifetime::Short;
         std::vector<uint8_t> vertices(d3m->num_triangles * sizeof(D3M::Vertex) * 3);
@@ -110,6 +110,8 @@ namespace FFXI
 
         model->meshes.push_back(std::move(mesh));
 
-        engine->worker_pool->addForegroundWork(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex), max_dist));
+        std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+        ret.push_back(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex), max_dist));
+        return ret;
     }
 }

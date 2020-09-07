@@ -9,7 +9,7 @@ namespace lotus
     {
     public:
         explicit ThirdPersonBoomCamera(Engine*);
-        void Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& focus);
+        std::vector<std::unique_ptr<WorkItem>> Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& focus);
 
         void setDistance(float distance);
         float getDistance() const { return distance; }

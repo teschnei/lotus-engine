@@ -8,7 +8,7 @@ namespace lotus
     TextureInitTask::TextureInitTask(int _image_index, std::shared_ptr<Texture> _texture, vk::Format _format, vk::ImageTiling _tiling, std::vector<uint8_t>&& _texture_data) :
         WorkItem(), image_index(_image_index), texture(std::move(_texture)), format(_format), tiling(_tiling), texture_data(std::move(_texture_data))
     {
-        priority = -1;
+        priority = -2;
     }
 
     void TextureInitTask::Process(WorkerThread* thread)

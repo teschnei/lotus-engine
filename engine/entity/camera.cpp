@@ -18,7 +18,7 @@ namespace lotus
     {
     }
 
-    void Camera::Init(const std::shared_ptr<Camera>& sp)
+    std::vector<std::unique_ptr<WorkItem>> Camera::Init(const std::shared_ptr<Camera>& sp)
     {
         camera_rot.x = cos(rot_x) * cos(rot_y);
         camera_rot.y = sin(rot_x);
@@ -26,6 +26,7 @@ namespace lotus
         camera_rot = glm::normalize(camera_rot);
 
         update = true;
+        return {};
     }
 
     void Camera::setPerspective(float radians, float aspect, float _near_clip, float _far_clip)

@@ -19,7 +19,7 @@ namespace lotus
     public:
         explicit Camera(Engine*);
         ~Camera();
-        void Init(const std::shared_ptr<Camera>& sp);
+        std::vector<std::unique_ptr<WorkItem>> Init(const std::shared_ptr<Camera>& sp);
         glm::mat4& getViewMatrix() { return camera_data.view; }
         glm::mat4& getProjMatrix() { return camera_data.proj; }
 

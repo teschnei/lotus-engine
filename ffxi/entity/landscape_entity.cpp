@@ -3,9 +3,11 @@
 #include "task/landscape_dat_load.h"
 #include "engine/core.h"
 
-void FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat)
+std::vector<std::unique_ptr<lotus::WorkItem>> FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat)
 {
-    engine->worker_pool->addForegroundWork(std::make_unique<LandscapeDatLoad>(sp, dat));
+    std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+    ret.push_back(std::make_unique<LandscapeDatLoad>(sp, dat));
+    return ret;
 }
 
 void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index)

@@ -32,6 +32,21 @@ namespace lotus
         {
             vk::CommandBuffer primary;
         } compute {};
+
+        std::vector<std::unique_ptr<WorkItem>> children_work;
+
+        void AddWork(std::unique_ptr<WorkItem>&& work)
+        {
+            children_work.push_back(std::move(work));
+        }
+        template<typename Container>
+        void AddWork(Container& c)
+        {
+            for (auto&& w : c)
+            {
+                children_work.push_back(std::move(w));
+            }
+        }
     };
 
     class LambdaWorkItem : public WorkItem

@@ -32,7 +32,8 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
 
     if (time > start_time + next_generation)
     {
-        auto particle = engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))));
+        auto [particle, particle_work] = engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))));
+        engine->worker_pool->addForegroundWork(particle_work);
         auto pos = glm::vec3(0);
         pos.x = lotus::random::GetRandomNumber(generator->gen_radius, generator->gen_radius + generator->gen_radius_fluctuation);
         //TODO: rotation (instead of randomly, spins around rotation+1 times per frame)

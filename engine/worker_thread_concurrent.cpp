@@ -22,6 +22,10 @@ namespace lotus
             if (work)
             {
                 work->Process(this);
+                if (!work->children_work.empty())
+                {
+                    pool->addForegroundWork(work->children_work);
+                }
                 pool->workFinished(std::move(work));
             }
         }

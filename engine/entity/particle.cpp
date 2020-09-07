@@ -12,11 +12,13 @@ namespace lotus
     {
     }
 
-    void Particle::Init(const std::shared_ptr<Particle>& sp, duration _lifetime)
+    std::vector<std::unique_ptr<WorkItem>> Particle::Init(const std::shared_ptr<Particle>& sp, duration _lifetime)
     {
         lifetime = _lifetime;
         spawn_time = engine->getSimulationTime();
-        engine->worker_pool->addForegroundWork(std::make_unique<ParticleEntityInitTask>(sp));
+        std::vector<std::unique_ptr<WorkItem>> ret;
+        ret.push_back(std::make_unique<ParticleEntityInitTask>(sp));
+        return ret;
     }
 
     void Particle::tick(time_point time, duration delta)
@@ -42,7 +44,7 @@ namespace lotus
 
     void Particle::render(Engine* engine, std::shared_ptr<Entity>& sp)
     {
-        auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
+//        auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
         auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
         engine->worker_pool->addForegroundWork(std::make_unique<EntityRenderTask>(re_sp));
     }
