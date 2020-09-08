@@ -9,7 +9,7 @@ namespace lotus
     {
     public:
         Particle(Engine*);
-        std::vector<std::unique_ptr<WorkItem>> Init(const std::shared_ptr<Particle>& sp, duration lifetime);
+        std::vector<UniqueWork> Init(const std::shared_ptr<Particle>& sp, duration lifetime);
         virtual ~Particle() = default;
 
         bool billboard{ false };

@@ -22,7 +22,7 @@ namespace lotus
         }
     }
 
-    std::unique_ptr<WorkItem> RenderableEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
+    UniqueWork RenderableEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
     {
         return std::make_unique<RenderableEntityReInitTask>(std::static_pointer_cast<RenderableEntity>(sp));
     }

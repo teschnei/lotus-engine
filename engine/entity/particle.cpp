@@ -12,11 +12,11 @@ namespace lotus
     {
     }
 
-    std::vector<std::unique_ptr<WorkItem>> Particle::Init(const std::shared_ptr<Particle>& sp, duration _lifetime)
+    std::vector<UniqueWork> Particle::Init(const std::shared_ptr<Particle>& sp, duration _lifetime)
     {
         lifetime = _lifetime;
         spawn_time = engine->getSimulationTime();
-        std::vector<std::unique_ptr<WorkItem>> ret;
+        std::vector<UniqueWork> ret;
         ret.push_back(std::make_unique<ParticleEntityInitTask>(sp));
         return ret;
     }

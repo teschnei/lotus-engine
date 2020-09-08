@@ -31,14 +31,14 @@ namespace lotus
         }
     }
 
-    void WorkerPool::addForegroundWork(std::unique_ptr<WorkItem> work_item)
+    void WorkerPool::addForegroundWork(UniqueWork work_item)
     {
         std::scoped_lock lg(work_mutex);
         work.push(std::move(work_item));
         work_cv.notify_one();
     }
 
-    std::unique_ptr<WorkItem> WorkerPool::waitForWork()
+    UniqueWork WorkerPool::waitForWork()
     {
         std::unique_lock lk(work_mutex);
         if (work.empty() && background_work.empty() && !exit)
@@ -53,7 +53,7 @@ namespace lotus
             return {};
     }
 
-    void WorkerPool::workFinished(std::unique_ptr<WorkItem>&& work_item)
+    void WorkerPool::workFinished(UniqueWork&& work_item)
     {
         std::scoped_lock lg(work_mutex);
         if (auto bg = dynamic_cast<BackgroundWork*>(work_item.get()))
@@ -206,7 +206,7 @@ namespace lotus
         }), pending_background_work.end());
     }
 
-    void WorkerPool::ProcessMainThread(std::unique_lock<std::mutex>& lock, std::unique_ptr<WorkItem>&& work_item)
+    void WorkerPool::ProcessMainThread(std::unique_lock<std::mutex>& lock, UniqueWork&& work_item)
     {
         lock.unlock();
         work_item->Process(&main_thread);

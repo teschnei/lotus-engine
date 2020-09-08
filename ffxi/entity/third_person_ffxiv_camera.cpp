@@ -8,7 +8,7 @@ ThirdPersonFFXIVCamera::ThirdPersonFFXIVCamera(lotus::Engine* engine) : lotus::T
     
 }
 
-std::vector<std::unique_ptr<lotus::WorkItem>> ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, std::weak_ptr<Entity>& _focus)
+std::vector<lotus::UniqueWork> ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, std::weak_ptr<Entity>& _focus)
 {
     focus = _focus;
     auto work = Camera::Init(sp);

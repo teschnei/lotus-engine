@@ -5,6 +5,8 @@
 namespace lotus
 {
     class WorkerThread;
+    class WorkItem;
+    using UniqueWork = std::unique_ptr<WorkItem>;
     class WorkItem
     {
     public:
@@ -33,9 +35,9 @@ namespace lotus
             vk::CommandBuffer primary;
         } compute {};
 
-        std::vector<std::unique_ptr<WorkItem>> children_work;
+        std::vector<UniqueWork> children_work;
 
-        void AddWork(std::unique_ptr<WorkItem>&& work)
+        void AddWork(UniqueWork&& work)
         {
             children_work.push_back(std::move(work));
         }

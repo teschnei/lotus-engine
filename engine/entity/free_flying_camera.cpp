@@ -10,7 +10,7 @@ namespace lotus
         
     }
 
-    std::vector<std::unique_ptr<WorkItem>> FreeFlyingCamera::Init(const std::shared_ptr<FreeFlyingCamera>& sp)
+    std::vector<UniqueWork> FreeFlyingCamera::Init(const std::shared_ptr<FreeFlyingCamera>& sp)
     {
         Camera::Init(sp);
         Input* input = engine->input.get();

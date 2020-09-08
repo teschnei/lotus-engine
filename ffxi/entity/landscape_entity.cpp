@@ -3,9 +3,9 @@
 #include "task/landscape_dat_load.h"
 #include "engine/core.h"
 
-std::vector<std::unique_ptr<lotus::WorkItem>> FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat)
+std::vector<lotus::UniqueWork> FFXILandscapeEntity::Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat)
 {
-    std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+    std::vector<lotus::UniqueWork> ret;
     ret.push_back(std::make_unique<LandscapeDatLoad>(sp, dat));
     return ret;
 }

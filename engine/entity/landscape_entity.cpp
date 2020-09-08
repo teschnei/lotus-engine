@@ -28,7 +28,7 @@ namespace lotus
         //landscape can't move so no need to update
     }
 
-    std::unique_ptr<WorkItem> LandscapeEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
+    UniqueWork LandscapeEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
     {
         return std::make_unique<LandscapeEntityReInitTask>(std::static_pointer_cast<LandscapeEntity>(sp));
     }

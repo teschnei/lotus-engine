@@ -12,7 +12,7 @@ class Actor : public lotus::DeformableEntity
 {
 public:
     explicit Actor(lotus::Engine* engine);
-    std::vector<std::unique_ptr<lotus::WorkItem>> Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat);
+    std::vector<lotus::UniqueWork> Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat);
 
     float speed{ 4.f };
 };
@@ -21,7 +21,7 @@ class FFXIActorLoader : public lotus::ModelLoader
 {
 public:
     FFXIActorLoader(const std::vector<FFXI::OS2*>& os2s, FFXI::SK2* sk2);
-    virtual std::vector<std::unique_ptr<lotus::WorkItem>> LoadModel(std::shared_ptr<lotus::Model>&) override;
+    virtual std::vector<lotus::UniqueWork> LoadModel(std::shared_ptr<lotus::Model>&) override;
 private:
     const std::vector<FFXI::OS2*>& os2s;
     FFXI::SK2* sk2;

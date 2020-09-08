@@ -28,7 +28,7 @@ namespace lotus
         WorkerPool* pool{ nullptr };
         Engine* engine{ nullptr };
     protected:
-        std::unique_ptr<WorkItem> work;
+        UniqueWork work;
         bool active{ true };
     };
 }

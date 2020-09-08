@@ -11,7 +11,7 @@ namespace lotus
         
     }
 
-    std::vector<std::unique_ptr<WorkItem>> ThirdPersonBoomCamera::Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& _focus)
+    std::vector<UniqueWork> ThirdPersonBoomCamera::Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& _focus)
     {
         focus = _focus;
         auto work = Camera::Init(sp);

@@ -27,7 +27,7 @@ public:
         glm::vec4 skybox_colors[8];
     };
     FFXILandscapeEntity(lotus::Engine* engine) : LandscapeEntity(engine) {}
-    std::vector<std::unique_ptr<lotus::WorkItem>> Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat);
+    std::vector<lotus::UniqueWork> Init(const std::shared_ptr<FFXILandscapeEntity>& sp, const std::filesystem::path& dat);
     virtual void populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index) override;
     FFXI::QuadTree quadtree{glm::vec3{}, glm::vec3{}};
     std::vector<std::pair<uint32_t, InstanceInfo>> model_vec;

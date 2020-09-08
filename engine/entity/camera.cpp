@@ -18,7 +18,7 @@ namespace lotus
     {
     }
 
-    std::vector<std::unique_ptr<WorkItem>> Camera::Init(const std::shared_ptr<Camera>& sp)
+    std::vector<UniqueWork> Camera::Init(const std::shared_ptr<Camera>& sp)
     {
         camera_rot.x = cos(rot_x) * cos(rot_y);
         camera_rot.y = sin(rot_x);

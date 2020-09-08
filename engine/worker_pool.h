@@ -53,11 +53,11 @@ namespace lotus
     class WorkCompare
     {
     public:
-        bool operator() (std::unique_ptr<WorkItem>& a, std::unique_ptr<WorkItem>& b) const
+        bool operator() (UniqueWork& a, UniqueWork& b) const
         {
             return *a > *b;
         }
-        bool operator() (std::unique_ptr<BackgroundWork>& a, std::unique_ptr<BackgroundWork>& b) const
+        bool operator() (UniqueBackgroundWork& a, UniqueBackgroundWork& b) const
         {
             return *a > *b;
         }
@@ -69,7 +69,7 @@ namespace lotus
         WorkerPool(Engine*);
         ~WorkerPool();
 
-        void addForegroundWork(std::unique_ptr<WorkItem>);
+        void addForegroundWork(UniqueWork);
         template<typename Container>
         void addForegroundWork(Container& c)
         {
@@ -81,7 +81,7 @@ namespace lotus
             work_cv.notify_all();
         }
         template<typename Callback>
-        void addBackgroundWork(std::unique_ptr<WorkItem> work_item, Callback cb)
+        void addBackgroundWork(UniqueWork work_item, Callback cb)
         {
             std::scoped_lock lg(work_mutex);
             background_work.emplace(std::move(work_item), cb);
@@ -108,8 +108,8 @@ namespace lotus
             wg->QueueItems(this);
         }
 
-        std::unique_ptr<WorkItem> waitForWork();
-        void workFinished(std::unique_ptr<WorkItem>&&);
+        UniqueWork waitForWork();
+        void workFinished(UniqueWork&&);
         std::vector<vk::CommandBuffer> getPrimaryGraphicsBuffers(int image);
         std::vector<vk::CommandBuffer> getSecondaryGraphicsBuffers(int image);
         std::vector<vk::CommandBuffer> getShadowmapGraphicsBuffers(int image);
@@ -126,15 +126,15 @@ namespace lotus
         void clearBackgroundWork(int image);
 
     private:
-        void ProcessMainThread(std::unique_lock<std::mutex>& lock, std::unique_ptr<WorkItem>&& work);
+        void ProcessMainThread(std::unique_lock<std::mutex>& lock, UniqueWork&& work);
 
         std::vector<std::unique_ptr<WorkerThreadConcurrent>> threads;
-        WorkItemQueue<std::unique_ptr<WorkItem>, std::vector<std::unique_ptr<WorkItem>>, WorkCompare> work;
-        std::vector<std::unique_ptr<WorkItem>> pending_work;
-        std::vector<std::vector<std::unique_ptr<WorkItem>>> processing_work;
-        std::vector<std::unique_ptr<WorkItem>> finished_work;
-        WorkItemQueue<std::unique_ptr<BackgroundWork>, std::vector<std::unique_ptr<BackgroundWork>>, WorkCompare> background_work;
-        std::vector<std::unique_ptr<WorkItem>> pending_background_work;
+        WorkItemQueue<UniqueWork, std::vector<UniqueWork>, WorkCompare> work;
+        std::vector<UniqueWork> pending_work;
+        std::vector<std::vector<UniqueWork>> processing_work;
+        std::vector<UniqueWork> finished_work;
+        WorkItemQueue<UniqueBackgroundWork, std::vector<UniqueBackgroundWork>, WorkCompare> background_work;
+        std::vector<UniqueWork> pending_background_work;
         std::vector<std::unique_ptr<WorkGroup>> workgroups;
         std::mutex work_mutex;
         std::mutex group_mutex;

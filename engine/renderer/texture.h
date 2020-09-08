@@ -17,11 +17,11 @@ namespace lotus
         //TODO: figure out how to get engine out of this call
         template<typename TextureLoader, typename... Args>
         [[nodiscard("Work must be queued in order to be processed")]]
-        static std::pair<std::shared_ptr<Texture>, std::vector<std::unique_ptr<WorkItem>>> LoadTexture(Engine* engine, const std::string& texturename, Args... args)
+        static std::pair<std::shared_ptr<Texture>, std::vector<UniqueWork>> LoadTexture(Engine* engine, const std::string& texturename, Args... args)
         {
             if (auto found = texture_map.find(texturename); found != texture_map.end())
             {
-                return { found->second.lock(), std::vector<std::unique_ptr<WorkItem>>() };
+                return { found->second.lock(), std::vector<UniqueWork>() };
             }
             auto new_texture = std::shared_ptr<Texture>(new Texture());
             TextureLoader loader{args...};
@@ -69,7 +69,7 @@ namespace lotus
         TextureLoader() {}
         void setEngine(Engine* _engine) { engine = _engine; }
         virtual ~TextureLoader() = default;
-        virtual std::vector<std::unique_ptr<WorkItem>> LoadTexture(std::shared_ptr<Texture>&) = 0;
+        virtual std::vector<UniqueWork> LoadTexture(std::shared_ptr<Texture>&) = 0;
     protected:
         Engine* engine {nullptr};
     };

@@ -5,7 +5,7 @@
 
 namespace lotus
 {
-    BackgroundWork::BackgroundWork(std::unique_ptr<WorkItem>&& _work, std::function<void(Engine*)> _callback) : WorkItem(), work(std::move(_work)),  callback(_callback)
+    BackgroundWork::BackgroundWork(UniqueWork&& _work, std::function<void(Engine*)> _callback) : WorkItem(), work(std::move(_work)),  callback(_callback)
     {
     }
 

@@ -16,7 +16,7 @@ namespace lotus
         void tick_all(time_point time, duration delta);
         template <typename T, typename... Args>
         [[nodiscard("Work must be queued in order to be processed")]]
-        std::pair<std::shared_ptr<T>, std::vector<std::unique_ptr<WorkItem>>> AddEntity(Args... args)
+        std::pair<std::shared_ptr<T>, std::vector<UniqueWork>> AddEntity(Args... args)
         {
             auto sp = std::static_pointer_cast<T>(new_entities.emplace_back(std::make_shared<T>(engine)));
             auto work = sp->Init(sp, args...);

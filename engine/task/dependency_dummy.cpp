@@ -2,7 +2,7 @@
 #include "../worker_thread.h"
 #include "../core.h"
 
-lotus::DependencyDummyTask::DependencyDummyTask(std::vector<std::unique_ptr<WorkItem>>&& dependencies) :
+lotus::DependencyDummyTask::DependencyDummyTask(std::vector<UniqueWork>&& dependencies) :
     WorkItem(), children(std::move(dependencies))
 {
 }

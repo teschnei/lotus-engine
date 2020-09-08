@@ -30,7 +30,7 @@ namespace FFXI
     {
     public:
         D3MLoader(D3M* _d3m) : d3m(_d3m) {}
-        virtual std::vector<std::unique_ptr<lotus::WorkItem>> LoadModel(std::shared_ptr<lotus::Model>&) override;
+        virtual std::vector<lotus::UniqueWork> LoadModel(std::shared_ptr<lotus::Model>&) override;
     private:
         D3M* d3m;
     };

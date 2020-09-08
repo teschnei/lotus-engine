@@ -10,9 +10,9 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
 }
 
-std::vector<std::unique_ptr<lotus::WorkItem>> Actor::Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat)
+std::vector<lotus::UniqueWork> Actor::Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat)
 {
-    std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+    std::vector<lotus::UniqueWork> ret;
     ret.push_back(std::make_unique<ActorDatLoad>(sp, dat));
     return ret;
 }
@@ -21,7 +21,7 @@ FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2
 {
 }
 
-std::vector<std::unique_ptr<lotus::WorkItem>> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+std::vector<lotus::UniqueWork> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
 {
     model->light_offset = 0;
     std::vector<std::vector<uint8_t>> vertices;
@@ -111,7 +111,7 @@ std::vector<std::unique_ptr<lotus::WorkItem>> FFXIActorLoader::LoadModel(std::sh
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
 
-    std::vector<std::unique_ptr<lotus::WorkItem>> ret;
+    std::vector<lotus::UniqueWork> ret;
     ret.push_back(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
     return ret;
 }

@@ -20,7 +20,7 @@ namespace lotus
 
         explicit RenderableEntity(Engine*);
         virtual ~RenderableEntity();
-        virtual std::unique_ptr<WorkItem> recreate_command_buffers(std::shared_ptr<Entity>& sp) override;
+        virtual UniqueWork recreate_command_buffers(std::shared_ptr<Entity>& sp) override;
 
         void setScale(float x, float y, float z);
         void setScale(glm::vec3 scale);

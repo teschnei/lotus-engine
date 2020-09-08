@@ -6,9 +6,9 @@ namespace lotus
     class DependencyDummyTask : public WorkItem
     {
     public:
-        DependencyDummyTask(std::vector<std::unique_ptr<WorkItem>>&& dependencies);
+        DependencyDummyTask(std::vector<UniqueWork>&& dependencies);
         virtual void Process(WorkerThread*) override;
     private:
-        std::vector<std::unique_ptr<WorkItem>> children;
+        std::vector<UniqueWork> children;
     };
 }

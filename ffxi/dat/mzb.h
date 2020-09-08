@@ -74,7 +74,7 @@ namespace FFXI
     {
     public:
         CollisionLoader(std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries);
-        virtual std::vector<std::unique_ptr<lotus::WorkItem>> LoadModel(std::shared_ptr<lotus::Model>&) override;
+        virtual std::vector<lotus::UniqueWork> LoadModel(std::shared_ptr<lotus::Model>&) override;
     private:
         std::vector<CollisionMeshData>& meshes;
         std::vector<CollisionEntry>& entries;

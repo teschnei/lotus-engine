@@ -13,7 +13,7 @@ namespace lotus
         //TODO: figure out how to get engine out of this call
         template<typename ModelLoader, typename... Args>
         [[nodiscard("Work must be queued in order to be processed")]]
-        static std::pair<std::shared_ptr<Model>, std::vector<std::unique_ptr<WorkItem>>> LoadModel(Engine* engine, const std::string& modelname, Args... args)
+        static std::pair<std::shared_ptr<Model>, std::vector<UniqueWork>> LoadModel(Engine* engine, const std::string& modelname, Args... args)
         {
             if (!modelname.empty())
             {
@@ -21,7 +21,7 @@ namespace lotus
                 {
                     auto ptr = found->second.lock();
                     if (ptr)
-                        return {ptr, std::vector<std::unique_ptr<WorkItem>>()};
+                        return {ptr, std::vector<UniqueWork>()};
                 }
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));
@@ -80,7 +80,7 @@ namespace lotus
         ModelLoader() {}
         void setEngine(Engine* _engine) { engine = _engine; }
         virtual ~ModelLoader() = default;
-        virtual std::vector<std::unique_ptr<WorkItem>> LoadModel(std::shared_ptr<Model>&) = 0;
+        virtual std::vector<UniqueWork> LoadModel(std::shared_ptr<Model>&) = 0;
     protected:
         Engine* engine {nullptr};
     };

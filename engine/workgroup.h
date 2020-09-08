@@ -39,7 +39,7 @@ namespace lotus
         void QueueItems(WorkerPool*);
 
     private:
-        std::vector<std::unique_ptr<BackgroundWork>> work;
+        std::vector<UniqueBackgroundWork> work;
         std::mutex group_mutex;
         std::function<void(Engine*)> callback;
         size_t work_size;
