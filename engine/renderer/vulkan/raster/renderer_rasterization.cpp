@@ -114,6 +114,7 @@ namespace lotus
 
         depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
         depth_attachment_ref.attachment = 0;
+        depth_attachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
         std::array<vk::AttachmentDescription, 1> shadow_attachments = { depth_attachment };
         subpass.colorAttachmentCount = 0;
@@ -226,7 +227,17 @@ namespace lotus
         desc_material.initialLayout = vk::ImageLayout::eUndefined;
         desc_material.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
-        std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_face_normal, desc_albedo, desc_accumulation, desc_revealage, desc_material, depth_attachment };
+        vk::AttachmentDescription gbuffer_depth_attachment;
+        gbuffer_depth_attachment.format = gpu->getDepthFormat();
+        gbuffer_depth_attachment.samples = vk::SampleCountFlagBits::e1;
+        gbuffer_depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+        gbuffer_depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+        gbuffer_depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        gbuffer_depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        gbuffer_depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
+        gbuffer_depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+        std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_face_normal, desc_albedo, desc_accumulation, desc_revealage, desc_material, gbuffer_depth_attachment };
 
         render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
         render_pass_info.pAttachments = gbuffer_attachments.data();
@@ -1225,7 +1236,10 @@ namespace lotus
             renderpass_info.framebuffer = *cascades[i].shadowmap_frame_buffer;
             buffer[0]->pushConstants<uint32_t>(*shadowmap_pipeline_layout, vk::ShaderStageFlagBits::eVertex, sizeof(uint32_t), i);
             buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);
-            buffer[0]->executeCommands(shadowmap_buffers);
+            if (!shadowmap_buffers.empty())
+            {
+                buffer[0]->executeCommands(shadowmap_buffers);
+            }
             buffer[0]->endRenderPass();
         }
 
