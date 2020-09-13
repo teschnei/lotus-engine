@@ -41,6 +41,8 @@ set(SHADERS
     shadow_frag.frag
     shadow_miss.rmiss
     shadow_vert.vert
+    ui_frag.frag
+    ui_vert.vert
 )
 
 add_custom_target(shaders-dir ALL

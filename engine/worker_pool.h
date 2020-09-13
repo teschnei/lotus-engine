@@ -10,6 +10,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <ranges>
 
 namespace lotus
 {
@@ -18,7 +19,8 @@ namespace lotus
         class T,
         class Container = std::vector<T>,
         class Compare = std::less<typename Container::value_type>>
-    class WorkItemQueue : public std::priority_queue<T, Container, Compare> {
+    class WorkItemQueue : public std::priority_queue<T, Container, Compare>
+    {
     public:
         T top_and_pop()
         {
@@ -33,12 +35,14 @@ namespace lotus
             c.clear();
         }
 
-        typename Container::iterator begin() noexcept
+        using iterator = typename Container::iterator;
+
+        iterator begin() noexcept
         {
             return c.begin();
         }
 
-        typename Container::iterator end() noexcept
+        iterator end() noexcept
         {
             return c.end();
         }
@@ -68,45 +72,6 @@ namespace lotus
     public:
         WorkerPool(Engine*);
         ~WorkerPool();
-
-        void addForegroundWork(UniqueWork);
-        template<typename Container>
-        void addForegroundWork(Container& c)
-        {
-            std::scoped_lock lg(work_mutex);
-            for (auto& item : c)
-            {
-                work.push(std::move(item));
-            }
-            work_cv.notify_all();
-        }
-        template<typename Callback>
-        void addBackgroundWork(UniqueWork work_item, Callback cb)
-        {
-            std::scoped_lock lg(work_mutex);
-            background_work.emplace(std::move(work_item), cb);
-            work_cv.notify_one();
-        }
-        template<typename Container>
-        void addBackgroundWork(Container& c)
-        {
-            std::scoped_lock lg(work_mutex);
-            for (auto& item : c)
-            {
-                background_work.push(std::move(item));
-            }
-            work_cv.notify_all();
-        }
-        template<typename Container, typename Callback>
-        void addBackgroundWork(Container& c, Callback cb)
-        {
-            std::unique_lock lg(group_mutex);
-            auto work = std::make_unique<WorkGroup>(c, cb);
-            auto wg = work.get();
-            workgroups.push_back(std::move(work));
-            lg.unlock();
-            wg->QueueItems(this);
-        }
 
         UniqueWork waitForWork();
         void workFinished(UniqueWork&&);
@@ -144,5 +109,49 @@ namespace lotus
 
         Engine* engine {nullptr};
         WorkerThread main_thread;
+    public:
+
+        void addForegroundWork(UniqueWork&&);
+
+        void addForegroundWork(std::ranges::input_range auto&& r)
+            requires std::indirectly_movable<std::ranges::iterator_t<decltype(r)>, typename decltype(work)::iterator>
+        {
+            std::scoped_lock lg(work_mutex);
+            for (auto&& item : r)
+            {
+                work.push(std::move(item));
+            }
+            work_cv.notify_all();
+        }
+
+        template<typename Callback>
+        void addBackgroundWork(UniqueWork&& work_item, Callback cb)
+        {
+            std::scoped_lock lg(work_mutex);
+            background_work.emplace(std::move(work_item), cb);
+            work_cv.notify_one();
+        }
+
+        void addBackgroundWork(std::ranges::input_range auto&& r)
+            requires std::indirectly_movable<std::ranges::iterator_t<decltype(r)>, typename decltype(background_work)::iterator>
+        {
+            std::scoped_lock lg(work_mutex);
+            for (auto&& item : r)
+            {
+                background_work.push(std::move(item));
+            }
+            work_cv.notify_all();
+        }
+
+        template<typename Container, typename Callback>
+        void addBackgroundWork(Container&& c, Callback cb)
+        {
+            std::unique_lock lg(group_mutex);
+            auto work = std::make_unique<WorkGroup>(c, cb);
+            auto wg = work.get();
+            workgroups.push_back(std::move(work));
+            lg.unlock();
+            wg->QueueItems(this);
+        }
     };
 }

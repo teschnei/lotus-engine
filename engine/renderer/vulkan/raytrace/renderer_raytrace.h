@@ -29,7 +29,6 @@ namespace lotus
 
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
-        std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> raytrace_sem;
 

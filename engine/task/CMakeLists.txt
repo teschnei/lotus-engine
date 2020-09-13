@@ -20,4 +20,6 @@ target_sources(engine
     texture_init.h
     transform_skeleton.cpp
     transform_skeleton.h
+    ui_element_init.cpp
+    ui_element_init.h
     )

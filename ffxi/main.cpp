@@ -16,6 +16,7 @@
 #include "entity/component/third_person_ffxi_entity_input.h"
 #include "entity/third_person_ffxi_camera.h"
 #include "config.h"
+#include "engine/ui/element.h"
 
 #include "dat/dat_parser.h"
 #include "particle_tester.h"
@@ -64,6 +65,24 @@ public:
 
         engine->lights->light.diffuse_dir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
         engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
+
+        auto ele = std::make_shared<lotus::ui::Element>();
+        ele->SetPos({20, -20});
+        ele->SetHeight(300);
+        ele->SetWidth(700);
+        ele->anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
+        ele->parent_anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
+        ele->bg_colour = glm::vec4{0.f, 0.f, 0.f, 0.4f};
+        engine->worker_pool->addForegroundWork(engine->ui->addElement(ele));
+
+        auto ele2 = std::make_shared<lotus::ui::Element>();
+        ele2->SetPos({10, -10});
+        ele2->SetHeight(30);
+        ele2->SetWidth(ele->GetWidth() - 20);
+        ele2->anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
+        ele2->parent_anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
+        ele2->bg_colour = glm::vec4{0.f, 0.f, 0.f, 0.7f};
+        engine->worker_pool->addForegroundWork(engine->ui->addElement(ele2, ele));
         //engine->camera->setPos(glm::vec3(259.f, -90.f, 82.f));
     }
     virtual void tick(lotus::time_point, lotus::duration) override

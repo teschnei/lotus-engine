@@ -6,9 +6,11 @@ target_sources(engine
     renderer.h
     swapchain.cpp
     swapchain.h
+    ui_renderer.cpp
+    ui_renderer.h
+    vulkan_inc.h
     window.cpp
     window.h
-    vulkan_inc.h
     )
 
 add_subdirectory(hybrid)

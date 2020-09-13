@@ -7,6 +7,7 @@ namespace lotus
 {
     BackgroundWork::BackgroundWork(UniqueWork&& _work, std::function<void(Engine*)> _callback) : WorkItem(), work(std::move(_work)),  callback(_callback)
     {
+        priority = work->priority;
     }
 
     void BackgroundWork::Process(WorkerThread* thread)

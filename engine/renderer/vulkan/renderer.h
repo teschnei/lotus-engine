@@ -7,6 +7,7 @@
 #include "window.h"
 #include "gpu.h"
 #include "swapchain.h"
+#include "ui_renderer.h"
 #include "engine/renderer/raytrace_query.h"
 
 namespace lotus
@@ -55,6 +56,7 @@ namespace lotus
         Renderer(Engine* engine);
         virtual ~Renderer();
 
+        void InitCommon();
         virtual void Init() = 0;
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
@@ -89,6 +91,7 @@ namespace lotus
             vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> image_view;
         };
 
+        std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;
 
         /* Animation pipeline */
@@ -98,6 +101,7 @@ namespace lotus
         /* Animation pipeline */
 
         std::unique_ptr<Raytracer> raytracer;
+        std::unique_ptr<UiRenderer> ui;
 
     protected:
         void createInstance(const std::string& app_name, uint32_t app_version);

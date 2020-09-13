@@ -34,9 +34,7 @@ target_include_directories(engine PUBLIC "../external/vma" )
 target_link_libraries(engine $<$<PLATFORM_ID:Linux>:-ldl>)
 target_link_libraries(engine Vulkan::Vulkan SDL::SDL2 GLM::GLM)
 
-set_property(TARGET engine PROPERTY CXX_STANDARD 20)
-set_property(TARGET engine PROPERTY CXX_STANDARD_REQUIRED ON)
-
 add_subdirectory(entity)
 add_subdirectory(renderer)
 add_subdirectory(task)
+add_subdirectory(ui)

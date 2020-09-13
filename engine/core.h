@@ -7,6 +7,8 @@
 #include "types.h"
 #include "light_manager.h"
 #include "random.h"
+#include "ui/events.h"
+#include "ui/ui.h"
 
 namespace lotus
 {
@@ -36,6 +38,8 @@ namespace lotus
         Camera* camera {nullptr};
         std::unique_ptr<WorkerPool> worker_pool;
         std::unique_ptr<LightManager> lights;
+        std::unique_ptr<ui::Events> events;
+        std::unique_ptr<ui::Manager> ui;
 
         void set_camera(Camera* _camera) { camera = _camera; }
         time_point getSimulationTime() { return simulation_time; }

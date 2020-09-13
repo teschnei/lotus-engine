@@ -25,8 +25,12 @@ namespace lotus
         input = std::make_unique<Input>(this, renderer->window->window);
         worker_pool = std::make_unique<WorkerPool>(this);
         lights = std::make_unique<LightManager>(this);
+        events = std::make_unique<ui::Events>();
+        ui = std::make_unique<ui::Manager>(this);
 
         renderer->Init();
+        renderer->InitCommon();
+        worker_pool->addForegroundWork(ui->Init());
     }
 
     Engine::~Engine()

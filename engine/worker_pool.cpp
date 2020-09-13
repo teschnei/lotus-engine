@@ -31,7 +31,7 @@ namespace lotus
         }
     }
 
-    void WorkerPool::addForegroundWork(UniqueWork work_item)
+    void WorkerPool::addForegroundWork(UniqueWork&& work_item)
     {
         std::scoped_lock lg(work_mutex);
         work.push(std::move(work_item));

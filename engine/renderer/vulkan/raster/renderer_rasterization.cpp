@@ -8,6 +8,7 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
+#include "engine/renderer/vulkan/task/renderer_init.h"
 
 constexpr size_t shadowmap_dimension = 2048;
 
@@ -44,7 +45,7 @@ namespace lotus
         generateCommandBuffers();
 
         render_commandbuffers.resize(getImageCount());
-        raytracer = std::make_unique<Raytracer>(engine);
+        engine->worker_pool->addForegroundWork(std::make_unique<RendererRasterizationInitTask>(this));
     }
 
     void RendererRasterization::generateCommandBuffers()
@@ -68,7 +69,7 @@ namespace lotus
         color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
         color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
         color_attachment.initialLayout = vk::ImageLayout::eUndefined;
-        color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+        color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
 
         vk::AttachmentDescription depth_attachment;
         depth_attachment.format = gpu->getDepthFormat();
@@ -1345,8 +1346,10 @@ namespace lotus
 
         submitInfo.waitSemaphoreCount = gbuffer_semaphores.size();
         submitInfo.pWaitSemaphores = gbuffer_semaphores.data();
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &*deferred_command_buffers[current_image];
+        std::vector<vk::CommandBuffer> deferred_commands {*deferred_command_buffers[current_image]};
+        deferred_commands.push_back(ui->Render(current_image));
+        submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
+        submitInfo.pCommandBuffers = deferred_commands.data();
 
         std::vector<vk::Semaphore> signalSemaphores = { *frame_finish_sem[current_frame] };
         submitInfo.signalSemaphoreCount = signalSemaphores.size();

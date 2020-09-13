@@ -30,6 +30,19 @@ namespace lotus
             return {texture_map.emplace(texturename, new_texture).first->second.lock(), std::move(work)};
         }
 
+        template<typename Func>
+        [[nodiscard("Work must be queued in order to be processed")]]
+        static std::pair<std::shared_ptr<Texture>, std::vector<UniqueWork>> LoadTexture(const std::string& texturename, Func func)
+        {
+            if (auto found = texture_map.find(texturename); found != texture_map.end())
+            {
+                return { found->second.lock(), std::vector<UniqueWork>() };
+            }
+            auto new_texture = std::shared_ptr<Texture>(new Texture());
+            auto work = func(new_texture);
+            return {texture_map.emplace(texturename, new_texture).first->second.lock(), std::move(work)};
+        }
+
         static std::shared_ptr<Texture> getTexture(const std::string& texturename)
         {
             if (auto found = texture_map.find(texturename); found != texture_map.end())

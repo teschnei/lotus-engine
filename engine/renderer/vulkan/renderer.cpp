@@ -64,6 +64,12 @@ namespace lotus
         gpu->device->waitIdle();
     }
 
+    void Renderer::InitCommon()
+    {
+        raytracer = std::make_unique<Raytracer>(engine);
+        ui = std::make_unique<UiRenderer>(engine, this);
+    }
+
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
     {
         if (enableValidationLayers && !checkValidationLayerSupport()) {
@@ -244,7 +250,7 @@ namespace lotus
     void Renderer::recreateStaticCommandBuffers()
     {
         //delete all the existing buffers first, single-threadedly (the destructor uses the pool it was created on)
-        engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
+        engine->game->scene->forEachEntity([](std::shared_ptr<Entity>& entity)
         {
             if (auto ren = std::dynamic_pointer_cast<RenderableEntity>(entity))
             {
