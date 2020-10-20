@@ -1,8 +1,6 @@
 #include "particle_entity.h"
 
 #include "engine/core.h"
-#include "engine/worker_thread.h"
-#include "engine/task/particle_entity_init.h"
 #include "engine/entity/particle.h"
 #include "engine/renderer/vulkan/raytrace/renderer_raytrace.h"
 #include "engine/renderer/vulkan/raster/renderer_rasterization.h"
@@ -10,31 +8,31 @@
 
 namespace lotus
 {
-    ParticleEntityInitializer::ParticleEntityInitializer(Entity* _entity, ParticleEntityInitTask* _task) :
-        EntityInitializer(_entity), task(_task)
+    ParticleEntityInitializer::ParticleEntityInitializer(Entity* _entity) :
+        EntityInitializer(_entity)
     {
     }
 
-    void ParticleEntityInitializer::initEntity(RendererRaytrace* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::initEntity(RendererRaytrace* renderer, Engine* engine)
     {
-        createBuffers(renderer, thread);
+        createBuffers(renderer, engine);
     }
 
-    void ParticleEntityInitializer::drawEntity(RendererRaytrace* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::drawEntity(RendererRaytrace* renderer, Engine* engine)
     {
     }
 
-    void ParticleEntityInitializer::initEntity(RendererRasterization* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::initEntity(RendererRasterization* renderer, Engine* engine)
     {
-        createBuffers(renderer, thread);
+        createBuffers(renderer, engine);
     }
 
-    void ParticleEntityInitializer::drawEntity(RendererRasterization* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::drawEntity(RendererRasterization* renderer, Engine* engine)
     {
         auto entity = static_cast<Particle*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
         
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -108,27 +106,27 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(thread, *command_buffer, false, *renderer->pipeline_layout, i);
+            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout, i);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->particle_pipeline_group.blended_graphics_pipeline);
 
-            drawModel(thread, *command_buffer, true, *renderer->pipeline_layout, i);
+            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout, i);
 
             command_buffer->end();
         }
     }
 
-    void ParticleEntityInitializer::initEntity(RendererHybrid* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::initEntity(RendererHybrid* renderer, Engine* engine)
     {
-        createBuffers(renderer, thread);
+        createBuffers(renderer, engine);
     }
 
-    void ParticleEntityInitializer::drawEntity(RendererHybrid* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::drawEntity(RendererHybrid* renderer, Engine* engine)
     {
         auto entity = static_cast<Particle*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
         
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -202,18 +200,18 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(thread, *command_buffer, false, *renderer->pipeline_layout, i);
+            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout, i);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->particle_pipeline_group.blended_graphics_pipeline);
 
-            drawModel(thread, *command_buffer, true, *renderer->pipeline_layout, i);
+            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout, i);
 
             command_buffer->end();
         }
 
     }
 
-    void ParticleEntityInitializer::createBuffers(Renderer* renderer, WorkerThread* thread)
+    void ParticleEntityInitializer::createBuffers(Renderer* renderer, Engine* engine)
     {
         auto entity = static_cast<Particle*>(this->entity);
         entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -223,7 +221,7 @@ namespace lotus
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(uint32_t)) * renderer->getImageCount(), {}));
     }
 
-    void ParticleEntityInitializer::drawModel(WorkerThread* thread, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout layout, size_t image)
+    void ParticleEntityInitializer::drawModel(Engine* engine, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout layout, size_t image)
     {
         auto entity = static_cast<Particle*>(this->entity);
         for (size_t model_i = 0; model_i < entity->models.size(); ++model_i)
@@ -240,14 +238,14 @@ namespace lotus
                     if (mesh->has_transparency == transparency)
                     {
                         buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, { 0 });
-                        drawMesh(thread, buffer, *mesh, layout, mesh_i);
+                        drawMesh(engine, buffer, *mesh, layout, mesh_i);
                     }
                 }
             }
         }
     }
 
-    void ParticleEntityInitializer::drawMesh(WorkerThread* thread, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t mesh_index)
+    void ParticleEntityInitializer::drawMesh(Engine* engine, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t mesh_index)
     {
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;

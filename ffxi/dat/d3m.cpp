@@ -1,7 +1,6 @@
 #include "d3m.h"
 
 #include "engine/core.h"
-#include "engine/task/particle_model_init.h"
 
 namespace FFXI
 {
@@ -69,7 +68,7 @@ namespace FFXI
         }
     }
 
-    std::vector<lotus::UniqueWork> D3MLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
         model->lifetime = lotus::Lifetime::Short;
         std::vector<uint8_t> vertices(d3m->num_triangles * sizeof(D3M::Vertex) * 3);
@@ -110,8 +109,6 @@ namespace FFXI
 
         model->meshes.push_back(std::move(mesh));
 
-        std::vector<lotus::UniqueWork> ret;
-        ret.push_back(std::make_unique<lotus::ParticleModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), sizeof(D3M::Vertex), max_dist));
-        return ret;
+        co_await model->InitWork(engine, std::move(vertices), sizeof(D3M::Vertex), max_dist);
     }
 }

@@ -1,6 +1,5 @@
 #include "dxt3.h"
 #include "engine/core.h"
-#include "engine/task/texture_init.h"
 
 namespace FFXI
 {
@@ -85,7 +84,7 @@ namespace FFXI
         }
     }
 
-    std::vector<lotus::UniqueWork> DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture>& texture)
+    lotus::Task<> DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture>& texture)
     {
         uint32_t stride = 4;
         if (dxt3->format == vk::Format::eBc2UnormBlock)
@@ -131,10 +130,10 @@ namespace FFXI
         sampler_info.compareOp = vk::CompareOp::eAlways;
         sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
 
+        engine->worker_pool->frameQueue(texture);
+
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        std::vector<lotus::UniqueWork> ret;
-        ret.push_back(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, dxt3->format, vk::ImageTiling::eOptimal, std::move(texture_data)));
-        return ret;
+        co_await texture->Init(engine, std::move(texture_data));
     }
 }

@@ -19,7 +19,7 @@ namespace lotus
     public:
         explicit Camera(Engine*);
         ~Camera();
-        std::vector<UniqueWork> Init(const std::shared_ptr<Camera>& sp);
+        static Task<std::shared_ptr<Camera>> Init(Engine*);
         glm::mat4& getViewMatrix() { return camera_data.view; }
         glm::mat4& getProjMatrix() { return camera_data.proj; }
 
@@ -59,7 +59,7 @@ namespace lotus
 
     protected:
         virtual void tick(time_point time, duration delta) override;
-        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
 
         float rot_x{ -glm::pi<float>() };
         float rot_y{ 0.f };

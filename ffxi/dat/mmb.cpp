@@ -4,7 +4,6 @@
 #include "engine/core.h"
 #include "engine/entity/landscape_entity.h"
 #include "engine/renderer/model.h"
-#include "engine/task/model_init.h"
 
 namespace FFXI
 {
@@ -379,7 +378,7 @@ namespace FFXI
 
     MMBLoader::MMBLoader(MMB* _mmb) : ModelLoader(), mmb(_mmb) {}
 
-    std::vector<lotus::UniqueWork> MMBLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    lotus::Task<> MMBLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
         model->light_offset = 1;
         std::vector<std::vector<uint8_t>> vertices;
@@ -421,8 +420,6 @@ namespace FFXI
             model->meshes.push_back(std::move(mesh));
         }
         model->lifetime = lotus::Lifetime::Long;
-        std::vector<lotus::UniqueWork> ret;
-        ret.push_back(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(MMB::Vertex)));
-        return ret;
+        co_await model->InitWork(engine, std::move(vertices), std::move(indices), sizeof(MMB::Vertex));
     }
 }

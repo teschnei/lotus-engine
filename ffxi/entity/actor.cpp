@@ -1,27 +1,98 @@
 #include "actor.h"
 
 #include "engine/core.h"
-#include "engine/task/model_init.h"
-#include "task/actor_dat_load.h"
+#include "dat/dat_parser.h"
 #include "dat/os2.h"
 #include "dat/sk2.h"
+#include "dat/dxt3.h"
+#include "dat/mo2.h"
 
 Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
 }
 
-std::vector<lotus::UniqueWork> Actor::Init(const std::shared_ptr<Actor>& sp, const std::filesystem::path& dat)
+lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, const std::filesystem::path& dat)
 {
-    std::vector<lotus::UniqueWork> ret;
-    ret.push_back(std::make_unique<ActorDatLoad>(sp, dat));
-    return ret;
+    auto actor = std::make_shared<Actor>(engine);
+    co_await actor->Load(dat);
+    co_return std::move(actor);
+}
+
+lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
+{
+    FFXI::DatParser parser{ dat, engine->config->renderer.RaytraceEnabled() };
+
+    auto skel = std::make_unique<lotus::Skeleton>();
+    FFXI::SK2* pSk2{ nullptr };
+    std::vector<FFXI::OS2*> os2s;
+    std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
+
+    for (const auto& chunk : parser.root->children)
+    {
+        if (auto dxt3 = dynamic_cast<FFXI::DXT3*>(chunk.get()))
+        {
+            if (dxt3->width > 0)
+            {
+                texture_tasks.push_back(lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3));
+            }
+        }
+        else if (auto sk2 = dynamic_cast<FFXI::SK2*>(chunk.get()))
+        {
+            pSk2 = sk2;
+            for(const auto& bone : sk2->bones)
+            {
+                skel->addBone(bone.parent_index, bone.rot, bone.trans);
+            }
+        }
+        else if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
+        {
+            std::unique_ptr<lotus::Animation> animation = std::make_unique<lotus::Animation>(skel.get());
+            animation->name = mo2->name;
+            animation->frame_duration = std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed));
+
+            for (size_t i = 0; i < mo2->frames; ++i)
+            {
+                for (size_t bone = 0; bone < skel->bones.size(); ++bone)
+                {
+                    if (auto transform = mo2->animation_data.find(bone); transform != mo2->animation_data.end())
+                    {
+                        auto& mo2_transform = transform->second[i];
+                        animation->addFrameData(i, bone, { mo2_transform.rot, mo2_transform.trans, mo2_transform.scale });
+                    }
+                    else
+                    {
+                        animation->addFrameData(i, bone, { glm::quat{1, 0, 0, 0}, glm::vec3{0}, glm::vec3{1} });
+                    }
+                }
+            }
+            skel->animations[animation->name] = std::move(animation);
+        }
+        else if (auto os2 = dynamic_cast<FFXI::OS2*>(chunk.get()))
+        {
+            os2s.push_back(os2);
+        }
+    }
+
+    addSkeleton(std::move(skel), sizeof(FFXI::OS2::Vertex));
+
+    auto [model, model_task] = lotus::Model::LoadModel<FFXIActorLoader>(engine, "iroha_test", os2s, pSk2);
+    models.push_back(model);
+    auto init_task = InitWork();
+
+    //co_await all tasks
+    for (const auto& task : texture_tasks)
+    {
+        co_await task;
+    }
+    if (model_task) co_await *model_task;
+    co_await init_task;
 }
 
 FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2* _sk2) : ModelLoader(), os2s(_os2s), sk2(_sk2)
 {
 }
 
-std::vector<lotus::UniqueWork> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
 {
     model->light_offset = 0;
     std::vector<std::vector<uint8_t>> vertices;
@@ -111,7 +182,5 @@ std::vector<lotus::UniqueWork> FFXIActorLoader::LoadModel(std::shared_ptr<lotus:
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
 
-    std::vector<lotus::UniqueWork> ret;
-    ret.push_back(std::make_unique<lotus::ModelInitTask>(engine->renderer->getCurrentImage(), model, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex)));
-    return ret;
+    co_await model->InitWork(engine, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex));
 }

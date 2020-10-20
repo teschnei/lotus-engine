@@ -7,6 +7,11 @@
 #include "engine/renderer/vulkan/vulkan_inc.h"
 #include "engine/renderer/texture.h"
 
+namespace lotus
+{
+    class Engine;
+}
+
 namespace lotus::ui
 {
     class Element
@@ -25,7 +30,7 @@ namespace lotus::ui
             Center
         };
         Element();
-        std::vector<UniqueWork> Init(std::shared_ptr<Element>);
+        static Task<> Init(Engine*, std::shared_ptr<Element>);
 
         glm::ivec2 GetRelativePos();
         glm::ivec2 GetAbsolutePos();
@@ -73,6 +78,7 @@ namespace lotus::ui
         glm::ivec2 GetAnchorOffset(AnchorPoint);
         void RecalculateScreenPos();
         void RecalculateScreenPosFromParent(glm::ivec2 parent);
+        WorkerTask<> InitWork(Engine*);
 
         glm::ivec2 pos{};
         glm::ivec2 screen_pos{};

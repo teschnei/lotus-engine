@@ -8,25 +8,22 @@ namespace lotus
     class RendererRaytrace;
     class RendererRasterization;
     class RendererHybrid;
-    class WorkerThread;
     class RenderableEntity;
-    class RenderableEntityInitTask;
 
     class RenderableEntityInitializer : public EntityInitializer
     {
     public:
-        RenderableEntityInitializer(Entity* _entity, RenderableEntityInitTask* task);
+        RenderableEntityInitializer(Entity* _entity);
 
-        virtual void initEntity(RendererRaytrace* renderer, WorkerThread* thread) override;
-        virtual void drawEntity(RendererRaytrace* renderer, WorkerThread* thread) override;
+        virtual void initEntity(RendererRaytrace* renderer, Engine* engine) override;
+        virtual void drawEntity(RendererRaytrace* renderer, Engine* engine) override;
 
-        virtual void initEntity(RendererRasterization* renderer, WorkerThread* thread) override;
-        virtual void drawEntity(RendererRasterization* renderer, WorkerThread* thread) override;
+        virtual void initEntity(RendererRasterization* renderer, Engine* engine) override;
+        virtual void drawEntity(RendererRasterization* renderer, Engine* engine) override;
 
-        virtual void initEntity(RendererHybrid* renderer, WorkerThread* thread) override;
-        virtual void drawEntity(RendererHybrid* renderer, WorkerThread* thread) override;
+        virtual void initEntity(RendererHybrid* renderer, Engine* engine) override;
+        virtual void drawEntity(RendererHybrid* renderer, Engine* engine) override;
     private:
-        RenderableEntityInitTask* task;
         vk::UniqueCommandBuffer command_buffer;
     };
 

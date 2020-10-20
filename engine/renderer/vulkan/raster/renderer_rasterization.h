@@ -14,13 +14,13 @@ namespace lotus
         RendererRasterization(Engine* engine);
         ~RendererRasterization();
 
-        virtual void Init() override;
+        virtual Task<> Init() override;
 
-        virtual void drawFrame() override;
+        virtual Task<> drawFrame() override;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) override {}
 
-        virtual void initEntity(EntityInitializer*, WorkerThread*) override;
-        virtual void drawEntity(EntityInitializer*, WorkerThread*) override;
+        virtual void initEntity(EntityInitializer*, Engine*) override;
+        virtual void drawEntity(EntityInitializer*, Engine*) override;
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
@@ -119,9 +119,8 @@ namespace lotus
         void createGBufferResources();
         void createDeferredCommandBuffer();
 
-        void resizeRenderer();
-        void recreateRenderer();
-        void recreateStaticCommandBuffers();
+        Task<> resizeRenderer();
+        Task<> recreateRenderer();
 
         void initializeCameraBuffers();
         void generateCommandBuffers();

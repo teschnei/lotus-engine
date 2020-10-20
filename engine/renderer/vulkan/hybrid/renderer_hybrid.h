@@ -16,13 +16,14 @@ namespace lotus
         RendererHybrid(Engine* engine);
         ~RendererHybrid();
 
-        virtual void Init() override;
+        virtual Task<> Init() override;
+        WorkerTask<> InitWork();
 
-        virtual void drawFrame() override;
+        virtual Task<> drawFrame() override;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) override;
 
-        virtual void initEntity(EntityInitializer*, WorkerThread*) override;
-        virtual void drawEntity(EntityInitializer*, WorkerThread*) override;
+        virtual void initEntity(EntityInitializer*, Engine*) override;
+        virtual void drawEntity(EntityInitializer*, Engine*) override;
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> gbuffer_render_pass;

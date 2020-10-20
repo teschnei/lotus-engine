@@ -1,8 +1,7 @@
 #include "renderable_entity.h"
 #include "engine/core.h"
-#include "engine/task/entity_render.h"
 #include "component/animation_component.h"
-#include "engine/task/renderable_entity_init.h"
+#include "engine/renderer/vulkan/entity_initializers/renderable_entity.h"
 
 namespace lotus
 {
@@ -22,11 +21,6 @@ namespace lotus
         }
     }
 
-    UniqueWork RenderableEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
-    {
-        return std::make_unique<RenderableEntityReInitTask>(std::static_pointer_cast<RenderableEntity>(sp));
-    }
-
     void RenderableEntity::setScale(float x, float y, float z)
     {
         this->scale = glm::vec3(x, y, z);
@@ -44,14 +38,34 @@ namespace lotus
         return scale;
     }
 
-    void RenderableEntity::render(Engine* engine, std::shared_ptr<Entity>& sp)
+    Task<> RenderableEntity::render(Engine* engine, std::shared_ptr<Entity> sp)
     {
         //TODO: check bounding box
         //if (glm::dot(engine->camera.getPos() - pos, engine->camera.getRotationVector()) > 0)
+        //{
+        co_await renderWork();
+        //}
+    }
+
+    WorkerTask<> RenderableEntity::renderWork()
+    {
+        auto image_index = engine->renderer->getCurrentImage();
+        updateUniformBuffer(image_index);
+
+        if (engine->config->renderer.RasterizationEnabled())
         {
-            auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
-            engine->worker_pool->addForegroundWork(std::make_unique<EntityRenderTask>(re_sp));
+            engine->worker_pool->command_buffers.graphics_secondary.queue(*command_buffers[image_index]);
+            if (!shadowmap_buffers.empty())
+                engine->worker_pool->command_buffers.shadowmap.queue(*shadowmap_buffers[image_index]);
         }
+        co_return;
+    }
+
+    void RenderableEntity::updateUniformBuffer(int image_index)
+    {
+        RenderableEntity::UniformBufferObject* ubo = reinterpret_cast<RenderableEntity::UniformBufferObject*>(uniform_buffer_mapped + (image_index * engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject))));
+        ubo->model = getModelMatrix();
+        ubo->modelIT = glm::transpose(glm::inverse(glm::mat3(ubo->model)));
     }
 
     void RenderableEntity::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
@@ -83,5 +97,23 @@ namespace lotus
     glm::mat4 RenderableEntity::getModelMatrix()
     {
         return this->pos_mat * this->rot_mat * this->scale_mat;
+    }
+
+    WorkerTask<> RenderableEntity::InitWork()
+    {
+        //priority: 0
+        auto initializer = std::make_unique<RenderableEntityInitializer>(this);
+        engine->renderer->initEntity(initializer.get(), engine);
+        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->worker_pool->frameQueue(std::move(initializer));
+        co_return;
+    }
+
+    WorkerTask<> RenderableEntity::ReInitWork()
+    {
+        auto initializer = std::make_unique<RenderableEntityInitializer>(this);
+        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->worker_pool->frameQueue(std::move(initializer));
+        co_return;
     }
 }

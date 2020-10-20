@@ -11,22 +11,21 @@ namespace lotus
 {
     Camera::Camera(Engine* engine) : Entity(engine)
     {
-        
-    }
-
-    Camera::~Camera()
-    {
-    }
-
-    std::vector<UniqueWork> Camera::Init(const std::shared_ptr<Camera>& sp)
-    {
         camera_rot.x = cos(rot_x) * cos(rot_y);
         camera_rot.y = sin(rot_x);
         camera_rot.z = cos(rot_x) * sin(rot_y);
         camera_rot = glm::normalize(camera_rot);
 
         update = true;
-        return {};
+    }
+
+    Camera::~Camera()
+    {
+    }
+
+    Task<std::shared_ptr<Camera>> Camera::Init(Engine* engine)
+    {
+        co_return std::make_shared<Camera>(engine);
     }
 
     void Camera::setPerspective(float radians, float aspect, float _near_clip, float _far_clip)
@@ -147,9 +146,10 @@ namespace lotus
         }
     }
 
-    void Camera::render(Engine* engine, std::shared_ptr<Entity>& sp)
+    Task<> Camera::render(Engine* engine, std::shared_ptr<Entity> sp)
     {
         //components run first, which will do stuff on updates
         update = false;
+        co_return;
     }
 }

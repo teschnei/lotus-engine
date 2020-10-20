@@ -20,7 +20,7 @@ namespace lotus
 
         explicit RenderableEntity(Engine*);
         virtual ~RenderableEntity();
-        virtual UniqueWork recreate_command_buffers(std::shared_ptr<Entity>& sp) override;
+        virtual WorkerTask<> ReInitWork() override;
 
         void setScale(float x, float y, float z);
         void setScale(glm::vec3 scale);
@@ -43,7 +43,10 @@ namespace lotus
         uint8_t* mesh_index_buffer_mapped{ nullptr };
 
     protected:
-        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
+        WorkerTask<> renderWork();
+        void updateUniformBuffer(int image_index);
+        WorkerTask<> InitWork();
         glm::vec3 scale{ 1.f, 1.f, 1.f };
         glm::mat4 scale_mat{ 1.f };
     };

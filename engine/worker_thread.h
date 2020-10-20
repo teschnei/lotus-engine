@@ -1,4 +1,5 @@
 #pragma once
+#include <thread>
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "work_item.h"
 
@@ -16,8 +17,6 @@ namespace lotus
         WorkerThread& operator=(WorkerThread&&) = delete;
         ~WorkerThread() = default;
 
-        bool Busy() const;
-        void Exit();
         void Join();
 
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> graphics_pool;
@@ -28,7 +27,7 @@ namespace lotus
         WorkerPool* pool{ nullptr };
         Engine* engine{ nullptr };
     protected:
-        UniqueWork work;
-        bool active{ true };
+        void WorkLoop(std::stop_token);
+        std::jthread thread;
     };
 }

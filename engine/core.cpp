@@ -28,33 +28,45 @@ namespace lotus
         events = std::make_unique<ui::Events>();
         ui = std::make_unique<ui::Manager>(this);
 
-        renderer->Init();
-        renderer->InitCommon();
-        worker_pool->addForegroundWork(ui->Init());
+    }
+
+    Task<> Engine::Init()
+    {
+        co_await renderer->Init();
+        co_await renderer->InitCommon();
+        co_await ui->Init();
     }
 
     Engine::~Engine()
     {
-        worker_pool->waitIdle();
         renderer->gpu->device->waitIdle();
     }
 
     void Engine::run()
     {
-        mainLoop();
+        worker_pool->Wait(mainLoop());
     }
 
-    void Engine::mainLoop()
+    WorkerTask<> Engine::mainLoop()
     {
-        while (!closing)
+        try
         {
-            time_point new_sim_time = sim_clock::now();
-            duration sim_delta = new_sim_time - simulation_time;
-            simulation_time = new_sim_time;
-            input->GetInput();
-            worker_pool->checkBackgroundWork();
-            game->tick_all(simulation_time, sim_delta);
-            renderer->drawFrame();
+            co_await Init();
+            co_await game->entry();
+            while (!closing)
+            {
+                time_point new_sim_time = sim_clock::now();
+                duration sim_delta = new_sim_time - simulation_time;
+                simulation_time = new_sim_time;
+                input->GetInput();
+                //maybe this should co_await too, but for now I don't think it's required
+                game->tick_all(simulation_time, sim_delta);
+                co_await renderer->drawFrame();
+            }
+        }
+        catch(...)
+        {
+            worker_pool->Stop(std::current_exception());
         }
     }
 }

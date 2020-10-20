@@ -1,24 +1,43 @@
 #include "particle.h"
 #include "engine/core.h"
 
-#include "engine/task/particle_entity_init.h"
-#include "engine/task/entity_render.h"
+#include "engine/renderer/vulkan/entity_initializers/particle_entity.h"
 
 #include <glm/gtx/euler_angles.hpp>
 
 namespace lotus
 {
-    Particle::Particle(Engine* _engine) : RenderableEntity(_engine)
+    Particle::Particle(Engine* _engine, duration _lifetime) : RenderableEntity(_engine), lifetime(_lifetime), spawn_time(engine->getSimulationTime())
     {
     }
 
-    std::vector<UniqueWork> Particle::Init(const std::shared_ptr<Particle>& sp, duration _lifetime)
+    Task<std::shared_ptr<Particle>> Particle::Init(Engine* engine, duration lifetime)
     {
-        lifetime = _lifetime;
-        spawn_time = engine->getSimulationTime();
-        std::vector<UniqueWork> ret;
-        ret.push_back(std::make_unique<ParticleEntityInitTask>(sp));
-        return ret;
+        auto particle = std::make_shared<Particle>(engine, lifetime);
+        co_await particle->Load();
+        co_return std::move(particle);
+    }
+
+    WorkerTask<> Particle::Load()
+    {
+        co_await InitWork();
+    }
+
+    WorkerTask<> Particle::InitWork()
+    {
+        auto initializer = std::make_unique<ParticleEntityInitializer>(this);
+        engine->renderer->initEntity(initializer.get(), engine);
+        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->worker_pool->frameQueue(std::move(initializer));
+        co_return;
+    }
+
+    WorkerTask<> Particle::ReInitWork()
+    {
+        auto initializer = std::make_unique<ParticleEntityInitializer>(this);
+        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->worker_pool->frameQueue(std::move(initializer));
+        co_return;
     }
 
     void Particle::tick(time_point time, duration delta)
@@ -42,13 +61,23 @@ namespace lotus
         }
     }
 
-    void Particle::render(Engine* engine, std::shared_ptr<Entity>& sp)
+    Task<> Particle::render(Engine* engine, std::shared_ptr<Entity> sp)
     {
-//        auto distance = glm::distance(engine->camera->getPos(), sp->getPos());
-        auto re_sp = std::static_pointer_cast<RenderableEntity>(sp);
-        engine->worker_pool->addForegroundWork(std::make_unique<EntityRenderTask>(re_sp));
+        co_await renderWork();
     }
-    
+
+    WorkerTask<> Particle::renderWork()
+    {
+        auto image_index = engine->renderer->getCurrentImage();
+        updateUniformBuffer(image_index);
+
+        if (engine->config->renderer.RasterizationEnabled())
+        {
+            engine->worker_pool->command_buffers.particle.queue(*command_buffers[image_index]);
+        }
+        co_return;
+    }
+
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
         for (size_t i = 0; i < models.size(); ++i)

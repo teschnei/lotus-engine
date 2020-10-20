@@ -1,63 +1,172 @@
 #pragma once
 #include <functional>
+#include <coroutine>
 #include <engine/renderer/vulkan/vulkan_inc.h>
+#include "engine/task.h"
 
 namespace lotus
 {
-    class WorkerThread;
-    class WorkItem;
-    using UniqueWork = std::unique_ptr<WorkItem>;
-    class WorkItem
+    class Engine;
+
+    /*
+    template<typename Result>
+    struct WorkItemTask;
+
+    struct WorkItemTaskPromise_base
     {
-    public:
-        WorkItem(){}
-        WorkItem(const WorkItem&) = delete;
-        WorkItem(WorkItem&&) = default;
-        WorkItem& operator=(const WorkItem&) = delete;
-        WorkItem& operator=(WorkItem&&) = default;
-        virtual ~WorkItem() = default;
-
-        virtual void Process(WorkerThread*) = 0;
-
-        float priority = 0;
-        bool operator>(const WorkItem& o) const { return priority > o.priority; }
-
-        struct GraphicsResources
+        auto initial_suspend() noexcept
         {
-            vk::CommandBuffer primary;
-            vk::CommandBuffer secondary;
-            vk::CommandBuffer shadow;
-            vk::CommandBuffer particle;
-        } graphics {};
-
-        struct ComputeResources
-        {
-            vk::CommandBuffer primary;
-        } compute {};
-
-        std::vector<UniqueWork> children_work;
-
-        void AddWork(UniqueWork&& work)
-        {
-            children_work.push_back(std::move(work));
+            return std::suspend_always{};
         }
-        template<typename Container>
-        void AddWork(Container& c)
+
+        auto final_suspend() noexcept
         {
-            for (auto&& w : c)
+            return std::suspend_always{};
+        }
+
+        void return_void() {}
+
+        void unhandled_exception() {}
+
+        std::coroutine_handle<> next_handle;
+    };
+
+    template<typename Result>
+    struct WorkItemTaskPromise : public WorkItemTaskPromise_base
+    {
+        using coroutine_handle = std::coroutine_handle<WorkItemTaskPromise<Result>>;
+        WorkItemTask<Result> get_return_object() noexcept;
+
+        struct yield_awaitable
+        {
+            auto await_ready() const noexcept {return false;}
+            template<typename Promise>
+            auto await_suspend(std::coroutine_handle<Promise> handle)
             {
-                children_work.push_back(std::move(w));
+                if (handle.promise().next_handle)
+                    handle.promise().next_handle.resume();
             }
+            void await_resume() noexcept {}
+        };
+
+        auto yield_value(Result&& r)
+        {
+            result_store = std::move(r);
+            return yield_awaitable{};
         }
-    };
 
-    class LambdaWorkItem : public WorkItem
-    {
-    public:
-        LambdaWorkItem(std::function<void(WorkerThread*)> _function) : WorkItem(), function(std::move(_function)){}
-        virtual void Process(WorkerThread* thread) override { function(thread); }
+        Result& result() &
+        {
+            return result_store;
+        }
+
+        Result&& result() &&
+        {
+            return std::move(result_store);
+        }
+
     private:
-        std::function<void(WorkerThread*)> function;
+        Result result_store;
     };
 
+    template<>
+    struct WorkItemTaskPromise<void> : public WorkItemTaskPromise_base
+    {
+        using coroutine_handle = std::coroutine_handle<WorkItemTaskPromise<void>>;
+        WorkItemTask<void> get_return_object() noexcept;
+
+        auto yield_value() noexcept
+        {
+            return std::suspend_always{};
+        }
+
+        void result() noexcept {}
+    };
+
+    template<typename Result = void>
+    struct WorkItemTask
+    {
+        using promise_type = WorkItemTaskPromise<Result>;
+        using coroutine_handle = typename promise_type::coroutine_handle;
+        WorkItemTask(coroutine_handle _handle) : handle(_handle) {}
+        ~WorkItemTask() { if (handle) handle.destroy(); }
+        WorkItemTask(const WorkItemTask&) = delete;
+        WorkItemTask(WorkItemTask&& o) noexcept : handle(o.handle)
+        {
+            o.handle = nullptr;
+        }
+        WorkItemTask& operator=(const WorkItemTask&) = delete;
+        WorkItemTask& operator=(WorkItemTask&& o)
+        {
+            if (std::addressof(o) != this)
+            {
+                if (handle)
+                    handle.destroy();
+
+                handle = o.handle;
+                o.handle = nullptr;
+            }
+            return *this;
+        }
+
+        auto operator co_await() const & noexcept
+        {
+            struct awaitable
+            {
+                awaitable(std::coroutine_handle<promise_type> _handle) : handle(_handle) {}
+                auto await_ready() const noexcept
+                {
+                    return !handle || handle.done();
+                }
+                auto await_suspend(std::coroutine_handle<> awaiting) noexcept
+                {
+                    handle.promise().next_handle = awaiting;
+                    return handle;
+                }
+                auto await_resume()
+                {
+                    return handle.promise().result();
+                }
+                std::coroutine_handle<promise_type> handle;
+            };
+            return awaitable{handle};
+        }
+
+        auto operator co_await() const && noexcept
+        {
+            struct awaitable
+            {
+                awaitable(std::coroutine_handle<promise_type> _handle) : handle(_handle) {}
+                auto await_ready() const noexcept
+                {
+                    return !handle || handle.done();
+                }
+                auto await_suspend(std::coroutine_handle<> awaiting) noexcept
+                {
+                    handle.promise().next_handle = awaiting;
+                    return handle;
+                }
+                auto await_resume()
+                {
+                    return std::move(handle.promise()).result();
+                }
+                std::coroutine_handle<promise_type> handle;
+            };
+            return awaitable{handle};
+        }
+
+        auto result()
+        {
+            return handle.promise().result();
+        }
+
+    protected:
+        coroutine_handle handle;
+    };
+
+    template<typename Result>
+    WorkItemTask<Result> WorkItemTaskPromise<Result>::get_return_object() noexcept
+    {
+        return WorkItemTask<Result>{coroutine_handle::from_promise(*this)};
+    }*/
 }

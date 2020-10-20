@@ -1,6 +1,8 @@
 #include "element.h"
-#include "engine/task/ui_element_init.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
+#include "engine/renderer/vulkan/gpu.h"
 
 namespace lotus::ui
 {
@@ -9,11 +11,39 @@ namespace lotus::ui
 
     }
 
-    std::vector<UniqueWork> Element::Init(std::shared_ptr<Element> self)
+    Task<> Element::Init(Engine* engine, std::shared_ptr<Element> self)
     {
-        std::vector<UniqueWork> ret;
-        ret.push_back(std::make_unique<UiElementInitTask>(self));
-        return ret;
+        co_await self->InitWork(engine);
+    }
+
+    WorkerTask<> Element::InitWork(Engine* engine)
+    {
+        buffer = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(ui::Element::UniformBuffer)) * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+        uint8_t* buffer_mapped = static_cast<uint8_t*>(buffer->map(0, engine->renderer->uniform_buffer_align_up(sizeof(ui::Element::UniformBuffer)) * engine->renderer->getImageCount(), {}));
+        for (size_t i = 0; i < engine->renderer->getImageCount(); ++i)
+        {
+            auto pos = GetAbsolutePos();
+            auto buf = reinterpret_cast<ui::Element::UniformBuffer*>(buffer_mapped);
+            buf->x = pos.x;
+            buf->y = pos.y;
+            buf->width = GetWidth();
+            buf->height = GetHeight();
+            buf->bg_colour = bg_colour;
+            buf->alpha = alpha;
+            buffer_mapped += engine->renderer->uniform_buffer_align_up(sizeof(ui::Element::UniformBuffer));
+        }
+        buffer->unmap();
+
+        vk::CommandBufferAllocateInfo alloc_info;
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = static_cast<uint32_t>(engine->renderer->getImageCount());
+
+        command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        engine->renderer->ui->GenerateRenderBuffers(this);
+        co_return;
     }
 
     glm::ivec2 Element::GetAbsolutePos()

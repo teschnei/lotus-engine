@@ -12,7 +12,8 @@ namespace lotus
         Game(const Settings& settings, std::unique_ptr<Config> config) : engine(std::make_unique<Engine>(this, settings, std::move(config))) {}
         virtual ~Game() = default;
 
-        virtual void run() { engine->run(); }
+        virtual Task<> entry() = 0;
+        void run() { engine->run(); }
         void tick_all(time_point time, duration delta)
         {
             tick(time, delta);

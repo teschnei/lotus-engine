@@ -25,13 +25,13 @@ namespace lotus
         tick(time, delta);
     }
 
-    void Entity::render_all(Engine* engine, std::shared_ptr<Entity>& sp)
+    Task<> Entity::render_all(Engine* engine, std::shared_ptr<Entity>& sp)
     {
         for (auto& component : components)
         {
-            component->render(engine, sp);
+            co_await component->render(engine, sp);
         }
-        render(engine, sp);
+        co_await render(engine, sp);
     }
 
     void Entity::setPos(glm::vec3 pos)

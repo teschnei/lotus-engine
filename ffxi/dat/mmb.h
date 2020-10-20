@@ -45,7 +45,7 @@ namespace FFXI
     {
     public:
         explicit MMBLoader(MMB* mmb);
-        virtual std::vector<lotus::UniqueWork> LoadModel(std::shared_ptr<lotus::Model>&) override;
+        virtual lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&) override;
     private:
         MMB* mmb;
     };

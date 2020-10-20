@@ -16,5 +16,9 @@ namespace lotus
         virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
 
         AnimationComponent* animation_component {nullptr};
+    protected:
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
+        WorkerTask<> renderWork();
+        void updateAnimationVertices(int image_index);
     };
 }

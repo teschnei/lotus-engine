@@ -4,7 +4,6 @@
 #include "entity/particle.h"
 #include "core.h"
 #include "renderer/vulkan/renderer.h"
-#include "task/acceleration_build.h"
 #include "renderer/vulkan/renderer_raytrace_base.h"
 
 namespace lotus
@@ -14,20 +13,22 @@ namespace lotus
         top_level_as.resize(engine->renderer->getImageCount());
     }
 
-    void Scene::render()
+    Task<> Scene::render()
     {
         uint32_t image_index = engine->renderer->getCurrentImage();
+        std::vector<Task<>> tasks;
         if (engine->config->renderer.RaytraceEnabled())
         {
             top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), true);
+            //TODO: review if this is needed
+            /*
             Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
             {
-                //TODO: review if this is needed
                 //if (model->bottom_level_as && model->lifetime != Lifetime::Long)
                 //{
                 //    top_level_as[image_index]->AddBLASResource(model.get());
                 //}
-            });
+            });*/
             for (const auto& entity : entities)
             {
                 if (auto deformable_entity = dynamic_cast<DeformableEntity*>(entity.get()))
@@ -42,7 +43,7 @@ namespace lotus
         }
         for (auto& entity : entities)
         {
-            entity->render_all(engine, entity);
+            tasks.push_back(entity->render_all(engine, entity));
             if (auto renderable_entity = dynamic_cast<RenderableEntity*>(entity.get()))
             {
                 if (engine->config->renderer.RaytraceEnabled())
@@ -53,7 +54,11 @@ namespace lotus
         }
         if (engine->config->renderer.RaytraceEnabled())
         {
-           engine->worker_pool->addForegroundWork(std::make_unique<AccelerationBuildTask>(top_level_as[image_index]));
+           co_await top_level_as[image_index]->Build(engine);
+        }
+        for (auto& task : tasks)
+        {
+            co_await task;
         }
     }
 

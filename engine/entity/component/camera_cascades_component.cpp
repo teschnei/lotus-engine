@@ -9,15 +9,15 @@ namespace lotus
     {
     }
 
-    void CameraCascadesComponent::render(Engine* engine, std::shared_ptr<Entity>& sp)
+    Task<> CameraCascadesComponent::render(Engine* engine, std::shared_ptr<Entity> sp)
     {
         if (static_cast<Camera*>(entity)->updated())
         {
             auto camera = std::static_pointer_cast<Camera>(sp);
-            engine->worker_pool->addForegroundWork(std::make_unique<LambdaWorkItem>([camera, engine](WorkerThread* thread)
+            co_await [camera, engine]() -> WorkerTask<>
             {
-                auto renderer = static_cast<RendererRasterization*>(thread->engine->renderer.get());
-                glm::vec3 lightDir = thread->engine->lights->light.diffuse_dir;
+                auto renderer = static_cast<RendererRasterization*>(engine->renderer.get());
+                glm::vec3 lightDir = engine->lights->light.diffuse_dir;
                 float cascade_splits[lotus::RendererRasterization::shadowmap_cascades];
 
                 float near_clip = camera->getNearClip();
@@ -94,7 +94,8 @@ namespace lotus
                     last_split = cascade_splits[i];
                 }
                 renderer->cascade_data.inverse_view = glm::inverse(camera->getViewMatrix());
-            }));
+                co_return;
+            }();
         }
     }
 }

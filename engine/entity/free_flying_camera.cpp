@@ -7,14 +7,12 @@ namespace lotus
 {
     FreeFlyingCamera::FreeFlyingCamera(Engine* engine) : Camera(engine)
     {
-        
-    }
-
-    std::vector<UniqueWork> FreeFlyingCamera::Init(const std::shared_ptr<FreeFlyingCamera>& sp)
-    {
-        Camera::Init(sp);
         Input* input = engine->input.get();
         addComponent<FreeFlyingCameraComponent>(input);
-        return {};
+    }
+
+    Task<std::shared_ptr<FreeFlyingCamera>> FreeFlyingCamera::Init(Engine* engine)
+    {
+        co_return std::make_shared<FreeFlyingCamera>(engine);
     }
 }

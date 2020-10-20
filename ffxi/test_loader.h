@@ -2,17 +2,15 @@
 #include "engine/core.h"
 #include "engine/renderer/mesh.h"
 #include "engine/renderer/texture.h"
-#include "engine/task/model_init.h"
-#include "engine/task/texture_init.h"
 #include <glm/glm.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-class TestTextureLoader : public lotus::TextureLoader
+class TestTextureLoader : public lotus::TextureLoaderBase
 {
 public:
-    virtual std::vector<lotus::UniqueWork> LoadTexture(std::shared_ptr<lotus::Texture>& texture) override
+    lotus::Task<> LoadTexture(std::shared_ptr<lotus::Texture>& texture)
     {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load("textures/texture.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -60,8 +58,6 @@ public:
 
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        std::vector<lotus::UniqueWork> ret;
-        ret.push_back(std::make_unique<lotus::TextureInitTask>(engine->renderer->getCurrentImage(), texture, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, std::move(texture_data)));
-        return ret;
+        co_await texture->Init(engine, std::move(texture_data));
     }
 };

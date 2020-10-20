@@ -9,6 +9,7 @@
 #include "swapchain.h"
 #include "ui_renderer.h"
 #include "engine/renderer/raytrace_query.h"
+#include "engine/task.h"
 
 namespace lotus
 {
@@ -29,14 +30,14 @@ namespace lotus
         EntityInitializer(Entity* _entity) : entity(_entity) {}
         virtual ~EntityInitializer() {}
 
-        virtual void initEntity(RendererRaytrace* renderer, WorkerThread* thread) = 0;
-        virtual void drawEntity(RendererRaytrace* renderer, WorkerThread* thread) = 0;
+        virtual void initEntity(RendererRaytrace* renderer, Engine* engine) = 0;
+        virtual void drawEntity(RendererRaytrace* renderer, Engine* engine) = 0;
 
-        virtual void initEntity(RendererRasterization* renderer, WorkerThread* thread) = 0;
-        virtual void drawEntity(RendererRasterization* renderer, WorkerThread* thread) = 0;
+        virtual void initEntity(RendererRasterization* renderer, Engine* engine) = 0;
+        virtual void drawEntity(RendererRasterization* renderer, Engine* engine) = 0;
 
-        virtual void initEntity(RendererHybrid* renderer, WorkerThread* thread) = 0;
-        virtual void drawEntity(RendererHybrid* renderer, WorkerThread* thread) = 0;
+        virtual void initEntity(RendererHybrid* renderer, Engine* engine) = 0;
+        virtual void drawEntity(RendererHybrid* renderer, Engine* engine) = 0;
     protected:
         Entity* entity;
     };
@@ -56,8 +57,10 @@ namespace lotus
         Renderer(Engine* engine);
         virtual ~Renderer();
 
-        void InitCommon();
-        virtual void Init() = 0;
+        Task<> InitCommon();
+        virtual Task<> Init() = 0;
+
+        void createThreadLocals();
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
@@ -66,11 +69,11 @@ namespace lotus
         size_t storage_buffer_align_up(size_t in_size) const;
         size_t align_up(size_t in_size, size_t alignment) const;
 
-        virtual void drawFrame() = 0;
+        virtual Task<> drawFrame() = 0;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) = 0;
 
-        virtual void initEntity(EntityInitializer*, WorkerThread*) = 0;
-        virtual void drawEntity(EntityInitializer*, WorkerThread*) = 0;
+        virtual void initEntity(EntityInitializer*, Engine*) = 0;
+        virtual void drawEntity(EntityInitializer*, Engine*) = 0;
 
         void resized() { resize = true; }
 
@@ -84,6 +87,11 @@ namespace lotus
         std::unique_ptr<Swapchain> swapchain;
 
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
+
+        inline static thread_local vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> graphics_pool;
+        inline static thread_local vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> compute_pool;
+
+        inline static thread_local vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> desc_pool;
 
         struct FramebufferAttachment
         {
@@ -110,9 +118,10 @@ namespace lotus
         void createQuad();
         void createAnimationResources();
 
-        void resizeRenderer();
-        void recreateRenderer();
-        void recreateStaticCommandBuffers();
+        Task<> resizeRenderer();
+        Task<> recreateRenderer();
+        Task<> recreateStaticCommandBuffers();
+
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;

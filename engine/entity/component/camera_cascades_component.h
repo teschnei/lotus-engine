@@ -7,6 +7,6 @@ namespace lotus
     {
     public:
         explicit CameraCascadesComponent(Entity*, Engine*);
-        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp) override;
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
     };
 }

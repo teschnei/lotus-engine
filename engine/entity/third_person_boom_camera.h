@@ -8,8 +8,8 @@ namespace lotus
     class ThirdPersonBoomCamera : public Camera
     {
     public:
-        explicit ThirdPersonBoomCamera(Engine*);
-        std::vector<UniqueWork> Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& focus);
+        explicit ThirdPersonBoomCamera(Engine*, std::weak_ptr<Entity>& focus);
+        static Task<std::shared_ptr<ThirdPersonBoomCamera>> Init(Engine*, std::weak_ptr<Entity>& focus);
 
         void setDistance(float distance);
         float getDistance() const { return distance; }

@@ -1,6 +1,8 @@
 #pragma once
 #include "memory.h"
 #include "engine/types.h"
+//TODO: move WorkerTask to its own header
+#include "engine/worker_pool.h"
 #include <glm/glm.hpp>
 #include <unordered_map>
 
@@ -61,7 +63,7 @@ namespace lotus
         TopLevelAccelerationStructure(RendererRaytraceBase* _renderer, bool updateable);
 
         uint32_t AddInstance(vk::AccelerationStructureInstanceKHR instance);
-        void Build(vk::CommandBuffer command_buffer);
+        WorkerTask<> Build(Engine*);
         void UpdateInstance(uint32_t instance_id, glm::mat3x4 instance);
         void AddBLASResource(Model* model);
         void AddBLASResource(DeformableEntity* entity);

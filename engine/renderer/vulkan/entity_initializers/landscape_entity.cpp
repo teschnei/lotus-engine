@@ -1,8 +1,6 @@
 #include "landscape_entity.h"
 
 #include "engine/core.h"
-#include "engine/worker_thread.h"
-#include "engine/task/landscape_entity_init.h"
 #include "engine/entity/landscape_entity.h"
 #include "engine/renderer/vulkan/raytrace/renderer_raytrace.h"
 #include "engine/renderer/vulkan/raster/renderer_rasterization.h"
@@ -10,31 +8,31 @@
 
 namespace lotus
 {
-    LandscapeEntityInitializer::LandscapeEntityInitializer(Entity* _entity, std::vector<LandscapeEntity::InstanceInfo>&& _instance_info, LandscapeEntityInitTask* _task) :
-        EntityInitializer(_entity), instance_info(std::move(_instance_info)), task(_task)
+    LandscapeEntityInitializer::LandscapeEntityInitializer(LandscapeEntity* _entity, std::vector<LandscapeEntity::InstanceInfo>&& _instance_info) :
+        EntityInitializer(_entity), instance_info(std::move(_instance_info))
     {
     }
 
-    void LandscapeEntityInitializer::initEntity(RendererRaytrace* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::initEntity(RendererRaytrace* renderer, Engine* engine)
     {
-        createBuffers(renderer, thread);
+        createBuffers(renderer, engine);
     }
 
-    void LandscapeEntityInitializer::drawEntity(RendererRaytrace* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::drawEntity(RendererRaytrace* renderer, Engine* engine)
     {
     }
 
-    void LandscapeEntityInitializer::initEntity(RendererRasterization* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::initEntity(RendererRasterization* renderer, Engine* engine)
     {
-        createBuffers(renderer, thread);
+        createBuffers(renderer, engine);
     }
 
-    void LandscapeEntityInitializer::drawEntity(RendererRasterization* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::drawEntity(RendererRasterization* renderer, Engine* engine)
     {
         auto entity = static_cast<LandscapeEntity*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
         
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -83,11 +81,11 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(thread, *command_buffer, false, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.blended_graphics_pipeline);
 
-            drawModel(thread, *command_buffer, true, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout);
 
             command_buffer->end();
         }
@@ -137,25 +135,25 @@ namespace lotus
             command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.shadowmap_pipeline);
-            drawModel(thread, *command_buffer, false, *renderer->shadowmap_pipeline_layout);
+            drawModel(engine, *command_buffer, false, *renderer->shadowmap_pipeline_layout);
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.blended_shadowmap_pipeline);
-            drawModel(thread, *command_buffer, true, *renderer->shadowmap_pipeline_layout);
+            drawModel(engine, *command_buffer, true, *renderer->shadowmap_pipeline_layout);
 
             command_buffer->end();
         }
     }
 
-    void LandscapeEntityInitializer::initEntity(RendererHybrid* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::initEntity(RendererHybrid* renderer, Engine* engine)
     {
-        createBuffers(renderer, thread);
+        createBuffers(renderer, engine);
     }
 
-    void LandscapeEntityInitializer::drawEntity(RendererHybrid* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::drawEntity(RendererHybrid* renderer, Engine* engine)
     {
         auto entity = static_cast<LandscapeEntity*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
         
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -203,17 +201,17 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(thread, *command_buffer, false, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.blended_graphics_pipeline);
 
-            drawModel(thread, *command_buffer, true, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout);
 
             command_buffer->end();
         }
     }
 
-    void LandscapeEntityInitializer::createBuffers(Renderer* renderer, WorkerThread* thread)
+    void LandscapeEntityInitializer::createBuffers(Renderer* renderer, Engine* engine)
     {
         auto entity = static_cast<LandscapeEntity*>(this->entity);
         entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -234,7 +232,7 @@ namespace lotus
 
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
         auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -261,10 +259,10 @@ namespace lotus
 
         command_buffer->end();
 
-        task->graphics.primary = *command_buffer;
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
     }
 
-    void LandscapeEntityInitializer::drawModel(WorkerThread* thread, vk::CommandBuffer command_buffer, bool transparency, vk::PipelineLayout layout)
+    void LandscapeEntityInitializer::drawModel(Engine* engine, vk::CommandBuffer command_buffer, bool transparency, vk::PipelineLayout layout)
     {
         auto entity = static_cast<LandscapeEntity*>(this->entity);
         for (const auto& model : entity->models)
@@ -283,14 +281,14 @@ namespace lotus
                         {
                             material_index = model->bottom_level_as->resource_index + i;
                         }
-                        drawMesh(thread, command_buffer, *mesh, count, layout, material_index);
+                        drawMesh(engine, command_buffer, *mesh, count, layout, material_index);
                     }
                 }
             }
         }
     }
 
-    void LandscapeEntityInitializer::drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout, uint32_t material_index)
+    void LandscapeEntityInitializer::drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout, uint32_t material_index)
     {
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;

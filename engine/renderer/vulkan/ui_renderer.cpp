@@ -2,7 +2,6 @@
 
 #include "renderer.h"
 #include "engine/core.h"
-#include "engine/task/texture_init.h"
 
 namespace lotus
 {
@@ -11,8 +10,12 @@ namespace lotus
         createDescriptorSetLayout();
         createRenderpass();
         createPipeline();
-        createBuffers();
         command_buffers.resize(renderer->getImageCount());
+    }
+
+    Task<> UiRenderer::Init()
+    {
+        co_await createBuffers();
     }
 
     vk::CommandBuffer UiRenderer::Render(int image_index)
@@ -56,7 +59,7 @@ namespace lotus
         return *command_buffers[image_index];
     }
 
-    void UiRenderer::GenerateRenderBuffers(std::shared_ptr<ui::Element> element)
+    void UiRenderer::GenerateRenderBuffers(ui::Element* element)
     {
         for(size_t i = 0; i < element->command_buffers.size(); ++i)
         {
@@ -332,7 +335,7 @@ namespace lotus
         renderpass = renderer->gpu->device->createRenderPassUnique(renderpass_ci);
     }
 
-    void UiRenderer::createBuffers()
+    Task<> UiRenderer::createBuffers()
     {
         std::vector<glm::vec4> vertex_buffer {
             {1.f, 1.f, 1.f, 1.f},
@@ -346,7 +349,7 @@ namespace lotus
         memcpy(buf_mem, vertex_buffer.data(), vertex_buffer.size() * sizeof(glm::vec4));
         quad.vertex_buffer->unmap();
 
-        auto [texture, work] = Texture::LoadTexture("ui_default", [this](std::shared_ptr<Texture> texture)
+        default_texture = co_await Texture::LoadTexture("ui_default", [this](std::shared_ptr<Texture> texture) -> lotus::Task<>
         {
             VkDeviceSize imageSize = sizeof(glm::vec4);
 
@@ -388,11 +391,7 @@ namespace lotus
 
             texture->sampler = renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-            std::vector<lotus::UniqueWork> ret;
-            ret.push_back(std::make_unique<TextureInitTask>(renderer->getCurrentImage(), texture, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, std::move(texture_data)));
-            return ret;
+            co_await texture->Init(engine, std::move(texture_data));
         });
-        default_texture = texture;
-        engine->worker_pool->addForegroundWork(work);
     }
 }

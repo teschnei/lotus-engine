@@ -3,21 +3,13 @@
 #include "component/third_person_ffxiv_camera_component.h"
 #include "engine/core.h"
 
-ThirdPersonFFXIVCamera::ThirdPersonFFXIVCamera(lotus::Engine* engine) : lotus::ThirdPersonBoomCamera(engine)
+ThirdPersonFFXIVCamera::ThirdPersonFFXIVCamera(lotus::Engine* engine, std::weak_ptr<Entity>& focus) : lotus::ThirdPersonBoomCamera(engine, focus)
 {
-    
 }
 
-std::vector<lotus::UniqueWork> ThirdPersonFFXIVCamera::Init(const std::shared_ptr<ThirdPersonFFXIVCamera>& sp, std::weak_ptr<Entity>& _focus)
+lotus::Task<std::shared_ptr<ThirdPersonFFXIVCamera>> ThirdPersonFFXIVCamera::Init(lotus::Engine* engine, std::weak_ptr<Entity>& focus)
 {
-    focus = _focus;
-    auto work = Camera::Init(sp);
-    lotus::Input* input = engine->input.get();
-    addComponent<ThirdPersonFFXIVCameraComponent>(input, focus);
-
-    glm::quat pitch = glm::angleAxis(rot_x, glm::vec3(0.f, 1.f, 0.f));
-    glm::quat yaw = glm::angleAxis(rot_y, glm::vec3(0.f, 0.f, 1.f));
-    rot = glm::normalize(yaw * pitch);
-    update = true;
-    return work;
+    auto sp = std::make_shared<ThirdPersonFFXIVCamera>(engine, focus);
+    sp->addComponent<ThirdPersonFFXIVCameraComponent>(engine->input.get(), focus);
+    co_return sp;
 }

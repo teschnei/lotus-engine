@@ -22,6 +22,7 @@ GeneratorComponent::GeneratorComponent(lotus::Entity* entity, lotus::Engine* eng
 
 void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
 {
+    /*
     if (time > start_time + duration)
     {
         remove = true;
@@ -212,5 +213,5 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
         particle_tick(time, 0s);
         particle->addComponent<lotus::TickComponent>(particle_tick);
         generated++;
-    }
+    }*/
 }

@@ -27,6 +27,8 @@ namespace lotus
         Engine(Game* game, Settings settings, std::unique_ptr<Config> config);
         ~Engine();
 
+        Task<> Init();
+
         void run();
         void close() { closing = true; }
 
@@ -46,7 +48,7 @@ namespace lotus
 
     private:
         time_point simulation_time;
-        void mainLoop();
+        WorkerTask<> mainLoop();
         bool closing{ false };
     };
 }

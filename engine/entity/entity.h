@@ -8,6 +8,7 @@
 #include "component/component.h"
 #include "../types.h"
 #include "engine/work_item.h"
+#include "engine/worker_pool.h"
 
 namespace lotus
 {
@@ -23,8 +24,8 @@ namespace lotus
         virtual ~Entity() = default;
 
         void tick_all(time_point time, duration delta);
-        void render_all(Engine* engine, std::shared_ptr<Entity>& sp);
-        virtual UniqueWork recreate_command_buffers(std::shared_ptr<Entity>&) { return {}; };
+        Task<> render_all(Engine* engine, std::shared_ptr<Entity>& sp);
+        virtual WorkerTask<> ReInitWork() { co_return; };
 
         template<typename T, typename... Args>
         void addComponent(Args&&... args)
@@ -64,7 +65,7 @@ namespace lotus
 
     protected:
         virtual void tick(time_point time, duration delta){}
-        virtual void render(Engine* engine, std::shared_ptr<Entity>& sp){}
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp){ co_return; }
 
         Engine* engine;
         glm::vec3 pos{0.f};

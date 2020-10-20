@@ -13,16 +13,17 @@ namespace lotus
     {
     public:
         UiRenderer(Engine*, Renderer*);
+        Task<> Init();
 
         vk::CommandBuffer Render(int image_index);
-        void GenerateRenderBuffers(std::shared_ptr<ui::Element>);
+        void GenerateRenderBuffers(ui::Element*);
 
     private:
 
         void createDescriptorSetLayout();
         void createRenderpass();
         void createPipeline();
-        void createBuffers();
+        Task<> createBuffers();
 
         struct Quad
         {

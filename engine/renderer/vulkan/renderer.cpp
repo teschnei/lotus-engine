@@ -64,10 +64,11 @@ namespace lotus
         gpu->device->waitIdle();
     }
 
-    void Renderer::InitCommon()
+    Task<> Renderer::InitCommon()
     {
         raytracer = std::make_unique<Raytracer>(engine);
         ui = std::make_unique<UiRenderer>(engine, this);
+        co_await ui->Init();
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -227,16 +228,16 @@ namespace lotus
         animation_pipeline = gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
     }
 
-    void Renderer::resizeRenderer()
+    Task<> Renderer::resizeRenderer()
     {
-        recreateRenderer();
+        co_await recreateRenderer();
         if (engine->camera)
         {
             engine->camera->setPerspective(glm::radians(70.f), swapchain->extent.width / (float)swapchain->extent.height, 0.01f, 1000.f);
         }
     }
 
-    void Renderer::recreateRenderer()
+    Task<> Renderer::recreateRenderer()
     {
         gpu->device->waitIdle();
         engine->worker_pool.reset();
@@ -244,10 +245,10 @@ namespace lotus
 
         createAnimationResources();
         //recreate command buffers
-        recreateStaticCommandBuffers();
+        co_await recreateStaticCommandBuffers();
     }
 
-    void Renderer::recreateStaticCommandBuffers()
+    Task<> Renderer::recreateStaticCommandBuffers()
     {
         //delete all the existing buffers first, single-threadedly (the destructor uses the pool it was created on)
         engine->game->scene->forEachEntity([](std::shared_ptr<Entity>& entity)
@@ -258,12 +259,35 @@ namespace lotus
                 ren->shadowmap_buffers.clear();
             }
         });
-        engine->game->scene->forEachEntity([this](std::shared_ptr<Entity>& entity)
+        std::vector<WorkerTask<>> tasks;
+        engine->game->scene->forEachEntity([this, &tasks](std::shared_ptr<Entity>& entity)
         {
-            auto work = entity->recreate_command_buffers(entity);
-            if (work)
-                engine->worker_pool->addForegroundWork(std::move(work));
+            tasks.push_back(entity->ReInitWork());
         });
+        for(auto& task : tasks)
+        {
+            co_await task;
+        }
+    }
+
+    void Renderer::createThreadLocals()
+    {
+        graphics_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
+        compute_pool = gpu->createCommandPool(GPU::QueueType::Compute);
+
+        std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
+        poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+        poolSizes[0].descriptorCount = static_cast<uint32_t>(getImageCount());
+        poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(getImageCount());
+
+        vk::DescriptorPoolCreateInfo poolInfo = {};
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = static_cast<uint32_t>(getImageCount());
+        poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+
+        desc_pool = gpu->device->createDescriptorPoolUnique(poolInfo);
     }
 
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)

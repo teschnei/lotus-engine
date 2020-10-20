@@ -16,11 +16,8 @@ namespace lotus
         public:
             Manager(Engine* engine);
 
-            [[nodiscard("Work must be queued in order to be processed")]]
-            std::vector<UniqueWork> Init();
-
-            [[nodiscard("Work must be queued in order to be processed")]]
-            std::vector<UniqueWork> addElement(std::shared_ptr<Element>, std::shared_ptr<Element> parent = nullptr);
+            Task<> Init();
+            Task<> addElement(std::shared_ptr<Element>, std::shared_ptr<Element> parent = nullptr);
 
             std::vector<vk::CommandBuffer> getRenderCommandBuffers(int image_index);
         private:

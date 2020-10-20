@@ -7,7 +7,6 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
-#include "engine/renderer/vulkan/task/renderer_init.h"
 
 namespace lotus
 {
@@ -24,7 +23,7 @@ namespace lotus
             camera_buffers.view_proj_ubo->unmap();
     }
 
-    void RendererHybrid::Init()
+    Task<> RendererHybrid::Init()
     {
         createRenderpasses();
         createDescriptorSetLayout();
@@ -43,7 +42,45 @@ namespace lotus
 
         render_commandbuffers.resize(getImageCount());
 
-        engine->worker_pool->addForegroundWork(std::make_unique<RendererHybridInitTask>(this));
+        co_await InitWork();
+    }
+
+    WorkerTask<> RendererHybrid::InitWork()
+    {
+        vk::CommandBufferAllocateInfo alloc_info = {};
+        alloc_info.level = vk::CommandBufferLevel::ePrimary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = 1;
+
+        auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        auto command_buffer = std::move(command_buffers[0]);
+
+        vk::CommandBufferBeginInfo begin_info = {};
+        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+        command_buffer->begin(begin_info);
+
+        vk::ImageMemoryBarrier barrier;
+        barrier.oldLayout = vk::ImageLayout::eUndefined;
+        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = rtx_gbuffer.light.image->image;
+        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        barrier.srcAccessMask = {};
+        barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, nullptr, nullptr, barrier);
+
+        command_buffer->end();
+
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+        engine->worker_pool->frameQueue(std::move(command_buffer));
+        co_return;
     }
 
     void RendererHybrid::generateCommandBuffers()
@@ -332,7 +369,7 @@ namespace lotus
             output_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
             output_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
             output_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            output_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+            output_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
 
             vk::AttachmentDescription depth_attachment;
             depth_attachment.format = gpu->getDepthFormat();
@@ -1697,10 +1734,10 @@ namespace lotus
         return *render_commandbuffers[image_index];
     }
 
-    void RendererHybrid::drawFrame()
+    Task<> RendererHybrid::drawFrame()
     {
         if (!engine->game || !engine->game->scene)
-            return;
+            co_return;
 
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
@@ -1709,103 +1746,93 @@ namespace lotus
         try
         {
             current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
-        }
-        catch (vk::OutOfDateKHRError&)
-        {
-            resizeRenderer();
-            return;
-        }
 
-        engine->worker_pool->clearProcessed(current_image);
-        engine->worker_pool->clearBackgroundWork(current_image);
-        swapchain->checkOldSwapchain(current_image);
-        engine->worker_pool->waitIdle();
-        if (raytracer->hasQueries())
-        {
-            raytracer->runQueries(prev_image);
-        }
-        engine->game->scene->render();
+            engine->worker_pool->clearProcessed(current_image);
+            swapchain->checkOldSwapchain(current_image);
 
-        engine->worker_pool->waitIdle();
-        engine->worker_pool->startProcessing(current_image);
-        engine->camera->updateBuffers(camera_buffers.view_proj_mapped);
-        engine->lights->UpdateLightBuffer();
+            if (raytracer->hasQueries())
+            {
+                raytracer->runQueries(prev_image);
+            }
+            co_await engine->game->scene->render();
+            engine->worker_pool->beginProcessing(current_image);
 
-        std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame]};
-        std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderKHR };
-        auto buffers = engine->worker_pool->getPrimaryComputeBuffers(current_image);
-        if (!buffers.empty())
-        {
+            engine->camera->updateBuffers(camera_buffers.view_proj_mapped);
+            engine->lights->UpdateLightBuffer();
+
+            std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame] };
+            std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderKHR };
+            auto buffers = engine->worker_pool->getPrimaryComputeBuffers(current_image);
+            if (!buffers.empty())
+            {
+                vk::SubmitInfo submitInfo = {};
+                submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
+                submitInfo.pCommandBuffers = buffers.data();
+                //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
+                vk::Semaphore compute_signal_sems[] = { *compute_sem };
+                submitInfo.signalSemaphoreCount = 1;
+                submitInfo.pSignalSemaphores = compute_signal_sems;
+
+                gpu->compute_queue.submit(submitInfo, nullptr);
+                waitSemaphores.push_back(*compute_sem);
+                waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eVertexInput);
+            }
+
             vk::SubmitInfo submitInfo = {};
+            submitInfo.waitSemaphoreCount = waitSemaphores.size();
+            submitInfo.pWaitSemaphores = waitSemaphores.data();
+            submitInfo.pWaitDstStageMask = waitStages.data();
+
+            buffers = engine->worker_pool->getPrimaryGraphicsBuffers(current_image);
+            buffers.push_back(getRenderCommandbuffer(current_image));
+
             submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
             submitInfo.pCommandBuffers = buffers.data();
-            //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
-            vk::Semaphore compute_signal_sems[] = { *compute_sem };
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = compute_signal_sems;
 
-            gpu->compute_queue.submit(submitInfo, nullptr);
-            waitSemaphores.push_back(*compute_sem);
-            waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eVertexInput);
-        }
+            std::vector<vk::Semaphore> gbuffer_semaphores = { *gbuffer_sem };
+            submitInfo.pSignalSemaphores = gbuffer_semaphores.data();
+            submitInfo.signalSemaphoreCount = gbuffer_semaphores.size();
 
-        vk::SubmitInfo submitInfo = {};
-        submitInfo.waitSemaphoreCount = waitSemaphores.size();
-        submitInfo.pWaitSemaphores = waitSemaphores.data();
-        submitInfo.pWaitDstStageMask = waitStages.data();
+            gpu->graphics_queue.submit(submitInfo, nullptr);
 
-        buffers = engine->worker_pool->getPrimaryGraphicsBuffers(current_image);
-        buffers.push_back(getRenderCommandbuffer(current_image));
+            submitInfo.waitSemaphoreCount = gbuffer_semaphores.size();
+            submitInfo.pWaitSemaphores = gbuffer_semaphores.data();
+            std::vector<vk::CommandBuffer> deferred_commands{ *deferred_command_buffers[current_image] };
+            deferred_commands.push_back(ui->Render(current_image));
+            submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
+            submitInfo.pCommandBuffers = deferred_commands.data();
 
-        submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
-        submitInfo.pCommandBuffers = buffers.data();
+            std::vector<vk::Semaphore> signalSemaphores = { *frame_finish_sem[current_frame] };
+            submitInfo.signalSemaphoreCount = signalSemaphores.size();
+            submitInfo.pSignalSemaphores = signalSemaphores.data();
 
-        std::vector<vk::Semaphore> gbuffer_semaphores = { *gbuffer_sem };
-        submitInfo.pSignalSemaphores = gbuffer_semaphores.data();
-        submitInfo.signalSemaphoreCount = gbuffer_semaphores.size();
+            gpu->device->resetFences(*frame_fences[current_frame]);
 
-        gpu->graphics_queue.submit(submitInfo, nullptr);
+            gpu->graphics_queue.submit(submitInfo, *frame_fences[current_frame]);
 
-        submitInfo.waitSemaphoreCount = gbuffer_semaphores.size();
-        submitInfo.pWaitSemaphores = gbuffer_semaphores.data();
-        std::vector<vk::CommandBuffer> deferred_commands {*deferred_command_buffers[current_image]};
-        deferred_commands.push_back(ui->Render(current_image));
-        submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
-        submitInfo.pCommandBuffers = deferred_commands.data();
+            vk::PresentInfoKHR presentInfo = {};
 
-        std::vector<vk::Semaphore> signalSemaphores = { *frame_finish_sem[current_frame] };
-        submitInfo.signalSemaphoreCount = signalSemaphores.size();
-        submitInfo.pSignalSemaphores = signalSemaphores.data();
+            presentInfo.waitSemaphoreCount = signalSemaphores.size();
+            presentInfo.pWaitSemaphores = signalSemaphores.data();
 
-        gpu->device->resetFences(*frame_fences[current_frame]);
+            std::vector<vk::SwapchainKHR> swap_chains = { *swapchain->swapchain };
+            presentInfo.swapchainCount = swap_chains.size();
+            presentInfo.pSwapchains = swap_chains.data();
 
-        gpu->graphics_queue.submit(submitInfo, *frame_fences[current_frame]);
+            presentInfo.pImageIndices = &current_image;
 
-        vk::PresentInfoKHR presentInfo = {};
-
-        presentInfo.waitSemaphoreCount = signalSemaphores.size();
-        presentInfo.pWaitSemaphores = signalSemaphores.data();
-
-        std::vector<vk::SwapchainKHR> swap_chains = {*swapchain->swapchain};
-        presentInfo.swapchainCount = swap_chains.size();
-        presentInfo.pSwapchains = swap_chains.data();
-
-        presentInfo.pImageIndices = &current_image;
-
-        try
-        {
+            co_await engine->worker_pool->mainThread();
             gpu->present_queue.presentKHR(presentInfo);
         }
         catch (vk::OutOfDateKHRError&)
         {
-            resize = false;
-            resizeRenderer();
+            resize = true;
         }
 
         if (resize)
         {
             resize = false;
-            resizeRenderer();
+            co_await resizeRenderer();
         }
 
         current_frame = (current_frame + 1) % max_pending_frames;
@@ -1823,13 +1850,13 @@ namespace lotus
         blas->instanceid = tlas->AddInstance(instance);
     }
 
-    void RendererHybrid::initEntity(EntityInitializer* initializer, WorkerThread* thread)
+    void RendererHybrid::initEntity(EntityInitializer* initializer, Engine* engine)
     {
-        initializer->initEntity(this, thread);
+        initializer->initEntity(this, engine);
     }
 
-    void RendererHybrid::drawEntity(EntityInitializer* initializer, WorkerThread* thread)
+    void RendererHybrid::drawEntity(EntityInitializer* initializer, Engine* engine)
     {
-        initializer->drawEntity(this, thread);
+        initializer->drawEntity(this, engine);
     }
 }

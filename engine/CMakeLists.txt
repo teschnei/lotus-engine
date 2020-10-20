@@ -1,8 +1,6 @@
 project( engine )
 
 add_library( engine
-    background_work.h
-    background_work.cpp
     config.cpp
     config.h
     core.cpp
@@ -15,15 +13,13 @@ add_library( engine
     random.h
     scene.cpp
     scene.h
+    shared_linked_list.cpp
+    shared_linked_list.h
+    task.h
+    task.cpp
     types.h
-    workgroup.h
-    workgroup.cpp
     worker_pool.cpp
     worker_pool.h
-    worker_thread.cpp
-    worker_thread.h
-    worker_thread_concurrent.cpp
-    worker_thread_concurrent.h
     work_item.cpp
     work_item.h
  )
@@ -31,10 +27,11 @@ add_library( engine
 target_include_directories(engine PUBLIC "../" )
 target_include_directories(engine PUBLIC "../external/vma" )
 
+target_compile_options(engine PUBLIC $<$<PLATFORM_ID:Linux>:-fcoroutines>)
+
 target_link_libraries(engine $<$<PLATFORM_ID:Linux>:-ldl>)
 target_link_libraries(engine Vulkan::Vulkan SDL::SDL2 GLM::GLM)
 
 add_subdirectory(entity)
 add_subdirectory(renderer)
-add_subdirectory(task)
 add_subdirectory(ui)

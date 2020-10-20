@@ -16,7 +16,7 @@ namespace lotus
         explicit LandscapeEntity(Engine* _engine) : RenderableEntity(_engine) {}
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
         virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index) override;
-        virtual UniqueWork recreate_command_buffers(std::shared_ptr<Entity>& sp) override;
+        virtual WorkerTask<> ReInitWork() override;
 
         std::unique_ptr<Buffer> instance_buffer;
         std::vector<InstanceInfo> instance_info;
@@ -24,5 +24,7 @@ namespace lotus
 
         std::vector<std::shared_ptr<Model>> collision_models;
         std::shared_ptr<TopLevelAccelerationStructure> collision_as;
+    protected:
+        WorkerTask<> InitWork(std::vector<InstanceInfo>&&);
     };
 }

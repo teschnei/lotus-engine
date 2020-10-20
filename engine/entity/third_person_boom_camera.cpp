@@ -6,18 +6,8 @@
 
 namespace lotus
 {
-    ThirdPersonBoomCamera::ThirdPersonBoomCamera(Engine* engine) : Camera(engine)
+    ThirdPersonBoomCamera::ThirdPersonBoomCamera(Engine* engine, std::weak_ptr<Entity>& _focus) : Camera(engine), focus(_focus)
     {
-        
-    }
-
-    std::vector<UniqueWork> ThirdPersonBoomCamera::Init(const std::shared_ptr<ThirdPersonBoomCamera>& sp, std::weak_ptr<Entity>& _focus)
-    {
-        focus = _focus;
-        auto work = Camera::Init(sp);
-        Input* input = engine->input.get();
-        addComponent<ThirdPersonCameraComponent>(input, focus);
-
         glm::quat yaw = glm::angleAxis(rot_x, glm::vec3(0.f, 1.f, 0.f));
         glm::quat pitch = glm::angleAxis(rot_y, glm::vec3(0.f, 0.f, 1.f));
         rot = glm::normalize(pitch * yaw);
@@ -26,7 +16,13 @@ namespace lotus
         glm::vec3 new_pos = boom * rot;
         Camera::setPos(new_pos + boom_source);
         update = true;
-        return work;
+    }
+
+    Task<std::shared_ptr<ThirdPersonBoomCamera>> ThirdPersonBoomCamera::Init(Engine* engine, std::weak_ptr<Entity>& focus)
+    {
+        auto sp = std::make_shared<ThirdPersonBoomCamera>(engine, focus);
+        sp->addComponent<ThirdPersonCameraComponent>(engine->input.get(), focus);
+        co_return sp;
     }
 
     void ThirdPersonBoomCamera::setDistance(float _distance)

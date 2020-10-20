@@ -54,9 +54,9 @@ void ParticleTester::ParseDir(FFXI::DatChunk* chunk)
         {
             if (dxt3->width > 0)
             {
-                auto [texture, work] = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3);
-                engine->worker_pool->addForegroundWork(work);
-                texture_map[dxt3->name] = std::move(texture);
+                //TODO
+                auto tex_task = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3);
+//                texture_map[dxt3->name] = co_await tex_task;
             }
         }
         else if (auto keyframe = dynamic_cast<FFXI::Keyframe*>(chunk.get()))
@@ -72,9 +72,10 @@ void ParticleTester::ParseDir(FFXI::DatChunk* chunk)
     {
         if (auto d3m = dynamic_cast<FFXI::D3M*>(chunk.get()))
         {
-            auto [model, work] = lotus::Model::LoadModel<FFXI::D3MLoader>(engine, std::string(d3m->name, 4), d3m);
-            models.push_back(model);
-            engine->worker_pool->addForegroundWork(work);
+            auto model_task = lotus::Model::LoadModel<FFXI::D3MLoader>(engine, std::string(d3m->name, 4), d3m);
+            //TODO
+//            models.push_back(model);
+//            engine->worker_pool->addForegroundWork(work);
         }
     }
 }

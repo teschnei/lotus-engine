@@ -1,8 +1,6 @@
 #include "renderable_entity.h"
 
 #include "engine/core.h"
-#include "engine/worker_thread.h"
-#include "engine/task/renderable_entity_init.h"
 #include "engine/entity/renderable_entity.h"
 #include "engine/entity/deformable_entity.h"
 #include "engine/entity/component/animation_component.h"
@@ -15,13 +13,13 @@ namespace lotus
     void generateVertexBuffers(RendererRaytrace* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
         std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
 
-    RenderableEntityInitializer::RenderableEntityInitializer(Entity* _entity, RenderableEntityInitTask* _task) : 
-        EntityInitializer(_entity), task(_task)
+    RenderableEntityInitializer::RenderableEntityInitializer(Entity* _entity) :
+        EntityInitializer(_entity)
     {
 
     }
 
-    void RenderableEntityInitializer::initEntity(RendererRaytrace* renderer, WorkerThread* thread)
+    void RenderableEntityInitializer::initEntity(RendererRaytrace* renderer, Engine* engine)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
         if (auto deformable = dynamic_cast<DeformableEntity*>(entity))
@@ -31,7 +29,7 @@ namespace lotus
             {
                 vk::CommandBufferAllocateInfo alloc_info;
                 alloc_info.level = vk::CommandBufferLevel::ePrimary;
-                alloc_info.commandPool = *thread->graphics_pool;
+                alloc_info.commandPool = *renderer->graphics_pool;
                 alloc_info.commandBufferCount = 1;
 
                 auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -51,7 +49,7 @@ namespace lotus
                     }
                 }
                 command_buffer->end();
-                task->graphics.primary = *command_buffer;
+                engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
             }
         }
 
@@ -62,12 +60,12 @@ namespace lotus
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(uint32_t)) * renderer->getImageCount(), {}));
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererRaytrace* renderer, WorkerThread* thread)
+    void RenderableEntityInitializer::drawEntity(RendererRaytrace* renderer, Engine* engine)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
 
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -198,10 +196,10 @@ namespace lotus
 
     void generateVertexBuffers(RendererRasterization* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
         std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
-    void drawModel(WorkerThread* thread, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image);
-    void drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index);
+    void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image);
+    void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index);
 
-    void RenderableEntityInitializer::initEntity(RendererRasterization* renderer, WorkerThread* thread)
+    void RenderableEntityInitializer::initEntity(RendererRasterization* renderer, Engine* engine)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
         if (auto deformable = dynamic_cast<DeformableEntity*>(entity))
@@ -211,7 +209,7 @@ namespace lotus
             {
                 vk::CommandBufferAllocateInfo alloc_info;
                 alloc_info.level = vk::CommandBufferLevel::ePrimary;
-                alloc_info.commandPool = *thread->graphics_pool;
+                alloc_info.commandPool = *renderer->graphics_pool;
                 alloc_info.commandBufferCount = 1;
 
                 auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -231,7 +229,7 @@ namespace lotus
                     }
                 }
                 command_buffer->end();
-                task->graphics.primary = *command_buffer;
+                engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
             }
         }
 
@@ -242,12 +240,12 @@ namespace lotus
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(uint32_t)) * renderer->getImageCount(), {}));
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererRasterization* renderer, WorkerThread* thread)
+    void RenderableEntityInitializer::drawEntity(RendererRasterization* renderer, Engine* engine)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
 
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -322,11 +320,11 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(thread, entity, *command_buffer, deformable, false, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, false, *renderer->pipeline_layout, i);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.blended_graphics_pipeline);
 
-            drawModel(thread, entity, *command_buffer, deformable, true, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, true, *renderer->pipeline_layout, i);
 
             command_buffer->end();
         }
@@ -376,15 +374,15 @@ namespace lotus
             command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.shadowmap_pipeline);
-            drawModel(thread, entity, *command_buffer, deformable, false, *renderer->shadowmap_pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, false, *renderer->shadowmap_pipeline_layout, i);
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.blended_shadowmap_pipeline);
-            drawModel(thread, entity, *command_buffer, deformable, true, *renderer->shadowmap_pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, true, *renderer->shadowmap_pipeline_layout, i);
 
             command_buffer->end();
         }
     }
 
-    void drawModel(WorkerThread* thread, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image)
+    void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image)
     {
         for (size_t model_i = 0; model_i < entity->models.size(); ++model_i)
         {
@@ -409,14 +407,14 @@ namespace lotus
                         {
                             material_index = model->bottom_level_as->resource_index + mesh_i;
                         }
-                        drawMesh(thread, command_buffer, *mesh, layout, material_index);
+                        drawMesh(engine, command_buffer, *mesh, layout, material_index);
                     }
                 }
             }
         }
     }
 
-    void drawMesh(WorkerThread* thread, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index)
+    void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index)
     {
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -466,7 +464,7 @@ namespace lotus
     void generateVertexBuffers(RendererHybrid* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
         std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
 
-    void RenderableEntityInitializer::initEntity(RendererHybrid* renderer, WorkerThread* thread)
+    void RenderableEntityInitializer::initEntity(RendererHybrid* renderer, Engine* engine)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
         if (auto deformable = dynamic_cast<DeformableEntity*>(entity))
@@ -476,7 +474,7 @@ namespace lotus
             {
                 vk::CommandBufferAllocateInfo alloc_info;
                 alloc_info.level = vk::CommandBufferLevel::ePrimary;
-                alloc_info.commandPool = *thread->graphics_pool;
+                alloc_info.commandPool = *renderer->graphics_pool;
                 alloc_info.commandBufferCount = 1;
 
                 auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -495,7 +493,7 @@ namespace lotus
                     }
                 }
                 command_buffer->end();
-                task->graphics.primary = *command_buffer;
+                engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
             }
         }
 
@@ -506,12 +504,12 @@ namespace lotus
         entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(uint32_t)) * renderer->getImageCount(), {}));
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererHybrid* renderer, WorkerThread* thread)
+    void RenderableEntityInitializer::drawEntity(RendererHybrid* renderer, Engine* engine)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *thread->graphics_pool;
+        alloc_info.commandPool = *renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
 
         entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -585,11 +583,11 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(thread, entity, *command_buffer, deformable, false, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, false, *renderer->pipeline_layout, i);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.blended_graphics_pipeline);
 
-            drawModel(thread, entity, *command_buffer, deformable, true, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, true, *renderer->pipeline_layout, i);
 
             command_buffer->end();
         }

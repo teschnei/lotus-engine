@@ -1,8 +1,8 @@
 #include "landscape_entity.h"
 #include "engine/core.h"
 #include "engine/renderer/raytrace_query.h"
-#include "engine/task/landscape_entity_init.h"
 #include "engine/renderer/vulkan/renderer.h"
+#include "engine/renderer/vulkan/entity_initializers/landscape_entity.h"
 
 namespace lotus
 {
@@ -28,8 +28,22 @@ namespace lotus
         //landscape can't move so no need to update
     }
 
-    UniqueWork LandscapeEntity::recreate_command_buffers(std::shared_ptr<Entity>& sp)
+    WorkerTask<> LandscapeEntity::InitWork(std::vector<InstanceInfo>&& instance_info)
     {
-        return std::make_unique<LandscapeEntityReInitTask>(std::static_pointer_cast<LandscapeEntity>(sp));
+        //priority: 0
+        auto initializer = std::make_unique<LandscapeEntityInitializer>(this, std::move(instance_info));
+        engine->renderer->initEntity(initializer.get(), engine);
+        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->worker_pool->frameQueue(std::move(initializer));
+        co_return;
+    }
+
+    WorkerTask<> LandscapeEntity::ReInitWork()
+    {
+        //priority: 0
+        auto initializer = std::make_unique<LandscapeEntityInitializer>(this, std::vector<InstanceInfo>());
+        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->worker_pool->frameQueue(std::move(initializer));
+        co_return;
     }
 }
