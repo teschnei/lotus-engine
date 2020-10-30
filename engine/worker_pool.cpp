@@ -19,11 +19,8 @@ namespace lotus
         }
     }
 
-    void WorkerPool::Wait(WorkerTask<> mainLoop)
+    void WorkerPool::Run()
     {
-        //the threads all destruct together, and jthreads join in destruction
-        auto task = std::move(mainLoop);
-        //threads[0].join();
         engine->renderer->createThreadLocals();
         main_flag.wait(false);
         while (!threads[0].get_stop_token().stop_requested())

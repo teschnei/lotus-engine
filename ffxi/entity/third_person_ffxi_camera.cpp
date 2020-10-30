@@ -2,7 +2,6 @@
 
 #include "component/third_person_ffxi_camera_component.h"
 #include "engine/core.h"
-#include "engine/work_item.h"
 
 ThirdPersonFFXICamera::ThirdPersonFFXICamera(lotus::Engine* engine, std::weak_ptr<Entity>& _focus) : lotus::ThirdPersonBoomCamera(engine, _focus)
 {

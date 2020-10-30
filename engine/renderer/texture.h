@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "memory.h"
-#include "../work_item.h"
 #include "engine/worker_pool.h"
 
 namespace lotus

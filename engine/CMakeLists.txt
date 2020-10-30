@@ -20,8 +20,7 @@ add_library( engine
     types.h
     worker_pool.cpp
     worker_pool.h
-    work_item.cpp
-    work_item.h
+    worker_task.h
  )
 
 target_include_directories(engine PUBLIC "../" )

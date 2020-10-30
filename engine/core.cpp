@@ -44,7 +44,8 @@ namespace lotus
 
     void Engine::run()
     {
-        worker_pool->Wait(mainLoop());
+        auto loop = mainLoop();
+        worker_pool->Run();
     }
 
     WorkerTask<> Engine::mainLoop()

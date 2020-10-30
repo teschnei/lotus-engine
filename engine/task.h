@@ -41,7 +41,7 @@ namespace lotus
     {
         auto initial_suspend() noexcept
         {
-            return std::suspend_never();
+            return std::suspend_never{};
         }
 
         struct final_awaitable
@@ -144,7 +144,7 @@ namespace lotus
                 {
                     return !handle || handle.done();
                 }
-                void await_suspend(std::coroutine_handle<> awaiting) noexcept
+                auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
                     handle.promise().next_handle = awaiting;
                 }
@@ -166,7 +166,7 @@ namespace lotus
                 {
                     return !handle || handle.done();
                 }
-                void await_suspend(std::coroutine_handle<> awaiting) noexcept
+                auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
                     handle.promise().next_handle = awaiting;
                 }

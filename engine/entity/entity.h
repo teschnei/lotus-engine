@@ -6,9 +6,9 @@
 #include <memory>
 
 #include "component/component.h"
-#include "../types.h"
-#include "engine/work_item.h"
+#include "engine/types.h"
 #include "engine/worker_pool.h"
+#include "engine/worker_task.h"
 
 namespace lotus
 {
