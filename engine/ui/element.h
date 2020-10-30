@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include "engine/renderer/vulkan/vulkan_inc.h"
 #include "engine/renderer/texture.h"
+#include "engine/worker_task.h"
 
 namespace lotus
 {

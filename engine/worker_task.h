@@ -5,26 +5,77 @@
 
 namespace lotus
 {
-    template<typename Result>
-    struct WorkerPromise : public Promise<Result>
+    template<typename Result = void>
+    struct WorkerTask;
+
+    struct WorkerPromise_base
     {
-        //TODO: this doesn't work until GCC supports p0914
-        // workaround is the operator new overload - remove when support is added (or when I move to clang)
-//        template<typename... Args>
-//        WorkerPromise(WorkerPool* _pool, Args&&...) : pool(_pool) {}
-        //nevermind operator new doesn't work either, gcc is a meme
-        /*
-        template<typename... Args>
-        void* operator new(size_t sz, WorkerPool* _pool, Args const&...)
-        {
-            saved_pool = _pool;
-            return ::operator new(sz);
-        }*/
-        using coroutine_handle = std::coroutine_handle<WorkerPromise<Result>>;
-        WorkerTask<Result> get_return_object() noexcept;
         auto initial_suspend() noexcept
         {
             return WorkerPool::ScheduledTask{WorkerPool::temp_pool};
+        }
+
+        struct final_awaitable
+        {
+            bool await_ready() const noexcept {return false;}
+            template<typename Promise>
+            auto await_suspend(std::coroutine_handle<Promise> handle)
+            {
+                return handle.promise().next_handle.exchange(nullptr);
+            }
+            void await_resume() noexcept {}
+        };
+
+        auto final_suspend() noexcept
+        {
+            return final_awaitable{};
+        }
+
+        void unhandled_exception()
+        {
+            exception = std::current_exception();
+        }
+
+        std::exception_ptr exception;
+        std::atomic<std::coroutine_handle<>> next_handle{ std::noop_coroutine() };
+    };
+
+    template<typename Result>
+    struct WorkerPromise : public WorkerPromise_base
+    {
+        using coroutine_handle = std::coroutine_handle<WorkerPromise<Result>>;
+        WorkerTask<Result> get_return_object() noexcept;
+
+        void return_value(Result&& value) noexcept
+        {
+            result_store = std::move(value);
+        }
+
+        Result& result() &
+        {
+            if (exception) std::rethrow_exception(exception);
+            return result_store;
+        }
+
+        Result&& result() &&
+        {
+            if (exception) std::rethrow_exception(exception);
+            return std::move(result_store);
+        }
+    protected:
+        Result result_store;
+    };
+
+    template<>
+    struct WorkerPromise<void> : public WorkerPromise_base
+    {
+        using coroutine_handle = std::coroutine_handle<WorkerPromise<void>>;
+        WorkerTask<void> get_return_object() noexcept;
+
+        void return_void() noexcept {}
+        void result()
+        {
+            if (exception) std::rethrow_exception(exception);
         }
     };
 
@@ -65,7 +116,12 @@ namespace lotus
                 }
                 auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
-                    handle.promise().next_handle = awaiting;
+                    auto expected = handle.promise().next_handle.load();
+                    if (expected && handle.promise().next_handle.compare_exchange_strong(expected, awaiting))
+                    {
+                        return true;
+                    }
+                    return false;
                 }
                 auto await_resume()
                 {
@@ -87,7 +143,12 @@ namespace lotus
                 }
                 auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
-                    handle.promise().next_handle = awaiting;
+                    auto expected = handle.promise().next_handle.load();
+                    if (expected && handle.promise().next_handle.compare_exchange_strong(expected, awaiting))
+                    {
+                        return true;
+                    }
+                    return false;
                 }
                 auto await_resume()
                 {
@@ -112,5 +173,10 @@ namespace lotus
     WorkerTask<Result> WorkerPromise<Result>::get_return_object() noexcept
     {
         return WorkerTask<Result>{coroutine_handle::from_promise(*this)};
+    }
+
+    inline WorkerTask<void> WorkerPromise<void>::get_return_object() noexcept
+    {
+        return WorkerTask<void>{coroutine_handle::from_promise(*this)};
     }
 }

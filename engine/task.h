@@ -50,8 +50,7 @@ namespace lotus
             template<typename Promise>
             auto await_suspend(std::coroutine_handle<Promise> handle)
             {
-                if (handle.promise().next_handle)
-                    handle.promise().next_handle.resume();
+                return handle.promise().next_handle;
             }
             void await_resume() noexcept {}
         };
@@ -67,7 +66,7 @@ namespace lotus
         }
 
         std::exception_ptr exception;
-        std::coroutine_handle<> next_handle;
+        std::coroutine_handle<> next_handle{ std::noop_coroutine() };
     };
 
     template<typename Result>
@@ -193,5 +192,10 @@ namespace lotus
     Task<Result> Promise<Result>::get_return_object() noexcept
     {
         return Task<Result>{coroutine_handle::from_promise(*this)};
+    }
+
+    inline Task<void> Promise<void>::get_return_object() noexcept
+    {
+        return Task<void>{coroutine_handle::from_promise(*this)};
     }
 };

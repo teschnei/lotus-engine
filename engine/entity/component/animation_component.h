@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <optional>
+#include "engine/worker_task.h"
 #include "engine/renderer/memory.h"
 #include "engine/renderer/acceleration_structure.h"
 #include "engine/renderer/animation.h"

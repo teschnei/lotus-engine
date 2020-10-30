@@ -16,7 +16,6 @@ add_library( engine
     shared_linked_list.cpp
     shared_linked_list.h
     task.h
-    task.cpp
     types.h
     worker_pool.cpp
     worker_pool.h

@@ -1,10 +1,9 @@
 #pragma once
+#include <unordered_map>
+#include <glm/glm.hpp>
 #include "memory.h"
 #include "engine/types.h"
-//TODO: move WorkerTask to its own header
-#include "engine/worker_pool.h"
-#include <glm/glm.hpp>
-#include <unordered_map>
+#include "engine/worker_task.h"
 
 namespace lotus
 {

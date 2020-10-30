@@ -43,7 +43,8 @@ namespace std
         stop_token get_stop_token() { return stop; }
 
         ~jthread() noexcept {
-            join();
+            if (joinable())
+                join();
         }
     private:
         stop_token stop;
@@ -54,9 +55,6 @@ namespace std
 namespace lotus
 {
     class Engine;
-
-    template<typename Result = void>
-    struct WorkerTask;
 
     class WorkerPool
     {
