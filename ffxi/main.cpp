@@ -39,7 +39,7 @@ public:
         ele->anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
         ele->parent_anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
         ele->bg_colour = glm::vec4{0.f, 0.f, 0.f, 0.4f};
-        //co_await engine->ui->addElement(ele);
+        co_await engine->ui->addElement(ele);
 
         auto ele2 = std::make_shared<lotus::ui::Element>();
         ele2->SetPos({10, -10});
@@ -48,7 +48,7 @@ public:
         ele2->anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
         ele2->parent_anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
         ele2->bg_colour = glm::vec4{0.f, 0.f, 0.f, 0.7f};
-        //co_await engine->ui->addElement(ele2, ele);
+        co_await engine->ui->addElement(ele2, ele);
         //engine->camera->setPos(glm::vec3(259.f, -90.f, 82.f));
 
         loading_scene = std::make_unique<lotus::Scene>(engine.get());
