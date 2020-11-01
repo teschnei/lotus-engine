@@ -2,11 +2,10 @@
 
 #include <vector>
 #include <coroutine>
-#include <condition_variable>
-#include <ranges>
 #include <thread>
 #include <memory>
 #include <exception>
+#include <unordered_map>
 #include "task.h"
 #include "shared_linked_list.h"
 #include "renderer/vulkan/vulkan_inc.h"
@@ -143,7 +142,6 @@ namespace lotus
         ScheduledTask* getTask();
         void runTasks(std::stop_token);
         void queueTask(ScheduledTask*);
-        void Wait();
 
         Engine* engine;
         std::vector<std::jthread> threads;
@@ -162,33 +160,151 @@ namespace lotus
         std::exception_ptr exception;
 
         template<typename... Args>
-        Task<> frameQueueTask(Args&&... args)
+        Task<> gpuResourceTask(Args&&... args)
         {
             auto a = std::make_tuple<Args...>(std::forward<Args>(args)...);
             co_await std::suspend_always{};
         }
+
+        struct BackgroundTask;
+
+        struct BackgroundPromise
+        {
+            using coroutine_handle = std::coroutine_handle<BackgroundPromise>;
+            auto initial_suspend() noexcept
+            {
+                return std::suspend_never{};
+            }
+
+            struct final_awaitable
+            {
+                bool await_ready() const noexcept {return false;}
+                auto await_suspend(std::coroutine_handle<> handle)
+                {
+                    WorkerPool::temp_pool->background_tasks.erase(handle.address());
+                }
+                void await_resume() noexcept {}
+            };
+
+            auto final_suspend() noexcept
+            {
+                return final_awaitable{};
+            }
+
+            void unhandled_exception()
+            {
+                exception = std::current_exception();
+            }
+
+            BackgroundTask get_return_object() noexcept;
+
+            void return_void() noexcept {}
+            void result()
+            {
+                if (exception) std::rethrow_exception(exception);
+            }
+
+            std::exception_ptr exception;
+        };
+
+        struct BackgroundTask
+        {
+            using promise_type = BackgroundPromise;
+            using coroutine_handle = typename promise_type::coroutine_handle;
+            BackgroundTask(coroutine_handle _handle) : handle(_handle) {}
+            ~BackgroundTask() { if (handle) handle.destroy(); }
+            BackgroundTask(const BackgroundTask&) = delete;
+            BackgroundTask(BackgroundTask&& o) noexcept : handle(o.handle)
+            {
+                o.handle = nullptr;
+            }
+            BackgroundTask& operator=(const BackgroundTask&) = delete;
+            BackgroundTask& operator=(BackgroundTask&& o)
+            {
+                if (std::addressof(o) != this)
+                {
+                    if (handle)
+                        handle.destroy();
+
+                    handle = o.handle;
+                    o.handle = nullptr;
+                }
+                return *this;
+            }
+
+
+    //    protected:
+            coroutine_handle handle;
+        };
+
+        template<Awaitable Task>
+        BackgroundTask make_background(Task&& task)
+        {
+            auto bg_task = std::move(task);
+            co_await std::suspend_always{};
+            co_await std::move(bg_task);
+        }
+
+        //because MSVC messed up the hash for coroutines, we just have to use address manually
+        std::unordered_map<void*, BackgroundTask> background_tasks;
+
+        class FrameWait
+        {
+        public:
+            FrameWait(WorkerPool* _pool) : pool(_pool) {}
+
+            bool await_ready() noexcept { return false; }
+            void await_suspend(std::coroutine_handle<> awaiter) noexcept
+            {
+                awaiting = awaiter;
+                pool->frame_waiting_tasks.queue(this);
+            }
+            void await_resume() noexcept {}
+
+        private:
+            friend class WorkerPool;
+            WorkerPool* pool;
+            std::coroutine_handle<> awaiting;
+        };
+        SharedLinkedList<FrameWait*> frame_waiting_tasks;
+
     public:
 
+        //move the arguments into a coroutine frame that will be deleted once the GPU is
+        // guaranteed to have no need of it anymore (3 frames usually)
         template<typename... Args>
-        void frameQueue(Args&&... args)
+        void gpuResource(Args&&... args)
         {
-            auto task = frameQueueTask(std::forward<Args>(args)...);
+            auto task = gpuResourceTask(std::forward<Args>(args)...);
             processing_tasks.queue(std::move(task));
         }
 
-        void beginProcessing(size_t image)
+        //run the task in the background
+        template<Awaitable Task>
+        void background(Task&& task)
         {
-            finished_tasks[image] = std::move(processing_tasks);
+            auto bg_task = make_background(std::move(task));
+            const std::coroutine_handle<> handle = bg_task.handle;
+            background_tasks.insert(std::make_pair(handle.address(), std::move(bg_task)));
+            handle.resume();
         }
 
-        void clearProcessed(size_t image)
+        //suspend the thread until the current frame is done on the CPU side
+        [[nodiscard]]
+        Task<> waitForFrame() 
         {
-            deletion_tasks = std::move(finished_tasks[image]);
+            co_await FrameWait(this);
         }
 
-        void deleteFinished()
-        {
-            deletion_tasks = {};
-        }
+        void processFrameWaits();
+
+        void beginProcessing(size_t image);
+        void clearProcessed(size_t image);
+        void deleteFinished();
     };
+
+    inline WorkerPool::BackgroundTask WorkerPool::BackgroundPromise::get_return_object() noexcept
+    {
+        return BackgroundTask{coroutine_handle::from_promise(*this)};
+    }
 }

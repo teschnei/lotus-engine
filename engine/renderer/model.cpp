@@ -152,7 +152,7 @@ namespace lotus
             command_buffer->end();
 
             engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
-            engine->worker_pool->frameQueue(std::move(staging_buffer), std::move(command_buffer));
+            engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;
     }
@@ -234,7 +234,7 @@ namespace lotus
             command_buffer->end();
 
             engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
-            engine->worker_pool->frameQueue(std::move(staging_buffer), std::move(command_buffer));
+            engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;
     }

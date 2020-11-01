@@ -5,6 +5,7 @@ add_library( engine
     config.h
     core.cpp
     core.h
+    game.cpp
     game.h
     input.cpp
     input.h
@@ -13,7 +14,6 @@ add_library( engine
     random.h
     scene.cpp
     scene.h
-    shared_linked_list.cpp
     shared_linked_list.h
     task.h
     types.h

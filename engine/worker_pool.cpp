@@ -123,4 +123,27 @@ namespace lotus
     {
         return command_buffers.compute.getAll();
     }
+
+    void WorkerPool::processFrameWaits()
+    {
+        for (auto& task : frame_waiting_tasks.getAll())
+        {
+            task->awaiting.resume();
+        }
+    }
+
+    void WorkerPool::beginProcessing(size_t image)
+    {
+        finished_tasks[image] = std::move(processing_tasks);
+    }
+
+    void WorkerPool::clearProcessed(size_t image)
+    {
+        deletion_tasks = std::move(finished_tasks[image]);
+    }
+
+    void WorkerPool::deleteFinished()
+    {
+        deletion_tasks = {};
+    }
 }

@@ -236,7 +236,7 @@ namespace lotus
         command_buffer->end();
 
         engine->worker_pool->command_buffers.compute.queue(*command_buffer);
-        engine->worker_pool->frameQueue(std::move(command_buffer));
+        engine->worker_pool->gpuResource(std::move(command_buffer));
         co_return;
     }
 

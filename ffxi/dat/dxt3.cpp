@@ -130,7 +130,7 @@ namespace FFXI
         sampler_info.compareOp = vk::CompareOp::eAlways;
         sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
 
-        engine->worker_pool->frameQueue(texture);
+        engine->worker_pool->gpuResource(texture);
 
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 

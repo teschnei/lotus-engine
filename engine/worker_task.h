@@ -159,11 +159,6 @@ namespace lotus
             return awaitable{handle};
         }
 
-        auto result()
-        {
-            return handle.promise().result();
-        }
-
 //    protected:
         friend class WorkerPool;
         coroutine_handle handle;

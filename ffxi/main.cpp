@@ -51,6 +51,20 @@ public:
         co_await engine->ui->addElement(ele2, ele);
         //engine->camera->setPos(glm::vec3(259.f, -90.f, 82.f));
 
+        auto camera = co_await scene->AddEntity<lotus::FreeFlyingCamera>();
+        engine->set_camera(camera.get());
+
+        engine->worker_pool->background(load_scene());
+    }
+    virtual void tick(lotus::time_point, lotus::duration) override
+    {
+    }
+private:
+    std::shared_ptr<lotus::Texture> default_texture;
+    std::unique_ptr<lotus::Scene> loading_scene;
+
+    lotus::WorkerTask<> load_scene()
+    {
         loading_scene = std::make_unique<lotus::Scene>(engine.get());
         auto default_texture_work = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
         default_texture = co_await default_texture_work;
@@ -77,13 +91,8 @@ public:
         player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
         //player->addComponent<ParticleTester>(engine->input.get());
 
-        engine->game->scene = std::move(loading_scene);
+        co_await update_scene(std::move(loading_scene));
     }
-    virtual void tick(lotus::time_point, lotus::duration) override
-    {
-    }
-    std::shared_ptr<lotus::Texture> default_texture;
-    std::unique_ptr<lotus::Scene> loading_scene;
 };
 
 int main(int argc, char* argv[]) {

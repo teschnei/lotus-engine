@@ -3,6 +3,7 @@
 #include "types.h"
 #include "scene.h"
 #include "core.h"
+#include "worker_task.h"
 
 namespace lotus
 {
@@ -21,6 +22,7 @@ namespace lotus
         }
         std::unique_ptr<Engine> engine;
         std::unique_ptr<Scene> scene;
+        Task<> update_scene(std::unique_ptr<Scene>&& scene);
 
     protected:
         virtual void tick(time_point time, duration delta) {}

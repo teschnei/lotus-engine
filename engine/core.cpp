@@ -59,6 +59,7 @@ namespace lotus
                 time_point new_sim_time = sim_clock::now();
                 duration sim_delta = new_sim_time - simulation_time;
                 simulation_time = new_sim_time;
+                worker_pool->processFrameWaits();
                 input->GetInput();
                 //maybe this should co_await too, but for now I don't think it's required
                 game->tick_all(simulation_time, sim_delta);

@@ -34,7 +34,7 @@ namespace lotus
         auto initializer = std::make_unique<LandscapeEntityInitializer>(this, std::move(instance_info));
         engine->renderer->initEntity(initializer.get(), engine);
         engine->renderer->drawEntity(initializer.get(), engine);
-        engine->worker_pool->frameQueue(std::move(initializer));
+        engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }
 
@@ -43,7 +43,7 @@ namespace lotus
         //priority: 0
         auto initializer = std::make_unique<LandscapeEntityInitializer>(this, std::vector<InstanceInfo>());
         engine->renderer->drawEntity(initializer.get(), engine);
-        engine->worker_pool->frameQueue(std::move(initializer));
+        engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }
 }
