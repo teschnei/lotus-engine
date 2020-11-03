@@ -795,14 +795,6 @@ namespace lotus
         raytrace_sem = gpu->device->createSemaphoreUnique({}, nullptr);
     }
 
-    void RendererRaytrace::createCommandPool()
-    {
-        vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = gpu->graphics_queue_index;
-
-        command_pool = gpu->device->createCommandPoolUnique(pool_info, nullptr);
-    }
-
     void RendererRaytrace::createGBufferResources()
     {
         rtx_gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);

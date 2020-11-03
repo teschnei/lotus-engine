@@ -29,8 +29,6 @@ public:
 
     virtual lotus::Task<> entry() override
     {
-        scene = std::make_unique<lotus::Scene>(engine.get());
-
         engine->lights->light.diffuse_dir = glm::normalize(-glm::vec3{ -25.f, -100.f, -50.f });
         auto ele = std::make_shared<lotus::ui::Element>();
         ele->SetPos({20, -20});
@@ -49,10 +47,6 @@ public:
         ele2->parent_anchor = lotus::ui::Element::AnchorPoint::BottomLeft;
         ele2->bg_colour = glm::vec4{0.f, 0.f, 0.f, 0.7f};
         co_await engine->ui->addElement(ele2, ele);
-        //engine->camera->setPos(glm::vec3(259.f, -90.f, 82.f));
-
-        auto camera = co_await scene->AddEntity<lotus::FreeFlyingCamera>();
-        engine->set_camera(camera.get());
 
         engine->worker_pool->background(load_scene());
     }

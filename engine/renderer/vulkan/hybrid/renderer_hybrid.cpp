@@ -1297,14 +1297,6 @@ namespace lotus
         compute_sem = gpu->device->createSemaphoreUnique({}, nullptr);
     }
 
-    void RendererHybrid::createCommandPool()
-    {
-        vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = gpu->graphics_queue_index;
-
-        command_pool = gpu->device->createCommandPoolUnique(pool_info, nullptr);
-    }
-
     void RendererHybrid::createGBufferResources()
     {
         gbuffer.position.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);

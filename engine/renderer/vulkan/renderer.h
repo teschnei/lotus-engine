@@ -60,7 +60,19 @@ namespace lotus
         Task<> InitCommon();
         virtual Task<> Init() = 0;
 
-        void createThreadLocals();
+        struct ThreadLocals
+        {
+            ThreadLocals(Renderer* _renderer) : renderer(_renderer) {}
+            ~ThreadLocals() { renderer->deleteThreadLocals(); }
+            ThreadLocals(const ThreadLocals&) = delete;
+            ThreadLocals(ThreadLocals&&) = delete;
+            ThreadLocals& operator=(const ThreadLocals&) = delete;
+            ThreadLocals& operator=(ThreadLocals&&) = delete;
+        private:
+            Renderer* renderer;
+        };
+        [[nodiscard]]
+        ThreadLocals createThreadLocals();
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
@@ -88,10 +100,18 @@ namespace lotus
 
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
 
-        inline static thread_local vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> graphics_pool;
-        inline static thread_local vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> compute_pool;
+        inline static thread_local vk::UniqueCommandPool graphics_pool;
+        inline static thread_local vk::UniqueCommandPool compute_pool;
 
-        inline static thread_local vk::UniqueHandle<vk::DescriptorPool, vk::DispatchLoaderDynamic> desc_pool;
+        inline static thread_local vk::UniqueDescriptorPool desc_pool;
+
+    private:
+        //when threads terminate, they move their thread_locals here so they can be destructed in the right order
+        void deleteThreadLocals();
+        std::mutex shutdown_mutex;
+        std::vector<vk::UniqueCommandPool> shutdown_command_pools;
+        std::vector<vk::UniqueDescriptorPool> shutdown_descriptor_pools;
+    public:
 
         struct FramebufferAttachment
         {

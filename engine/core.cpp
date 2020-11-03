@@ -27,7 +27,6 @@ namespace lotus
         lights = std::make_unique<LightManager>(this);
         events = std::make_unique<ui::Events>();
         ui = std::make_unique<ui::Manager>(this);
-
     }
 
     Task<> Engine::Init()
@@ -70,5 +69,6 @@ namespace lotus
         {
             worker_pool->Stop(std::current_exception());
         }
+        worker_pool->Stop();
     }
 }

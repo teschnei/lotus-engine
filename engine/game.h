@@ -18,7 +18,8 @@ namespace lotus
         void tick_all(time_point time, duration delta)
         {
             tick(time, delta);
-            scene->tick_all(time, delta);
+            if (scene)
+                scene->tick_all(time, delta);
         }
         std::unique_ptr<Engine> engine;
         std::unique_ptr<Scene> scene;

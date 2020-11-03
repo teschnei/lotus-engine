@@ -117,10 +117,7 @@ namespace lotus
 
     void Renderer::createCommandPool()
     {
-        vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = gpu->graphics_queue_index;
-
-        command_pool = gpu->device->createCommandPoolUnique(pool_info, nullptr);
+        command_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
     }
 
     void Renderer::createQuad()
@@ -270,7 +267,7 @@ namespace lotus
         }
     }
 
-    void Renderer::createThreadLocals()
+    Renderer::ThreadLocals Renderer::createThreadLocals()
     {
         graphics_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
         compute_pool = gpu->createCommandPool(GPU::QueueType::Compute);
@@ -288,6 +285,17 @@ namespace lotus
         poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
         desc_pool = gpu->device->createDescriptorPoolUnique(poolInfo);
+
+        return ThreadLocals{this};
+    }
+
+    void Renderer::deleteThreadLocals()
+    {
+        //move static thread_locals in renderer to the renderer's storage so it can be destructed in the right order
+        std::lock_guard lk{ engine->renderer->shutdown_mutex };
+        engine->renderer->shutdown_command_pools.push_back(std::move(engine->renderer->graphics_pool));
+        engine->renderer->shutdown_command_pools.push_back(std::move(engine->renderer->compute_pool));
+        engine->renderer->shutdown_descriptor_pools.push_back(std::move(engine->renderer->desc_pool));
     }
 
     vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> Renderer::getShader(const std::string& file_name)

@@ -139,7 +139,6 @@ namespace lotus
         friend class ScheduledTask;
         friend class MainThreadTask;
         ScheduledTask* tryGetTask();
-        ScheduledTask* getTask();
         void runTasks(std::stop_token);
         void queueTask(ScheduledTask*);
 

@@ -63,7 +63,6 @@ namespace lotus
         void createDepthImage();
         void createFramebuffers();
         void createSyncs();
-        void createCommandPool();
         void createGBufferResources();
         void createDeferredCommandBuffer();
         void createQuad();

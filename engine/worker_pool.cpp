@@ -13,7 +13,7 @@ namespace lotus
         {
             threads.emplace_back([this](std::stop_token stop)
             {
-                engine->renderer->createThreadLocals();
+                auto thread_locals = engine->renderer->createThreadLocals();
                 runTasks(stop);
             });
         }
@@ -21,15 +21,17 @@ namespace lotus
 
     void WorkerPool::Run()
     {
-        engine->renderer->createThreadLocals();
-        main_flag.wait(false);
+        auto thread_locals = engine->renderer->createThreadLocals();
         while (!threads[0].get_stop_token().stop_requested())
         {
-            auto task = std::exchange(main_task, nullptr);
-            task->awaiting.resume();
             main_flag.clear();
             main_flag.notify_one();
             main_flag.wait(false);
+            if (!threads[0].get_stop_token().stop_requested())
+            {
+                auto task = std::exchange(main_task, nullptr);
+                task->awaiting.resume();
+            }
         }
         if (exception) std::rethrow_exception(exception);
     }
@@ -53,17 +55,6 @@ namespace lotus
         Stop();
     }
 
-    WorkerPool::ScheduledTask* WorkerPool::getTask()
-    {
-        ScheduledTask* task = nullptr;
-        while (!task)
-        {
-            task_head.wait(nullptr);
-            task = tryGetTask();
-        }
-        return task;
-    }
-
     void WorkerPool::runTasks(std::stop_token stop)
     {
         task_head.wait(nullptr);
@@ -73,10 +64,13 @@ namespace lotus
             {
                 main_flag.wait(true);
             }
-            auto* task = tryGetTask();
-            if (task)
-                task->awaiting.resume();
-            task_head.wait(nullptr);
+            if (!stop.stop_requested())
+            {
+                auto* task = tryGetTask();
+                if (task)
+                    task->awaiting.resume();
+                task_head.wait(nullptr);
+            }
         }
     }
 
