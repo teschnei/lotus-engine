@@ -73,7 +73,7 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
         }
     }
 
-    addSkeleton(std::move(skel), sizeof(FFXI::OS2::Vertex));
+    co_await addSkeleton(std::move(skel), sizeof(FFXI::OS2::Vertex));
 
     auto [model, model_task] = lotus::Model::LoadModel<FFXIActorLoader>(engine, "iroha_test", os2s, pSk2);
     models.push_back(model);

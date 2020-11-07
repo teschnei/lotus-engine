@@ -89,7 +89,7 @@ namespace lotus
         return false;
     }
 
-    void FreeFlyingCameraComponent::tick(time_point time, duration delta)
+    Task<> FreeFlyingCameraComponent::tick(time_point time, duration delta)
     {
         auto camera = static_cast<Camera*>(entity);
         if (moving.x != 0 || moving.z != 0)
@@ -101,5 +101,6 @@ namespace lotus
             auto pos = camera->getPos();
             std::cout << "x: " << pos[0] << " y: " << pos[1] << " z: " << pos[2] << std::endl;
         }
+        co_return;
     }
 }

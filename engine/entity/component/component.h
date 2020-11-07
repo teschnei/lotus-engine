@@ -16,7 +16,8 @@ namespace lotus {
         Component& operator=(const Component&) = delete;
         Component& operator=(Component&&) = default;
         virtual ~Component() = default;
-        virtual void tick(time_point time, duration delta) {};
+        Task<> init() { co_return; }
+        virtual Task<> tick(time_point time, duration delta) { co_return; };
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) { co_return; };
         bool removed() { return remove; }
     protected:

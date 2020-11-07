@@ -58,7 +58,7 @@ namespace lotus
         } frustum {};
 
     protected:
-        virtual void tick(time_point time, duration delta) override;
+        virtual Task<> tick(time_point time, duration delta) override;
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
 
         float rot_x{ -glm::pi<float>() };

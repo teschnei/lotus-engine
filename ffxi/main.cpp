@@ -50,8 +50,9 @@ public:
 
         engine->worker_pool->background(load_scene());
     }
-    virtual void tick(lotus::time_point, lotus::duration) override
+    virtual lotus::Task<> tick(lotus::time_point, lotus::duration) override
     {
+        co_return;
     }
 private:
     std::shared_ptr<lotus::Texture> default_texture;
@@ -77,13 +78,13 @@ private:
         auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
         if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
         {
-            camera->addComponent<lotus::CameraCascadesComponent>();
+            co_await camera->addComponent<lotus::CameraCascadesComponent>();
         }
         engine->set_camera(camera.get());
         engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
 
-        player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
-        //player->addComponent<ParticleTester>(engine->input.get());
+        co_await player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
+        co_await player->addComponent<ParticleTester>(engine->input.get());
 
         co_await update_scene(std::move(loading_scene));
     }

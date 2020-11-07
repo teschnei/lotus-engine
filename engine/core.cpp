@@ -62,8 +62,7 @@ namespace lotus
                 //make sure we're on the main thread for any SDL events
                 co_await worker_pool->mainThread();
                 input->GetInput();
-                //maybe this should co_await too, but for now I don't think it's required
-                game->tick_all(simulation_time, sim_delta);
+                co_await game->tick_all(simulation_time, sim_delta);
                 co_await renderer->drawFrame();
             }
         }

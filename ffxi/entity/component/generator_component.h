@@ -10,7 +10,7 @@ class GeneratorComponent : public lotus::Component
 public:
     GeneratorComponent(lotus::Entity* entity, lotus::Engine* engine, FFXI::Generator* generator, lotus::duration duration);
     virtual ~GeneratorComponent() = default;
-    virtual void tick(lotus::time_point time, lotus::duration delta) override;
+    virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
 
 protected:
     FFXI::Generator* generator;

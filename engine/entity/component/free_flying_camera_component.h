@@ -9,7 +9,7 @@ namespace lotus
     public:
         explicit FreeFlyingCameraComponent(Entity*, Engine*, Input*);
         virtual bool handleInput(const SDL_Event&) override;
-        virtual void tick(time_point time, duration delta) override;
+        virtual Task<> tick(time_point time, duration delta) override;
     private:
         bool look{ false };
         //x/y of mouse when mouselook started

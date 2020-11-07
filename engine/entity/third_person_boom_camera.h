@@ -19,7 +19,7 @@ namespace lotus
         void update_camera() { update = true; }
 
     protected:
-        void tick(time_point time, duration delta) override;
+        Task<> tick(time_point time, duration delta) override;
         float distance {7.f};
         std::weak_ptr<Entity> focus;
     };

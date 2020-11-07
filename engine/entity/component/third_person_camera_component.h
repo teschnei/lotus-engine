@@ -9,7 +9,7 @@ namespace lotus
     public:
         explicit ThirdPersonCameraComponent(Entity*, Engine*, Input*, std::weak_ptr<Entity>& focus);
         virtual bool handleInput(const SDL_Event&) override;
-        virtual void tick(time_point time, duration delta) override;
+        virtual Task<> tick(time_point time, duration delta) override;
     protected:
         std::weak_ptr<Entity> focus;
         //min/max camera distance (squared)

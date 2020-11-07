@@ -11,7 +11,7 @@ ThirdPersonEntityFFXIInputComponent::ThirdPersonEntityFFXIInputComponent(lotus::
 {
 }
 
-void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::duration delta)
+lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::duration delta)
 {
     if (moving.x != 0 || moving.z != 0)
     {
@@ -73,4 +73,5 @@ void ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, lotus::du
         }
     }
     moving_prev = now_moving;
+    co_return;
 }

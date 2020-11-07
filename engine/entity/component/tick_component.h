@@ -9,9 +9,10 @@ namespace lotus
     {
     public:
         explicit TickComponent(Entity* entity, Engine* engine, std::function<void(time_point, duration)> function) : Component(entity, engine), tick_function(function) {}
-        virtual void tick(time_point time, duration delta)
+        virtual Task<> tick(time_point time, duration delta)
         {
             tick_function(time, delta);
+            co_return;
         };
     private:
         std::function<void(time_point, duration)> tick_function;

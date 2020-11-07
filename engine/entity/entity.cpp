@@ -10,11 +10,11 @@ namespace lotus
     {
     }
 
-    void Entity::tick_all(time_point time, duration delta)
+    Task<> Entity::tick_all(time_point time, duration delta)
     {
         for (auto& component : components)
         {
-            component->tick(time, delta);
+            co_await component->tick(time, delta);
         }
         components.erase(std::remove_if(components.begin(), components.end(), [](auto& component)
         {
@@ -22,7 +22,7 @@ namespace lotus
         }), components.end());
         components.insert(components.end(), std::move_iterator(new_components.begin()), std::move_iterator(new_components.end()));
         new_components.clear();
-        tick(time, delta);
+        co_await tick(time, delta);
     }
 
     Task<> Entity::render_all(Engine* engine, std::shared_ptr<Entity>& sp)

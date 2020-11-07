@@ -20,7 +20,7 @@ namespace lotus
         }
     }
 
-    void AnimationComponent::tick(time_point time, duration delta)
+    Task<> AnimationComponent::tick(time_point time, duration delta)
     {
         if (current_animation)
         {
@@ -54,6 +54,7 @@ namespace lotus
                 }
             }
         }
+        co_return;
     }
 
     Task<> AnimationComponent::render(Engine* engine, std::shared_ptr<Entity> sp)

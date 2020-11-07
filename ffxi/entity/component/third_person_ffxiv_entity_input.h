@@ -5,7 +5,7 @@ class ThirdPersonEntityFFXIVInputComponent : public lotus::ThirdPersonEntityInpu
 {
 public:
     explicit ThirdPersonEntityFFXIVInputComponent(lotus::Entity*, lotus::Engine*, lotus::Input*);
-    virtual void tick(lotus::time_point time, lotus::duration delta) override;
+    virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
 protected:
     bool moving_prev {false};
 };

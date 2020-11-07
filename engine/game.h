@@ -15,17 +15,17 @@ namespace lotus
 
         virtual Task<> entry() = 0;
         void run() { engine->run(); }
-        void tick_all(time_point time, duration delta)
+        Task<> tick_all(time_point time, duration delta)
         {
-            tick(time, delta);
+            co_await tick(time, delta);
             if (scene)
-                scene->tick_all(time, delta);
+                co_await scene->tick_all(time, delta);
         }
         std::unique_ptr<Engine> engine;
         std::unique_ptr<Scene> scene;
         Task<> update_scene(std::unique_ptr<Scene>&& scene);
 
     protected:
-        virtual void tick(time_point time, duration delta) {}
+        virtual Task<> tick(time_point time, duration delta) { co_return; }
     };
 }

@@ -25,7 +25,7 @@ namespace lotus
         explicit AnimationComponent(Entity*, Engine* engine, std::unique_ptr<Skeleton>&&, size_t vertex_stride);
         virtual ~AnimationComponent() override = default;
 
-        virtual void tick(time_point time, duration delta) override;
+        virtual Task<> tick(time_point time, duration delta) override;
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
         void playAnimation(std::string name, float speed = 1.f, std::optional<std::string> next_anim = {});
         void playAnimationLoop(std::string name, float speed = 1.f );

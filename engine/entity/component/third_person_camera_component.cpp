@@ -63,7 +63,7 @@ namespace lotus
         return false;
     }
 
-    void ThirdPersonCameraComponent::tick(time_point time, duration delta)
+    Task<> ThirdPersonCameraComponent::tick(time_point time, duration delta)
     {
         auto camera = static_cast<ThirdPersonBoomCamera*>(entity);
         auto focus_lock = focus.lock();
@@ -87,5 +87,6 @@ namespace lotus
         {
             //destroy self as focus is no longer valid
         }
+        co_return;
     }
 }

@@ -10,6 +10,6 @@ ThirdPersonFFXIVCamera::ThirdPersonFFXIVCamera(lotus::Engine* engine, std::weak_
 lotus::Task<std::shared_ptr<ThirdPersonFFXIVCamera>> ThirdPersonFFXIVCamera::Init(lotus::Engine* engine, std::weak_ptr<Entity>& focus)
 {
     auto sp = std::make_shared<ThirdPersonFFXIVCamera>(engine, focus);
-    sp->addComponent<ThirdPersonFFXIVCameraComponent>(engine->input.get(), focus);
+    co_await sp->addComponent<ThirdPersonFFXIVCameraComponent>(engine->input.get(), focus);
     co_return sp;
 }

@@ -71,7 +71,7 @@ namespace lotus
         return false;
     }
 
-    void ThirdPersonEntityInputComponent::tick(time_point time, duration delta)
+    Task<> ThirdPersonEntityInputComponent::tick(time_point time, duration delta)
     {
         if (moving.x != 0 || moving.z != 0)
         {
@@ -88,5 +88,6 @@ namespace lotus
                 entity->setPos(pos + offset * new_distance * rot);
             });
         }
+        co_return;
     }
 }

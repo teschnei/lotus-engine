@@ -22,7 +22,9 @@ class ParticleTester : public lotus::InputComponent
 {
 public:
     explicit ParticleTester(lotus::Entity*, lotus::Engine*, lotus::Input*);
+    lotus::Task<> init();
     virtual bool handleInput(const SDL_Event&) override;
+    virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
 private:
     std::vector<std::shared_ptr<lotus::Model>> models;
     FFXI::DatParser parser;
@@ -31,5 +33,6 @@ private:
     std::map<std::string, FFXI::Scheduler*> schedulers;
     std::map<std::string, FFXI::Keyframe*> keyframes;
     std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
-    void ParseDir(FFXI::DatChunk*);
+    lotus::Task<> ParseDir(FFXI::DatChunk*);
+    bool add{ false };
 };

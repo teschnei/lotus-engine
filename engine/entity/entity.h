@@ -23,16 +23,21 @@ namespace lotus
         Entity& operator=(Entity&&) = default;
         virtual ~Entity() = default;
 
-        void tick_all(time_point time, duration delta);
+        Task<> tick_all(time_point time, duration delta);
         Task<> render_all(Engine* engine, std::shared_ptr<Entity>& sp);
         virtual WorkerTask<> ReInitWork() { co_return; };
 
         template<typename T, typename... Args>
-        void addComponent(Args&&... args)
+        Task<T*> addComponent(Args&&... args)
         {
-            components.push_back(std::make_unique<T>(this, engine, std::forward<Args>(args)...));
+            auto component = std::make_unique<T>(this, engine, std::forward<Args>(args)...);
+            co_await component->init();
+            auto comp_ptr = component.get();
+            components.push_back(std::move(component));
+            co_return comp_ptr;
         };
 
+        //TODO: this is because iterators are invalidated - can I use ranges to make a shallow copy when iterating?
         //Components added from within components of the same entity must use an alternate method
         template<typename T, typename... Args>
         void addNewComponent(Args&&... args)
@@ -64,7 +69,7 @@ namespace lotus
         bool should_remove() { return remove; };
 
     protected:
-        virtual void tick(time_point time, duration delta){}
+        virtual Task<> tick(time_point time, duration delta) { co_return; }
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp){ co_return; }
 
         Engine* engine;

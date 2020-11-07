@@ -7,9 +7,9 @@ ThirdPersonEntityFFXIVInputComponent::ThirdPersonEntityFFXIVInputComponent(lotus
 {
 }
 
-void ThirdPersonEntityFFXIVInputComponent::tick(lotus::time_point time, lotus::duration delta)
+lotus::Task<> ThirdPersonEntityFFXIVInputComponent::tick(lotus::time_point time, lotus::duration delta)
 {
-    lotus::ThirdPersonEntityInputComponent::tick(time, delta);
+    co_await lotus::ThirdPersonEntityInputComponent::tick(time, delta);
     //play animation
     bool now_moving = moving.x != 0.f || moving.z != 0.f;
     auto deformable = dynamic_cast<lotus::DeformableEntity*>(entity);

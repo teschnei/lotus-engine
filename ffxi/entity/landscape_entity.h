@@ -34,7 +34,7 @@ public:
     std::map<std::string, std::map<uint32_t, LightTOD>> weather_light_map;
 protected:
     virtual lotus::Task<> render(lotus::Engine* engine, std::shared_ptr<Entity> sp) override;
-    virtual void tick(lotus::time_point time, lotus::duration delta) override;
+    virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
     uint32_t current_time{750};
     std::string current_weather = "suny";

@@ -16,7 +16,7 @@ class SchedulerComponent : public lotus::Component
 public:
     SchedulerComponent(lotus::Entity* entity, lotus::Engine* engine, FFXI::Scheduler* scheduler);
     virtual ~SchedulerComponent() = default;
-    virtual void tick(lotus::time_point time, lotus::duration delta) override;
+    virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
 
 protected:
     FFXI::Scheduler* scheduler;

@@ -16,7 +16,7 @@ namespace lotus
     public:
         explicit Scene(Engine* _engine);
         Task<> render();
-        void tick_all(time_point time, duration delta);
+        Task<> tick_all(time_point time, duration delta);
 
         template <typename T, typename... Args>
         [[nodiscard("Work must be awaited to be processed")]]
@@ -36,7 +36,7 @@ namespace lotus
         }
         std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
     protected:
-        virtual void tick(time_point time, duration delta) {}
+        virtual Task<> tick(time_point time, duration delta) { co_return; }
 
         Engine* engine;
         std::vector<std::shared_ptr<Entity>> entities;

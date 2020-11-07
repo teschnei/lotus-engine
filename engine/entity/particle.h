@@ -26,7 +26,7 @@ namespace lotus
     protected:
         WorkerTask<> Load();
         WorkerTask<> InitWork();
-        virtual void tick(time_point time, duration delta) override;
+        virtual Task<> tick(time_point time, duration delta) override;
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
         WorkerTask<> renderWork();
         glm::mat4 entity_rot_mat{};

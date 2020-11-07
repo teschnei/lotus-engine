@@ -75,7 +75,8 @@ namespace lotus
         using coroutine_handle = std::coroutine_handle<Promise<Result>>;
         Task<Result> get_return_object() noexcept;
 
-        void return_value(Result&& value) noexcept
+        template<typename R> requires std::convertible_to<R&&, Result>
+        void return_value(R&& value) noexcept(std::is_nothrow_convertible<R&&, Result>)
         {
             result_store = std::move(value);
         }

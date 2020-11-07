@@ -152,7 +152,6 @@ namespace lotus
         std::atomic_flag main_flag;
         std::atomic_flag worker_flag;
 
-        //TODO: this should be a shared_ptr specialization of std::atomic, but it doesn't exist yet in gcc
         SharedLinkedList<Task<>> processing_tasks;
         std::vector<SharedLinkedList<Task<>>> finished_tasks;
         SharedLinkedList<Task<>> deletion_tasks;

@@ -85,7 +85,7 @@ namespace lotus
         memcpy(view_proj_mapped + (engine->renderer->getCurrentImage() * engine->renderer->uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
     }
 
-    void Camera::tick(time_point time, duration delta)
+    Task<> Camera::tick(time_point time, duration delta)
     {
         if (update)
         {
@@ -144,6 +144,7 @@ namespace lotus
             point = -glm::dot(normal, nc + X * nw);
             frustum.right.x = normal.x; frustum.right.y = normal.y; frustum.right.z = normal.z; frustum.right.w = point;
         }
+        co_return;
     }
 
     Task<> Camera::render(Engine* engine, std::shared_ptr<Entity> sp)

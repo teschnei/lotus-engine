@@ -20,7 +20,7 @@ SchedulerComponent::SchedulerComponent(lotus::Entity* entity, lotus::Engine* eng
     }
 }
 
-void SchedulerComponent::tick(lotus::time_point time, lotus::duration delta)
+lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration delta)
 {
     auto frame_number = std::chrono::duration_cast<std::chrono::milliseconds>(time - start_time).count() * (60.f / 1000.f);
     auto [buffer, next_frame] = scheduler->getStage(stage);
@@ -75,4 +75,5 @@ void SchedulerComponent::tick(lotus::time_point time, lotus::duration delta)
         }
         stage++;
     }
+    co_return;
 }

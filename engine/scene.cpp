@@ -62,12 +62,12 @@ namespace lotus
         }
     }
 
-    void Scene::tick_all(time_point time, duration delta)
+    Task<> Scene::tick_all(time_point time, duration delta)
     {
-        tick(time, delta);
+        co_await tick(time, delta);
         for (const auto& entity : entities)
         {
-            entity->tick_all(time, delta);
+            co_await entity->tick_all(time, delta);
         }
         entities.erase(std::remove_if(entities.begin(), entities.end(), [](auto& entity)
         {

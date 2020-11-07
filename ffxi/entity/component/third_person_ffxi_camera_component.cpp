@@ -58,7 +58,7 @@ bool ThirdPersonFFXICameraComponent::handleInput(const SDL_Event& event)
     return false;
 }
 
-void ThirdPersonFFXICameraComponent::tick(lotus::time_point time, lotus::duration delta)
+lotus::Task<> ThirdPersonFFXICameraComponent::tick(lotus::time_point time, lotus::duration delta)
 {
     auto camera = static_cast<ThirdPersonFFXIVCamera*>(entity);
     auto focus_lock = focus.lock();
@@ -73,4 +73,5 @@ void ThirdPersonFFXICameraComponent::tick(lotus::time_point time, lotus::duratio
     {
         //destroy self as focus is no longer valid
     }
+    co_return;
 }

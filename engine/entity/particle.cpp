@@ -40,7 +40,7 @@ namespace lotus
         co_return;
     }
 
-    void Particle::tick(time_point time, duration delta)
+    Task<> Particle::tick(time_point time, duration delta)
     {
         if (time > (spawn_time + lifetime))
         {
@@ -57,8 +57,9 @@ namespace lotus
                 camera_mat[2].y = 0;
             }
             rot_mat = camera_mat * entity_rot_mat;
-            RenderableEntity::tick(time, delta);
+            co_await RenderableEntity::tick(time, delta);
         }
+        co_return;
     }
 
     Task<> Particle::render(Engine* engine, std::shared_ptr<Entity> sp)

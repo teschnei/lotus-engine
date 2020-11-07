@@ -21,7 +21,7 @@ namespace lotus
     Task<std::shared_ptr<ThirdPersonBoomCamera>> ThirdPersonBoomCamera::Init(Engine* engine, std::weak_ptr<Entity>& focus)
     {
         auto sp = std::make_shared<ThirdPersonBoomCamera>(engine, focus);
-        sp->addComponent<ThirdPersonCameraComponent>(engine->input.get(), focus);
+        co_await sp->addComponent<ThirdPersonCameraComponent>(engine->input.get(), focus);
         co_return sp;
     }
 
@@ -66,7 +66,7 @@ namespace lotus
         update = true;
     }
 
-    void ThirdPersonBoomCamera::tick(time_point time, duration delta)
+    Task<> ThirdPersonBoomCamera::tick(time_point time, duration delta)
     {
         if (update)
         {
@@ -80,6 +80,6 @@ namespace lotus
                 look(boom_source);
             });
         }
-        Camera::tick(time, delta);
+        co_await Camera::tick(time, delta);
     }
 }

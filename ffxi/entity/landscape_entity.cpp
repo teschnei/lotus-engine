@@ -235,6 +235,7 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
     co_await lotus::LandscapeEntity::render(engine, sp);
 }
 
-void FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
+lotus::Task<> FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
 {
+    co_return;
 }

@@ -20,21 +20,19 @@ GeneratorComponent::GeneratorComponent(lotus::Entity* entity, lotus::Engine* eng
     }
 }
 
-void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
+lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
 {
-    /*
     if (time > start_time + duration)
     {
         remove = true;
-        return;
+        co_return;
     }
     uint32_t frequency = 1000 * ((generator->header->interval + 1) / 60.f);
     auto next_generation = std::chrono::milliseconds(generated * frequency);
 
     if (time > start_time + next_generation)
     {
-        auto [particle, particle_work] = engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))));
-        engine->worker_pool->addForegroundWork(particle_work);
+        auto particle = co_await engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))));
         auto pos = glm::vec3(0);
         pos.x = lotus::random::GetRandomNumber(generator->gen_radius, generator->gen_radius + generator->gen_radius_fluctuation);
         //TODO: rotation (instead of randomly, spins around rotation+1 times per frame)
@@ -211,7 +209,7 @@ void GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
             }
         };
         particle_tick(time, 0s);
-        particle->addComponent<lotus::TickComponent>(particle_tick);
+        co_await particle->addComponent<lotus::TickComponent>(particle_tick);
         generated++;
-    }*/
+    }
 }

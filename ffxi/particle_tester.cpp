@@ -19,7 +19,20 @@ ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, l
     parser_system( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path / "ROM/0/0.DAT", engine->config->renderer.RaytraceEnabled() ),
     parser( static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path / "ROM/10/9.DAT", engine->config->renderer.RaytraceEnabled() )
 {
-    ParseDir(parser.root.get());
+}
+
+lotus::Task<> ParticleTester::init()
+{
+    co_await ParseDir(parser.root.get());
+}
+
+lotus::Task<> ParticleTester::tick(lotus::time_point time, lotus::duration delta)
+{
+    if (add)
+    {
+        co_await entity->addComponent<SchedulerComponent>(schedulers["tgt0"]);
+        add = false;
+    }
 }
 
 bool ParticleTester::handleInput(const SDL_Event& event)
@@ -29,7 +42,7 @@ bool ParticleTester::handleInput(const SDL_Event& event)
         switch (event.key.keysym.scancode)
         {
         case SDL_SCANCODE_R:
-            entity->addComponent<SchedulerComponent>(schedulers["tgt0"]);
+            add = true;
             return true;
         default:
             return false;
@@ -38,8 +51,10 @@ bool ParticleTester::handleInput(const SDL_Event& event)
     return false;
 }
 
-void ParticleTester::ParseDir(FFXI::DatChunk* chunk)
+lotus::Task<> ParticleTester::ParseDir(FFXI::DatChunk* chunk)
 {
+    std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
+    std::vector<lotus::Task<>> model_tasks;
     for (const auto& chunk : chunk->children)
     {
         ParseDir(chunk.get());
@@ -54,9 +69,7 @@ void ParticleTester::ParseDir(FFXI::DatChunk* chunk)
         {
             if (dxt3->width > 0)
             {
-                //TODO
-                auto tex_task = lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3);
-//                texture_map[dxt3->name] = co_await tex_task;
+                texture_tasks.push_back(lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3));
             }
         }
         else if (auto keyframe = dynamic_cast<FFXI::Keyframe*>(chunk.get()))
@@ -72,10 +85,19 @@ void ParticleTester::ParseDir(FFXI::DatChunk* chunk)
     {
         if (auto d3m = dynamic_cast<FFXI::D3M*>(chunk.get()))
         {
-            auto model_task = lotus::Model::LoadModel<FFXI::D3MLoader>(engine, std::string(d3m->name, 4), d3m);
-            //TODO
-//            models.push_back(model);
-//            engine->worker_pool->addForegroundWork(work);
+            auto [model, model_task] = lotus::Model::LoadModel<FFXI::D3MLoader>(engine, std::string(d3m->name, 4), d3m);
+            models.push_back(model);
+            if (model_task)
+                model_tasks.push_back(std::move(*model_task));
         }
+    }
+    //co_await all tasks
+    for (const auto& task : texture_tasks)
+    {
+        co_await task;
+    }
+    for (const auto& task : model_tasks)
+    {
+        co_await task;
     }
 }
