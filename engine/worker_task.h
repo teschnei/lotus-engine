@@ -116,12 +116,7 @@ namespace lotus
                 }
                 auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
-                    auto expected = handle.promise().next_handle.load();
-                    if (expected && handle.promise().next_handle.compare_exchange_strong(expected, awaiting))
-                    {
-                        return true;
-                    }
-                    return false;
+                    return handle.promise().next_handle.exchange(awaiting) != nullptr;
                 }
                 auto await_resume()
                 {
@@ -143,12 +138,7 @@ namespace lotus
                 }
                 auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
-                    auto expected = handle.promise().next_handle.load();
-                    if (expected && handle.promise().next_handle.compare_exchange_strong(expected, awaiting))
-                    {
-                        return true;
-                    }
-                    return false;
+                    return handle.promise().next_handle.exchange(awaiting) != nullptr;
                 }
                 auto await_resume()
                 {
@@ -159,7 +149,7 @@ namespace lotus
             return awaitable{handle};
         }
 
-//    protected:
+    protected:
         friend class WorkerPool;
         coroutine_handle handle;
     };

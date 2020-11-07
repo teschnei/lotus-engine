@@ -76,23 +76,16 @@ namespace lotus
 
     WorkerPool::ScheduledTask* WorkerPool::tryGetTask()
     {
-        ScheduledTask* head = nullptr;
-        do
-        {
-            head = task_head.load();
-        } while (head && !task_head.compare_exchange_weak(head, head->next));
+        auto head = task_head.load();
+        while (head && !task_head.compare_exchange_weak(head, head->next, std::memory_order::seq_cst, std::memory_order::relaxed));
 
         return head;
     }
 
     void WorkerPool::queueTask(ScheduledTask* task)
     {
-        ScheduledTask* head = nullptr;
-        do
-        {
-            head = task_head.load();
-            task->next = head;
-        } while (!task_head.compare_exchange_weak(head, task));
+        task->next = task_head.load(std::memory_order::relaxed);
+        while (!task_head.compare_exchange_weak(task->next, task, std::memory_order::seq_cst, std::memory_order::relaxed));
 
         task_head.notify_one();
     }

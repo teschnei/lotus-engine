@@ -26,7 +26,7 @@ namespace lotus
         {
             Node(T _val) : val(std::move(_val)) {}
             T val;
-            std::atomic<std::shared_ptr<Node>> next;
+            std::shared_ptr<Node> next;
         };
 
         std::optional<T> get()
@@ -45,7 +45,7 @@ namespace lotus
             while(node)
             {
                 values.push_back(std::move(node->val));
-                node = node->next.load(std::memory_order::relaxed);
+                node = node->next;
             }
             return values;
         }
@@ -53,12 +53,8 @@ namespace lotus
         void queue(T val)
         {
             auto node = std::make_shared<Node>(std::move(val));
-            std::shared_ptr<Node> expected_head;
-            do
-            {
-                expected_head = head.load(std::memory_order::seq_cst);
-                node->next.store(expected_head, std::memory_order::relaxed);
-            } while (!head.compare_exchange_weak(expected_head, node, std::memory_order::seq_cst, std::memory_order::relaxed));
+            node->next = head.load(std::memory_order::relaxed);
+            while (!head.compare_exchange_weak(node->next, node, std::memory_order::seq_cst, std::memory_order::relaxed));
         }
     private:
         std::atomic<std::shared_ptr<Node>> head;

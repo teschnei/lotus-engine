@@ -232,7 +232,8 @@ namespace lotus
             }
 
 
-    //    protected:
+        protected:
+            friend class WorkerPool;
             coroutine_handle handle;
         };
 

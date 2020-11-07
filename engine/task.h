@@ -50,7 +50,7 @@ namespace lotus
             template<typename Promise>
             auto await_suspend(std::coroutine_handle<Promise> handle)
             {
-                return handle.promise().next_handle;
+                return handle.promise().next_handle.exchange(nullptr);
             }
             void await_resume() noexcept {}
         };
@@ -66,7 +66,7 @@ namespace lotus
         }
 
         std::exception_ptr exception;
-        std::coroutine_handle<> next_handle{ std::noop_coroutine() };
+        std::atomic<std::coroutine_handle<>> next_handle{ std::noop_coroutine() };
     };
 
     template<typename Result>
@@ -145,7 +145,7 @@ namespace lotus
                 }
                 auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
-                    handle.promise().next_handle = awaiting;
+                    return handle.promise().next_handle.exchange(awaiting) != nullptr;
                 }
                 auto await_resume()
                 {
@@ -167,7 +167,7 @@ namespace lotus
                 }
                 auto await_suspend(std::coroutine_handle<> awaiting) noexcept
                 {
-                    handle.promise().next_handle = awaiting;
+                    return handle.promise().next_handle.exchange(awaiting) != nullptr;
                 }
                 auto await_resume()
                 {
@@ -178,7 +178,7 @@ namespace lotus
             return awaitable{handle};
         }
 
-//    protected:
+    protected:
         friend class WorkerPool;
         coroutine_handle handle;
     };
