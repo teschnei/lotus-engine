@@ -65,7 +65,9 @@ namespace lotus
     Task<> Scene::tick_all(time_point time, duration delta)
     {
         co_await tick(time, delta);
-        for (const auto& entity : entities)
+        std::vector<decltype(entities)::value_type::element_type*> entities_p{entities.size()};
+        std::ranges::transform(entities, entities_p.begin(), [](auto& c) {return c.get(); });
+        for (auto entity : entities_p)
         {
             co_await entity->tick_all(time, delta);
         }
@@ -73,8 +75,6 @@ namespace lotus
         {
             return entity->should_remove();
         }), entities.end());
-        entities.insert(entities.end(), std::move_iterator(new_entities.begin()), std::move_iterator(new_entities.end()));
-        new_entities.clear();
     }
 }
 

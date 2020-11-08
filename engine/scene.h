@@ -23,7 +23,7 @@ namespace lotus
         Task<std::shared_ptr<T>> AddEntity(Args... args)
         {
             auto sp = co_await T::Init(engine, args...);
-            new_entities.emplace_back(sp);
+            entities.emplace_back(sp);
             co_return sp;
         }
         template<typename F>
@@ -40,6 +40,5 @@ namespace lotus
 
         Engine* engine;
         std::vector<std::shared_ptr<Entity>> entities;
-        std::vector<std::shared_ptr<Entity>> new_entities;
     };
 }

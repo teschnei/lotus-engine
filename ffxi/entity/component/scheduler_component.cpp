@@ -47,7 +47,7 @@ lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration d
             auto generator = generators[std::string(id, 4)];
             {
                 auto real_duration = std::chrono::milliseconds((duration * 1000) / 60);
-                entity->addNewComponent<GeneratorComponent>(generator, real_duration);
+                co_await entity->addComponent<GeneratorComponent>(generator, real_duration);
             }
             break;
         }

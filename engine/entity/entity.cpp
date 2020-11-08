@@ -1,4 +1,5 @@
 #include "entity.h"
+#include <ranges>
 #include <glm/gtx/euler_angles.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,7 +13,9 @@ namespace lotus
 
     Task<> Entity::tick_all(time_point time, duration delta)
     {
-        for (auto& component : components)
+        std::vector<decltype(components)::value_type::element_type*> components_p{components.size()};
+        std::ranges::transform(components, components_p.begin(), [](auto& c) {return c.get(); });
+        for (auto component : components_p)
         {
             co_await component->tick(time, delta);
         }
@@ -20,8 +23,6 @@ namespace lotus
         {
             return component->removed();
         }), components.end());
-        components.insert(components.end(), std::move_iterator(new_components.begin()), std::move_iterator(new_components.end()));
-        new_components.clear();
         co_await tick(time, delta);
     }
 
