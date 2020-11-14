@@ -10,16 +10,11 @@ layout(binding = 6) uniform CameraUBO
     vec4 eye_pos;
 } camera_ubo;
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec3 inColor;
-layout(location = 3) in vec2 inTexCoord;
-
-layout(location = 0) out vec2 fragTexCoord;
+layout(location = 0) out vec2 outUV;
 layout(location = 1) out vec4 eye_dir;
 
 void main() {
-    gl_Position = vec4(inPosition, 1.0);
+	outUV = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+	gl_Position = vec4(outUV * 2.0f - 1.0f, 0.0f, 1.0f);
     eye_dir = camera_ubo.view_inverse * camera_ubo.proj_inverse * gl_Position;
-    fragTexCoord = inTexCoord;
 }

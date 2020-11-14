@@ -33,7 +33,7 @@ namespace lotus
         //TODO: figure out how to get engine out of this call
         template<TextureLoader Loader, typename... Args>
         [[nodiscard("Work must be queued in order to be processed")]]
-        static Task<std::shared_ptr<Texture>> LoadTexture(Engine* engine, std::string texturename, Args... args)
+        static Task<std::shared_ptr<Texture>> LoadTexture(Engine* engine, std::string texturename, Args&&... args)
         {
             if (auto found = texture_map.find(texturename); found != texture_map.end())
             {
@@ -41,7 +41,7 @@ namespace lotus
             }
             auto new_texture = std::shared_ptr<Texture>(new Texture(texturename));
             texture_map.emplace(texturename, new_texture);
-            Loader loader{args...};
+            Loader loader{ std::forward<Args>(args)... };
             loader.setEngine(engine);
             co_await loader.LoadTexture(new_texture);
             co_return new_texture;

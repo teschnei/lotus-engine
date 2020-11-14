@@ -9,9 +9,9 @@ namespace lotus
     {
     }
 
-    Task<> DeformableEntity::addSkeleton(std::unique_ptr<Skeleton>&& skeleton, size_t vertex_stride)
+    Task<> DeformableEntity::addSkeleton(std::unique_ptr<Skeleton>&& skeleton)
     {
-        animation_component = co_await addComponent<AnimationComponent>(std::move(skeleton), vertex_stride);
+        animation_component = co_await addComponent<AnimationComponent>(std::move(skeleton));
     }
 
     void DeformableEntity::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)

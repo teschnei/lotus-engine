@@ -14,21 +14,22 @@ set(SHADERS
     blend.frag
     closesthit.rchit
     color_hit.rahit
+    d3m_gbuffer_vert.vert
+    deferred.vert
     deferred_raster.frag
     deferred_raytrace.frag
     deferred_raytrace_hybrid.frag
-    deferred.vert
+    ffxiactor_gbuffer_vert.vert
+    ffxiactor_shadow_vert.vert
     gbuffer_frag.frag
-    gbuffer_vert.vert
-    landscape_closest_hit.rchit
-    landscape_color_hit.rahit
-    landscape_gbuffer_vert.vert
-    landscape_shadow_vert.vert
     miss.rmiss
+    mmb_closest_hit.rchit
+    mmb_color_hit.rahit
+    mmb_gbuffer_vert.vert
+    mmb_shadow_vert.vert
     particle_blend.frag
     particle_closest_hit.rchit
     particle_color_hit.rahit
-    particle_gbuffer_vert.vert
     particle_intersection.rint
     particle_shadow_color_hit.rahit
     particle_shadow_vert.vert
@@ -40,7 +41,6 @@ set(SHADERS
     rayquery.rgen
     shadow_frag.frag
     shadow_miss.rmiss
-    shadow_vert.vert
     ui_frag.frag
     ui_vert.vert
 )

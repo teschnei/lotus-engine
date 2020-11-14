@@ -32,6 +32,9 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> raytrace_sem;
 
+        virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
+        virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
+
         struct
         {
             std::unique_ptr<Buffer> view_proj_ubo;

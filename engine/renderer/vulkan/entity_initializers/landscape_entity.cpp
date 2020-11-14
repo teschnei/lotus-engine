@@ -51,8 +51,6 @@ namespace lotus
 
             command_buffer->begin(beginInfo);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.graphics_pipeline);
-
             vk::DescriptorBufferInfo buffer_info;
             buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
             buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
@@ -81,11 +79,8 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.blended_graphics_pipeline);
-
-            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, false, false, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, true, false, *renderer->pipeline_layout);
 
             command_buffer->end();
         }
@@ -134,10 +129,8 @@ namespace lotus
 
             command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.shadowmap_pipeline);
-            drawModel(engine, *command_buffer, false, *renderer->shadowmap_pipeline_layout);
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.blended_shadowmap_pipeline);
-            drawModel(engine, *command_buffer, true, *renderer->shadowmap_pipeline_layout);
+            drawModel(engine, *command_buffer, false, true, *renderer->shadowmap_pipeline_layout);
+            drawModel(engine, *command_buffer, true, true, *renderer->shadowmap_pipeline_layout);
 
             command_buffer->end();
         }
@@ -171,8 +164,6 @@ namespace lotus
 
             command_buffer->begin(beginInfo);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.graphics_pipeline);
-
             vk::DescriptorBufferInfo buffer_info;
             buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
             buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
@@ -201,11 +192,8 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->landscape_pipeline_group.blended_graphics_pipeline);
-
-            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, false, false, *renderer->pipeline_layout);
+            drawModel(engine, *command_buffer, true, false, *renderer->pipeline_layout);
 
             command_buffer->end();
         }
@@ -262,7 +250,7 @@ namespace lotus
         engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
     }
 
-    void LandscapeEntityInitializer::drawModel(Engine* engine, vk::CommandBuffer command_buffer, bool transparency, vk::PipelineLayout layout)
+    void LandscapeEntityInitializer::drawModel(Engine* engine, vk::CommandBuffer command_buffer, bool transparency, bool shadowmap, vk::PipelineLayout layout)
     {
         auto entity = static_cast<LandscapeEntity*>(this->entity);
         for (const auto& model : entity->models)
@@ -281,14 +269,14 @@ namespace lotus
                         {
                             material_index = model->bottom_level_as->resource_index + i;
                         }
-                        drawMesh(engine, command_buffer, *mesh, count, layout, material_index);
+                        drawMesh(engine, command_buffer, *mesh, count, layout, material_index, shadowmap);
                     }
                 }
             }
         }
     }
 
-    void LandscapeEntityInitializer::drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout, uint32_t material_index)
+    void LandscapeEntityInitializer::drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout, uint32_t material_index, bool shadowmap)
     {
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -308,6 +296,8 @@ namespace lotus
         descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pImageInfo = &image_info;
+
+        command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, shadowmap ? mesh.pipeline_shadow : mesh.pipeline);
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites);
 

@@ -48,7 +48,7 @@ namespace lotus
         {
             bool await_ready() const noexcept {return false;}
             template<typename Promise>
-            auto await_suspend(std::coroutine_handle<Promise> handle)
+            auto await_suspend(std::coroutine_handle<Promise> handle) noexcept
             {
                 return handle.promise().next_handle.exchange(nullptr);
             }

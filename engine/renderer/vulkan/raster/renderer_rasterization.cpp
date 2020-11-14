@@ -9,8 +9,6 @@
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
 
-constexpr size_t shadowmap_dimension = 2048;
-
 namespace lotus
 {
     RendererRasterization::RendererRasterization(Engine* _engine) : Renderer(_engine)
@@ -37,7 +35,6 @@ namespace lotus
         createCommandPool();
         createShadowmapResources();
         createGBufferResources();
-        createQuad();
         createAnimationResources();
 
         initializeCameraBuffers();
@@ -473,70 +470,41 @@ namespace lotus
 
     void RendererRasterization::createGraphicsPipeline()
     {
-        auto vertex_module = getShader("shaders/gbuffer_vert.spv");
-        auto landscape_vertex_module = getShader("shaders/landscape_gbuffer_vert.spv");
-        auto particle_vertex_module = getShader("shaders/particle_gbuffer_vert.spv");
-        auto fragment_module = getShader("shaders/gbuffer_frag.spv");
-        auto particle_fragment_module = getShader("shaders/particle_blend.spv");
+        std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *static_descriptor_set_layout };
 
+        vk::PipelineLayoutCreateInfo pipeline_layout_info;
+        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
+        pipeline_layout_info.pSetLayouts = descriptor_layouts.data();
+
+        //material index
+        vk::PushConstantRange push_constant_range;
+        push_constant_range.stageFlags = vk::ShaderStageFlagBits::eFragment;
+        push_constant_range.size = 4;
+        push_constant_range.offset = 0;
+
+        pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+        pipeline_layout_info.pushConstantRangeCount = 1;
+
+        pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
+
+        auto vertex_module = getShader("shaders/deferred.spv");
         vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
         vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
         vert_shader_stage_info.module = *vertex_module;
         vert_shader_stage_info.pName = "main";
 
-        vk::PipelineShaderStageCreateInfo landscape_vert_shader_stage_info;
-        landscape_vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
-        landscape_vert_shader_stage_info.module = *landscape_vertex_module;
-        landscape_vert_shader_stage_info.pName = "main";
-
-        vk::PipelineShaderStageCreateInfo particle_vert_shader_stage_info;
-        particle_vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
-        particle_vert_shader_stage_info.module = *particle_vertex_module;
-        particle_vert_shader_stage_info.pName = "main";
-
+        auto fragment_module = getShader("shaders/deferred_raster.spv");
         vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
         frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
         frag_shader_stage_info.module = *fragment_module;
         frag_shader_stage_info.pName = "main";
 
-        vk::PipelineShaderStageCreateInfo particle_frag_shader_stage_info;
-        particle_frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
-        particle_frag_shader_stage_info.module = *particle_fragment_module;
-        particle_frag_shader_stage_info.pName = "main";
+        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
 
-        std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
-        std::array<vk::PipelineShaderStageCreateInfo, 2> landscape_shaderStages = {landscape_vert_shader_stage_info, frag_shader_stage_info};
-        std::array<vk::PipelineShaderStageCreateInfo, 2> particle_shaderStages = {particle_vert_shader_stage_info, particle_frag_shader_stage_info};
+        vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
-        vk::PipelineVertexInputStateCreateInfo main_vertex_input_info;
-
-        auto main_binding_descriptions = engine->settings.renderer_settings.model_vertex_input_binding_descriptions;
-        auto main_attribute_descriptions = engine->settings.renderer_settings.model_vertex_input_attribute_descriptions;
-
-        main_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(main_binding_descriptions.size());
-        main_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(main_attribute_descriptions.size());
-        main_vertex_input_info.pVertexBindingDescriptions = main_binding_descriptions.data();
-        main_vertex_input_info.pVertexAttributeDescriptions = main_attribute_descriptions.data();
-
-        vk::PipelineVertexInputStateCreateInfo landscape_vertex_input_info;
-
-        auto landscape_binding_descriptions = engine->settings.renderer_settings.landscape_vertex_input_binding_descriptions;
-        auto landscape_attribute_descriptions = engine->settings.renderer_settings.landscape_vertex_input_attribute_descriptions;
-
-        landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(landscape_binding_descriptions.size());
-        landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
-        landscape_vertex_input_info.pVertexBindingDescriptions = landscape_binding_descriptions.data();
-        landscape_vertex_input_info.pVertexAttributeDescriptions = landscape_attribute_descriptions.data();
-
-        vk::PipelineVertexInputStateCreateInfo particle_vertex_input_info;
-
-        auto particle_binding_descriptions = engine->settings.renderer_settings.particle_vertex_input_binding_descriptions;
-        auto particle_attribute_descriptions = engine->settings.renderer_settings.particle_vertex_input_attribute_descriptions;
-
-        particle_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(particle_binding_descriptions.size());
-        particle_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(particle_attribute_descriptions.size());
-        particle_vertex_input_info.pVertexBindingDescriptions = particle_binding_descriptions.data();
-        particle_vertex_input_info.pVertexAttributeDescriptions = particle_attribute_descriptions.data();
+        vertex_input_info.vertexBindingDescriptionCount = 0;
+        vertex_input_info.vertexAttributeDescriptionCount = 0;
 
         vk::PipelineInputAssemblyStateCreateInfo input_assembly = {};
         input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
@@ -590,21 +558,7 @@ namespace lotus
         color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
-        vk::PipelineColorBlendAttachmentState color_blend_attachment_accumulation = color_blend_attachment;
-        color_blend_attachment_accumulation.blendEnable = true;
-        color_blend_attachment_accumulation.srcColorBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.dstColorBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.dstAlphaBlendFactor = vk::BlendFactor::eOne;
-        vk::PipelineColorBlendAttachmentState color_blend_attachment_revealage = color_blend_attachment;
-        color_blend_attachment_revealage.blendEnable = true;
-        color_blend_attachment_revealage.srcColorBlendFactor = vk::BlendFactor::eZero;
-        color_blend_attachment_revealage.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-        color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
-        color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-
-        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
-        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
+        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(1, color_blend_attachment);
 
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;
@@ -616,94 +570,19 @@ namespace lotus
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
 
-        vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
-        color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
-        color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
-
-        std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *static_descriptor_set_layout };
-
-        vk::PipelineLayoutCreateInfo pipeline_layout_info;
-        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
-        pipeline_layout_info.pSetLayouts = descriptor_layouts.data();
-
-        //material index
-        vk::PushConstantRange push_constant_range;
-        push_constant_range.stageFlags = vk::ShaderStageFlagBits::eFragment;
-        push_constant_range.size = 4;
-        push_constant_range.offset = 0;
-
-        pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-        pipeline_layout_info.pushConstantRangeCount = 1;
-
-        pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
-
-        vk::GraphicsPipelineCreateInfo landscape_pipeline_info;
-        landscape_pipeline_info.stageCount = static_cast<uint32_t>(landscape_shaderStages.size());
-        landscape_pipeline_info.pStages = landscape_shaderStages.data();
-        landscape_pipeline_info.pVertexInputState = &landscape_vertex_input_info;
-        landscape_pipeline_info.pInputAssemblyState = &input_assembly;
-        landscape_pipeline_info.pViewportState = &viewport_state;
-        landscape_pipeline_info.pRasterizationState = &rasterizer;
-        landscape_pipeline_info.pMultisampleState = &multisampling;
-        landscape_pipeline_info.pDepthStencilState = &depth_stencil;
-        landscape_pipeline_info.pColorBlendState = &color_blending;
-        landscape_pipeline_info.layout = *pipeline_layout;
-        landscape_pipeline_info.renderPass = *gbuffer_render_pass;
-        landscape_pipeline_info.subpass = 0;
-        landscape_pipeline_info.basePipelineHandle = nullptr;
-
-        vk::GraphicsPipelineCreateInfo main_pipeline_info = landscape_pipeline_info;
-        main_pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-        main_pipeline_info.pStages = shaderStages.data();
-        main_pipeline_info.pVertexInputState = &main_vertex_input_info;
-
-        vk::PipelineDepthStencilStateCreateInfo particle_depth_stencil;
-        particle_depth_stencil.depthTestEnable = true;
-        particle_depth_stencil.depthWriteEnable = false;
-        particle_depth_stencil.depthCompareOp = vk::CompareOp::eLessOrEqual;
-        particle_depth_stencil.depthBoundsTestEnable = false;
-        particle_depth_stencil.stencilTestEnable = false;
-
-        vk::GraphicsPipelineCreateInfo particle_pipeline_info = landscape_pipeline_info;
-        particle_pipeline_info.pDepthStencilState = &particle_depth_stencil;
-        particle_pipeline_info.stageCount = static_cast<uint32_t>(particle_shaderStages.size());
-        particle_pipeline_info.pStages = particle_shaderStages.data();
-        particle_pipeline_info.pVertexInputState = &particle_vertex_input_info;
-        particle_pipeline_info.pColorBlendState = &color_blending_subpass1;
-        particle_pipeline_info.subpass = 1;
-
-        main_pipeline_group.graphics_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
-        landscape_pipeline_group.graphics_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
-        particle_pipeline_group.graphics_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
-
-        fragment_module = getShader("shaders/blend.spv");
-
-        frag_shader_stage_info.module = *fragment_module;
-
-        shaderStages[1] = frag_shader_stage_info;
-        landscape_shaderStages[1] = frag_shader_stage_info;
-
-        main_pipeline_group.blended_graphics_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
-        landscape_pipeline_group.blended_graphics_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
-        particle_pipeline_group.blended_graphics_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
-
-        landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(1);
-        landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(4);
-
-        vertex_module = getShader("shaders/deferred.spv");
-        vert_shader_stage_info.module = *vertex_module;
-
-        fragment_module = getShader("shaders/deferred_raster.spv");
-        frag_shader_stage_info.module = *fragment_module;
-
-        landscape_shaderStages[0] = vert_shader_stage_info;
-        landscape_shaderStages[1] = frag_shader_stage_info;
-        vk::GraphicsPipelineCreateInfo deferred_pipeline_info = landscape_pipeline_info;
-
-        deferred_pipeline_info.renderPass = *render_pass;
-        color_blend_attachment_states = std::vector<vk::PipelineColorBlendAttachmentState>(1, color_blend_attachment);
-        color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
-        color_blending.pAttachments = color_blend_attachment_states.data();
+        vk::GraphicsPipelineCreateInfo pipeline_info;
+        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+        pipeline_info.pStages = shaderStages.data();
+        pipeline_info.pVertexInputState = &vertex_input_info;
+        pipeline_info.pInputAssemblyState = &input_assembly;
+        pipeline_info.pViewportState = &viewport_state;
+        pipeline_info.pRasterizationState = &rasterizer;
+        pipeline_info.pMultisampleState = &multisampling;
+        pipeline_info.pDepthStencilState = &depth_stencil;
+        pipeline_info.pColorBlendState = &color_blending;
+        pipeline_info.renderPass = *render_pass;
+        pipeline_info.subpass = 0;
+        pipeline_info.basePipelineHandle = nullptr;
 
         std::array<vk::DescriptorSetLayout, 1> deferred_descriptor_layouts = { *deferred_descriptor_set_layout };
 
@@ -712,20 +591,17 @@ namespace lotus
 
         deferred_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
-        deferred_pipeline_info.layout = *deferred_pipeline_layout;
+        pipeline_info.layout = *deferred_pipeline_layout;
 
-        deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, deferred_pipeline_info, nullptr);
+        deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr);
 
-        landscape_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(landscape_binding_descriptions.size());
-        landscape_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(landscape_attribute_descriptions.size());
+        std::array<vk::DescriptorSetLayout, 1> shadowmap_descriptor_layouts = { *shadowmap_descriptor_set_layout };
+
         vk::PushConstantRange push_constant_range_shadowmap;
         push_constant_range_shadowmap.stageFlags = vk::ShaderStageFlagBits::eVertex;
         push_constant_range_shadowmap.size = sizeof(uint32_t);
         push_constant_range_shadowmap.offset = 4;
 
-        color_blending.attachmentCount = 0;
-
-        std::array<vk::DescriptorSetLayout, 1> shadowmap_descriptor_layouts = { *shadowmap_descriptor_set_layout };
         std::vector<vk::PushConstantRange> push_constant_ranges = { push_constant_range, push_constant_range_shadowmap };
 
         pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(shadowmap_descriptor_layouts.size());
@@ -734,63 +610,6 @@ namespace lotus
         pipeline_layout_info.pPushConstantRanges = push_constant_ranges.data();
 
         shadowmap_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
-
-        main_pipeline_info.layout = *shadowmap_pipeline_layout;
-        landscape_pipeline_info.layout = *shadowmap_pipeline_layout;
-        particle_pipeline_info.layout = *shadowmap_pipeline_layout;
-
-        main_pipeline_info.renderPass = *shadowmap_render_pass;
-        landscape_pipeline_info.renderPass = *shadowmap_render_pass;
-        particle_pipeline_info.renderPass = *shadowmap_render_pass;
-        vertex_module = getShader("shaders/shadow_vert.spv");
-        landscape_vertex_module = getShader("shaders/landscape_shadow_vert.spv");
-        particle_vertex_module = getShader("shaders/particle_shadow_vert.spv");
-        fragment_module = getShader("shaders/shadow_frag.spv");
-
-        vert_shader_stage_info.module = *vertex_module;
-        landscape_vert_shader_stage_info.module = *landscape_vertex_module;
-        particle_vert_shader_stage_info.module = *particle_vertex_module;
-        frag_shader_stage_info.module = *fragment_module;
-
-        shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
-        landscape_shaderStages = { landscape_vert_shader_stage_info, frag_shader_stage_info };
-        particle_shaderStages = { particle_vert_shader_stage_info, frag_shader_stage_info };
-
-        main_pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-        main_pipeline_info.pStages = shaderStages.data();
-        landscape_pipeline_info.stageCount = static_cast<uint32_t>(landscape_shaderStages.size());
-        landscape_pipeline_info.pStages = landscape_shaderStages.data();
-        particle_pipeline_info.stageCount = static_cast<uint32_t>(particle_shaderStages.size());
-        particle_pipeline_info.pStages = particle_shaderStages.data();
-
-        viewport.width = shadowmap_dimension;
-        viewport.height = shadowmap_dimension;
-        scissor.extent.width = shadowmap_dimension;
-        scissor.extent.height = shadowmap_dimension;
-
-        rasterizer.depthClampEnable = true;
-        rasterizer.depthBiasEnable = true;
-
-        std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
-        vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
-        dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
-        dynamic_state_ci.pDynamicStates = dynamic_states.data();
-        main_pipeline_info.pDynamicState = &dynamic_state_ci;
-        landscape_pipeline_info.pDynamicState = &dynamic_state_ci;
-        particle_pipeline_info.pDynamicState = &dynamic_state_ci;
-        main_pipeline_group.blended_shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
-        landscape_pipeline_group.blended_shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
-        //particle_pipeline_group.blended_shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
-
-        main_pipeline_info.stageCount = 1;
-        main_pipeline_info.pStages = &vert_shader_stage_info;
-        landscape_pipeline_info.stageCount = 1;
-        landscape_pipeline_info.pStages = &landscape_vert_shader_stage_info;
-        particle_pipeline_info.stageCount = 1;
-        particle_pipeline_info.pStages = &particle_vert_shader_stage_info;
-        main_pipeline_group.shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, main_pipeline_info, nullptr);
-        landscape_pipeline_group.shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, landscape_pipeline_info, nullptr);
-        //particle_pipeline_group.shadowmap_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, particle_pipeline_info, nullptr);
     }
 
     void RendererRasterization::createDepthImage()
@@ -851,7 +670,7 @@ namespace lotus
     {
         auto format = gpu->getDepthFormat();
 
-        shadowmap_image = gpu->memory_manager->GetImage(shadowmap_dimension, shadowmap_dimension, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, shadowmap_cascades);
+        shadowmap_image = gpu->memory_manager->GetImage(engine->settings.renderer_settings.shadowmap_dimension, engine->settings.renderer_settings.shadowmap_dimension, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, shadowmap_cascades);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = shadowmap_image->image;
@@ -880,8 +699,8 @@ namespace lotus
             framebuffer_info.renderPass = *shadowmap_render_pass;
             framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
             framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = shadowmap_dimension;
-            framebuffer_info.height = shadowmap_dimension;
+            framebuffer_info.width = engine->settings.renderer_settings.shadowmap_dimension;
+            framebuffer_info.height = engine->settings.renderer_settings.shadowmap_dimension;
             framebuffer_info.layers = 1;
 
             cascade.shadowmap_frame_buffer = gpu->device->createFramebufferUnique(framebuffer_info, nullptr);
@@ -1138,10 +957,7 @@ namespace lotus
 
             buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
 
-            vk::DeviceSize offsets = 0;
-            buffer.bindVertexBuffers(0, quad.vertex_buffer->buffer, offsets);
-            buffer.bindIndexBuffer(quad.index_buffer->buffer, offsets, vk::IndexType::eUint32);
-            buffer.drawIndexed(6, 1, 0, 0, 0);
+            buffer.draw(3, 1, 0, 0);
 
             buffer.endRenderPass();
             buffer.end();
@@ -1202,7 +1018,7 @@ namespace lotus
         renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
 
         renderpass_info.renderPass = *shadowmap_render_pass;
-        renderpass_info.renderArea.extent = vk::Extent2D{ shadowmap_dimension, shadowmap_dimension };
+        renderpass_info.renderArea.extent = vk::Extent2D{ engine->settings.renderer_settings.shadowmap_dimension, engine->settings.renderer_settings.shadowmap_dimension };
 
         std::array<vk::ClearValue, 1> clearValue = {};
         clearValue[0].depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 };
@@ -1367,5 +1183,21 @@ namespace lotus
     void RendererRasterization::drawEntity(EntityInitializer* initializer, Engine* engine)
     {
         initializer->drawEntity(this, engine);
+    }
+
+    vk::Pipeline lotus::RendererRasterization::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)
+    {
+        info.layout = *pipeline_layout;
+        info.renderPass = *gbuffer_render_pass;
+        std::lock_guard lk{ shutdown_mutex };
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
+    }
+
+    vk::Pipeline lotus::RendererRasterization::createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info)
+    {
+        info.layout = *shadowmap_pipeline_layout;
+        info.renderPass = *shadowmap_render_pass;
+        std::lock_guard lk{ shutdown_mutex };
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
     }
 }

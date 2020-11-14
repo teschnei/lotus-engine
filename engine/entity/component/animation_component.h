@@ -22,7 +22,7 @@ namespace lotus
             //acceleration structures (per render target)
             std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> bottom_level_as;
         };
-        explicit AnimationComponent(Entity*, Engine* engine, std::unique_ptr<Skeleton>&&, size_t vertex_stride);
+        explicit AnimationComponent(Entity*, Engine* engine, std::unique_ptr<Skeleton>&&);
         virtual ~AnimationComponent() override = default;
 
         virtual Task<> tick(time_point time, duration delta) override;
@@ -33,7 +33,6 @@ namespace lotus
         //acceleration structures (per model)
         std::vector<ModelTransformedGeometry> transformed_geometries;
         std::unique_ptr<Skeleton> skeleton;
-        size_t vertex_stride;
         Animation* current_animation{ nullptr };
         time_point animation_start;
         struct BufferBone

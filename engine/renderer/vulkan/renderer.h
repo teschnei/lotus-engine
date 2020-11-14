@@ -47,12 +47,7 @@ namespace lotus
     public:
         struct Settings
         {
-            std::vector<vk::VertexInputBindingDescription> landscape_vertex_input_binding_descriptions;
-            std::vector<vk::VertexInputAttributeDescription> landscape_vertex_input_attribute_descriptions;
-            std::vector<vk::VertexInputBindingDescription> model_vertex_input_binding_descriptions;
-            std::vector<vk::VertexInputAttributeDescription> model_vertex_input_attribute_descriptions;
-            std::vector<vk::VertexInputBindingDescription> particle_vertex_input_binding_descriptions;
-            std::vector<vk::VertexInputAttributeDescription> particle_vertex_input_attribute_descriptions;
+            uint32_t shadowmap_dimension{ 2048 };
         };
         Renderer(Engine* engine);
         virtual ~Renderer();
@@ -90,6 +85,8 @@ namespace lotus
         void resized() { resize = true; }
 
         vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
+        virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
+        virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
 
         vk::UniqueHandle<vk::Instance, vk::DispatchLoaderDynamic> instance;
 
@@ -105,12 +102,13 @@ namespace lotus
 
         inline static thread_local vk::UniqueDescriptorPool desc_pool;
 
-    private:
+    protected:
         //when threads terminate, they move their thread_locals here so they can be destructed in the right order
         void deleteThreadLocals();
         std::mutex shutdown_mutex;
         std::vector<vk::UniqueCommandPool> shutdown_command_pools;
         std::vector<vk::UniqueDescriptorPool> shutdown_descriptor_pools;
+        std::vector<vk::UniquePipeline> pipelines;
     public:
 
         struct FramebufferAttachment
@@ -135,7 +133,6 @@ namespace lotus
         void createInstance(const std::string& app_name, uint32_t app_version);
         void createSwapchain();
         void createCommandPool();
-        void createQuad();
         void createAnimationResources();
 
         Task<> resizeRenderer();
@@ -157,13 +154,6 @@ namespace lotus
         uint32_t current_image{ 0 };
         uint32_t max_pending_frames{ 2 };
         uint32_t current_frame{ 0 };
-
-        struct
-        {
-            std::unique_ptr<Buffer> vertex_buffer;
-            std::unique_ptr<Buffer> index_buffer;
-            uint32_t index_count;
-        } quad;
 
         bool resize{ false };
     };

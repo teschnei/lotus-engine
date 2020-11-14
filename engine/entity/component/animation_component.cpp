@@ -5,9 +5,11 @@
 
 namespace lotus
 {
-    AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton, size_t _vertex_stride) : Component(_entity, _engine), skeleton(std::move(_skeleton)), vertex_stride(_vertex_stride)
+    AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton) :
+        Component(_entity, _engine), skeleton(std::move(_skeleton))
     {
-        skeleton_bone_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        skeleton_bone_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer->getImageCount(),
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         //TODO: remove me
         playAnimation("idl0");

@@ -58,6 +58,9 @@ namespace lotus
 
         float specular_exponent{};
         float specular_intensity{};
+
+        vk::Pipeline pipeline;
+        vk::Pipeline pipeline_shadow;
     protected:
 
         std::vector<vk::VertexInputBindingDescription> vertex_bindings;

@@ -143,7 +143,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
 
         quadtree = *mzb->quadtree;
 
-        auto [collision_model, collision_model_task] = lotus::Model::LoadModel<FFXI::CollisionLoader>(engine, "", std::move(mzb->meshes), std::move(mzb->mesh_entries));
+        auto [collision_model, collision_model_task] = lotus::Model::LoadModel<FFXI::CollisionLoader>(engine, "", mzb->meshes, mzb->mesh_entries);
         collision_models.push_back(collision_model);
 
         auto init_task = InitWork(std::move(instance_info));

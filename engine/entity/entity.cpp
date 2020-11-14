@@ -14,7 +14,7 @@ namespace lotus
     Task<> Entity::tick_all(time_point time, duration delta)
     {
         std::vector<decltype(components)::value_type::element_type*> components_p{components.size()};
-        std::ranges::transform(components, components_p.begin(), [](auto& c) {return c.get(); });
+        std::ranges::transform(components, components_p.begin(), [](auto& c) { return c.get(); });
         for (auto component : components_p)
         {
             co_await component->tick(time, delta);

@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <vector>
+#include <latch>
+#include <atomic>
 #include <glm/glm.hpp>
 #include "dat_chunk.h"
 #include "engine/renderer/vulkan/vulkan_inc.h"
@@ -19,9 +21,6 @@ namespace FFXI
             glm::vec3 color;
             glm::vec2 tex_coord;
             float _pad;
-
-            static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
-            static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
         };
         struct Mesh
         {
@@ -45,8 +44,15 @@ namespace FFXI
     {
     public:
         explicit MMBLoader(MMB* mmb);
-        virtual lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&) override;
+        lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&);
     private:
         MMB* mmb;
+        void InitPipeline();
+        static inline vk::Pipeline pipeline;
+        static inline vk::Pipeline pipeline_blend;
+        static inline vk::Pipeline pipeline_shadowmap;
+        static inline vk::Pipeline pipeline_shadowmap_blend;
+        static inline std::latch pipeline_latch{ 1 };
+        static inline std::atomic_flag pipeline_flag;
     };
 }

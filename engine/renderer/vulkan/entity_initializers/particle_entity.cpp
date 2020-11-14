@@ -52,8 +52,6 @@ namespace lotus
 
             command_buffer->begin(begin_info);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->particle_pipeline_group.graphics_pipeline);
-
             vk::DescriptorBufferInfo camera_buffer_info;
             camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
             camera_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
@@ -106,10 +104,6 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout, i);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->particle_pipeline_group.blended_graphics_pipeline);
-
             drawModel(engine, *command_buffer, true, *renderer->pipeline_layout, i);
 
             command_buffer->end();
@@ -145,8 +139,6 @@ namespace lotus
             begin_info.pInheritanceInfo = &inherit_info;
 
             command_buffer->begin(begin_info);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->particle_pipeline_group.graphics_pipeline);
 
             vk::DescriptorBufferInfo camera_buffer_info;
             camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
@@ -200,10 +192,6 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, *command_buffer, false, *renderer->pipeline_layout, i);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->particle_pipeline_group.blended_graphics_pipeline);
-
             drawModel(engine, *command_buffer, true, *renderer->pipeline_layout, i);
 
             command_buffer->end();
@@ -247,6 +235,7 @@ namespace lotus
 
     void ParticleEntityInitializer::drawMesh(Engine* engine, vk::CommandBuffer buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t mesh_index)
     {
+        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipeline);
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 

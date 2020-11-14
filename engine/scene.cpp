@@ -66,7 +66,7 @@ namespace lotus
     {
         co_await tick(time, delta);
         std::vector<decltype(entities)::value_type::element_type*> entities_p{entities.size()};
-        std::ranges::transform(entities, entities_p.begin(), [](auto& c) {return c.get(); });
+        std::ranges::transform(entities, entities_p.begin(), [](auto& c) { return c.get(); });
         for (auto entity : entities_p)
         {
             co_await entity->tick_all(time, delta);

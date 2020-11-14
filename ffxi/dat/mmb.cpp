@@ -70,11 +70,12 @@ namespace FFXI
         float u, v;
     };
 
-    std::vector<vk::VertexInputBindingDescription> MMB::Vertex::getBindingDescriptions() {
+    inline std::vector<vk::VertexInputBindingDescription> getMMBBindingDescriptions()
+    {
         std::vector<vk::VertexInputBindingDescription> binding_descriptions(2);
 
         binding_descriptions[0].binding = 0;
-        binding_descriptions[0].stride = sizeof(Vertex);
+        binding_descriptions[0].stride = sizeof(FFXI::MMB::Vertex);
         binding_descriptions[0].inputRate = vk::VertexInputRate::eVertex;
 
         binding_descriptions[1].binding = 1;
@@ -84,28 +85,29 @@ namespace FFXI
         return binding_descriptions;
     }
 
-    std::vector<vk::VertexInputAttributeDescription> MMB::Vertex::getAttributeDescriptions() {
+    inline std::vector<vk::VertexInputAttributeDescription> getMMBAttributeDescriptions()
+    {
         std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(11);
 
         attribute_descriptions[0].binding = 0;
         attribute_descriptions[0].location = 0;
         attribute_descriptions[0].format = vk::Format::eR32G32B32Sfloat;
-        attribute_descriptions[0].offset = offsetof(Vertex, pos);
+        attribute_descriptions[0].offset = offsetof(FFXI::MMB::Vertex, pos);
 
         attribute_descriptions[1].binding = 0;
         attribute_descriptions[1].location = 1;
         attribute_descriptions[1].format = vk::Format::eR32G32B32Sfloat;
-        attribute_descriptions[1].offset = offsetof(Vertex, normal);
+        attribute_descriptions[1].offset = offsetof(FFXI::MMB::Vertex, normal);
 
         attribute_descriptions[2].binding = 0;
         attribute_descriptions[2].location = 2;
         attribute_descriptions[2].format = vk::Format::eR32G32B32Sfloat;
-        attribute_descriptions[2].offset = offsetof(Vertex, color);
+        attribute_descriptions[2].offset = offsetof(FFXI::MMB::Vertex, color);
 
         attribute_descriptions[3].binding = 0;
         attribute_descriptions[3].location = 3;
         attribute_descriptions[3].format = vk::Format::eR32G32Sfloat;
-        attribute_descriptions[3].offset = offsetof(Vertex, tex_coord);
+        attribute_descriptions[3].offset = offsetof(FFXI::MMB::Vertex, tex_coord);
 
         attribute_descriptions[4].binding = 1;
         attribute_descriptions[4].location = 4;
@@ -380,6 +382,12 @@ namespace FFXI
 
     lotus::Task<> MMBLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     {
+        if (!pipeline_flag.test_and_set())
+        {
+            InitPipeline();
+            pipeline_latch.count_down();
+        }
+        pipeline_latch.wait();
         model->light_offset = 1;
         std::vector<std::vector<uint8_t>> vertices;
         std::vector<std::vector<uint8_t>> indices;
@@ -388,10 +396,12 @@ namespace FFXI
             auto mesh = std::make_unique<lotus::Mesh>();
             mesh->texture = lotus::Texture::getTexture(mmb_mesh.textureName);
 
-            mesh->setVertexInputAttributeDescription(FFXI::MMB::Vertex::getAttributeDescriptions());
-            mesh->setVertexInputBindingDescription(FFXI::MMB::Vertex::getBindingDescriptions());
+            mesh->setVertexInputAttributeDescription(getMMBAttributeDescriptions());
+            mesh->setVertexInputBindingDescription(getMMBBindingDescriptions());
             mesh->setIndexCount(static_cast<int>(mmb_mesh.indices.size()));
             mesh->has_transparency = mmb_mesh.blending & 0x8000 || mmb->name[0] == '_';
+            mesh->pipeline = mesh->has_transparency ? pipeline_blend : pipeline;
+            mesh->pipeline_shadow = mesh->has_transparency ? pipeline_shadowmap_blend : pipeline_shadowmap;
             mesh->blending = mmb_mesh.blending;
 
             std::vector<uint8_t> vertices_uint8;
@@ -421,5 +431,170 @@ namespace FFXI
         }
         model->lifetime = lotus::Lifetime::Long;
         co_await model->InitWork(engine, std::move(vertices), std::move(indices), sizeof(MMB::Vertex));
+    }
+
+    void MMBLoader::InitPipeline()
+    {
+        auto vertex_module = engine->renderer->getShader("shaders/mmb_gbuffer_vert.spv");
+        auto fragment_module = engine->renderer->getShader("shaders/gbuffer_frag.spv");
+
+        vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
+        vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
+        vert_shader_stage_info.module = *vertex_module;
+        vert_shader_stage_info.pName = "main";
+
+        vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
+        frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
+        frag_shader_stage_info.module = *fragment_module;
+        frag_shader_stage_info.pName = "main";
+
+        std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
+
+        vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+        auto binding_descriptions = getMMBBindingDescriptions();
+        auto attribute_descriptions = getMMBAttributeDescriptions();
+
+        vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(binding_descriptions.size());
+        vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
+        vertex_input_info.pVertexBindingDescriptions = binding_descriptions.data();
+        vertex_input_info.pVertexAttributeDescriptions = attribute_descriptions.data();
+
+        vk::PipelineInputAssemblyStateCreateInfo input_assembly = {};
+        input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
+        input_assembly.primitiveRestartEnable = false;
+
+        vk::Viewport viewport;
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = (float)engine->renderer->swapchain->extent.width;
+        viewport.height = (float)engine->renderer->swapchain->extent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+
+        vk::Rect2D scissor;
+        scissor.offset = vk::Offset2D{0, 0};
+        scissor.extent = engine->renderer->swapchain->extent;
+
+        vk::PipelineViewportStateCreateInfo viewport_state;
+        viewport_state.viewportCount = 1;
+        viewport_state.pViewports = &viewport;
+        viewport_state.scissorCount = 1;
+        viewport_state.pScissors = &scissor;
+
+        vk::PipelineRasterizationStateCreateInfo rasterizer;
+        rasterizer.depthClampEnable = false;
+        rasterizer.rasterizerDiscardEnable = false;
+        rasterizer.polygonMode = vk::PolygonMode::eFill;
+        rasterizer.lineWidth = 1.0f;
+        rasterizer.cullMode = vk::CullModeFlagBits::eNone;
+        rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
+        rasterizer.depthBiasEnable = false;
+
+        vk::PipelineMultisampleStateCreateInfo multisampling;
+        multisampling.sampleShadingEnable = false;
+        multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+
+        vk::PipelineDepthStencilStateCreateInfo depth_stencil;
+        depth_stencil.depthTestEnable = true;
+        depth_stencil.depthWriteEnable = true;
+        depth_stencil.depthCompareOp = vk::CompareOp::eLessOrEqual;
+        depth_stencil.depthBoundsTestEnable = false;
+        depth_stencil.stencilTestEnable = false;
+
+        vk::PipelineColorBlendAttachmentState color_blend_attachment;
+        color_blend_attachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+        color_blend_attachment.blendEnable = false;
+        color_blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
+        color_blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
+        color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcColor;
+        color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
+        color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+
+        vk::PipelineColorBlendAttachmentState color_blend_attachment_accumulation = color_blend_attachment;
+        color_blend_attachment_accumulation.blendEnable = true;
+        color_blend_attachment_accumulation.srcColorBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment_accumulation.dstColorBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment_accumulation.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment_accumulation.dstAlphaBlendFactor = vk::BlendFactor::eOne;
+        vk::PipelineColorBlendAttachmentState color_blend_attachment_revealage = color_blend_attachment;
+        color_blend_attachment_revealage.blendEnable = true;
+        color_blend_attachment_revealage.srcColorBlendFactor = vk::BlendFactor::eZero;
+        color_blend_attachment_revealage.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
+        color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
+        color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
+
+        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
+        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
+
+        vk::PipelineColorBlendStateCreateInfo color_blending;
+        color_blending.logicOpEnable = false;
+        color_blending.logicOp = vk::LogicOp::eCopy;
+        color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
+        color_blending.pAttachments = color_blend_attachment_states.data();
+        color_blending.blendConstants[0] = 0.0f;
+        color_blending.blendConstants[1] = 0.0f;
+        color_blending.blendConstants[2] = 0.0f;
+        color_blending.blendConstants[3] = 0.0f;
+
+        vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
+        color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
+        color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
+
+        vk::GraphicsPipelineCreateInfo pipeline_info;
+        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+        pipeline_info.pStages = shaderStages.data();
+        pipeline_info.pVertexInputState = &vertex_input_info;
+        pipeline_info.pInputAssemblyState = &input_assembly;
+        pipeline_info.pViewportState = &viewport_state;
+        pipeline_info.pRasterizationState = &rasterizer;
+        pipeline_info.pMultisampleState = &multisampling;
+        pipeline_info.pDepthStencilState = &depth_stencil;
+        pipeline_info.pColorBlendState = &color_blending;
+        pipeline_info.subpass = 0;
+        pipeline_info.basePipelineHandle = nullptr;
+
+        pipeline = engine->renderer->createGraphicsPipeline(pipeline_info);
+
+        fragment_module = engine->renderer->getShader("shaders/blend.spv");
+
+        frag_shader_stage_info.module = *fragment_module;
+
+        shaderStages[1] = frag_shader_stage_info;
+
+        pipeline_blend = engine->renderer->createGraphicsPipeline(pipeline_info);
+
+        color_blending.attachmentCount = 0;
+
+        vertex_module = engine->renderer->getShader("shaders/mmb_shadow_vert.spv");
+        fragment_module = engine->renderer->getShader("shaders/shadow_frag.spv");
+
+        vert_shader_stage_info.module = *vertex_module;
+        frag_shader_stage_info.module = *fragment_module;
+
+        shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
+
+        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
+        pipeline_info.pStages = shaderStages.data();
+
+        viewport.width = engine->settings.renderer_settings.shadowmap_dimension;
+        viewport.height = engine->settings.renderer_settings.shadowmap_dimension;
+        scissor.extent.width = engine->settings.renderer_settings.shadowmap_dimension;
+        scissor.extent.height = engine->settings.renderer_settings.shadowmap_dimension;
+
+        rasterizer.depthClampEnable = true;
+        rasterizer.depthBiasEnable = true;
+
+        std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
+        vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
+        dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
+        dynamic_state_ci.pDynamicStates = dynamic_states.data();
+        pipeline_info.pDynamicState = &dynamic_state_ci;
+        pipeline_shadowmap_blend = engine->renderer->createShadowmapPipeline(pipeline_info);
+
+        pipeline_info.stageCount = 1;
+        pipeline_info.pStages = &vert_shader_stage_info;
+        pipeline_shadowmap = engine->renderer->createShadowmapPipeline(pipeline_info);
     }
 }

@@ -14,7 +14,7 @@ namespace lotus
         //TODO: figure out how to get engine out of this call
         template<typename ModelLoader, typename... Args>
         [[nodiscard("Work must be awaited before being used")]]
-        static std::pair<std::shared_ptr<Model>, std::optional<Task<>>> LoadModel(Engine* engine, const std::string& modelname, Args... args)
+        static std::pair<std::shared_ptr<Model>, std::optional<Task<>>> LoadModel(Engine* engine, const std::string& modelname, Args&&... args)
         {
             if (!modelname.empty())
             {
@@ -26,7 +26,7 @@ namespace lotus
                 }
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));
-            ModelLoader loader{args...};
+            ModelLoader loader{ std::forward<Args>(args)... };
             loader.setEngine(engine);
             auto task = loader.LoadModel(new_model);
             if (!modelname.empty())
@@ -84,10 +84,8 @@ namespace lotus
     class ModelLoader
     {
     public:
-        ModelLoader() {}
         void setEngine(Engine* _engine) { engine = _engine; }
-        virtual ~ModelLoader() = default;
-        virtual Task<> LoadModel(std::shared_ptr<Model>&) = 0;
+        Task<> LoadModel(std::shared_ptr<Model>&) { co_return; }
     protected:
         Engine* engine {nullptr};
     };

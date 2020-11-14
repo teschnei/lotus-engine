@@ -177,7 +177,7 @@ namespace lotus
             struct final_awaitable
             {
                 bool await_ready() const noexcept {return false;}
-                auto await_suspend(std::coroutine_handle<> handle)
+                auto await_suspend(std::coroutine_handle<> handle) noexcept
                 {
                     WorkerPool::temp_pool->background_tasks.erase(handle.address());
                 }

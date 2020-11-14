@@ -120,46 +120,6 @@ namespace lotus
         command_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
     }
 
-    void Renderer::createQuad()
-    {
-        struct Vertex
-        {
-            float pos[3];
-            float normal[3];
-            float color[3];
-            float uv[2];
-            float _pad32;
-        };
-
-        std::vector<Vertex> vertex_buffer {
-            {{1.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 1.f}, 0.f},
-            {{-1.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 1.f}, 0.f},
-            {{-1.f, -1.f, 1.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {0.f, 0.f}, 0.f},
-            {{1.f, -1.f, 1.f}, {0.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 0.f}, 0.f}
-        };
-
-        quad.vertex_buffer = gpu->memory_manager->GetBuffer(vertex_buffer.size() * sizeof(Vertex), vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        void* buf_mem = quad.vertex_buffer->map(0, vertex_buffer.size() * sizeof(Vertex), {});
-        memcpy(buf_mem, vertex_buffer.data(), vertex_buffer.size() * sizeof(Vertex));
-        quad.vertex_buffer->unmap();
-
-        std::vector<uint32_t> index_buffer = { 0,1,2,2,3,0 };
-        for (uint32_t i = 0; i < 3; ++i)
-        {
-            uint32_t indices[6] = { 0,1,2, 2,3,0 };
-            for (auto index : indices)
-            {
-                index_buffer.push_back(i * 4 + index);
-            }
-        }
-        quad.index_count = static_cast<uint32_t>(index_buffer.size());
-
-        quad.index_buffer = gpu->memory_manager->GetBuffer(index_buffer.size() * sizeof(uint32_t), vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        buf_mem = quad.index_buffer->map(0, index_buffer.size() * sizeof(uint32_t), {});
-        memcpy(buf_mem, index_buffer.data(), index_buffer.size() * sizeof(uint32_t));
-        quad.index_buffer->unmap();
-    }
-
     void Renderer::createAnimationResources()
     {
         //descriptor set layout

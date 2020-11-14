@@ -72,40 +72,6 @@ struct BoneIndices
 
 #pragma pack(pop)
 
-
-std::vector<vk::VertexInputBindingDescription> FFXI::OS2::Vertex::getBindingDescriptions()
-{
-    std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
-
-    binding_descriptions[0].binding = 0;
-    binding_descriptions[0].stride = sizeof(Vertex);
-    binding_descriptions[0].inputRate = vk::VertexInputRate::eVertex;
-
-    return binding_descriptions;
-}
-
-std::vector<vk::VertexInputAttributeDescription> FFXI::OS2::Vertex::getAttributeDescriptions()
-{
-    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(3);
-
-    attribute_descriptions[0].binding = 0;
-    attribute_descriptions[0].location = 0;
-    attribute_descriptions[0].format = vk::Format::eR32G32B32Sfloat;
-    attribute_descriptions[0].offset = offsetof(Vertex, pos);
-
-    attribute_descriptions[1].binding = 0;
-    attribute_descriptions[1].location = 1;
-    attribute_descriptions[1].format = vk::Format::eR32G32B32Sfloat;
-    attribute_descriptions[1].offset = offsetof(Vertex, norm);
-
-    attribute_descriptions[2].binding = 0;
-    attribute_descriptions[2].location = 2;
-    attribute_descriptions[2].format = vk::Format::eR32G32Sfloat;
-    attribute_descriptions[2].offset = offsetof(Vertex, uv);
-
-    return attribute_descriptions;
-}
-
 FFXI::OS2::OS2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
 {
     MeshHeader* header = (MeshHeader*)buffer;

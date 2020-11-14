@@ -95,12 +95,6 @@ int main(int argc, char* argv[]) {
     lotus::Settings settings;
     settings.app_name = "core-test";
     settings.app_version = VK_MAKE_VERSION(1, 0, 0);
-    settings.renderer_settings.landscape_vertex_input_attribute_descriptions = FFXI::MMB::Vertex::getAttributeDescriptions();
-    settings.renderer_settings.landscape_vertex_input_binding_descriptions = FFXI::MMB::Vertex::getBindingDescriptions();
-    settings.renderer_settings.model_vertex_input_attribute_descriptions = FFXI::OS2::Vertex::getAttributeDescriptions();
-    settings.renderer_settings.model_vertex_input_binding_descriptions = FFXI::OS2::Vertex::getBindingDescriptions();
-    settings.renderer_settings.particle_vertex_input_attribute_descriptions = FFXI::D3M::Vertex::getAttributeDescriptions();
-    settings.renderer_settings.particle_vertex_input_binding_descriptions = FFXI::D3M::Vertex::getBindingDescriptions();
     Game game{settings};
 
     game.run();

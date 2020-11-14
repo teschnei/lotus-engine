@@ -196,8 +196,8 @@ namespace lotus
 
     void generateVertexBuffers(RendererRasterization* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
         std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
-    void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image);
-    void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index);
+    void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, bool shadowmap, vk::PipelineLayout layout, size_t image);
+    void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index, bool shadowmap);
 
     void RenderableEntityInitializer::initEntity(RendererRasterization* renderer, Engine* engine)
     {
@@ -266,8 +266,6 @@ namespace lotus
 
             command_buffer->begin(beginInfo);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.graphics_pipeline);
-
             vk::DescriptorBufferInfo camera_buffer_info;
             camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
             camera_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
@@ -320,11 +318,8 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, entity, *command_buffer, deformable, false, *renderer->pipeline_layout, i);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.blended_graphics_pipeline);
-
-            drawModel(engine, entity, *command_buffer, deformable, true, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, false, false, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, true, false, *renderer->pipeline_layout, i);
 
             command_buffer->end();
         }
@@ -373,16 +368,14 @@ namespace lotus
 
             command_buffer->setDepthBias(1.25f, 0, 1.75f);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.shadowmap_pipeline);
-            drawModel(engine, entity, *command_buffer, deformable, false, *renderer->shadowmap_pipeline_layout, i);
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.blended_shadowmap_pipeline);
-            drawModel(engine, entity, *command_buffer, deformable, true, *renderer->shadowmap_pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, false, true, *renderer->shadowmap_pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, true, true, *renderer->shadowmap_pipeline_layout, i);
 
             command_buffer->end();
         }
     }
 
-    void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, vk::PipelineLayout layout, size_t image)
+    void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, bool shadowmap, vk::PipelineLayout layout, size_t image)
     {
         for (size_t model_i = 0; model_i < entity->models.size(); ++model_i)
         {
@@ -407,15 +400,16 @@ namespace lotus
                         {
                             material_index = model->bottom_level_as->resource_index + mesh_i;
                         }
-                        drawMesh(engine, command_buffer, *mesh, layout, material_index);
+                        drawMesh(engine, command_buffer, *mesh, layout, material_index, shadowmap);
                     }
                 }
             }
         }
     }
 
-    void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index)
+    void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index, bool shadowmap)
     {
+        command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, shadowmap ? mesh.pipeline_shadow : mesh.pipeline);
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
@@ -529,8 +523,6 @@ namespace lotus
 
             command_buffer->begin(beginInfo);
 
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.graphics_pipeline);
-
             vk::DescriptorBufferInfo camera_buffer_info;
             camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
             camera_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
@@ -583,11 +575,8 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, entity, *command_buffer, deformable, false, *renderer->pipeline_layout, i);
-
-            command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *renderer->main_pipeline_group.blended_graphics_pipeline);
-
-            drawModel(engine, entity, *command_buffer, deformable, true, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, false, false, *renderer->pipeline_layout, i);
+            drawModel(engine, entity, *command_buffer, deformable, true, false, *renderer->pipeline_layout, i);
 
             command_buffer->end();
         }

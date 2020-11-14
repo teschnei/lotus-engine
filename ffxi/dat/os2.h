@@ -33,6 +33,7 @@ namespace FFXI
             uint8_t mirror_axis;
         };
 
+        //vertex format after transformation (animation_skin.comp)
         struct Vertex
         {
             glm::vec3 pos;
@@ -41,9 +42,6 @@ namespace FFXI
             float _pad2;
             glm::vec2 uv;
             glm::vec2 _pad3;
-
-            static std::vector<vk::VertexInputBindingDescription> getBindingDescriptions();
-            static std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions();
         };
 
         struct Mesh
