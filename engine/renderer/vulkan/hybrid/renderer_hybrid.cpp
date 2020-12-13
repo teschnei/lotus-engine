@@ -62,7 +62,7 @@ namespace lotus
         barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = rtx_gbuffer.light.image->image;
+        barrier.image = rtx_gbuffer.colour.image->image;
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
@@ -499,8 +499,15 @@ namespace lotus
         face_normal_sample_layout_binding.pImmutableSamplers = nullptr;
         face_normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
+        vk::DescriptorSetLayoutBinding albedo_layout_binding;
+        albedo_layout_binding.binding = 7;
+        albedo_layout_binding.descriptorCount = 1;
+        albedo_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        albedo_layout_binding.pImmutableSamplers = nullptr;
+        albedo_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+
         vk::DescriptorSetLayoutBinding material_index_sample_layout_binding;
-        material_index_sample_layout_binding.binding = 7;
+        material_index_sample_layout_binding.binding = 8;
         material_index_sample_layout_binding.descriptorCount = 1;
         material_index_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         material_index_sample_layout_binding.pImmutableSamplers = nullptr;
@@ -559,6 +566,7 @@ namespace lotus
             position_sample_layout_binding,
             normal_sample_layout_binding,
             face_normal_sample_layout_binding,
+            albedo_layout_binding,
             material_index_sample_layout_binding
         };
 
@@ -586,53 +594,53 @@ namespace lotus
         position_sample_layout_binding.pImmutableSamplers = nullptr;
         position_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding albedo_sample_layout_binding;
-        albedo_sample_layout_binding.binding = 1;
-        albedo_sample_layout_binding.descriptorCount = 1;
-        albedo_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        albedo_sample_layout_binding.pImmutableSamplers = nullptr;
-        albedo_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        vk::DescriptorSetLayoutBinding light_sample_layout_binding;
-        light_sample_layout_binding.binding = 2;
-        light_sample_layout_binding.descriptorCount = 1;
-        light_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        light_sample_layout_binding.pImmutableSamplers = nullptr;
-        light_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+        vk::DescriptorSetLayoutBinding colour_sample_layout_binding;
+        colour_sample_layout_binding.binding = 1;
+        colour_sample_layout_binding.descriptorCount = 1;
+        colour_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        colour_sample_layout_binding.pImmutableSamplers = nullptr;
+        colour_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding material_index_layout_binding;
-        material_index_layout_binding.binding = 3;
+        material_index_layout_binding.binding = 2;
         material_index_layout_binding.descriptorCount = 1;
         material_index_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         material_index_layout_binding.pImmutableSamplers = nullptr;
         material_index_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding accumulation_sample_layout_binding;
-        accumulation_sample_layout_binding.binding = 4;
+        accumulation_sample_layout_binding.binding = 3;
         accumulation_sample_layout_binding.descriptorCount = 1;
         accumulation_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         accumulation_sample_layout_binding.pImmutableSamplers = nullptr;
         accumulation_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding revealage_sample_layout_binding;
-        revealage_sample_layout_binding.binding = 5;
+        revealage_sample_layout_binding.binding = 4;
         revealage_sample_layout_binding.descriptorCount = 1;
         revealage_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         revealage_sample_layout_binding.pImmutableSamplers = nullptr;
         revealage_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         //vk::DescriptorSetLayoutBinding mesh_info_binding;
-        mesh_info_binding.binding = 6;
+        mesh_info_binding.binding = 5;
         mesh_info_binding.descriptorCount = 1;
         mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding light_buffer_binding;
-        light_buffer_binding.binding = 7;
+        light_buffer_binding.binding = 6;
         light_buffer_binding.descriptorCount = 1;
         light_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         light_buffer_binding.pImmutableSamplers = nullptr;
         light_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+ //       vk::DescriptorSetLayoutBinding material_info_layout_binding;
+        material_info_layout_binding.binding = 7;
+        material_info_layout_binding.descriptorCount = GlobalResources::max_resource_index;
+        material_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        material_info_layout_binding.pImmutableSamplers = nullptr;
+        material_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding camera_buffer_binding;
         camera_buffer_binding.binding = 8;
@@ -641,21 +649,13 @@ namespace lotus
         camera_buffer_binding.pImmutableSamplers = nullptr;
         camera_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 
- //       vk::DescriptorSetLayoutBinding material_info_layout_binding;
-        material_info_layout_binding.binding = 9;
-        material_info_layout_binding.descriptorCount = GlobalResources::max_resource_index;
-        material_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        material_info_layout_binding.pImmutableSamplers = nullptr;
-        material_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { position_sample_layout_binding, albedo_sample_layout_binding, light_sample_layout_binding,
-            material_index_layout_binding, accumulation_sample_layout_binding, revealage_sample_layout_binding, mesh_info_binding, light_buffer_binding, camera_buffer_binding,
-            material_info_layout_binding };
+        std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { position_sample_layout_binding, colour_sample_layout_binding, material_index_layout_binding,
+            accumulation_sample_layout_binding, revealage_sample_layout_binding, mesh_info_binding, light_buffer_binding, camera_buffer_binding, material_info_layout_binding };
 
         vk::DescriptorSetLayoutCreateInfo rtx_deferred_layout_info;
         rtx_deferred_layout_info.bindingCount = static_cast<uint32_t>(rtx_deferred_bindings.size());
         rtx_deferred_layout_info.pBindings = rtx_deferred_bindings.data();
-        std::vector<vk::DescriptorBindingFlags> binding_flags_deferred{ {}, {}, {}, {}, {}, {}, {}, {}, {}, vk::DescriptorBindingFlagBits::ePartiallyBound };
+        std::vector<vk::DescriptorBindingFlags> binding_flags_deferred{ {}, {}, {}, {}, {}, {}, {}, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
         vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags_deferred{ static_cast<uint32_t>(binding_flags_deferred.size()), binding_flags_deferred.data() };
         rtx_deferred_layout_info.pNext = &layout_flags_deferred;
 
@@ -667,11 +667,10 @@ namespace lotus
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
-        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
-        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, GlobalResources::max_resource_index);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
 
         vk::DescriptorPoolCreateInfo pool_ci;
         pool_ci.maxSets = 3;
@@ -1117,22 +1116,18 @@ namespace lotus
 
         gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        rtx_gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        rtx_gbuffer.light.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        rtx_gbuffer.colour.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         //vk::ImageViewCreateInfo image_view_info;
-        image_view_info.image = rtx_gbuffer.albedo.image->image;
+        image_view_info.image = rtx_gbuffer.colour.image->image;
         image_view_info.viewType = vk::ImageViewType::e2D;
-        image_view_info.format = vk::Format::eR8G8B8A8Unorm;
+        image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         image_view_info.subresourceRange.baseMipLevel = 0;
         image_view_info.subresourceRange.levelCount = 1;
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
-        rtx_gbuffer.albedo.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = rtx_gbuffer.light.image->image;
-        image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
-        rtx_gbuffer.light.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
+        rtx_gbuffer.colour.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
 
         //vk::SamplerCreateInfo sampler_info = {};
         sampler_info.magFilter = vk::Filter::eNearest;
@@ -1177,7 +1172,7 @@ namespace lotus
             light_barrier.subresourceRange.levelCount = 1;
             light_barrier.subresourceRange.baseArrayLayer = 0;
             light_barrier.subresourceRange.layerCount = 1;
-            light_barrier.image = rtx_gbuffer.light.image->image;
+            light_barrier.image = rtx_gbuffer.colour.image->image;
             light_barrier.oldLayout = vk::ImageLayout::eGeneral;
             light_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
             light_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
@@ -1200,15 +1195,10 @@ namespace lotus
 
             buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
 
-            vk::DescriptorImageInfo albedo_info;
-            albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            albedo_info.imageView = *gbuffer.albedo.image_view;
-            albedo_info.sampler = *gbuffer.sampler;
-
-            vk::DescriptorImageInfo light_info;
-            light_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            light_info.imageView = *rtx_gbuffer.light.image_view;
-            light_info.sampler = *rtx_gbuffer.sampler;
+            vk::DescriptorImageInfo colour_info;
+            colour_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            colour_info.imageView = *rtx_gbuffer.colour.image_view;
+            colour_info.sampler = *rtx_gbuffer.sampler;
 
             vk::DescriptorImageInfo position_info;
             position_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -1245,7 +1235,7 @@ namespace lotus
             camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
             camera_buffer_info.range = sizeof(Camera::CameraData);
 
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {9};
+            std::vector<vk::WriteDescriptorSet> descriptorWrites {8};
 
             descriptorWrites[0].dstSet = *descriptor_set_deferred[i];
             descriptorWrites[0].dstBinding = 0;
@@ -1259,66 +1249,59 @@ namespace lotus
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &albedo_info;
+            descriptorWrites[1].pImageInfo = &colour_info;
 
             descriptorWrites[2].dstSet = *descriptor_set_deferred[i];
             descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].dstArrayElement = 0;
             descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &light_info;
+            descriptorWrites[2].pImageInfo = &deferred_material_index_info;
 
             descriptorWrites[3].dstSet = *descriptor_set_deferred[i];
             descriptorWrites[3].dstBinding = 3;
             descriptorWrites[3].dstArrayElement = 0;
             descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &deferred_material_index_info;
+            descriptorWrites[3].pImageInfo = &accumulation_info;
 
             descriptorWrites[4].dstSet = *descriptor_set_deferred[i];
             descriptorWrites[4].dstBinding = 4;
             descriptorWrites[4].dstArrayElement = 0;
             descriptorWrites[4].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[4].descriptorCount = 1;
-            descriptorWrites[4].pImageInfo = &accumulation_info;
+            descriptorWrites[4].pImageInfo = &revealage_info;
 
             descriptorWrites[5].dstSet = *descriptor_set_deferred[i];
+            descriptorWrites[5].descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptorWrites[5].dstBinding = 5;
             descriptorWrites[5].dstArrayElement = 0;
-            descriptorWrites[5].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[5].descriptorCount = 1;
-            descriptorWrites[5].pImageInfo = &revealage_info;
+            descriptorWrites[5].pBufferInfo = &mesh_info;
 
             descriptorWrites[6].dstSet = *descriptor_set_deferred[i];
             descriptorWrites[6].descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptorWrites[6].dstBinding = 6;
             descriptorWrites[6].dstArrayElement = 0;
             descriptorWrites[6].descriptorCount = 1;
-            descriptorWrites[6].pBufferInfo = &mesh_info;
+            descriptorWrites[6].pBufferInfo = &light_buffer_info;
 
             descriptorWrites[7].dstSet = *descriptor_set_deferred[i];
             descriptorWrites[7].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[7].dstBinding = 7;
+            descriptorWrites[7].dstBinding = 8;
             descriptorWrites[7].dstArrayElement = 0;
             descriptorWrites[7].descriptorCount = 1;
-            descriptorWrites[7].pBufferInfo = &light_buffer_info;
-
-            descriptorWrites[8].dstSet = *descriptor_set_deferred[i];
-            descriptorWrites[8].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[8].dstBinding = 8;
-            descriptorWrites[8].dstArrayElement = 0;
-            descriptorWrites[8].descriptorCount = 1;
-            descriptorWrites[8].pBufferInfo = &camera_buffer_info;
+            descriptorWrites[7].pBufferInfo = &camera_buffer_info;
 
             if (resources->descriptor_material_info.size() > 0)
             {
                 descriptorWrites.push_back({});
-                descriptorWrites[9].dstSet = *descriptor_set_deferred[i];
-                descriptorWrites[9].dstBinding = 10;
-                descriptorWrites[9].dstArrayElement = 0;
-                descriptorWrites[9].descriptorType = vk::DescriptorType::eUniformBuffer;
-                descriptorWrites[9].descriptorCount = resources->descriptor_material_info.size();
-                descriptorWrites[9].pBufferInfo = resources->descriptor_material_info.data();
+                descriptorWrites[8].dstSet = *descriptor_set_deferred[i];
+                descriptorWrites[8].dstBinding = 7;
+                descriptorWrites[8].dstArrayElement = 0;
+                descriptorWrites[8].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[8].descriptorCount = resources->descriptor_material_info.size();
+                descriptorWrites[8].pBufferInfo = resources->descriptor_material_info.data();
             }
 
             gpu->device->updateDescriptorSets(descriptorWrites, {});
@@ -1393,7 +1376,7 @@ namespace lotus
         light_barrier.subresourceRange.levelCount = 1;
         light_barrier.subresourceRange.baseArrayLayer = 0;
         light_barrier.subresourceRange.layerCount = 1;
-        light_barrier.image = rtx_gbuffer.light.image->image;
+        light_barrier.image = rtx_gbuffer.colour.image->image;
         light_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         light_barrier.newLayout = vk::ImageLayout::eGeneral;
         light_barrier.srcAccessMask = {};
@@ -1401,16 +1384,16 @@ namespace lotus
 
         buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, {}, {}, light_barrier);
 
-        vk::WriteDescriptorSet write_info_target_light;
-        write_info_target_light.descriptorCount = 1;
-        write_info_target_light.descriptorType = vk::DescriptorType::eStorageImage;
-        write_info_target_light.dstBinding = 0;
-        write_info_target_light.dstArrayElement = 0;
+        vk::WriteDescriptorSet write_info_target_colour;
+        write_info_target_colour.descriptorCount = 1;
+        write_info_target_colour.descriptorType = vk::DescriptorType::eStorageImage;
+        write_info_target_colour.dstBinding = 0;
+        write_info_target_colour.dstArrayElement = 0;
 
-        vk::DescriptorImageInfo target_image_info_light;
-        target_image_info_light.imageView = *rtx_gbuffer.light.image_view;
-        target_image_info_light.imageLayout = vk::ImageLayout::eGeneral;
-        write_info_target_light.pImageInfo = &target_image_info_light;
+        vk::DescriptorImageInfo target_image_info_colour;
+        target_image_info_colour.imageView = *rtx_gbuffer.colour.image_view;
+        target_image_info_colour.imageLayout = vk::ImageLayout::eGeneral;
+        write_info_target_colour.pImageInfo = &target_image_info_colour;
 
         vk::DescriptorBufferInfo light_buffer_info;
         light_buffer_info.buffer = engine->lights->light_buffer->buffer;
@@ -1460,6 +1443,18 @@ namespace lotus
         write_info_face_normal.dstArrayElement = 0;
         write_info_face_normal.pImageInfo = &face_normal_info;
 
+        vk::DescriptorImageInfo albedo_info;
+        albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        albedo_info.imageView = *gbuffer.albedo.image_view;
+        albedo_info.sampler = *gbuffer.sampler;
+
+        vk::WriteDescriptorSet write_info_albedo;
+        write_info_albedo.descriptorCount = 1;
+        write_info_albedo.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        write_info_albedo.dstBinding = 7;
+        write_info_albedo.dstArrayElement = 0;
+        write_info_albedo.pImageInfo = &albedo_info;
+
         vk::DescriptorImageInfo material_index_info;
         material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         material_index_info.imageView = *gbuffer.material.image_view;
@@ -1468,11 +1463,12 @@ namespace lotus
         vk::WriteDescriptorSet write_info_material_index;
         write_info_material_index.descriptorCount = 1;
         write_info_material_index.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_material_index.dstBinding = 7;
+        write_info_material_index.dstBinding = 8;
         write_info_material_index.dstArrayElement = 0;
         write_info_material_index.pImageInfo = &material_index_info;
 
-        buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1, { write_info_target_light, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_material_index });
+        buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1,
+            { write_info_target_colour, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_albedo, write_info_material_index });
 
         buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain->extent.width, swapchain->extent.height, 1);
 

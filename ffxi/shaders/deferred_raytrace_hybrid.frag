@@ -6,13 +6,12 @@
 #include "common.glsl"
 
 layout(binding = 0) uniform sampler2D positionSampler;
-layout(binding = 1) uniform sampler2D albedoSampler;
-layout(binding = 2) uniform sampler2D lightSampler;
-layout(binding = 3) uniform usampler2D materialIndexSampler;
-layout(binding = 4) uniform sampler2D accumulationSampler;
-layout(binding = 5) uniform sampler2D revealageSampler;
+layout(binding = 1) uniform sampler2D colourSampler;
+layout(binding = 2) uniform usampler2D materialIndexSampler;
+layout(binding = 3) uniform sampler2D accumulationSampler;
+layout(binding = 4) uniform sampler2D revealageSampler;
 
-layout(binding = 6, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -29,7 +28,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 7) uniform Light
+layout(std430, binding = 6) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -46,6 +45,11 @@ layout(std430, binding = 7) uniform Light
     vec4 skybox_colors[8];
 } light;
 
+layout(binding = 7) uniform MaterialInfo
+{
+    Material m;
+} materials[1024];
+
 layout(binding = 8) uniform Camera {
     mat4 proj;
     mat4 view;
@@ -53,11 +57,6 @@ layout(binding = 8) uniform Camera {
     mat4 view_inverse;
     vec3 pos;
 } camera;
-
-layout(binding = 9) uniform MaterialInfo
-{
-    Material m;
-} materials[1024];
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec4 eye_dir;
@@ -111,8 +110,7 @@ void main() {
     }
     else
     {
-        vec4 albedo = texture(albedoSampler, fragTexCoord);
-        vec4 in_light = texture(lightSampler, fragTexCoord);
+        vec4 colour = texture(colourSampler, fragTexCoord);
         uint mesh_index = texture(materialIndexSampler, fragTexCoord).r;
         float dist = length(fragPos - camera.pos.xyz);
 
@@ -139,11 +137,11 @@ void main() {
         }
         else if (dist > min_fog_dist)
         {
-            outColor = mix(albedo * in_light, vec4(fog, 1.0), (dist - min_fog_dist) / (max_fog_dist - min_fog_dist));
+            outColor = mix(colour, vec4(fog, 1.0), (dist - min_fog_dist) / (max_fog_dist - min_fog_dist));
         }
         else
         {
-            outColor = albedo * in_light;
+            outColor = colour;
         }
     }
 

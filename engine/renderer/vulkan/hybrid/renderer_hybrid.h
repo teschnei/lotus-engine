@@ -76,8 +76,7 @@ namespace lotus
 
         struct RaytraceGBuffer
         {
-            FramebufferAttachment albedo;
-            FramebufferAttachment light;
+            FramebufferAttachment colour;
 
             vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
         } rtx_gbuffer;

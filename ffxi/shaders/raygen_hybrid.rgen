@@ -51,7 +51,8 @@ layout(std430, binding = 3, set = 1) uniform Light
 layout(binding = 4, set = 1) uniform sampler2D position_in;
 layout(binding = 5, set = 1) uniform sampler2D normal_in;
 layout(binding = 6, set = 1) uniform sampler2D face_normal_in;
-layout(binding = 7, set = 1) uniform usampler2D material_index_in;
+layout(binding = 7, set = 1) uniform sampler2D albedo_in;
+layout(binding = 8, set = 1) uniform usampler2D material_index_in;
 
 layout(location = 1) rayPayloadEXT Shadow 
 {
@@ -70,6 +71,7 @@ void main()
     vec3 position = texture(position_in, uv).xyz;
     vec3 normal = texture(normal_in, uv).xyz;
     vec3 face_normal = texture(face_normal_in, uv).xyz;
+    vec3 albedo = texture(albedo_in, uv).xyz;
     uint mesh_index = texture(material_index_in, uv).r;
     uint material_index = meshInfo.m[mesh_index].material_index;
 
@@ -111,7 +113,7 @@ void main()
 
     diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
 
-    vec3 color = ambient + diffuse;
+    vec3 colour = (ambient + diffuse) * albedo;
 
-    imageStore(light_out, ivec2(gl_LaunchIDEXT.xy), vec4(color, 0.0));
+    imageStore(light_out, ivec2(gl_LaunchIDEXT.xy), vec4(colour, 0.0));
 }

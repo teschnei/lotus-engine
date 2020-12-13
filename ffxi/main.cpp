@@ -69,8 +69,8 @@ private:
         */
         auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(path / "ROM/342/73.DAT");
         //costumeid 3111 (arciela 3074)
-        //auto player = scene->AddEntity<Actor>(path / "/ROM/310/3.DAT");
-        auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/309/105.DAT");
+        auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/310/3.DAT");
+        //auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/309/105.DAT");
         player->setPos(glm::vec3(259.f, -87.f, 99.f));
         auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
         if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
