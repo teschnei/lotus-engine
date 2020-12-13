@@ -25,7 +25,7 @@ namespace lotus
     WorkerTask<std::shared_ptr<Material>> Material::make_material(Engine* engine, std::shared_ptr<Buffer> buffer, uint32_t buffer_offset,
         std::shared_ptr<Texture> texture, uint32_t light_type, float specular_exponent, float specular_intensity)
     {
-        std::shared_ptr<Material> material = std::shared_ptr<Material>(new Material(buffer, buffer_offset, texture, specular_exponent, specular_intensity, light_type));
+        std::shared_ptr<Material> material = std::shared_ptr<Material>(new Material(buffer, buffer_offset, texture, light_type, specular_exponent, specular_intensity));
 
         auto buffer_size = engine->renderer->uniform_buffer_align_up(sizeof(MaterialBufferBlock));
 
