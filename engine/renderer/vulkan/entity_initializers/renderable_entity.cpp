@@ -415,7 +415,7 @@ namespace lotus
             }
         }
 
-        std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
+        std::vector<vk::WriteDescriptorSet> descriptorWrites{ 1 };
 
         descriptorWrites[0].dstSet = nullptr;
         descriptorWrites[0].dstBinding = 1;
@@ -424,12 +424,16 @@ namespace lotus
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pImageInfo = &image_info;
 
-        descriptorWrites[1].dstSet = nullptr;
-        descriptorWrites[1].dstBinding = 4;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pBufferInfo = &material_info;
+        if (!shadowmap)
+        {
+            descriptorWrites.push_back({});
+            descriptorWrites[1].dstSet = nullptr;
+            descriptorWrites[1].dstBinding = 4;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = &material_info;
+        }
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorWrites);
 

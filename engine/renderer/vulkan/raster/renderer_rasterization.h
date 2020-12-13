@@ -31,6 +31,8 @@ namespace lotus
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> shadowmap_pipeline_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> deferred_pipeline_layout;
+        vk::UniqueDescriptorPool deferred_descriptor_pool;
+        std::vector<vk::UniqueDescriptorSet> deferred_descriptor_set;
 
         struct PipelineGroup
         {

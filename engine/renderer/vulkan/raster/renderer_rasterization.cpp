@@ -477,10 +477,44 @@ namespace lotus
             mesh_info_layout_binding
         };
 
+        layout_info.flags = {};
         layout_info.bindingCount = static_cast<uint32_t>(deferred_bindings.size());
         layout_info.pBindings = deferred_bindings.data();
+        std::vector<vk::DescriptorBindingFlags> deferred_binding_flags{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
+        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags_deferred{ static_cast<uint32_t>(deferred_binding_flags.size()), deferred_binding_flags.data() };
+        layout_info.pNext = &layout_flags_deferred;
 
         deferred_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
+
+        std::vector<vk::DescriptorPoolSize> pool_sizes_deferred;
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, GlobalResources::max_resource_index);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
+
+        vk::DescriptorPoolCreateInfo pool_ci;
+        pool_ci.maxSets = 3;
+        pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes_deferred.size());
+        pool_ci.pPoolSizes = pool_sizes_deferred.data();
+        pool_ci.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+
+        deferred_descriptor_pool = gpu->device->createDescriptorPoolUnique(pool_ci, nullptr);
+
+        std::array<vk::DescriptorSetLayout, 3> layouts = { *deferred_descriptor_set_layout, *deferred_descriptor_set_layout, *deferred_descriptor_set_layout };
+
+        vk::DescriptorSetAllocateInfo set_ci;
+        set_ci.descriptorPool = *deferred_descriptor_pool;
+        set_ci.descriptorSetCount = 3;
+        set_ci.pSetLayouts = layouts.data();
+        deferred_descriptor_set = gpu->device->allocateDescriptorSetsUnique(set_ci);
     }
 
     void RendererRasterization::createGraphicsPipeline()
@@ -875,51 +909,51 @@ namespace lotus
             camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
             camera_buffer_info.range = sizeof(Camera::CameraData);
 
-            std::vector<vk::WriteDescriptorSet> descriptorWrites{ 12 };
+            std::vector<vk::WriteDescriptorSet> descriptorWrites{ 11 };
 
-            descriptorWrites[0].dstSet = nullptr;
+            descriptorWrites[0].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pImageInfo = &pos_info;
 
-            descriptorWrites[1].dstSet = nullptr;
+            descriptorWrites[1].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &normal_info;
 
-            descriptorWrites[2].dstSet = nullptr;
+            descriptorWrites[2].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].dstArrayElement = 0;
             descriptorWrites[2].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pImageInfo = &albedo_info;
 
-            descriptorWrites[3].dstSet = nullptr;
+            descriptorWrites[3].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[3].dstBinding = 3;
             descriptorWrites[3].dstArrayElement = 0;
             descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[3].descriptorCount = 1;
             descriptorWrites[3].pImageInfo = &material_info;
 
-            descriptorWrites[4].dstSet = nullptr;
+            descriptorWrites[4].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[4].dstBinding = 4;
             descriptorWrites[4].dstArrayElement = 0;
             descriptorWrites[4].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[4].descriptorCount = 1;
             descriptorWrites[4].pImageInfo = &accumulation_info;
 
-            descriptorWrites[5].dstSet = nullptr;
+            descriptorWrites[5].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[5].dstBinding = 5;
             descriptorWrites[5].dstArrayElement = 0;
             descriptorWrites[5].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[5].descriptorCount = 1;
             descriptorWrites[5].pImageInfo = &revealage_info;
 
-            descriptorWrites[6].dstSet = nullptr;
+            descriptorWrites[6].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[6].dstBinding = 6;
             descriptorWrites[6].dstArrayElement = 0;
             descriptorWrites[6].descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -941,47 +975,52 @@ namespace lotus
             cascade_buffer_info.offset = i * uniform_buffer_align_up(sizeof(cascade_data));
             cascade_buffer_info.range = sizeof(cascade_data);
 
-            descriptorWrites[7].dstSet = nullptr;
+            descriptorWrites[7].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[7].dstBinding = 7;
             descriptorWrites[7].dstArrayElement = 0;
             descriptorWrites[7].descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptorWrites[7].descriptorCount = 1;
             descriptorWrites[7].pBufferInfo = &light_buffer_info;
 
-            descriptorWrites[8].dstSet = nullptr;
+            descriptorWrites[8].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[8].dstBinding = 8;
             descriptorWrites[8].dstArrayElement = 0;
             descriptorWrites[8].descriptorType = vk::DescriptorType::eUniformBuffer;
             descriptorWrites[8].descriptorCount = 1;
             descriptorWrites[8].pBufferInfo = &cascade_buffer_info;
 
-            descriptorWrites[9].dstSet = nullptr;
+            descriptorWrites[9].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[9].dstBinding = 9;
             descriptorWrites[9].dstArrayElement = 0;
             descriptorWrites[9].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[9].descriptorCount = 1;
             descriptorWrites[9].pImageInfo = &shadowmap_image_info;
             
-            descriptorWrites[10].dstSet = nullptr;
-            descriptorWrites[10].dstBinding = 10;
-            descriptorWrites[10].dstArrayElement = 0;
-            descriptorWrites[10].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[10].descriptorCount = resources->descriptor_material_info.size();
-            descriptorWrites[10].pBufferInfo = resources->descriptor_material_info.data();
-
             vk::DescriptorBufferInfo mesh_info;
             mesh_info.buffer = resources->mesh_info_buffer->buffer;
             mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
             mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
-            descriptorWrites[11].dstSet = nullptr;
-            descriptorWrites[11].dstBinding = 11;
-            descriptorWrites[11].dstArrayElement = 0;
-            descriptorWrites[11].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[11].descriptorCount = 1;
-            descriptorWrites[11].pBufferInfo = &mesh_info;
+            descriptorWrites[10].dstSet = *deferred_descriptor_set[i];
+            descriptorWrites[10].dstBinding = 11;
+            descriptorWrites[10].dstArrayElement = 0;
+            descriptorWrites[10].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[10].descriptorCount = 1;
+            descriptorWrites[10].pBufferInfo = &mesh_info;
 
-            buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
+            if (resources->descriptor_material_info.size() > 0)
+            {
+                descriptorWrites.push_back({});
+                descriptorWrites[11].dstSet = *deferred_descriptor_set[i];
+                descriptorWrites[11].dstBinding = 10;
+                descriptorWrites[11].dstArrayElement = 0;
+                descriptorWrites[11].descriptorType = vk::DescriptorType::eUniformBuffer;
+                descriptorWrites[11].descriptorCount = resources->descriptor_material_info.size();
+                descriptorWrites[11].pBufferInfo = resources->descriptor_material_info.data();
+            }
+
+            gpu->device->updateDescriptorSets(descriptorWrites, {});
+            buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, *deferred_descriptor_set[i], {});
 
             buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
 
