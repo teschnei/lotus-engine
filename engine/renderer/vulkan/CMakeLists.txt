@@ -2,6 +2,8 @@ target_sources(engine
     PRIVATE
     gpu.cpp
     gpu.h
+    global_resources.cpp
+    global_resources.h
     renderer.cpp
     renderer.h
     swapchain.cpp

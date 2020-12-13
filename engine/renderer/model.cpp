@@ -97,44 +97,52 @@ namespace lotus
                 {
                     std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
                     std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
+                    std::vector<vk::DescriptorBufferInfo> descriptor_material_info;
                     std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
-                    //TODO: move these into some kind of engine-safe implementation
-                    std::scoped_lock lg{ renderer->acceleration_binding_mutex };
-                    uint16_t index = renderer->static_acceleration_bindings_offset;
+                    resource_index = renderer->resources->static_binding_offset.fetch_add(meshes.size());
                     for (size_t i = 0; i < meshes.size(); ++i)
                     {
                         auto& mesh = meshes[i];
                         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
                         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-                        descriptor_texture_info.emplace_back(*mesh->texture->sampler, *mesh->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                        auto [buffer, offset] = mesh->material->getBuffer();
+                        descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
+                        descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                        mesh->material->index = resource_index + i;
                         for (size_t image = 0; image < engine->renderer->getImageCount(); ++image)
                         {
-                            renderer->mesh_info_buffer_mapped[image * renderer->max_acceleration_binding_index + index + i] = { index + (uint32_t)i, index + (uint32_t)i, mesh->specular_exponent, mesh->specular_intensity, glm::vec4{1.f}, glm::vec3{1.f}, 0, light_offset, (uint32_t)mesh->getIndexCount() };
+                            renderer->resources->mesh_info_buffer_mapped[image * GlobalResources::max_resource_index + resource_index + i] =
+                            { resource_index + (uint32_t)i, resource_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, glm::vec3{1.0}, 0, glm::vec4{1.f} };
                         }
                     }
-                    bottom_level_as->resource_index = index;
 
-                    renderer->static_acceleration_bindings_offset = index + meshes.size();
                     vk::WriteDescriptorSet write_info_vertex;
                     write_info_vertex.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    write_info_vertex.dstArrayElement = index;
+                    write_info_vertex.dstArrayElement = resource_index;
                     write_info_vertex.dstBinding = 1;
                     write_info_vertex.descriptorCount = static_cast<uint32_t>(descriptor_vertex_info.size());
                     write_info_vertex.pBufferInfo = descriptor_vertex_info.data();
 
                     vk::WriteDescriptorSet write_info_index;
                     write_info_index.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    write_info_index.dstArrayElement = index;
+                    write_info_index.dstArrayElement = resource_index;
                     write_info_index.dstBinding = 2;
                     write_info_index.descriptorCount = static_cast<uint32_t>(descriptor_index_info.size());
                     write_info_index.pBufferInfo = descriptor_index_info.data();
 
                     vk::WriteDescriptorSet write_info_texture;
                     write_info_texture.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-                    write_info_texture.dstArrayElement = index;
+                    write_info_texture.dstArrayElement = resource_index;
                     write_info_texture.dstBinding = 3;
                     write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
                     write_info_texture.pImageInfo = descriptor_texture_info.data();
+
+                    vk::WriteDescriptorSet write_info_material;
+                    write_info_material.descriptorType = vk::DescriptorType::eUniformBuffer;
+                    write_info_material.dstArrayElement = resource_index;
+                    write_info_material.dstBinding = 4;
+                    write_info_material.descriptorCount = static_cast<uint32_t>(descriptor_material_info.size());
+                    write_info_material.pBufferInfo = descriptor_material_info.data();
 
                     std::vector<vk::WriteDescriptorSet> writes;
                     for (size_t i = 0; i < engine->renderer->getImageCount(); ++i)
@@ -142,11 +150,16 @@ namespace lotus
                         write_info_vertex.dstSet = *renderer->rtx_descriptor_sets_const[i];
                         write_info_index.dstSet = *renderer->rtx_descriptor_sets_const[i];
                         write_info_texture.dstSet = *renderer->rtx_descriptor_sets_const[i];
+                        write_info_material.dstSet = *renderer->rtx_descriptor_sets_const[i];
                         writes.push_back(write_info_vertex);
                         writes.push_back(write_info_index);
                         writes.push_back(write_info_texture);
+                        writes.push_back(write_info_material);
                     }
-                    engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
+                    {
+                        std::lock_guard lk{ engine->renderer->resources->resource_descriptor_mutex };
+                        engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
+                    }
                 }
             }
             command_buffer->end();

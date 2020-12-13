@@ -10,47 +10,6 @@
 #include "shared_linked_list.h"
 #include "renderer/vulkan/vulkan_inc.h"
 
-#ifdef _MSC_VER
-namespace std
-{
-    //bootleg jthread until MSVC implements it :)
-    class jthread;
-    class stop_token
-    {
-        friend class jthread;
-        shared_ptr<bool> stop{ make_shared<bool>(false) };
-    public:
-        bool stop_requested() { return *stop; }
-    };
-    class jthread : public thread
-    {
-    public:
-        jthread() noexcept : thread() {}
-        template <typename Fn, typename... Args>
-        explicit jthread(Fn&& fn, Args&&... args) : jthread(forward<Fn>(fn), stop_token{}, forward<Args>(args)...) {}
-        template <typename Fn, typename... Args>
-        explicit jthread(Fn&& fn, stop_token stop, Args&&... args) : thread(forward<Fn>(fn), stop, forward<Args>(args)...), stop{ stop } {}
-
-        jthread(jthread&&) = default;
-
-        jthread& operator=(jthread&&) = default;
-
-        jthread(const jthread&) = delete;
-        jthread& operator=(const jthread&) = delete;
-
-        void request_stop() { *stop.stop = true; }
-        stop_token get_stop_token() { return stop; }
-
-        ~jthread() noexcept {
-            if (joinable())
-                join();
-        }
-    private:
-        stop_token stop;
-    };
-}
-#endif
-
 namespace lotus
 {
     class Engine;

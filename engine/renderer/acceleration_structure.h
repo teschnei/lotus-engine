@@ -48,7 +48,6 @@ namespace lotus
             std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>&& geometry_offsets, std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>&& geometry_infos,
             bool updateable, bool compact, Performance performance);
         void Update(vk::CommandBuffer buffer);
-        uint16_t resource_index{ 0 };
         uint32_t instanceid{ 0 };
     private:
         std::vector<vk::AccelerationStructureGeometryKHR> geometries;
@@ -64,12 +63,7 @@ namespace lotus
         uint32_t AddInstance(vk::AccelerationStructureInstanceKHR instance);
         WorkerTask<> Build(Engine*);
         void UpdateInstance(uint32_t instance_id, glm::mat3x4 instance);
-        void AddBLASResource(Model* model);
-        void AddBLASResource(DeformableEntity* entity);
-        void AddBLASResource(Particle* entity);
-        std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
-        std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
-        std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
+
     private:
         std::vector<vk::AccelerationStructureInstanceKHR> instances;
         std::unique_ptr<Buffer> instance_memory;

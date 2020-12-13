@@ -2,6 +2,9 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
 
 struct Vertex
 {
@@ -24,20 +27,12 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
-struct Mesh
+layout(binding = 4, set = 0) uniform MaterialInfo
 {
-    uint vec_index_offset;
-    uint tex_offset;
-    float specular_exponent;
-    float specular_intensity;
-    vec4 color;
-    vec3 scale;
-    uint billboard;
-    uint light_type;
-    uint indices;
-};
+    Material m;
+} materials[1024];
 
-layout(binding = 4, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -90,7 +85,7 @@ hitAttributeEXT block {
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -112,7 +107,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_offset;
     
     Vertex v;
 
@@ -149,7 +144,7 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
-    vec4 texture_color = texture(textures[mesh.tex_offset], uv);
+    vec4 texture_color = texture(textures[mesh.material_index], uv);
     float tex_a = (texture_color.r + texture_color.g + texture_color.b) * (1.0 / 3.0);
 
     vec3 ambient = light.entity.ambient_color.rgb;

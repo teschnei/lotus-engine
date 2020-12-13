@@ -18,8 +18,6 @@ namespace lotus
     RendererRaytrace::~RendererRaytrace()
     {
         gpu->device->waitIdle();
-        if (mesh_info_buffer)
-            mesh_info_buffer->unmap();
         if (camera_buffers.view_proj_ubo)
             camera_buffers.view_proj_ubo->unmap();
     }
@@ -131,9 +129,9 @@ namespace lotus
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
             pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureKHR, 1);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, max_acceleration_binding_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, max_acceleration_binding_index);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index);
+            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, GlobalResources::max_resource_index);
             pool_sizes_const.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
 
             vk::DescriptorPoolCreateInfo pool_ci;
@@ -144,11 +142,11 @@ namespace lotus
 
             rtx_descriptor_pool_const = gpu->device->createDescriptorPoolUnique(pool_ci, nullptr);
 
-            std::array<vk::DescriptorSetLayout, 3> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
+            std::vector<vk::DescriptorSetLayout> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
 
             vk::DescriptorSetAllocateInfo set_ci;
             set_ci.descriptorPool = *rtx_descriptor_pool_const;
-            set_ci.descriptorSetCount = 3;
+            set_ci.descriptorSetCount = layouts.size();
             set_ci.pSetLayouts = layouts.data();
             rtx_descriptor_sets_const = gpu->device->allocateDescriptorSetsUnique(set_ci);
         }
@@ -368,24 +366,30 @@ namespace lotus
 
         vk::DescriptorSetLayoutBinding vertex_buffer_binding;
         vertex_buffer_binding.binding = 1;
-        vertex_buffer_binding.descriptorCount = max_acceleration_binding_index;
+        vertex_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
         vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
         vk::DescriptorSetLayoutBinding index_buffer_binding;
         index_buffer_binding.binding = 2;
-        index_buffer_binding.descriptorCount = max_acceleration_binding_index;
+        index_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
         index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
         vk::DescriptorSetLayoutBinding texture_bindings;
         texture_bindings.binding = 3;
-        texture_bindings.descriptorCount = max_acceleration_binding_index;
+        texture_bindings.descriptorCount = GlobalResources::max_resource_index;
         texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
+        vk::DescriptorSetLayoutBinding material_buffer_binding;
+        material_buffer_binding.binding = 4;
+        material_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
+        material_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        material_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
+
         vk::DescriptorSetLayoutBinding mesh_info_binding;
-        mesh_info_binding.binding = 4;
+        mesh_info_binding.binding = 5;
         mesh_info_binding.descriptorCount = 1;
         mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
@@ -396,6 +400,7 @@ namespace lotus
             vertex_buffer_binding,
             index_buffer_binding,
             texture_bindings,
+            material_buffer_binding,
             mesh_info_binding
         };
 
@@ -412,7 +417,7 @@ namespace lotus
         rtx_layout_info_const.pBindings = rtx_bindings_const.data();
 
         std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
-            vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
+            vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
         vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ static_cast<uint32_t>(binding_flags.size()), binding_flags.data() };
         rtx_layout_info_const.pNext = &layout_flags;
 
@@ -464,8 +469,8 @@ namespace lotus
             auto shadow_miss_shader_module = getShader("shaders/shadow_miss.spv");
             auto closest_hit_shader_module = getShader("shaders/closesthit.spv");
             auto color_hit_shader_module = getShader("shaders/color_hit.spv");
-            auto landscape_closest_hit_shader_module = getShader("shaders/landscape_closest_hit.spv");
-            auto landscape_color_hit_shader_module = getShader("shaders/landscape_color_hit.spv");
+            auto landscape_closest_hit_shader_module = getShader("shaders/mmb_closest_hit.spv");
+            auto landscape_color_hit_shader_module = getShader("shaders/mmb_color_hit.spv");
             auto particle_closest_hit_shader_module = getShader("shaders/particle_closest_hit.spv");
             auto particle_color_hit_shader_module = getShader("shaders/particle_color_hit.spv");
             auto particle_intersection_shader_module = getShader("shaders/particle_intersection.spv");
@@ -828,12 +833,6 @@ namespace lotus
         sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 
         rtx_gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
-
-        if (!mesh_info_buffer_mapped)
-        {
-            mesh_info_buffer = gpu->memory_manager->GetBuffer(max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
-            mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_acceleration_binding_index * sizeof(MeshInfo) * getImageCount(), {});
-        }
     }
 
     void RendererRaytrace::createDeferredCommandBuffer()
@@ -1250,5 +1249,28 @@ namespace lotus
     void RendererRaytrace::drawEntity(EntityInitializer* initializer, Engine* engine)
     {
         initializer->drawEntity(this, engine);
+    }
+
+    void RendererRaytrace::bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
+        vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info)
+    {
+        std::vector<vk::WriteDescriptorSet> writes;
+
+        vertex.dstSet = *rtx_descriptor_sets_const[image];
+        index.dstSet = *rtx_descriptor_sets_const[image];
+        texture.dstSet = *rtx_descriptor_sets_const[image];
+        material.dstSet = *rtx_descriptor_sets_const[image];
+        mesh_info.dstSet = *rtx_descriptor_sets_const[image];
+        if (vertex.descriptorCount > 0)
+            writes.push_back(vertex);
+        if (index.descriptorCount > 0)
+            writes.push_back(index);
+        if (texture.descriptorCount > 0)
+        {
+            writes.push_back(texture);
+            writes.push_back(material);
+        }
+        writes.push_back(mesh_info);
+        gpu->device->updateDescriptorSets(writes, nullptr);
     }
 }

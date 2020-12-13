@@ -7,6 +7,7 @@
 #include "window.h"
 #include "gpu.h"
 #include "swapchain.h"
+#include "global_resources.h"
 #include "ui_renderer.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
@@ -88,12 +89,16 @@ namespace lotus
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
 
+        virtual void bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
+            vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info) = 0;
+
         vk::UniqueHandle<vk::Instance, vk::DispatchLoaderDynamic> instance;
 
         std::unique_ptr<Window> window;
         vk::UniqueSurfaceKHR surface;
         std::unique_ptr<GPU> gpu;
         std::unique_ptr<Swapchain> swapchain;
+        std::unique_ptr<GlobalResources> resources;
 
         vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
 

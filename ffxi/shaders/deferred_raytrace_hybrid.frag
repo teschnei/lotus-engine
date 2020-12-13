@@ -54,6 +54,11 @@ layout(binding = 8) uniform Camera {
     vec3 pos;
 } camera;
 
+layout(binding = 9) uniform MaterialInfo
+{
+    Material m;
+} materials[1024];
+
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec4 eye_dir;
 
@@ -108,14 +113,14 @@ void main() {
     {
         vec4 albedo = texture(albedoSampler, fragTexCoord);
         vec4 in_light = texture(lightSampler, fragTexCoord);
-        uint material_index = texture(materialIndexSampler, fragTexCoord).r;
+        uint mesh_index = texture(materialIndexSampler, fragTexCoord).r;
         float dist = length(fragPos - camera.pos.xyz);
 
         vec3 fog = vec3(0.0);
         float max_fog_dist = 0;
         float min_fog_dist = 0;
 
-        if (meshInfo.m[material_index].light_type == 0)
+        if (materials[meshInfo.m[mesh_index].material_index].m.light_type == 0)
         {
             fog = light.entity.fog_color.rgb;
             max_fog_dist = light.entity.max_fog;

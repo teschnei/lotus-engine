@@ -43,6 +43,9 @@ namespace lotus
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info);
 
+        virtual void bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
+            vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info) override;
+
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
@@ -85,23 +88,6 @@ namespace lotus
             std::unique_ptr<Buffer> cascade_data_ubo;
             uint8_t* cascade_data_mapped{ nullptr };
         } camera_buffers;
-
-        struct MeshInfo
-        {
-            uint32_t vertex_index_offset;
-            uint32_t texture_offset;
-            float specular_exponent;
-            float specular_intensity;
-            glm::vec4 color;
-            glm::vec3 scale;
-            uint32_t billboard;
-            uint32_t light_type;
-            uint32_t indices;
-            float _pad[2];
-        };
-
-        //std::unique_ptr<Buffer> mesh_info_buffer;
-        MeshInfo* mesh_info_buffer_mapped{ nullptr };
 
         struct UBOFS
         {

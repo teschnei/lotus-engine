@@ -1,6 +1,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : enable
+
+#include "common.glsl"
 
 layout(binding = 0) uniform sampler2D posSampler;
 layout(binding = 1) uniform sampler2D normalSampler;
@@ -55,6 +58,16 @@ layout(binding = 8) uniform CascadeUBO
 } cascade_ubo;
 
 layout(binding = 9) uniform sampler2DArray shadowSampler;
+
+layout(binding = 10) uniform MaterialInfo
+{
+    Material m;
+} materials[1024];
+
+layout(binding = 11) uniform MeshInfo
+{
+    Mesh m[1024];
+} meshInfo;
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec4 eye_dir;
@@ -117,6 +130,7 @@ void main() {
     {
         vec3 normal = texture(normalSampler, fragTexCoord).xyz;
         vec4 albedo = texture(albedoSampler, fragTexCoord);
+        uint mesh_index = texture(materialSampler, fragTexCoord).r;
         float dist = length(fragPos - camera_ubo.eye_pos.xyz);
 
         vec3 ambient_color = vec3(0.0);
@@ -127,7 +141,7 @@ void main() {
         float min_fog_dist = 0;
         float brightness = 0;
 
-        if (texture(materialSampler, fragTexCoord).r == 0)
+        if (materials[meshInfo.m[mesh_index].material_index].m.light_type == 0)
         {
             ambient_color = light.entity.ambient_color.rgb;
             specular_color = light.entity.specular_color.rgb;

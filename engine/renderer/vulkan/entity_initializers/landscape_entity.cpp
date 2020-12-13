@@ -56,12 +56,12 @@ namespace lotus
             buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
             buffer_info.range = sizeof(Camera::CameraData);
 
-            //vk::DescriptorBufferInfo mesh_info;
-            //mesh_info.buffer = renderer->mesh_info_buffer->buffer;
-            //mesh_info.offset = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index * i;
-            //mesh_info.range = sizeof(Renderer::MeshInfo) * Renderer::max_acceleration_binding_index;
+            vk::DescriptorBufferInfo mesh_info;
+            mesh_info.buffer = renderer->resources->mesh_info_buffer->buffer;
+            mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
+            mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
-            std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
+            std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
             descriptorWrites[0].dstSet = nullptr;
             descriptorWrites[0].dstBinding = 0;
@@ -70,12 +70,12 @@ namespace lotus
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &buffer_info;
 
-            //descriptorWrites[1].dstSet = nullptr;
-            //descriptorWrites[1].dstBinding = 3;
-            //descriptorWrites[1].dstArrayElement = 0;
-            //descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-            //descriptorWrites[1].descriptorCount = 1;
-            //descriptorWrites[1].pBufferInfo = &mesh_info;
+            descriptorWrites[1].dstSet = nullptr;
+            descriptorWrites[1].dstBinding = 3;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = &mesh_info;
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
@@ -170,9 +170,9 @@ namespace lotus
             buffer_info.range = sizeof(Camera::CameraData);
 
             vk::DescriptorBufferInfo mesh_info;
-            mesh_info.buffer = renderer->mesh_info_buffer->buffer;
-            mesh_info.offset = sizeof(RendererHybrid::MeshInfo) * RendererHybrid::max_acceleration_binding_index * i;
-            mesh_info.range = sizeof(RendererHybrid::MeshInfo) * RendererHybrid::max_acceleration_binding_index;
+            mesh_info.buffer = renderer->resources->mesh_info_buffer->buffer;
+            mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
+            mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
             std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
@@ -265,11 +265,7 @@ namespace lotus
                     auto& mesh = model->meshes[i];
                     if (mesh->has_transparency == transparency)
                     {
-                        if (model->bottom_level_as)
-                        {
-                            material_index = model->bottom_level_as->resource_index + i;
-                        }
-                        drawMesh(engine, command_buffer, *mesh, count, layout, material_index, shadowmap);
+                        drawMesh(engine, command_buffer, *mesh, count, layout, model->resource_index + i, shadowmap);
                     }
                 }
             }
@@ -278,17 +274,25 @@ namespace lotus
 
     void LandscapeEntityInitializer::drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout layout, uint32_t material_index, bool shadowmap)
     {
+        vk::DescriptorBufferInfo material_info;
         vk::DescriptorImageInfo image_info;
         image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
         //TODO: debug texture? probably AYAYA
-        if (mesh.texture)
+        if (mesh.material)
         {
-            image_info.imageView = *mesh.texture->image_view;
-            image_info.sampler = *mesh.texture->sampler;
+            auto [buffer, offset] = mesh.material->getBuffer();
+            material_info.buffer = buffer;
+            material_info.offset = offset;
+            material_info.range = Material::getMaterialBufferSize(engine);
+            if (mesh.material->texture)
+            {
+                image_info.imageView = *mesh.material->texture->image_view;
+                image_info.sampler = *mesh.material->texture->sampler;
+            }
         }
 
-        std::array<vk::WriteDescriptorSet, 1> descriptorWrites = {};
+        std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
         descriptorWrites[0].dstSet = nullptr;
         descriptorWrites[0].dstBinding = 1;
@@ -296,6 +300,13 @@ namespace lotus
         descriptorWrites[0].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pImageInfo = &image_info;
+
+        descriptorWrites[1].dstSet = nullptr;
+        descriptorWrites[1].dstBinding = 4;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &material_info;
 
         command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, shadowmap ? mesh.pipeline_shadow : mesh.pipeline);
 

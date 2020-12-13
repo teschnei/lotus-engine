@@ -17,7 +17,7 @@ namespace lotus
                 {
                     //glm is column-major so we have to transpose the model matrix for RTX
                     auto matrix = glm::mat3x4{ instance_info[offset+i].model_t };
-                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->bottom_level_as->resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry), 2);
+                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::LevelGeometry), 2);
                 }
             }
         }

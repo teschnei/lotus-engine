@@ -10,30 +10,12 @@
 namespace lotus
 {
     class Engine;
-    class Texture;
-
-    class TextureLoaderBase
-    {
-    public:
-        void setEngine(Engine* _engine) { engine = _engine; }
-    protected:
-        Engine* engine {nullptr};
-    };
-
-    template<typename T>
-    concept TextureLoader = std::derived_from<T, TextureLoaderBase> &&
-        requires(T t, Engine* e, std::shared_ptr<Texture>& s)
-    {
-        {t.LoadTexture(s)} -> std::convertible_to<lotus::Task<>>;
-    };
-
     class Texture
     {
     public:
-        //TODO: figure out how to get engine out of this call
-        template<TextureLoader Loader, typename... Args>
+        template<typename Func, typename... Args>
         [[nodiscard("Work must be queued in order to be processed")]]
-        static Task<std::shared_ptr<Texture>> LoadTexture(Engine* engine, std::string texturename, Args&&... args)
+        static Task<std::shared_ptr<Texture>> LoadTexture(std::string texturename, Func func, Args&&... args)
         {
             if (auto found = texture_map.find(texturename); found != texture_map.end())
             {
@@ -41,23 +23,7 @@ namespace lotus
             }
             auto new_texture = std::shared_ptr<Texture>(new Texture(texturename));
             texture_map.emplace(texturename, new_texture);
-            Loader loader{ std::forward<Args>(args)... };
-            loader.setEngine(engine);
-            co_await loader.LoadTexture(new_texture);
-            co_return new_texture;
-        }
-
-        template<typename Func>
-        [[nodiscard("Work must be queued in order to be processed")]]
-        static Task<std::shared_ptr<Texture>> LoadTexture(std::string texturename, Func func)
-        {
-            if (auto found = texture_map.find(texturename); found != texture_map.end())
-            {
-                co_return found->second.lock();
-            }
-            auto new_texture = std::shared_ptr<Texture>(new Texture(texturename));
-            texture_map.emplace(texturename, new_texture);
-            co_await func(new_texture);
+            co_await func(new_texture, std::forward<Args>(args)...);
             co_return new_texture;
         }
 

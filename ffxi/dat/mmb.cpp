@@ -378,23 +378,33 @@ namespace FFXI
         return true;
     }
 
-    MMBLoader::MMBLoader(MMB* _mmb) : ModelLoader(), mmb(_mmb) {}
-
-    lotus::Task<> MMBLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    lotus::Task<> MMBLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, MMB* mmb)
     {
         if (!pipeline_flag.test_and_set())
         {
-            InitPipeline();
+            InitPipeline(engine);
             pipeline_latch.count_down();
         }
         pipeline_latch.wait();
         model->light_offset = 1;
         std::vector<std::vector<uint8_t>> vertices;
         std::vector<std::vector<uint8_t>> indices;
+        std::map<lotus::Mesh*, lotus::WorkerTask<std::shared_ptr<lotus::Material>>> material_map;
+        std::shared_ptr<lotus::Buffer> material_buffer;
+        if (mmb->meshes.size() > 0)
+        {
+            material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine) * mmb->meshes.size(),
+                vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        }
+        uint32_t material_buffer_offset = 0;
+
         for (const auto& mmb_mesh : mmb->meshes)
         {
             auto mesh = std::make_unique<lotus::Mesh>();
-            mesh->texture = lotus::Texture::getTexture(mmb_mesh.textureName);
+            std::shared_ptr<lotus::Texture> texture = lotus::Texture::getTexture(mmb_mesh.textureName);
+            if (!texture) texture = lotus::Texture::getTexture("default");
+            material_map.insert(std::make_pair(mesh.get(), lotus::Material::make_material(engine, material_buffer, material_buffer_offset, texture, 1)));
+            material_buffer_offset += lotus::Material::getMaterialBufferSize(engine);
 
             mesh->setVertexInputAttributeDescription(getMMBAttributeDescriptions());
             mesh->setVertexInputBindingDescription(getMMBBindingDescriptions());
@@ -429,11 +439,15 @@ namespace FFXI
 
             model->meshes.push_back(std::move(mesh));
         }
+        for (auto& [mesh, task] : material_map)
+        {
+            mesh->material = co_await task;
+        }
         model->lifetime = lotus::Lifetime::Long;
         co_await model->InitWork(engine, std::move(vertices), std::move(indices), sizeof(MMB::Vertex));
     }
 
-    void MMBLoader::InitPipeline()
+    void MMBLoader::InitPipeline(lotus::Engine* engine)
     {
         auto vertex_module = engine->renderer->getShader("shaders/mmb_gbuffer_vert.spv");
         auto fragment_module = engine->renderer->getShader("shaders/gbuffer_frag.spv");

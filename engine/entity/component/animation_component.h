@@ -21,6 +21,7 @@ namespace lotus
             std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
             //acceleration structures (per render target)
             std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> bottom_level_as;
+            uint16_t resource_index{ 0 };
         };
         explicit AnimationComponent(Entity*, Engine* engine, std::unique_ptr<Skeleton>&&);
         virtual ~AnimationComponent() override = default;

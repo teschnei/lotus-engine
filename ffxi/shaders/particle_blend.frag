@@ -6,15 +6,10 @@
 
 layout(binding = 1) uniform sampler2D texSampler;
 
-layout(binding = 3, set = 0) uniform MeshInfo
+layout(binding = 3, set = 0) uniform MeshBlock
 {
-    Mesh m[1024];
-} meshInfo;
-
-layout(binding = 4, set = 0) uniform EntityIndex
-{
-    uint index;
-} entity;
+    Mesh mesh;
+} mesh;
 
 layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -31,7 +26,7 @@ layout(push_constant) uniform PushConstant
 
 void main() {
     vec4 tex = texture(texSampler, fragTexCoord);
-    vec4 particle_color = meshInfo.m[entity.index + push.mesh_index].color;
+    vec4 particle_color = mesh.mesh.colour;
     float tex_a = (tex.r + tex.g + tex.b) * (1.0 / 3.0);
     if (tex_a < 1.f/16.f)
         discard;

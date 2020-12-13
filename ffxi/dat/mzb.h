@@ -70,13 +70,9 @@ namespace FFXI
         std::unordered_map<uint32_t, uint32_t> mesh_map;
     };
 
-    class CollisionLoader : public lotus::ModelLoader
+    class CollisionLoader
     {
     public:
-        CollisionLoader(std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries);
-        lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&);
-    private:
-        std::vector<CollisionMeshData>& meshes;
-        std::vector<CollisionEntry>& entries;
+        static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine* engine, std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries);
     };
 }

@@ -7,9 +7,6 @@
 #include "entity/landscape_entity.h"
 #include "entity/actor.h"
 #include "test_loader.h"
-#include "dat/mmb.h"
-#include "dat/os2.h"
-#include "dat/d3m.h"
 #include "engine/entity/free_flying_camera.h"
 #include "engine/entity/component/camera_cascades_component.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
@@ -61,7 +58,7 @@ private:
     lotus::WorkerTask<> load_scene()
     {
         loading_scene = std::make_unique<lotus::Scene>(engine.get());
-        auto default_texture_work = lotus::Texture::LoadTexture<TestTextureLoader>(engine.get(), "default");
+        auto default_texture_work = lotus::Texture::LoadTexture("default", TestTextureLoader::LoadTexture, engine.get());
         default_texture = co_await default_texture_work;
         auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
         /* zone dats vtable:

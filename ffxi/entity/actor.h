@@ -22,15 +22,12 @@ private:
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
 };
 
-class FFXIActorLoader : public lotus::ModelLoader
+class FFXIActorLoader
 {
 public:
-    FFXIActorLoader(const std::vector<FFXI::OS2*>& os2s, FFXI::SK2* sk2);
-    lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&);
+    static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine* engine, const std::vector<FFXI::OS2*>& os2s, FFXI::SK2* sk2);
 private:
-    const std::vector<FFXI::OS2*>& os2s;
-    FFXI::SK2* sk2;
-    void InitPipeline();
+    static void InitPipeline(lotus::Engine*);
     static inline vk::Pipeline pipeline;
     static inline vk::Pipeline pipeline_shadowmap;
     static inline std::latch pipeline_latch{ 1 };

@@ -25,14 +25,12 @@ namespace FFXI
         std::vector<Vertex> vertex_buffer;
     };
 
-    class D3MLoader : public lotus::ModelLoader
+    class D3MLoader
     {
     public:
-        D3MLoader(D3M* _d3m) : d3m(_d3m) {}
-        lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&);
+        static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine*, D3M* d3m);
     private:
-        D3M* d3m;
-        void InitPipeline();
+        static void InitPipeline(lotus::Engine*);
         static inline vk::Pipeline pipeline;
         static inline vk::Pipeline pipeline_blend;
         static inline std::latch pipeline_latch{ 1 };

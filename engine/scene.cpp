@@ -15,6 +15,7 @@ namespace lotus
 
     Task<> Scene::render()
     {
+        engine->renderer->resources->Reset();
         uint32_t image_index = engine->renderer->getCurrentImage();
         std::vector<Task<>> tasks;
         if (engine->config->renderer.RaytraceEnabled())
@@ -33,11 +34,11 @@ namespace lotus
             {
                 if (auto deformable_entity = dynamic_cast<DeformableEntity*>(entity.get()))
                 {
-                    top_level_as[image_index]->AddBLASResource(deformable_entity);
+                    engine->renderer->resources->AddResources(deformable_entity);
                 }
                 if (auto particle = dynamic_cast<Particle*>(entity.get()))
                 {
-                    top_level_as[image_index]->AddBLASResource(particle);
+                    engine->renderer->resources->AddResources(particle);
                 }
             }
         }
@@ -52,6 +53,7 @@ namespace lotus
                 }
             }
         }
+        engine->renderer->resources->BindResources(image_index);
         if (engine->config->renderer.RaytraceEnabled())
         {
            co_await top_level_as[image_index]->Build(engine);

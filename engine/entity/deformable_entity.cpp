@@ -20,18 +20,21 @@ namespace lotus
         {
             const auto& model = models[i];
             BottomLevelAccelerationStructure* blas = nullptr;
+            uint32_t resource_index = 0;
             if (model->weighted)
             {
                 blas = animation_component->transformed_geometries[i].bottom_level_as[image_index].get();
+                resource_index = animation_component->transformed_geometries[i].resource_index;
             }
             else if (model->bottom_level_as)
             {
                 blas = model->bottom_level_as.get();
+                resource_index = model->resource_index;
             }
             if (blas)
             {
                 auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                engine->renderer->populateAccelerationStructure(as, blas, matrix, blas->resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities), 0);
+                engine->renderer->populateAccelerationStructure(as, blas, matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities), 0);
             }
         }
     }

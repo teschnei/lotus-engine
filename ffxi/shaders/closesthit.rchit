@@ -26,7 +26,12 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
-layout(binding = 4, set = 0) uniform MeshInfo
+layout(binding = 4, set = 0) uniform MaterialInfo
+{
+    Material m;
+} materials[1024];
+
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -76,7 +81,7 @@ hitAttributeEXT vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -98,7 +103,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_offset;
     Vertex v = vertices[resource_index].v[index];
 
     return v;
@@ -126,7 +131,8 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
-    vec4 texture_color = texture(textures[mesh.tex_offset], uv);
+    Material material = materials[mesh.material_index].m;
+    vec4 texture_color = texture(textures[mesh.material_index], uv);
 
     shadow.light = vec4(light.entity.diffuse_color.rgb * light.entity.brightness, 1.0);
     shadow.shadow = vec4(0.0);
@@ -154,10 +160,10 @@ void main()
         vec3 ray = normalize(gl_WorldRayDirectionEXT);
         vec3 reflection = normalize(reflect(-light.diffuse_dir, normalized_normal));
         float specular_dot = dot(ray, reflection);
-        float specular_factor = mesh.specular_intensity * texture_color.a;
+        float specular_factor = material.specular_intensity * texture_color.a;
         if (specular_dot > 0)
         {
-            specular_dot = pow(specular_dot, mesh.specular_exponent);
+            specular_dot = pow(specular_dot, material.specular_exponent);
             specular = vec3(specular_factor * specular_dot) * light.entity.diffuse_color.rgb;
         }
         diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;

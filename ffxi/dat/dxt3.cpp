@@ -84,7 +84,7 @@ namespace FFXI
         }
     }
 
-    lotus::Task<> DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture>& texture)
+    lotus::Task<> DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture> texture, lotus::Engine* engine, DXT3* dxt3)
     {
         uint32_t stride = 4;
         if (dxt3->format == vk::Format::eBc2UnormBlock)

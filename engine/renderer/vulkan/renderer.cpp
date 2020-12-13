@@ -57,6 +57,7 @@ namespace lotus
         }
 
         createSwapchain();
+        resources = std::make_unique<GlobalResources>(engine, this);
     }
 
     Renderer::~Renderer()

@@ -7,7 +7,12 @@
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 
-layout(binding = 4, set = 0) uniform MeshInfo
+layout(binding = 4, set = 0) uniform MaterialInfo
+{
+    Material m;
+} materials[1024];
+
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -65,7 +70,8 @@ void main()
     vec3 position = texture(position_in, uv).xyz;
     vec3 normal = texture(normal_in, uv).xyz;
     vec3 face_normal = texture(face_normal_in, uv).xyz;
-    uint material_index = texture(material_index_in, uv).r;
+    uint mesh_index = texture(material_index_in, uv).r;
+    uint material_index = meshInfo.m[mesh_index].material_index;
 
     float dot_product = dot(-light.diffuse_dir, normal);
 
@@ -74,7 +80,7 @@ void main()
     vec3 diffuse_color = vec3(0.0);
     float brightness = 0;
 
-    if (meshInfo.m[material_index].light_type == 0)
+    if (materials[material_index].m.light_type == 0)
     {
         ambient_color = light.entity.ambient_color.rgb;
         specular_color = light.entity.specular_color.rgb;

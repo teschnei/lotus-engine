@@ -17,12 +17,9 @@ namespace FFXI
         vk::Format format{};
     };
 
-    class DXT3Loader : public lotus::TextureLoaderBase
+    class DXT3Loader
     {
     public:
-        DXT3Loader(DXT3* _dxt3) : dxt3(_dxt3) {}
-        lotus::Task<> LoadTexture(std::shared_ptr<lotus::Texture>& texture);
-        
-        DXT3* dxt3;
+        static lotus::Task<> LoadTexture(std::shared_ptr<lotus::Texture> texture, lotus::Engine* engine, DXT3* dxt3);
     };
 }

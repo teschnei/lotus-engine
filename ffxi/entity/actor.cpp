@@ -66,7 +66,7 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
         {
             if (dxt3->width > 0)
             {
-                texture_tasks.push_back(lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3));
+                texture_tasks.push_back(lotus::Texture::LoadTexture(dxt3->name, FFXI::DXT3Loader::LoadTexture, engine, dxt3));
             }
         }
         else if (auto sk2 = dynamic_cast<FFXI::SK2*>(chunk.get()))
@@ -108,7 +108,7 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
 
     co_await addSkeleton(std::move(skel));
 
-    auto [model, model_task] = lotus::Model::LoadModel<FFXIActorLoader>(engine, "iroha_test", os2s, pSk2);
+    auto [model, model_task] = lotus::Model::LoadModel("iroha_test", FFXIActorLoader::LoadModel, engine, os2s, pSk2);
     models.push_back(model);
     auto init_task = InitWork();
 
@@ -121,36 +121,38 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
     co_await init_task;
 }
 
-FFXIActorLoader::FFXIActorLoader(const std::vector<FFXI::OS2*>& _os2s, FFXI::SK2* _sk2) : ModelLoader(), os2s(_os2s), sk2(_sk2)
-{
-}
-
-lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, const std::vector<FFXI::OS2*>& os2s, FFXI::SK2* sk2)
 {
     if (!pipeline_flag.test_and_set())
     {
-        InitPipeline();
+        InitPipeline(engine);
         pipeline_latch.count_down();
     }
     pipeline_latch.wait();
     model->light_offset = 0;
     std::vector<std::vector<uint8_t>> vertices;
     std::vector<std::vector<uint8_t>> indices;
+    std::map<lotus::Mesh*, lotus::WorkerTask<std::shared_ptr<lotus::Material>>> material_map;
 
     for (const auto& os2 : os2s)
     {
+        std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine) * os2->meshes.size(),
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        uint32_t material_buffer_offset = 0;
         for (const auto& os2_mesh : os2->meshes)
         {
             auto mesh = std::make_unique<lotus::Mesh>(); 
             mesh->has_transparency = true;
-            mesh->specular_exponent = os2_mesh.specular_exponent;
-            mesh->specular_intensity = os2_mesh.specular_intensity;
 
             std::vector<FFXI::OS2::WeightingVertex> os2_vertices;
             std::vector<uint8_t> vertices_uint8;
             std::vector<uint16_t> mesh_indices;
             std::vector<uint8_t> indices_uint8;
-            mesh->texture = lotus::Texture::getTexture(os2_mesh.tex_name);
+            std::shared_ptr<lotus::Texture> texture = lotus::Texture::getTexture(os2_mesh.tex_name);
+            if (!texture) texture = lotus::Texture::getTexture("default");
+            material_map.insert(std::make_pair(mesh.get(), lotus::Material::make_material(engine, material_buffer, material_buffer_offset, texture, 0, os2_mesh.specular_exponent, os2_mesh.specular_intensity)));
+            material_buffer_offset += lotus::Material::getMaterialBufferSize(engine);
+
             int passes = os2->mirror ? 2 : 1;
             for (int i = 0; i < passes; ++i)
             {
@@ -223,10 +225,15 @@ lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
     model->lifetime = lotus::Lifetime::Short;
     model->weighted = true;
 
+    for (auto& [mesh, task] : material_map)
+    {
+        mesh->material = co_await task;
+    }
+
     co_await model->InitWork(engine, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex));
 }
 
-void FFXIActorLoader::InitPipeline()
+void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
 {
     auto vertex_module = engine->renderer->getShader("shaders/ffxiactor_gbuffer_vert.spv");
     auto fragment_module = engine->renderer->getShader("shaders/blend.spv");

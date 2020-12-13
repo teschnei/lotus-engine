@@ -68,7 +68,7 @@ namespace FFXI
         }
     }
 
-    lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
     {
         model->lifetime = lotus::Lifetime::Short;
         std::vector<uint8_t> vertices(d3m->num_triangles * sizeof(D3M::Vertex) * 3);
@@ -97,7 +97,11 @@ namespace FFXI
         auto mesh = std::make_unique<lotus::Mesh>(); 
         mesh->has_transparency = true;
 
-        mesh->texture = lotus::Texture::getTexture(d3m->texture_name);
+        std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        std::shared_ptr<lotus::Texture> texture = lotus::Texture::getTexture(d3m->texture_name);
+        if (!texture) texture = lotus::Texture::getTexture("default");
+        mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(d3m->num_triangles * 3 * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -113,7 +117,7 @@ namespace FFXI
         co_await model->InitWork(engine, std::move(vertices), sizeof(D3M::Vertex), max_dist);
     }
 
-    void D3MLoader::InitPipeline()
+    void D3MLoader::InitPipeline(lotus::Engine* engine)
     {
         auto vertex_module = engine->renderer->getShader("shaders/d3m_gbuffer_vert.spv");
         auto fragment_module = engine->renderer->getShader("shaders/particle_blend.spv");

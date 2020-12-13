@@ -7,10 +7,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-class TestTextureLoader : public lotus::TextureLoaderBase
+class TestTextureLoader
 {
 public:
-    lotus::Task<> LoadTexture(std::shared_ptr<lotus::Texture>& texture)
+    static lotus::Task<> LoadTexture(std::shared_ptr<lotus::Texture>& texture, lotus::Engine* engine)
     {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load("textures/texture.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);

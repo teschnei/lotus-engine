@@ -11,10 +11,9 @@ namespace lotus
     {
     public:
         //TODO: when to clean up dead weak_ptrs?
-        //TODO: figure out how to get engine out of this call
-        template<typename ModelLoader, typename... Args>
+        template<typename Loader, typename... Args>
         [[nodiscard("Work must be awaited before being used")]]
-        static std::pair<std::shared_ptr<Model>, std::optional<Task<>>> LoadModel(Engine* engine, const std::string& modelname, Args&&... args)
+        static std::pair<std::shared_ptr<Model>, std::optional<Task<>>> LoadModel(std::string modelname, Loader loader, Args&&... args)
         {
             if (!modelname.empty())
             {
@@ -26,9 +25,7 @@ namespace lotus
                 }
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));
-            ModelLoader loader{ std::forward<Args>(args)... };
-            loader.setEngine(engine);
-            auto task = loader.LoadModel(new_model);
+            auto task = loader(new_model, std::forward<Args>(args)...);
             if (!modelname.empty())
             {
                 return {model_map.emplace(modelname, new_model).first->second.lock(), std::move(task)};
@@ -72,6 +69,7 @@ namespace lotus
         Lifetime lifetime {Lifetime::Short};
         bool rendered{ true };
         uint32_t light_offset{ 0 };
+        uint16_t resource_index{ 0 };
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
 
@@ -79,14 +77,5 @@ namespace lotus
         explicit Model(const std::string& name);
 
         inline static std::unordered_map<std::string, std::weak_ptr<Model>> model_map{};
-    };
-
-    class ModelLoader
-    {
-    public:
-        void setEngine(Engine* _engine) { engine = _engine; }
-        Task<> LoadModel(std::shared_ptr<Model>&) { co_return; }
-    protected:
-        Engine* engine {nullptr};
     };
 }

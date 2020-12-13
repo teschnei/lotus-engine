@@ -90,7 +90,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
         {
             if (dxt3->width > 0)
             {
-                texture_tasks.push_back(lotus::Texture::LoadTexture<FFXI::DXT3Loader>(engine, dxt3->name, dxt3));
+                texture_tasks.push_back(lotus::Texture::LoadTexture(dxt3->name, FFXI::DXT3Loader::LoadTexture, engine, dxt3));
             }
         }
         else if (auto mzb_chunk = dynamic_cast<FFXI::MZB*>(chunk.get()))
@@ -104,7 +104,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
         if (auto mmb = dynamic_cast<FFXI::MMB*>(chunk.get()))
         {
             std::string name(mmb->name, 16);
-            auto [model, model_task] = lotus::Model::LoadModel<FFXI::MMBLoader>(engine, name, mmb);
+            auto [model, model_task] = lotus::Model::LoadModel(name, FFXI::MMBLoader::LoadModel, engine, mmb);
             models.push_back(model);
             if (model_task) model_tasks.push_back(std::move(*model_task));
             model_map[name] = models.size() - 1;
@@ -143,7 +143,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
 
         quadtree = *mzb->quadtree;
 
-        auto [collision_model, collision_model_task] = lotus::Model::LoadModel<FFXI::CollisionLoader>(engine, "", mzb->meshes, mzb->mesh_entries);
+        auto [collision_model, collision_model_task] = lotus::Model::LoadModel("", FFXI::CollisionLoader::LoadModel, engine, mzb->meshes, mzb->mesh_entries);
         collision_models.push_back(collision_model);
 
         auto init_task = InitWork(std::move(instance_info));
@@ -172,7 +172,7 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
         {
             //glm is column-major so we have to transpose the model matrix for Raytrace
             auto matrix = glm::mat3x4{ instance_info.model_t };
-            engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->bottom_level_as->resource_index, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry), 2);
+            engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry), 2);
         }
     }
     for (const auto& collision_model : collision_models)

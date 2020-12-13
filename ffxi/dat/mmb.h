@@ -40,14 +40,12 @@ namespace FFXI
         
     };
 
-    class MMBLoader : public lotus::ModelLoader
+    class MMBLoader
     {
     public:
-        explicit MMBLoader(MMB* mmb);
-        lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>&);
+        static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine* engine, MMB* mmb);
     private:
-        MMB* mmb;
-        void InitPipeline();
+        static void InitPipeline(lotus::Engine*);
         static inline vk::Pipeline pipeline;
         static inline vk::Pipeline pipeline_blend;
         static inline vk::Pipeline pipeline_shadowmap;

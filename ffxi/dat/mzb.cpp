@@ -317,8 +317,6 @@ namespace FFXI
         mesh_entries.push_back({ glm::transpose(transform_matrix), mesh_offset });
     }
 
-    CollisionLoader::CollisionLoader(std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries) : ModelLoader(), meshes(meshes), entries(entries) {}
-
     lotus::WorkerTask<> CollisionInitWork(lotus::Engine* engine, std::shared_ptr<lotus::Model> model, std::vector<FFXI::CollisionMeshData> mesh_data, std::vector<FFXI::CollisionEntry> entries, uint32_t vertex_stride)
     {
         std::vector<vk::DeviceSize> vertex_offsets;
@@ -423,7 +421,7 @@ namespace FFXI
         co_return;
     }
 
-    lotus::Task<> CollisionLoader::LoadModel(std::shared_ptr<lotus::Model>& model)
+    lotus::Task<> CollisionLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries)
     {
         model->rendered = false;
         auto mesh = std::make_unique<CollisionMesh>();

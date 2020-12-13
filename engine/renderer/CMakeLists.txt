@@ -4,6 +4,8 @@ target_sources(engine
     acceleration_structure.h
     animation.cpp
     animation.h
+    material.cpp
+    material.h
     memory.cpp
     memory.h
     mesh.cpp

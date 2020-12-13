@@ -28,7 +28,12 @@ layout(binding = 2, set = 0) buffer Indices
 
 layout(binding = 3, set = 0) uniform sampler2D textures[1024];
 
-layout(binding = 4, set = 0) uniform MeshInfo
+layout(binding = 4, set = 0) uniform MaterialInfo
+{
+    Material m;
+} materials[1024];
+
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -78,7 +83,7 @@ hitAttributeEXT vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].index_offset;
     ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
@@ -100,7 +105,7 @@ uint vertexSize = 3;
 
 Vertex unpackVertex(uint index)
 {
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vec_index_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_offset;
     Vertex v;
 
     vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
@@ -138,7 +143,7 @@ void main()
     vec3 primitive_color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].tex_offset;
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     vec3 texture_color = texture(textures[resource_index], uv).xyz;
 
     shadow.light = vec4(light.landscape.diffuse_color.rgb * light.landscape.brightness, 1.0);

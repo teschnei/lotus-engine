@@ -3,7 +3,7 @@
 #include <memory>
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "memory.h"
-#include "texture.h"
+#include "material.h"
 
 namespace lotus
 {
@@ -16,7 +16,7 @@ namespace lotus
         Mesh& operator=(const Mesh&) = delete;
         Mesh(Mesh&&) = default;
         Mesh& operator=(Mesh&&) = default;
-        virtual ~Mesh() = default;
+        ~Mesh() = default;
 
         std::vector<vk::VertexInputBindingDescription>& getVertexInputBindingDescription()
         {
@@ -49,15 +49,12 @@ namespace lotus
         std::unique_ptr<Buffer> index_buffer;
         std::unique_ptr<Buffer> aabbs_buffer;
 
-        std::shared_ptr<Texture> texture;
+        std::shared_ptr<Material> material;
 
         bool has_transparency{ false };
         uint16_t blending{ 0 };
 
         Mesh() = default;
-
-        float specular_exponent{};
-        float specular_intensity{};
 
         vk::Pipeline pipeline;
         vk::Pipeline pipeline_shadow;
