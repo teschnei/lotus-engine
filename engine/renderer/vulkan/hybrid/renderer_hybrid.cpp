@@ -513,6 +513,13 @@ namespace lotus
         material_index_sample_layout_binding.pImmutableSamplers = nullptr;
         material_index_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
+        //vk::DescriptorSetLayoutBinding camera_layout_binding;
+        camera_layout_binding.binding = 9;
+        camera_layout_binding.descriptorCount = 1;
+        camera_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        camera_layout_binding.pImmutableSamplers = nullptr;
+        camera_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+
         vk::DescriptorSetLayoutBinding acceleration_structure_binding;
         acceleration_structure_binding.binding = 0;
         acceleration_structure_binding.descriptorCount = 1;
@@ -567,7 +574,8 @@ namespace lotus
             normal_sample_layout_binding,
             face_normal_sample_layout_binding,
             albedo_layout_binding,
-            material_index_sample_layout_binding
+            material_index_sample_layout_binding,
+            camera_layout_binding
         };
 
         vk::DescriptorSetLayoutCreateInfo rtx_layout_info_const;
@@ -1467,8 +1475,21 @@ namespace lotus
         write_info_material_index.dstArrayElement = 0;
         write_info_material_index.pImageInfo = &material_index_info;
 
+        vk::DescriptorBufferInfo camera_buffer_info;
+        camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
+        camera_buffer_info.offset = image_index * uniform_buffer_align_up(sizeof(Camera::CameraData));
+        camera_buffer_info.range = sizeof(Camera::CameraData);
+
+        vk::WriteDescriptorSet write_info_camera;
+        write_info_camera.descriptorCount = 1;
+        write_info_camera.descriptorType = vk::DescriptorType::eUniformBuffer;
+        write_info_camera.dstBinding = 9;
+        write_info_camera.dstArrayElement = 0;
+        write_info_camera.pBufferInfo = &camera_buffer_info;
+
         buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1,
-            { write_info_target_colour, write_info_light, write_info_position, write_info_normal, write_info_face_normal, write_info_albedo, write_info_material_index });
+            { write_info_target_colour, write_info_light, write_info_position, write_info_normal,
+            write_info_face_normal, write_info_albedo, write_info_material_index, write_info_camera });
 
         buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain->extent.width, swapchain->extent.height, 1);
 
