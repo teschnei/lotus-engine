@@ -39,7 +39,7 @@ namespace lotus
 
         physical_device = *physical_device_pointer;
 
-        ray_tracing_properties.maxRecursionDepth = 0;
+        ray_tracing_properties.maxRayRecursionDepth = 0;
         ray_tracing_properties.shaderGroupHandleSize = 0;
         properties.pNext = &ray_tracing_properties;
         physical_device.getProperties2(&properties);
@@ -81,30 +81,31 @@ namespace lotus
         physical_device_features.depthClamp = true;
         physical_device_features.independentBlend = true;
 
-        vk::PhysicalDeviceUniformBufferStandardLayoutFeatures buffer_layout_features;
-        buffer_layout_features.uniformBufferStandardLayout = true;
+        vk::PhysicalDeviceVulkan12Features vk_12_features;
 
-        vk::PhysicalDeviceRayTracingFeaturesKHR rt_features;
-        rt_features.rayTracing = true;
+        vk_12_features.uniformBufferStandardLayout = true;
+        vk_12_features.bufferDeviceAddress = true;
+        vk_12_features.descriptorBindingPartiallyBound = true;
+        vk_12_features.descriptorIndexing;
 
-        buffer_layout_features.pNext = &rt_features;
+        //this is part of the 1.2 spec but not in Vulkan12Features...?
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features;
+        as_features.accelerationStructure = true;
+        as_features.descriptorBindingAccelerationStructureUpdateAfterBind = true;
 
-        vk::PhysicalDeviceBufferDeviceAddressFeatures buffer_address_features;
-        buffer_address_features.bufferDeviceAddress = true;
+        vk_12_features.pNext = &as_features;
 
-        rt_features.pNext = &buffer_address_features;
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rt_features;
+        rt_features.rayTracingPipeline = true;
+        rt_features.rayTracingPipelineTraceRaysIndirect = true;
 
-        vk::PhysicalDeviceDescriptorIndexingFeatures indexing_features;
-        indexing_features.descriptorBindingPartiallyBound = true;
-
-        buffer_address_features.pNext = &indexing_features;
+        as_features.pNext = &rt_features;
 
         std::vector<const char*> device_extensions2 = device_extensions;
         if (config->renderer.RaytraceEnabled())
         {
-            device_extensions2.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
-            device_extensions2.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-            device_extensions2.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
@@ -114,7 +115,7 @@ namespace lotus
         device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
         device_create_info.pEnabledFeatures = &physical_device_features;
-        device_create_info.pNext = &buffer_layout_features;
+        device_create_info.pNext = &vk_12_features;
         device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size());
         device_create_info.ppEnabledExtensionNames = device_extensions2.data();
 

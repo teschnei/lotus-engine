@@ -110,5 +110,5 @@ void main()
     float a = (color.r + color.g + color.b) / 3.0;
 
     shadow.light.rgb = mix(shadow.light.rgb, color.rgb, a);
-    ignoreIntersectionEXT();
+    ignoreIntersectionEXT;
 }

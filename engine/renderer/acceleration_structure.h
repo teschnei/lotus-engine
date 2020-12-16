@@ -17,10 +17,9 @@ namespace lotus
     protected:
         AccelerationStructure(RendererRaytraceBase* _renderer, vk::AccelerationStructureTypeKHR _type) : renderer(_renderer), type(_type) {}
 
-        void PopulateAccelerationStructure(const std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>& geometries);
-        void PopulateBuffers();
+        void CreateAccelerationStructure(const std::vector<vk::AccelerationStructureGeometryKHR>& geometries, std::vector<uint32_t>& max_primitive_counts);
         void BuildAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
-            const std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>& offsets, bool update);
+            const std::vector<vk::AccelerationStructureBuildRangeInfoKHR>& ranges, vk::BuildAccelerationStructureModeKHR mode);
         void Copy(vk::CommandBuffer command_buffer, AccelerationStructure& target);
 
         const vk::AccelerationStructureTypeKHR type;
@@ -29,10 +28,10 @@ namespace lotus
         RendererRaytraceBase* renderer;
     public:
         void UpdateAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometry,
-            const std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>& offsets);
+            const std::vector<vk::AccelerationStructureBuildRangeInfoKHR>& ranges);
         vk::UniqueHandle<vk::AccelerationStructureKHR, vk::DispatchLoaderDynamic> acceleration_structure;
         std::unique_ptr<Buffer> scratch_memory;
-        std::unique_ptr<GenericMemory> object_memory;
+        std::unique_ptr<Buffer> object_memory;
         uint64_t handle {0};
     };
 
@@ -45,14 +44,13 @@ namespace lotus
             FastBuild
         };
         BottomLevelAccelerationStructure(RendererRaytraceBase* _renderer, vk::CommandBuffer command_buffer, std::vector<vk::AccelerationStructureGeometryKHR>&& geometry,
-            std::vector<vk::AccelerationStructureBuildOffsetInfoKHR>&& geometry_offsets, std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>&& geometry_infos,
-            bool updateable, bool compact, Performance performance);
+            std::vector<vk::AccelerationStructureBuildRangeInfoKHR>&& geometry_ranges, std::vector<uint32_t>&& max_primitive_counts, bool updateable, bool compact, Performance performance);
         void Update(vk::CommandBuffer buffer);
         uint32_t instanceid{ 0 };
     private:
         std::vector<vk::AccelerationStructureGeometryKHR> geometries;
-        std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> geometry_offsets;
-        std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> geometry_infos;
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR> geometry_ranges;
+        std::vector<uint32_t> max_primitive_counts;
     };
 
     class TopLevelAccelerationStructure : public AccelerationStructure

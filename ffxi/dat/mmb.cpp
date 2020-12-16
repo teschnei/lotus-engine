@@ -1,6 +1,7 @@
 #include "mmb.h"
 #include "key_tables.h"
 #include <list>
+#include <ranges>
 #include "engine/core.h"
 #include "engine/entity/landscape_entity.h"
 #include "engine/renderer/model.h"
@@ -433,6 +434,7 @@ namespace FFXI
 
             mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
             mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->setMaxIndex(*std::ranges::max_element(mmb_mesh.indices));
 
             vertices.push_back(std::move(vertices_uint8));
             indices.push_back(std::move(indices_uint8));

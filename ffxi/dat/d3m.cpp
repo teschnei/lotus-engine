@@ -108,6 +108,7 @@ namespace FFXI
         mesh->aabbs_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(d3m->num_triangles * 3);
         mesh->setVertexCount(d3m->num_triangles * 3);
+        mesh->setMaxIndex(mesh->getIndexCount() - 1);
         mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
         mesh->setVertexInputBindingDescription(getBindingDescriptions());
         mesh->pipeline = pipeline;

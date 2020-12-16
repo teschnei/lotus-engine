@@ -16,7 +16,7 @@ namespace lotus
         Mesh& operator=(const Mesh&) = delete;
         Mesh(Mesh&&) = default;
         Mesh& operator=(Mesh&&) = default;
-        ~Mesh() = default;
+        virtual ~Mesh() = default;
 
         std::vector<vk::VertexInputBindingDescription>& getVertexInputBindingDescription()
         {
@@ -40,8 +40,10 @@ namespace lotus
 
         int getIndexCount() const { return indices; }
         int getVertexCount() const { return vertices; }
+        uint32_t getMaxIndex() const { return max_index; }
         void setIndexCount(int _indices) { indices = _indices; }
         void setVertexCount(int _vertices) { vertices = _vertices; }
+        void setMaxIndex(uint32_t _max_index) { max_index = _max_index; }
 
         void setVertexBuffer(uint8_t* buffer, size_t len);
 
@@ -64,6 +66,7 @@ namespace lotus
         std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
         int indices{ 0 };
         int vertices{ 0 };
+        uint32_t max_index;
     };
 
 }

@@ -276,6 +276,7 @@ namespace FFXI
             mesh.indices.push_back((*(uint16_t*)(buffer + triangles + (i * 4 + 1) * 2)) & 0x3FFF);
             mesh.indices.push_back((*(uint16_t*)(buffer + triangles + (i * 4 + 2) * 2)) & 0x3FFF);
         }
+        mesh.max_index = *std::ranges::max_element(mesh.indices);
 
         mesh_map.insert({ offset, meshes.size() - 1 });
 
@@ -343,8 +344,8 @@ namespace FFXI
         }
 
         std::vector<vk::AccelerationStructureGeometryKHR> raytrace_geometry;
-        std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> raytrace_offset_info;
-        std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> raytrace_create_info;
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR> raytrace_offset_info;
+        std::vector<uint32_t> max_primitives;
 
         if (engine->config->renderer.RaytraceEnabled())
         {
@@ -359,17 +360,17 @@ namespace FFXI
 
                 raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                     vk::Format::eR32G32B32Sfloat,
-                    engine->renderer->gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                    engine->renderer->gpu->device->getBufferAddress(mesh->vertex_buffer->buffer),
                     vertex_stride,
+                    data.max_index,
                     vk::IndexType::eUint16,
-                    engine->renderer->gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer),
-                    engine->renderer->gpu->device->getBufferAddressKHR(mesh->transform_buffer->buffer)
+                    engine->renderer->gpu->device->getBufferAddress(mesh->index_buffer->buffer),
+                    engine->renderer->gpu->device->getBufferAddress(mesh->transform_buffer->buffer)
                     }, vk::GeometryFlagBitsKHR::eOpaque);
 
                 raytrace_offset_info.emplace_back(static_cast<uint32_t>(data.indices.size() / 3), index_offsets[entry.mesh_entry], vertex_offsets[entry.mesh_entry] / vertex_stride, transform_offset);
 
-                raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eTriangles, static_cast<uint32_t>(data.indices.size() / 3),
-                    vk::IndexType::eUint16, static_cast<uint32_t>(data.vertices.size() / vertex_stride), vk::Format::eR32G32B32Sfloat, true);
+                max_primitives.emplace_back(static_cast<uint32_t>(data.indices.size() / 3));
 
                 transform_offset += sizeof(float) * 12;
             }
@@ -411,7 +412,7 @@ namespace FFXI
             barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
             command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
             model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(static_cast<lotus::RendererRaytraceBase*>(engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
-                std::move(raytrace_create_info), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
+                std::move(max_primitives), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
         }
 
         command_buffer->end();

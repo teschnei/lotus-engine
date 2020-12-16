@@ -71,6 +71,12 @@ layout(location = 0) rayPayloadInEXT HitValue
     vec3 light;
 } hitValue;
 
+/*layout(location = 0) rayPayloadEXT Reflection 
+{
+    vec3 albedo;
+    vec3 light;
+} reflection;*/
+
 layout(location = 1) rayPayloadEXT Shadow 
 {
     vec4 light;
@@ -136,21 +142,23 @@ void main()
 
     shadow.light = vec4(light.entity.diffuse_color.rgb * light.entity.brightness, 1.0);
     shadow.shadow = vec4(0.0);
+
+    vec3 transformed_v0 = mat3(gl_ObjectToWorldEXT) * v0.pos;
+    vec3 transformed_v1 = mat3(gl_ObjectToWorldEXT) * v1.pos;
+    vec3 transformed_v2 = mat3(gl_ObjectToWorldEXT) * v2.pos;
+    vec3 vertex_vec1 = normalize(vec3(transformed_v1 - transformed_v0));
+    vec3 vertex_vec2 = normalize(vec3(transformed_v2 - transformed_v0));
+
+    vec3 cross_vec = normalize(cross(vertex_vec1, vertex_vec2));
+
+    if ((dot(cross_vec, normalized_normal)) < 0)
+        cross_vec = -cross_vec;
+
+    vec3 trace_origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
+
     if (dot_product > 0)
     {
-        vec3 transformed_v0 = mat3(gl_ObjectToWorldEXT) * v0.pos;
-        vec3 transformed_v1 = mat3(gl_ObjectToWorldEXT) * v1.pos;
-        vec3 transformed_v2 = mat3(gl_ObjectToWorldEXT) * v2.pos;
-        vec3 vertex_vec1 = normalize(vec3(transformed_v1 - transformed_v0));
-        vec3 vertex_vec2 = normalize(vec3(transformed_v2 - transformed_v0));
-
-        vec3 cross_vec = normalize(cross(vertex_vec1, vertex_vec2));
-
-        if ((dot(cross_vec, normalized_normal)) < 0)
-            cross_vec = -cross_vec;
-
-        vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
-        traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10, 1, 0, 1, origin, 0.000, -light.diffuse_dir, 500, 1);
+        traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10, 1, 0, 1, trace_origin, 0.000, -light.diffuse_dir, 500, 1);
     }
     vec3 ambient = light.entity.ambient_color.rgb;
     vec3 specular = vec3(0);
@@ -169,10 +177,16 @@ void main()
         diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
     }
 
+    if(material.specular_intensity > 0)
+    {
+        vec3 reflect_dir = normalize(reflect(gl_WorldRayDirectionEXT, normalized_normal));
+        //traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 0, 0, trace_origin.xyz, 0.000, reflect_dir, 500.0, 0);
+    }
+
     vec3 out_light = diffuse + ambient;
     vec3 out_color = texture_color.rgb;
     //todo: split these
-    out_color = out_light * out_color + specular;
+    out_color = out_light * out_color + specular;// + reflection.albedo;
     if (gl_HitTEXT > light.entity.min_fog)
     {
         out_color = mix(out_color, light.entity.fog_color.rgb, (gl_HitTEXT - light.entity.min_fog) / (light.entity.max_fog - light.entity.min_fog));

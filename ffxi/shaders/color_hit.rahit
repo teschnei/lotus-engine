@@ -84,5 +84,5 @@ void main()
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     float a = texture(textures[resource_index], uv).a;
     if (a == 0)
-        ignoreIntersectionEXT();
+        ignoreIntersectionEXT;
 }

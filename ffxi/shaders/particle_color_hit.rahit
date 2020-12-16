@@ -105,6 +105,6 @@ void main()
 
     if (a < 1.f/16.f)
     {
-        ignoreIntersectionEXT();
+        ignoreIntersectionEXT;
     }
 }

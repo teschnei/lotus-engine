@@ -103,7 +103,7 @@ namespace lotus
             vk::DeviceSize shader_offset_miss = (((nonhit_shader_stride * shader_raygencount) / engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment;
             vk::DeviceSize shader_offset_hit = shader_offset_miss + (((nonhit_shader_stride * shader_misscount) / engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment;
             vk::DeviceSize sbt_size = (hit_shader_stride * shader_hitcount) + shader_offset_hit;
-            shader_binding_table = gpu->memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eRayTracingKHR, vk::MemoryPropertyFlagBits::eHostVisible);
+            shader_binding_table = gpu->memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible);
 
             uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
 
@@ -123,9 +123,9 @@ namespace lotus
             }
             shader_binding_table->unmap();
 
-            raygenSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_raygen, nonhit_shader_stride, nonhit_shader_stride * shader_raygencount };
-            missSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_miss, nonhit_shader_stride, nonhit_shader_stride * shader_misscount };
-            hitSBT = vk::StridedBufferRegionKHR{ shader_binding_table->buffer, shader_offset_hit, hit_shader_stride, hit_shader_stride * shader_hitcount };
+            raygenSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_raygen, nonhit_shader_stride, nonhit_shader_stride * shader_raygencount };
+            missSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_miss, nonhit_shader_stride, nonhit_shader_stride * shader_misscount };
+            hitSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_hit, hit_shader_stride, hit_shader_stride * shader_hitcount };
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
             pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureKHR, 1);
@@ -628,14 +628,14 @@ namespace lotus
             rtx_pipeline_layout = gpu->device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr);
 
             vk::RayTracingPipelineCreateInfoKHR rtx_pipeline_ci;
-            rtx_pipeline_ci.maxRecursionDepth = 3;
+            rtx_pipeline_ci.maxPipelineRayRecursionDepth = 3;
             rtx_pipeline_ci.stageCount = static_cast<uint32_t>(shaders_ci.size());
             rtx_pipeline_ci.pStages = shaders_ci.data();
             rtx_pipeline_ci.groupCount = static_cast<uint32_t>(shader_group_ci.size());
             rtx_pipeline_ci.pGroups = shader_group_ci.data();
             rtx_pipeline_ci.layout = *rtx_pipeline_layout;
 
-            auto result = gpu->device->createRayTracingPipelineKHRUnique(nullptr, rtx_pipeline_ci, nullptr);
+            auto result = gpu->device->createRayTracingPipelineKHRUnique(nullptr, nullptr, rtx_pipeline_ci, nullptr);
             rtx_pipeline = std::move(result.value);
         }
         {

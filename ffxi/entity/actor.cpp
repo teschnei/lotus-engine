@@ -1,5 +1,6 @@
 #include "actor.h"
 
+#include <ranges>
 #include "engine/core.h"
 #include "dat/dat_parser.h"
 #include "dat/os2.h"
@@ -212,6 +213,7 @@ lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lo
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(mesh_indices.size());
         mesh->setVertexCount(os2_vertices.size());
+        mesh->setMaxIndex(*std::ranges::max_element(mesh_indices));
         mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
         mesh->setVertexInputBindingDescription(getBindingDescriptions());
         mesh->pipeline = pipeline;

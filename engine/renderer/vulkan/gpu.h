@@ -17,7 +17,7 @@ namespace lotus
 
         vk::PhysicalDevice physical_device;
         vk::PhysicalDeviceProperties2 properties;
-        vk::PhysicalDeviceRayTracingPropertiesKHR ray_tracing_properties;
+        vk::PhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties;
         vk::UniqueHandle<vk::Device, vk::DispatchLoaderDynamic> device;
         vk::Queue graphics_queue;
         vk::Queue present_queue;

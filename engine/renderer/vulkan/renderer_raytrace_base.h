@@ -13,9 +13,9 @@ namespace lotus
 //        {
 //            uint32_t geometry_instance;
 //        };
-        vk::StridedBufferRegionKHR raygenSBT;
-        vk::StridedBufferRegionKHR missSBT;
-        vk::StridedBufferRegionKHR hitSBT;
+        vk::StridedDeviceAddressRegionKHR raygenSBT;
+        vk::StridedDeviceAddressRegionKHR missSBT;
+        vk::StridedDeviceAddressRegionKHR hitSBT;
         std::unique_ptr<Buffer> shader_binding_table;
         static constexpr uint32_t shaders_per_group{ 1 };
 

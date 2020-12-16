@@ -16,8 +16,8 @@ namespace lotus
         if (!vertex_buffers.empty())
         {
             std::vector<vk::AccelerationStructureGeometryKHR> raytrace_geometry;
-            std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> raytrace_offset_info;
-            std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> raytrace_create_info;
+            std::vector<vk::AccelerationStructureBuildRangeInfoKHR> raytrace_offset_info;
+            std::vector<uint32_t> max_primitive_count;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
             alloc_info.commandPool = *engine->renderer->graphics_pool;
@@ -66,16 +66,15 @@ namespace lotus
                 {
                     raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                         vk::Format::eR32G32B32Sfloat,
-                        engine->renderer->gpu->device->getBufferAddressKHR(mesh->vertex_buffer->buffer),
+                        engine->renderer->gpu->device->getBufferAddress(mesh->vertex_buffer->buffer),
                         vertex_stride,
+                        mesh->getMaxIndex(),
                         vk::IndexType::eUint16,
-                        engine->renderer->gpu->device->getBufferAddressKHR(mesh->index_buffer->buffer)
+                        engine->renderer->gpu->device->getBufferAddress(mesh->index_buffer->buffer)
                         }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
                     raytrace_offset_info.emplace_back(static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t))/3), 0, 0);
-
-                    raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eTriangles, static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t)) / 3),
-                        vk::IndexType::eUint16, static_cast<uint32_t>(vertex_buffer.size() / vertex_stride), vk::Format::eR32G32B32Sfloat, false);
+                    max_primitive_count.emplace_back(static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t))/3));
                 }
 
                 staging_buffer_offset += vertex_buffer.size() + index_buffer.size();
@@ -91,7 +90,7 @@ namespace lotus
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
                 bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(renderer, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
-                    std::move(raytrace_create_info), false, lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
+                    std::move(max_primitive_count), false, lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
 
                 if (lifetime == Lifetime::Long && rendered)
                 {
@@ -175,8 +174,8 @@ namespace lotus
         if (!vertex_buffer.empty())
         {
             std::vector<vk::AccelerationStructureGeometryKHR> raytrace_geometry;
-            std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> raytrace_offset_info;
-            std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> raytrace_create_info;
+            std::vector<vk::AccelerationStructureBuildRangeInfoKHR> raytrace_offset_info;
+            std::vector<uint32_t> max_primitives;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
             alloc_info.commandPool = *engine->renderer->graphics_pool;
@@ -223,14 +222,13 @@ namespace lotus
             if (engine->config->renderer.RaytraceEnabled())
             {
                 raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eAabbs, vk::AccelerationStructureGeometryAabbsDataKHR{
-                    engine->renderer->gpu->device->getBufferAddressKHR(mesh->aabbs_buffer->buffer),
+                    engine->renderer->gpu->device->getBufferAddress(mesh->aabbs_buffer->buffer),
                     sizeof(vk::AabbPositionsKHR)
                     }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
                 raytrace_offset_info.emplace_back(1, 0);
 
-                raytrace_create_info.emplace_back(vk::GeometryTypeKHR::eAabbs, 1,
-                    vk::IndexType::eUint16, static_cast<uint32_t>(vertex_buffer.size() / vertex_stride), vk::Format::eR32G32B32Sfloat, false);
+                max_primitives.emplace_back(1);
             }
 
             staging_buffer->unmap();
@@ -242,7 +240,7 @@ namespace lotus
                 barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
                 bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
-                    std::move(raytrace_create_info), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
+                    std::move(max_primitives), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
             }
             command_buffer->end();
 

@@ -25,6 +25,7 @@ namespace FFXI
         std::vector<uint8_t> normals;
         std::vector<uint16_t> indices;
         uint16_t flags{};
+        uint32_t max_index;
     };
 
     struct CollisionEntry

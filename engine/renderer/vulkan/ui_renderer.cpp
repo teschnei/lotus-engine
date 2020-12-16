@@ -32,8 +32,6 @@ namespace lotus
 
         buffers[0]->begin(begin_info);
 
-        buffers[0]->pushConstants<vk::Extent2D>(*pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, {renderer->swapchain->extent});
-
         std::vector<vk::ClearValue> clearvalues(2);
         clearvalues[1].color = std::array<float, 4>{{0.f, 0.f, 0.f, 0.f}};
 
@@ -76,6 +74,8 @@ namespace lotus
             command_buffer->begin(buffer_begin);
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+
+            command_buffer->pushConstants<vk::Extent2D>(*pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, {renderer->swapchain->extent});
 
             vk::DescriptorBufferInfo buffer_info;
             buffer_info.buffer = element->buffer->buffer;
