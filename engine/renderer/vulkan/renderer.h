@@ -85,22 +85,20 @@ namespace lotus
 
         void resized() { resize = true; }
 
-        vk::UniqueHandle<vk::ShaderModule, vk::DispatchLoaderDynamic> getShader(const std::string& file_name);
+        vk::UniqueShaderModule getShader(const std::string& file_name);
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
 
         virtual void bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
             vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info) = 0;
 
-        vk::UniqueHandle<vk::Instance, vk::DispatchLoaderDynamic> instance;
+        vk::UniqueInstance instance;
 
         std::unique_ptr<Window> window;
         vk::UniqueSurfaceKHR surface;
         std::unique_ptr<GPU> gpu;
         std::unique_ptr<Swapchain> swapchain;
         std::unique_ptr<GlobalResources> resources;
-
-        vk::UniqueHandle<vk::CommandPool, vk::DispatchLoaderDynamic> command_pool;
 
         inline static thread_local vk::UniqueCommandPool graphics_pool;
         inline static thread_local vk::UniqueCommandPool compute_pool;
@@ -114,25 +112,35 @@ namespace lotus
         std::vector<vk::UniqueCommandPool> shutdown_command_pools;
         std::vector<vk::UniqueDescriptorPool> shutdown_descriptor_pools;
         std::vector<vk::UniquePipeline> pipelines;
+
+        vk::UniqueCommandPool command_pool;
+        vk::UniqueCommandPool local_compute_pool;
     public:
 
         struct FramebufferAttachment
         {
             std::unique_ptr<Image> image;
-            vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> image_view;
+            vk::UniqueImageView image_view;
         };
 
-        std::vector<vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic>> frame_buffers;
-        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> deferred_command_buffers;
+        std::vector<vk::UniqueFramebuffer> frame_buffers;
+        std::vector<vk::UniqueCommandBuffer> deferred_command_buffers;
 
         /* Animation pipeline */
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> animation_descriptor_set_layout;
-        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> animation_pipeline_layout;
-        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> animation_pipeline;
+        vk::UniqueDescriptorSetLayout animation_descriptor_set_layout;
+        vk::UniquePipelineLayout animation_pipeline_layout;
+        vk::UniquePipeline animation_pipeline;
         /* Animation pipeline */
 
         std::unique_ptr<Raytracer> raytracer;
         std::unique_ptr<UiRenderer> ui;
+
+        /* Post processing */
+        vk::UniqueDescriptorSetLayout post_descriptor_set_layout;
+        vk::UniquePipelineLayout post_pipeline_layout;
+        vk::UniquePipeline post_pipeline;
+        std::vector<vk::UniqueCommandBuffer> post_command_buffers;
+        /* Post processing */
 
     protected:
         void createInstance(const std::string& app_name, uint32_t app_version);
@@ -152,12 +160,12 @@ namespace lotus
 
         Engine* engine;
         vk::UniqueDebugUtilsMessengerEXT debug_messenger;
-        std::vector<vk::UniqueHandle<vk::Fence, vk::DispatchLoaderDynamic>> frame_fences;
-        std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> image_ready_sem;
-        std::vector<vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic>> frame_finish_sem;
-        vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> compute_sem;
+        std::vector<vk::UniqueFence> frame_fences;
+        std::vector<vk::UniqueSemaphore> image_ready_sem;
+        std::vector<vk::UniqueSemaphore> frame_finish_sem;
+        vk::UniqueSemaphore compute_sem;
         uint32_t current_image{ 0 };
-        uint32_t max_pending_frames{ 2 };
+        static constexpr uint32_t max_pending_frames{ 2 };
         uint32_t current_frame{ 0 };
 
         bool resize{ false };

@@ -33,6 +33,7 @@ set(SHADERS
     particle_intersection.rint
     particle_shadow_color_hit.rahit
     particle_shadow_vert.vert
+    post_process.comp
     quad.vert
     query_closest_hit.rchit
     query_miss.rmiss

@@ -49,7 +49,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 3, set = 1) uniform Light
+layout(std430, binding = 4, set = 1) uniform Light
 {
     Lights entity;
     Lights landscape;

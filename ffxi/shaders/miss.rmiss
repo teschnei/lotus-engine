@@ -1,11 +1,17 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 #extension GL_EXT_scalar_block_layout : require
 
-layout(location = 0) rayPayloadInNV HitValue
+layout(location = 0) rayPayloadInEXT HitValue
 {
-    vec3 albedo;
-    vec3 light;
+    vec3 BRDF;
+    vec3 diffuse;
+    vec3 normal;
+    int depth;
+    uint seed;
+    float weight;
+    vec3 origin;
+    vec3 direction;
 } hitValue;
 
 struct Lights
@@ -20,7 +26,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 3, set = 1) uniform Light
+layout(std430, binding = 4, set = 1) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -39,49 +45,57 @@ layout(std430, binding = 3, set = 1) uniform Light
 
 void main()
 {
-    float dot_up = dot(gl_WorldRayDirectionNV, vec3(0.f, -1.f, 0.f));
-    hitValue.light = vec3(1.0);
+    hitValue.BRDF = vec3(1.0);
+    if(hitValue.depth > 0)
+    {
+        hitValue.diffuse = light.landscape.ambient.rgb * light.landscape.brightness * 5;
+        hitValue.depth = 10;
+        return;
+    }
+    hitValue.depth = 10;
+    hitValue.normal = vec3(1.0);
+    float dot_up = dot(gl_WorldRayDirectionEXT, vec3(0.f, -1.f, 0.f));
 
     if (dot_up < light.skybox_altitudes2)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes1) / (light.skybox_altitudes2 - light.skybox_altitudes1);
-        hitValue.albedo = mix(light.skybox_colors[0], light.skybox_colors[1], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[0], light.skybox_colors[1], value).xyz;
         return;
     }
     if (dot_up < light.skybox_altitudes3)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes2) / (light.skybox_altitudes3 - light.skybox_altitudes2);
-        hitValue.albedo = mix(light.skybox_colors[1], light.skybox_colors[2], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[1], light.skybox_colors[2], value).xyz;
         return;
     }
     if (dot_up < light.skybox_altitudes4)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes3) / (light.skybox_altitudes4 - light.skybox_altitudes3);
-        hitValue.albedo = mix(light.skybox_colors[2], light.skybox_colors[3], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[2], light.skybox_colors[3], value).xyz;
         return;
     }
     if (dot_up < light.skybox_altitudes5)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes4) / (light.skybox_altitudes5 - light.skybox_altitudes4);
-        hitValue.albedo = mix(light.skybox_colors[3], light.skybox_colors[4], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[3], light.skybox_colors[4], value).xyz;
         return;
     }
     if (dot_up < light.skybox_altitudes6)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes5) / (light.skybox_altitudes6 - light.skybox_altitudes5);
-        hitValue.albedo = mix(light.skybox_colors[4], light.skybox_colors[5], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[4], light.skybox_colors[5], value).xyz;
         return;
     }
     if (dot_up < light.skybox_altitudes7)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes6) / (light.skybox_altitudes7 - light.skybox_altitudes6);
-        hitValue.albedo = mix(light.skybox_colors[5], light.skybox_colors[6], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[5], light.skybox_colors[6], value).xyz;
         return;
     }
     if (dot_up < light.skybox_altitudes8)
     {
         float value = (max(dot_up, 0.0) - light.skybox_altitudes7) / (light.skybox_altitudes8 - light.skybox_altitudes7);
-        hitValue.albedo = mix(light.skybox_colors[6], light.skybox_colors[7], value).xyz;
+        hitValue.diffuse = mix(light.skybox_colors[6], light.skybox_colors[7], value).xyz;
         return;
     }
 }

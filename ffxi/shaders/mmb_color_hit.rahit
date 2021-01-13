@@ -36,13 +36,6 @@ layout(binding = 5, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-layout(location = 0) rayPayloadInEXT HitValue
-{
-    vec3 color;
-    uint max_index;
-    float min_dist;
-} hitValue;
-
 hitAttributeEXT vec3 attribs;
 
 ivec3 getIndex(uint primitive_id)

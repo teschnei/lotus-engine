@@ -60,14 +60,14 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
                                 uint_to_color_vec(casted->data->fog1),
                                 casted->data->max_fog_dist1,
                                 casted->data->min_fog_dist1,
-                                casted->data->brightness1,
+                                casted->data->brightness1 * 2.5,
                                 uint_to_color_vec(casted->data->sunlight_diffuse2),
                                 uint_to_color_vec(casted->data->moonlight_diffuse2),
                                 uint_to_color_vec(casted->data->ambient2),
                                 uint_to_color_vec(casted->data->fog2),
                                 casted->data->max_fog_dist2,
                                 casted->data->min_fog_dist2,
-                                casted->data->brightness2,
+                                casted->data->brightness2 * 2.5,
                                 {},
                                 {}
                             };

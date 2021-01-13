@@ -119,6 +119,7 @@ namespace lotus
     void Renderer::createCommandPool()
     {
         command_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
+        local_compute_pool = gpu->createCommandPool(GPU::QueueType::Compute);
     }
 
     void Renderer::createAnimationResources()

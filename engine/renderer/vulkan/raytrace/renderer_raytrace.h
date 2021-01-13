@@ -24,13 +24,13 @@ namespace lotus
         virtual void initEntity(EntityInitializer*, Engine*) override;
         virtual void drawEntity(EntityInitializer*, Engine*) override;
 
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> static_descriptor_set_layout;
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> deferred_descriptor_set_layout;
+        vk::UniqueDescriptorSetLayout static_descriptor_set_layout;
+        vk::UniqueDescriptorSetLayout deferred_descriptor_set_layout;
 
         std::unique_ptr<Image> depth_image;
-        vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
-        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
-        vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> raytrace_sem;
+        vk::UniqueImageView depth_image_view;
+        std::vector<vk::UniqueCommandBuffer> render_commandbuffers;
+        vk::UniqueSemaphore raytrace_sem;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
@@ -44,21 +44,23 @@ namespace lotus
             uint8_t* view_proj_mapped{ nullptr };
         } camera_buffers;
 
-        ///* Ray tracing */
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
-        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_pipeline_layout;
-        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_pipeline;
-        vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> rtx_render_pass;
-        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_deferred_pipeline_layout;
-        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_deferred_pipeline;
+        /* Ray tracing */
+        vk::UniqueDescriptorSetLayout rtx_descriptor_layout_dynamic;
+        vk::UniqueDescriptorSetLayout rtx_descriptor_layout_deferred;
+        vk::UniquePipelineLayout rtx_pipeline_layout;
+        vk::UniquePipeline rtx_pipeline;
+        vk::UniqueRenderPass rtx_render_pass;
+        vk::UniquePipelineLayout rtx_deferred_pipeline_layout;
+        vk::UniquePipeline rtx_deferred_pipeline;
 
         struct RaytraceGBuffer
         {
             FramebufferAttachment albedo;
             FramebufferAttachment light;
+            FramebufferAttachment normal;
+            FramebufferAttachment light_post;
 
-            vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
+            vk::UniqueSampler sampler;
         } rtx_gbuffer;
 
     private:
@@ -71,8 +73,8 @@ namespace lotus
         void createSyncs();
         void createGBufferResources();
         void createDeferredCommandBuffer();
-        void createQuad();
         void createAnimationResources();
+        void createPostProcessingResources();
 
         Task<> resizeRenderer();
         Task<> recreateRenderer();

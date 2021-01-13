@@ -9,6 +9,8 @@ namespace lotus
     {
         createDescriptorSetLayout();
         createRenderpass();
+        createDepthImage();
+        createFrameBuffers();
         createPipeline();
         command_buffers.resize(renderer->getImageCount());
     }
@@ -22,7 +24,7 @@ namespace lotus
     {
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *renderer->command_pool;
+        alloc_info.commandPool = *renderer->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
         auto buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -40,7 +42,7 @@ namespace lotus
         renderpass_begin.renderArea.extent = renderer->swapchain->extent;
         renderpass_begin.clearValueCount = static_cast<uint32_t>(clearvalues.size());
         renderpass_begin.pClearValues = clearvalues.data();
-        renderpass_begin.framebuffer = *renderer->frame_buffers[image_index];
+        renderpass_begin.framebuffer = *framebuffers[image_index];
 
         buffers[0]->beginRenderPass(renderpass_begin, vk::SubpassContents::eSecondaryCommandBuffers);
 
@@ -65,7 +67,7 @@ namespace lotus
 
             vk::CommandBufferInheritanceInfo inherit_info = {};
             inherit_info.renderPass = *renderpass;
-            inherit_info.framebuffer = *renderer->frame_buffers[i];
+            inherit_info.framebuffer = *framebuffers[i];
 
             vk::CommandBufferBeginInfo buffer_begin;
             buffer_begin.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -335,6 +337,44 @@ namespace lotus
         renderpass = renderer->gpu->device->createRenderPassUnique(renderpass_ci);
     }
 
+    void UiRenderer::createDepthImage()
+    {
+        auto format = renderer->gpu->getDepthFormat();
+
+        depth_image = renderer->gpu->memory_manager->GetImage(renderer->swapchain->extent.width, renderer->swapchain->extent.height, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.viewType = vk::ImageViewType::e2D;
+        image_view_info.format = format;
+        image_view_info.image = depth_image->image;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = 1;
+
+        depth_image_view = renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
+    }
+
+    void UiRenderer::createFrameBuffers()
+    {
+        for (auto& swapchain_image_view : renderer->swapchain->image_views) {
+            std::vector<vk::ImageView> attachments = {
+                *swapchain_image_view,
+                *depth_image_view
+            };
+
+            vk::FramebufferCreateInfo framebuffer_info = {};
+            framebuffer_info.renderPass = *renderpass;
+            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebuffer_info.pAttachments = attachments.data();
+            framebuffer_info.width = renderer->swapchain->extent.width;
+            framebuffer_info.height = renderer->swapchain->extent.height;
+            framebuffer_info.layers = 1;
+
+            framebuffers.push_back(renderer->gpu->device->createFramebufferUnique(framebuffer_info, nullptr));
+        }
+    }
     Task<> UiRenderer::createBuffers()
     {
         std::vector<glm::vec4> vertex_buffer {

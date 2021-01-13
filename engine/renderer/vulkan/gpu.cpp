@@ -80,6 +80,8 @@ namespace lotus
         physical_device_features.samplerAnisotropy = true;
         physical_device_features.depthClamp = true;
         physical_device_features.independentBlend = true;
+        physical_device_features.shaderInt64 = true;
+        physical_device_features.shaderStorageImageWriteWithoutFormat = true;
 
         vk::PhysicalDeviceVulkan12Features vk_12_features;
 
@@ -109,6 +111,7 @@ namespace lotus
             device_extensions2.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
             device_extensions2.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+            device_extensions2.push_back(VK_KHR_SHADER_CLOCK_EXTENSION_NAME);
         }
 
         vk::DeviceCreateInfo device_create_info;

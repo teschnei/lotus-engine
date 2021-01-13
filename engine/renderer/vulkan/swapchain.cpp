@@ -92,7 +92,7 @@ namespace lotus
         swapchain_create_info.imageColorSpace = surface_format.colorSpace;
         swapchain_create_info.imageExtent = swap_extent;
         swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
         if (config->renderer.RaytraceEnabled())
         {
             swapchain_create_info.imageUsage |= vk::ImageUsageFlagBits::eStorage;

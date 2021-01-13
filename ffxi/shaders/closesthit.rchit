@@ -5,6 +5,7 @@
 #extension GL_GOOGLE_include_directive : enable
 
 #include "common.glsl"
+#include "sampling.glsl"
 
 struct Vertex
 {
@@ -48,7 +49,7 @@ struct Lights
     float _pad;
 };
 
-layout(std430, binding = 3, set = 1) uniform Light
+layout(std430, binding = 4, set = 1) uniform Light
 {
     Lights entity;
     Lights landscape;
@@ -67,15 +68,15 @@ layout(std430, binding = 3, set = 1) uniform Light
 
 layout(location = 0) rayPayloadInEXT HitValue
 {
-    vec3 albedo;
-    vec3 light;
+    vec3 BRDF;
+    vec3 diffuse;
+    vec3 normal;
+    int depth;
+    uint seed;
+    float weight;
+    vec3 origin;
+    vec3 direction;
 } hitValue;
-
-/*layout(location = 0) rayPayloadEXT Reflection 
-{
-    vec3 albedo;
-    vec3 light;
-} reflection;*/
 
 layout(location = 1) rayPayloadEXT Shadow 
 {
@@ -119,8 +120,10 @@ void main()
 {
     if (gl_HitTEXT > light.entity.max_fog)
     {
-        hitValue.albedo = light.entity.fog_color.rgb;
-        hitValue.light = vec3(1.0);
+        hitValue.BRDF = vec3(1.0);
+        hitValue.diffuse = light.entity.fog_color.rgb;
+        hitValue.depth = 10;
+        return;
     }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
     Vertex v0 = unpackVertex(primitive_indices.x);
@@ -158,13 +161,16 @@ void main()
 
     if (dot_product > 0)
     {
-        traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10, 1, 0, 1, trace_origin, 0.000, -light.diffuse_dir, 500, 1);
+        vec3 light_tangent, light_bitangent;
+        createCoordinateSystem(-light.diffuse_dir, light_tangent, light_bitangent);
+        vec3 shadow_dir = samplingHemisphere(hitValue.seed, light_tangent, light_bitangent, -light.diffuse_dir, 0.001);
+        traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10, 1, 0, 1, trace_origin, 0.000, shadow_dir, 500, 1);
     }
     vec3 ambient = light.entity.ambient_color.rgb;
     vec3 specular = vec3(0);
-    vec3 diffuse = vec3(0);
     if (shadow.shadow.a > 0.0)
     {
+        /*
         vec3 ray = normalize(gl_WorldRayDirectionEXT);
         vec3 reflection = normalize(reflect(-light.diffuse_dir, normalized_normal));
         float specular_dot = dot(ray, reflection);
@@ -174,23 +180,22 @@ void main()
             specular_dot = pow(specular_dot, material.specular_exponent);
             specular = vec3(specular_factor * specular_dot) * light.entity.diffuse_color.rgb;
         }
-        diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
+        */
     }
+    vec3 diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
 
-    if(material.specular_intensity > 0)
-    {
-        vec3 reflect_dir = normalize(reflect(gl_WorldRayDirectionEXT, normalized_normal));
-        //traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 0, 0, trace_origin.xyz, 0.000, reflect_dir, 500.0, 0);
-    }
+    vec3 tangent, bitangent;
+    createCoordinateSystem(normalized_normal, tangent, bitangent);
+    hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normalized_normal, 1.0);
+    hitValue.origin = trace_origin.xyz;
 
-    vec3 out_light = diffuse + ambient;
-    vec3 out_color = texture_color.rgb;
-    //todo: split these
-    out_color = out_light * out_color + specular;// + reflection.albedo;
-    if (gl_HitTEXT > light.entity.min_fog)
-    {
-        out_color = mix(out_color, light.entity.fog_color.rgb, (gl_HitTEXT - light.entity.min_fog) / (light.entity.max_fog - light.entity.min_fog));
-    }
-    hitValue.albedo = out_color;
-    hitValue.light = vec3(1.0);
+    //const float p = cos_theta / M_PI;
+
+    float cos_theta = dot(hitValue.direction, normalized_normal);
+    vec3 albedo = texture_color.rgb;
+    vec3 BRDF = albedo / M_PI;
+    hitValue.BRDF = BRDF;
+    hitValue.diffuse = diffuse;
+    hitValue.weight = M_PI;
+    hitValue.normal = normalized_normal;
 }
