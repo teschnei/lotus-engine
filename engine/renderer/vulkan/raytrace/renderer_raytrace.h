@@ -73,7 +73,6 @@ namespace lotus
         void createSyncs();
         void createGBufferResources();
         void createDeferredCommandBuffer();
-        void createAnimationResources();
         void createPostProcessingResources();
 
         Task<> resizeRenderer();

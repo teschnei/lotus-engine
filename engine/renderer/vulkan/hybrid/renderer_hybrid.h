@@ -77,6 +77,7 @@ namespace lotus
         struct RaytraceGBuffer
         {
             FramebufferAttachment colour;
+            FramebufferAttachment post_colour;
 
             vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
         } rtx_gbuffer;
@@ -94,6 +95,7 @@ namespace lotus
         void createSyncs();
         void createGBufferResources();
         void createDeferredCommandBuffer();
+        void createPostProcessingResources();
 
         void initializeCameraBuffers();
         void generateCommandBuffers();

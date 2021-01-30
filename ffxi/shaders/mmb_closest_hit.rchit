@@ -177,6 +177,7 @@ void main()
         traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 1, trace_origin, 0.000, shadow_dir, 500, 1);
     }
     vec3 ambient = light.landscape.ambient_color.rgb;
+    //TODO: proper formula for randomly sampling lights (the direction is not the same as the GI ray, so it cannot be combined with that term)
     vec3 diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
 
     vec3 tangent, bitangent;

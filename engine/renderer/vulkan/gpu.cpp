@@ -88,12 +88,14 @@ namespace lotus
         vk_12_features.uniformBufferStandardLayout = true;
         vk_12_features.bufferDeviceAddress = true;
         vk_12_features.descriptorBindingPartiallyBound = true;
-        vk_12_features.descriptorIndexing;
+        vk_12_features.descriptorIndexing = true;
 
         //this is part of the 1.2 spec but not in Vulkan12Features...?
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features;
         as_features.accelerationStructure = true;
         as_features.descriptorBindingAccelerationStructureUpdateAfterBind = true;
+        //some day nvidia will support this
+        //as_features.accelerationStructureHostCommands = true;
 
         vk_12_features.pNext = &as_features;
 

@@ -48,6 +48,8 @@ void main()
     vec3 BRDF = vec3(0.0);
     vec3 accumulation = vec3(0.0);
     vec3 hit_normal = hitValue.normal;
+    //TODO: optimize this - the first ray is always the same so we don't need to do it repeatedly for samples
+    // make it look more like raygen_hybrid but with one extra traceRay to get the actual origin
     for (int samples = 0; samples < max_samples; ++samples)
     {
         vec3 weight = vec3(1.0);

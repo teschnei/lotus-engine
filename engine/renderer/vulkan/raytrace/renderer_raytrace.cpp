@@ -466,7 +466,7 @@ namespace lotus
         light_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding camera_buffer_binding;
-        camera_buffer_binding.binding = 8;
+        camera_buffer_binding.binding = 9;
         camera_buffer_binding.descriptorCount = 1;
         camera_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         camera_buffer_binding.pImmutableSamplers = nullptr;
@@ -947,7 +947,7 @@ namespace lotus
 
             descriptorWrites[2].dstSet = nullptr;
             descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[2].dstBinding = 8;
+            descriptorWrites[2].dstBinding = 9;
             descriptorWrites[2].dstArrayElement = 0;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &camera_buffer_info;
@@ -959,71 +959,6 @@ namespace lotus
             buffer.endRenderPass();
             buffer.end();
         }
-    }
-
-    void RendererRaytrace::createAnimationResources()
-    {
-        //descriptor set layout
-        vk::DescriptorSetLayoutBinding vertex_info_buffer;
-        vertex_info_buffer.binding = 0;
-        vertex_info_buffer.descriptorCount = 1;
-        vertex_info_buffer.descriptorType = vk::DescriptorType::eStorageBuffer;
-        vertex_info_buffer.pImmutableSamplers = nullptr;
-        vertex_info_buffer.stageFlags = vk::ShaderStageFlagBits::eCompute;
-
-        vk::DescriptorSetLayoutBinding skeleton_info_buffer;
-        skeleton_info_buffer.binding = 1;
-        skeleton_info_buffer.descriptorCount = 1;
-        skeleton_info_buffer.descriptorType = vk::DescriptorType::eStorageBuffer;
-        skeleton_info_buffer.pImmutableSamplers = nullptr;
-        skeleton_info_buffer.stageFlags = vk::ShaderStageFlagBits::eCompute;
-
-        vk::DescriptorSetLayoutBinding vertex_out_buffer;
-        vertex_out_buffer.binding = 2;
-        vertex_out_buffer.descriptorCount = 1;
-        vertex_out_buffer.descriptorType = vk::DescriptorType::eStorageBuffer;
-        vertex_out_buffer.pImmutableSamplers = nullptr;
-        vertex_out_buffer.stageFlags = vk::ShaderStageFlagBits::eCompute;
-
-        std::vector<vk::DescriptorSetLayoutBinding> descriptor_bindings = { vertex_info_buffer, skeleton_info_buffer, vertex_out_buffer };
-
-        vk::DescriptorSetLayoutCreateInfo layout_info = {};
-        layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
-        layout_info.bindingCount = static_cast<uint32_t>(descriptor_bindings.size());
-        layout_info.pBindings = descriptor_bindings.data();
-
-        animation_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
-
-        //pipeline layout
-        vk::PipelineLayoutCreateInfo pipeline_layout_ci;
-        std::vector<vk::DescriptorSetLayout> layouts = { *animation_descriptor_set_layout };
-        pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(layouts.size());
-        pipeline_layout_ci.pSetLayouts = layouts.data();
-
-        vk::PushConstantRange push_constants;
-        push_constants.size = sizeof(uint32_t);
-        push_constants.offset = 0;
-        push_constants.stageFlags = vk::ShaderStageFlagBits::eCompute;
-
-        pipeline_layout_ci.pPushConstantRanges = &push_constants;
-        pipeline_layout_ci.pushConstantRangeCount = 1;
-
-        animation_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_ci, nullptr);
-
-        //pipeline
-        vk::ComputePipelineCreateInfo pipeline_ci;
-        pipeline_ci.layout = *animation_pipeline_layout;
-
-        auto animation_module = getShader("shaders/animation_skin.spv");
-
-        vk::PipelineShaderStageCreateInfo animation_shader_stage_info;
-        animation_shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
-        animation_shader_stage_info.module = *animation_module;
-        animation_shader_stage_info.pName = "main";
-
-        pipeline_ci.stage = animation_shader_stage_info;
-
-        animation_pipeline = gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
     }
 
     void RendererRaytrace::createPostProcessingResources()
@@ -1110,7 +1045,7 @@ namespace lotus
             barrier.subresourceRange.baseArrayLayer = 0;
             barrier.subresourceRange.layerCount = 1;
             barrier.srcAccessMask = {};
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+            barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
 
             buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, nullptr, nullptr, barrier);
 
