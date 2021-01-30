@@ -95,7 +95,7 @@ namespace lotus
         if (!shader_binding_table)
         {
             constexpr uint32_t shader_raygencount = 1;
-            constexpr uint32_t shader_misscount = 2;
+            constexpr uint32_t shader_misscount = 3;
             constexpr uint32_t shader_nonhitcount = shader_raygencount + shader_misscount;
             constexpr uint32_t shader_hitcount = shaders_per_group * 6;
             vk::DeviceSize shader_handle_size = gpu->ray_tracing_properties.shaderGroupHandleSize;
@@ -733,6 +733,7 @@ namespace lotus
             //ray-tracing pipeline
             vk::UniqueShaderModule raygen_shader_module = getShader("shaders/raygen_hybrid.spv");
             auto miss_shader_module = getShader("shaders/miss.spv");
+            auto miss_gi_shader_module = getShader("shaders/miss_gi.spv");
             auto shadow_miss_shader_module = getShader("shaders/shadow_miss.spv");
             auto closest_hit_shader_module = getShader("shaders/closesthit.spv");
             auto color_hit_shader_module = getShader("shaders/color_hit.spv");
@@ -752,6 +753,11 @@ namespace lotus
             miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
             miss_stage_ci.module = *miss_shader_module;
             miss_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo miss_gi_stage_ci;
+            miss_gi_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
+            miss_gi_stage_ci.module = *miss_gi_shader_module;
+            miss_gi_stage_ci.pName = "main";
 
             vk::PipelineShaderStageCreateInfo shadow_miss_stage_ci;
             shadow_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
@@ -798,7 +804,7 @@ namespace lotus
             particle_shadow_color_hit_stage_ci.module = *particle_shadow_color_hit_shader_module;
             particle_shadow_color_hit_stage_ci.pName = "main";
 
-            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci,
+            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, miss_gi_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci,
                 landscape_closest_stage_ci, landscape_color_hit_stage_ci, particle_closest_stage_ci, particle_color_hit_stage_ci, particle_intersection_stage_ci, particle_shadow_color_hit_stage_ci };
 
             std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
@@ -822,6 +828,13 @@ namespace lotus
                 VK_SHADER_UNUSED_KHR,
                 VK_SHADER_UNUSED_KHR,
                 VK_SHADER_UNUSED_KHR
+                },
+                {
+                vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                3,
+                VK_SHADER_UNUSED_KHR,
+                VK_SHADER_UNUSED_KHR,
+                VK_SHADER_UNUSED_KHR
                 }
             };
             for (int i = 0; i < shaders_per_group; ++i)
@@ -829,8 +842,8 @@ namespace lotus
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
                     VK_SHADER_UNUSED_KHR,
-                    3,
                     4,
+                    5,
                     VK_SHADER_UNUSED_KHR
                 );
             }
@@ -839,18 +852,18 @@ namespace lotus
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
                     VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    4,
-                    VK_SHADER_UNUSED_KHR
-                );
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
                     VK_SHADER_UNUSED_KHR,
                     5,
+                    VK_SHADER_UNUSED_KHR
+                );
+            }
+            for (int i = 0; i < shaders_per_group; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_KHR,
                     6,
+                    7,
                     VK_SHADER_UNUSED_KHR
                 );
             }
@@ -860,7 +873,7 @@ namespace lotus
                     vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
                     VK_SHADER_UNUSED_KHR,
                     VK_SHADER_UNUSED_KHR,
-                    6,
+                    7,
                     VK_SHADER_UNUSED_KHR
                 );
             }
@@ -870,9 +883,9 @@ namespace lotus
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
                     VK_SHADER_UNUSED_KHR,
-                    7,
                     8,
-                    9
+                    9,
+                    10
                 );
             }
 
@@ -882,8 +895,8 @@ namespace lotus
                     vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
                     VK_SHADER_UNUSED_KHR,
                     VK_SHADER_UNUSED_KHR,
-                    10,
-                    9
+                    11,
+                    10
                 );
             }
 

@@ -23,6 +23,7 @@ set(SHADERS
     ffxiactor_shadow_vert.vert
     gbuffer_frag.frag
     miss.rmiss
+    miss_gi.rmiss
     mmb_closest_hit.rchit
     mmb_color_hit.rahit
     mmb_gbuffer_vert.vert

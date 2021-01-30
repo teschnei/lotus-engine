@@ -46,12 +46,6 @@ layout(std430, binding = 4, set = 1) uniform Light
 void main()
 {
     hitValue.BRDF = vec3(1.0);
-    if(hitValue.depth > 0)
-    {
-        hitValue.diffuse = light.landscape.ambient.rgb * light.landscape.brightness * 5;
-        hitValue.depth = 10;
-        return;
-    }
     hitValue.depth = 10;
     hitValue.normal = vec3(1.0);
     float dot_up = dot(gl_WorldRayDirectionEXT, vec3(0.f, -1.f, 0.f));

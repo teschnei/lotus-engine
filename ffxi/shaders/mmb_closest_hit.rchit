@@ -174,7 +174,7 @@ void main()
         vec3 light_tangent, light_bitangent;
         createCoordinateSystem(-light.diffuse_dir, light_tangent, light_bitangent);
         vec3 shadow_dir = samplingHemisphere(hitValue.seed, light_tangent, light_bitangent, -light.diffuse_dir, 0.001);
-        traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 1, trace_origin, 0.000, shadow_dir, 500, 1);
+        traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 2, trace_origin, 0.000, shadow_dir, 500, 1);
     }
     vec3 ambient = light.landscape.ambient_color.rgb;
     //TODO: proper formula for randomly sampling lights (the direction is not the same as the GI ray, so it cannot be combined with that term)
