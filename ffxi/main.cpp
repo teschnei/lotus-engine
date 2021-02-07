@@ -72,6 +72,7 @@ private:
         auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/310/3.DAT");
         //auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/309/105.DAT");
         player->setPos(glm::vec3(259.f, -87.f, 99.f));
+        engine->lights->AddLight({ {259.f, -89.f, 95.f}, 400.f, {1.f, 1.f, 1.f}, 0.25f });
         auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
         if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
         {

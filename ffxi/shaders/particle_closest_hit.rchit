@@ -37,33 +37,11 @@ layout(binding = 5, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-struct Lights
+layout(std430, binding = 4, set = 1) buffer readonly Light
 {
-    vec4 diffuse_color;
-    vec4 specular_color;
-    vec4 ambient_color;
-    vec4 fog_color;
-    float max_fog;
-    float min_fog;
-    float brightness;
-    float _pad;
-};
-
-layout(std430, binding = 4, set = 1) uniform Light
-{
-    Lights entity;
-    Lights landscape;
-    vec3 diffuse_dir;
-    float _pad;
-    float skybox_altitudes1;
-    float skybox_altitudes2;
-    float skybox_altitudes3;
-    float skybox_altitudes4;
-    float skybox_altitudes5;
-    float skybox_altitudes6;
-    float skybox_altitudes7;
-    float skybox_altitudes8;
-    vec4 skybox_colors[8];
+    LightBuffer light;
+    uint light_count;
+    LightInfo light_info[];
 } light;
 
 layout(location = 0) rayPayloadInEXT HitValue
@@ -124,9 +102,9 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
-    if (gl_HitTEXT > light.entity.max_fog)
+    if (gl_HitTEXT > light.light.entity.max_fog)
     {
-        hitValue.albedo = light.entity.fog_color.rgb;
+        hitValue.albedo = light.light.entity.fog_color.rgb;
         hitValue.light = vec3(1.0);
     }
     ivec3 primitive_indices = getIndex(attribs.primitive_id);
@@ -140,14 +118,14 @@ void main()
     vec3 transformed_normal = mat3(gl_ObjectToWorldEXT) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
 
-    float dot_product = dot(-light.diffuse_dir, normalized_normal);
+    float dot_product = dot(-light.light.diffuse_dir, normalized_normal);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
     vec4 texture_color = texture(textures[mesh.material_index], uv);
     float tex_a = (texture_color.r + texture_color.g + texture_color.b) * (1.0 / 3.0);
 
-    vec3 ambient = light.entity.ambient_color.rgb;
+    vec3 ambient = light.light.entity.ambient_color.rgb;
     vec3 specular = vec3(0);
     vec3 diffuse = vec3(0);
 
@@ -155,9 +133,9 @@ void main()
     vec3 out_color = texture_color.rgb;
     //todo: split these
     out_color = out_light * out_color + specular;
-    if (gl_HitTEXT > light.entity.min_fog)
+    if (gl_HitTEXT > light.light.entity.min_fog)
     {
-        out_color = mix(out_color, light.entity.fog_color.rgb, (gl_HitTEXT - light.entity.min_fog) / (light.entity.max_fog - light.entity.min_fog));
+        out_color = mix(out_color, light.light.entity.fog_color.rgb, (gl_HitTEXT - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));
     }
 
     if (texture_color.a != 1.f)

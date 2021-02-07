@@ -962,8 +962,8 @@ namespace lotus
 
             vk::DescriptorBufferInfo light_buffer_info;
             light_buffer_info.buffer = engine->lights->light_buffer->buffer;
-            light_buffer_info.offset = i * uniform_buffer_align_up(sizeof(engine->lights->light));
-            light_buffer_info.range = sizeof(engine->lights->light);
+            light_buffer_info.offset = i * engine->lights->GetBufferSize();
+            light_buffer_info.range = engine->lights->GetBufferSize();
 
             vk::DescriptorImageInfo shadowmap_image_info;
             shadowmap_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;

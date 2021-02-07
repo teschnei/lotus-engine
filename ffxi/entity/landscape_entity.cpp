@@ -158,6 +158,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
         }
         if (collision_model_task) co_await *collision_model_task;
         co_await init_task;
+        sunlight = engine->lights->AddLight({});
     }
 }
 
@@ -231,6 +232,8 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
     {
         light.skybox_colors[i] = glm::mix(time1->second.skybox_colors[i], time2->second.skybox_colors[i], a);
     }
+
+    engine->lights->UpdateLight(sunlight, { {50.f, -500.f, -100.f}, 0.f, light.landscape.diffuse_color * light.landscape.brightness, 10.f });
 
     co_await lotus::LandscapeEntity::render(engine, sp);
 }

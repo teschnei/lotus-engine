@@ -375,7 +375,7 @@ namespace lotus
         vk::DescriptorSetLayoutBinding light_binding;
         light_binding.binding = 4;
         light_binding.descriptorCount = 1;
-        light_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        light_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         light_binding.pImmutableSamplers = nullptr;
         light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR;
 
@@ -1221,12 +1221,12 @@ namespace lotus
 
         vk::DescriptorBufferInfo light_buffer_info_global;
         light_buffer_info_global.buffer = engine->lights->light_buffer->buffer;
-        light_buffer_info_global.offset = getCurrentImage() * uniform_buffer_align_up(sizeof(engine->lights->light));
-        light_buffer_info_global.range = sizeof(engine->lights->light);
+        light_buffer_info_global.offset = getCurrentImage() * engine->lights->GetBufferSize();
+        light_buffer_info_global.range = engine->lights->GetBufferSize();
 
         vk::WriteDescriptorSet write_info_light;
         write_info_light.descriptorCount = 1;
-        write_info_light.descriptorType = vk::DescriptorType::eUniformBuffer;
+        write_info_light.descriptorType = vk::DescriptorType::eStorageBuffer;
         write_info_light.dstBinding = 4;
         write_info_light.dstArrayElement = 0;
         write_info_light.pBufferInfo = &light_buffer_info_global;

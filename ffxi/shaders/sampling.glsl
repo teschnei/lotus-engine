@@ -35,24 +35,37 @@ float rnd(inout uint prev)
   return (float(lcg(prev)) / float(0x01000000));
 }
 
+#define M_PI 3.141592
 
 //-------------------------------------------------------------------------------------------------
 // Sampling
 //-------------------------------------------------------------------------------------------------
 
 // Randomly sampling around +Z
-vec3 samplingHemisphere(inout uint seed, in vec3 x, in vec3 y, in vec3 z, in float range)
+vec3 samplingHemisphere(inout uint seed, in vec3 x, in vec3 y, in vec3 z)
 {
-#define M_PI 3.141592
-
   float r1 = rnd(seed);
-  float r2 = 1.0 - (rnd(seed) * range);
+  float r2 = rnd(seed);
   float sq = sqrt(1.0 - r2);
 
   vec3 direction = vec3(cos(2 * M_PI * r1) * sq, sin(2 * M_PI * r1) * sq, sqrt(r2));
   direction      = direction.x * x + direction.y * y + direction.z * z;
 
   return normalize(direction);
+}
+
+// Randomly sampling in direction of +Z
+vec3 samplingCone(inout uint seed, inout float pdf, in vec3 x, in vec3 y, in vec3 z, in float radius, in float length_sq)
+{
+    float cos_a_max = sqrt(1 - radius * radius / length_sq);
+    float r1 = rnd(seed);
+    float r2 = rnd(seed);
+    float cos_a = 1 - r1 + (r1 * cos_a_max);
+    float sin_a = sqrt(1 - cos_a * cos_a);
+    float phi = 2 * M_PI * r2;
+    vec3 direction = x * cos(phi) * sin_a + y * sin(phi) * sin_a + z * cos_a;
+    pdf = 1 / (2 * M_PI * (1 - cos_a_max));
+    return normalize(direction);
 }
 
 // Return the tangent and binormal from the incoming normal

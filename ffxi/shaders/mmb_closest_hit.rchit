@@ -39,33 +39,10 @@ layout(binding = 5, set = 0) uniform MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-struct Lights
+layout(std430, binding = 4, set = 1) buffer readonly Light
 {
-    vec4 diffuse_color;
-    vec4 specular_color;
-    vec4 ambient_color;
-    vec4 fog_color;
-    float max_fog;
-    float min_fog;
-    float brightness;
-    float _pad;
-};
-
-layout(std430, binding = 4, set = 1) uniform Light
-{
-    Lights entity;
-    Lights landscape;
-    vec3 diffuse_dir;
-    float _pad;
-    float skybox_altitudes1;
-    float skybox_altitudes2;
-    float skybox_altitudes3;
-    float skybox_altitudes4;
-    float skybox_altitudes5;
-    float skybox_altitudes6;
-    float skybox_altitudes7;
-    float skybox_altitudes8;
-    vec4 skybox_colors[8];
+    LightBuffer light;
+    LightInfo light_info[];
 } light;
 
 layout(location = 0) rayPayloadInEXT HitValue
@@ -128,10 +105,10 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
-    if (gl_HitTEXT > light.landscape.max_fog)
+    if (gl_HitTEXT > light.light.landscape.max_fog)
     {
         hitValue.BRDF = vec3(1.0);
-        hitValue.diffuse = light.landscape.fog_color.rgb;
+        hitValue.diffuse = light.light.landscape.fog_color.rgb;
         hitValue.depth = 10;
         return;
     }
@@ -145,8 +122,6 @@ void main()
     vec3 normal = v0.norm * barycentrics.x + v1.norm * barycentrics.y + v2.norm * barycentrics.z;
     vec3 transformed_normal = mat3(gl_ObjectToWorldEXT) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
-
-    float dot_product = dot(-light.diffuse_dir, normalized_normal);
 
     vec3 primitive_color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
 
@@ -166,23 +141,57 @@ void main()
         cross_vec = -cross_vec;
 
     vec3 trace_origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
+    vec3 diffuse = vec3(0);
 
-    shadow.light = vec4(light.landscape.diffuse_color.rgb * light.landscape.brightness, 1.0);
-    shadow.shadow = vec4(0.0);
-    if (dot_product > 0)
+    for (int i = 0; i < light.light.light_count; i++)
     {
-        vec3 light_tangent, light_bitangent;
-        createCoordinateSystem(-light.diffuse_dir, light_tangent, light_bitangent);
-        vec3 shadow_dir = samplingHemisphere(hitValue.seed, light_tangent, light_bitangent, -light.diffuse_dir, 0.001);
-        traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 2, trace_origin, 0.000, shadow_dir, 500, 1);
+        vec3 diff = light.light_info[i].pos - trace_origin;
+        vec3 dir = normalize(diff);
+        float length = length(diff);
+        float radius = light.light_info[i].radius;
+        if (length > radius)
+        {
+            float att = 1;
+            float intensity = light.light_info[i].intensity;
+            int use_pdf = 1;
+            if (intensity > 0)
+            {
+                att = max(1, radius * radius) / (length * length);
+            }
+            else
+            {
+                intensity = 1;
+                use_pdf = 0;
+            }
+            shadow.shadow = vec4(0.0);
+
+            att *= dot(dir, normalized_normal);
+            if (att > 0.001)
+            {
+                shadow.light = vec4(light.light_info[i].colour * intensity * att, 1.0);
+                vec3 trace_dir = dir;
+                float pdf = 1;
+
+                if (radius > 0)
+                {
+                    vec3 tangent, bitangent;
+                    createCoordinateSystem(dir, tangent, bitangent);
+
+                    float temp_pdf;
+                    trace_dir = samplingCone(hitValue.seed, temp_pdf, tangent, bitangent, dir, radius, dot(diff, diff));
+                    if (use_pdf > 0)
+                        pdf = temp_pdf;
+                }
+
+                traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 2, trace_origin, 0.000, trace_dir, length, 1);
+                diffuse += shadow.shadow.rgb / pdf;
+            }
+        }
     }
-    vec3 ambient = light.landscape.ambient_color.rgb;
-    //TODO: proper formula for randomly sampling lights (the direction is not the same as the GI ray, so it cannot be combined with that term)
-    vec3 diffuse = vec3(max(dot_product, 0.0)) * shadow.shadow.rgb;
 
     vec3 tangent, bitangent;
     createCoordinateSystem(normalized_normal, tangent, bitangent);
-    hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normalized_normal, 1.0);
+    hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normalized_normal);
     hitValue.origin = trace_origin.xyz;
 
     //const float p = cos_theta / M_PI;
@@ -197,8 +206,8 @@ void main()
     hitValue.weight = M_PI;
     hitValue.normal = normalized_normal;
 
-    if (gl_HitTEXT > light.landscape.min_fog)
+    if (gl_HitTEXT > light.light.landscape.min_fog)
     {
-        hitValue.diffuse = mix(hitValue.diffuse, light.landscape.fog_color.rgb, (gl_HitTEXT - light.landscape.min_fog) / (light.landscape.max_fog - light.landscape.min_fog));
+        hitValue.diffuse = mix(hitValue.diffuse, light.light.landscape.fog_color.rgb, (gl_HitTEXT - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));
     }
 }

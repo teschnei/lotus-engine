@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include "engine/entity/landscape_entity.h"
+#include "engine/light_manager.h"
 #include "engine/renderer/mesh.h"
 #include "dat/mzb.h"
 
@@ -38,6 +39,7 @@ protected:
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
     uint32_t current_time{750};
     std::string current_weather = "suny";
+    lotus::LightID sunlight;
 };
 
 class CollisionMesh : public lotus::Mesh
