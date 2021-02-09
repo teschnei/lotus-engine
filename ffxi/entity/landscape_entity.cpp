@@ -7,6 +7,8 @@
 #include "ffxi/dat/dxt3.h"
 #include "ffxi/dat/mmb.h"
 #include "ffxi/dat/mzb.h"
+#include "ffxi/vana_time.h"
+#include <glm/gtx/rotate_vector.hpp>
 
 lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotus::Engine* engine, const std::filesystem::path& dat)
 {
@@ -159,6 +161,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
         if (collision_model_task) co_await *collision_model_task;
         co_await init_task;
         sunlight = engine->lights->AddLight({});
+        moonlight = engine->lights->AddLight({});
     }
 }
 
@@ -194,16 +197,21 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
 
     float a = (float)((current_time - time1->first)) / (time2->first - time1->first);
 
+    glm::vec4 sunlight_colour_entity = glm::mix(time1->second.sunlight_diffuse_entity, time2->second.sunlight_diffuse_entity, a);
+    glm::vec4 sunlight_colour_landscape = glm::mix(time1->second.sunlight_diffuse_landscape, time2->second.sunlight_diffuse_landscape, a);
+    glm::vec4 moonlight_colour_entity = glm::mix(time1->second.moonlight_diffuse_entity, time2->second.moonlight_diffuse_entity, a);
+    glm::vec4 moonlight_colour_landscape = glm::mix(time1->second.moonlight_diffuse_landscape, time2->second.moonlight_diffuse_landscape, a);
+
     auto& light = engine->lights->light;
     if (current_time > 360 && current_time < 1080)
     {
-        light.entity.diffuse_color = glm::mix(time1->second.sunlight_diffuse_entity, time2->second.sunlight_diffuse_entity, a);
-        light.landscape.diffuse_color = glm::mix(time1->second.sunlight_diffuse_landscape, time2->second.sunlight_diffuse_landscape, a);
+        light.entity.diffuse_color = sunlight_colour_entity;
+        light.landscape.diffuse_color = sunlight_colour_landscape;
     }
     else
     {
-        light.entity.diffuse_color = glm::mix(time1->second.moonlight_diffuse_entity, time2->second.moonlight_diffuse_entity, a);
-        light.landscape.diffuse_color = glm::mix(time1->second.moonlight_diffuse_landscape, time2->second.moonlight_diffuse_landscape, a);
+        light.entity.diffuse_color = moonlight_colour_entity;
+        light.landscape.diffuse_color = moonlight_colour_landscape;
     }
     light.entity.specular_color = glm::vec4(1.f);
     light.entity.ambient_color = glm::mix(time1->second.ambient_entity, time2->second.ambient_entity, a);
@@ -233,12 +241,20 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
         light.skybox_colors[i] = glm::mix(time1->second.skybox_colors[i], time2->second.skybox_colors[i], a);
     }
 
-    engine->lights->UpdateLight(sunlight, { {50.f, -500.f, -100.f}, 0.f, light.landscape.diffuse_color * light.landscape.brightness, 10.f });
+    //sun radius: 4.7, distance 1000
+    //moon radius: 4.5, distance 1000
+    auto rot = (current_time / 720 * glm::pi<float>()) + (glm::pi<float>() / 2);
+    //auto rot = -glm::pi<float>()/ 2;
+    glm::vec3 b = glm::rotate(glm::vec3{1000.f, 0.f, 0.f}, rot, glm::vec3{ 0.f, -0.382f, 0.924f });
+    engine->lights->UpdateLight(sunlight, { b, 0.f, sunlight_colour_landscape * light.landscape.brightness, 4.7f });
+    engine->lights->UpdateLight(moonlight, { -b, 0.f, moonlight_colour_landscape * light.landscape.brightness, 4.5f });
 
     co_await lotus::LandscapeEntity::render(engine, sp);
 }
 
 lotus::Task<> FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
 {
+    current_time = std::chrono::duration_cast<std::chrono::duration<float, FFXITime::minutes::period>>(FFXITime::vana_time() % FFXITime::days(1)).count();
+
     co_return;
 }

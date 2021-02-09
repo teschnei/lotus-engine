@@ -6,7 +6,8 @@ add_executable( ffxi
     config.h
     particle_tester.cpp
     particle_tester.h
-)
+    vana_time.h
+    )
 target_include_directories(ffxi PRIVATE "." )
 target_include_directories(ffxi PRIVATE "../external/stb" )
 
