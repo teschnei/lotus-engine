@@ -1,3 +1,5 @@
+//TODO: complain to glm that their header breaks <optional> if it's included before it
+#include <optional>
 #include "free_flying_camera_component.h"
 #include "engine/entity/camera.h"
 #include "engine/input.h"

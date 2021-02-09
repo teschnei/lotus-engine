@@ -1,9 +1,5 @@
 #pragma once
 
-#include <string>
-#include <optional>
-#include <cstdint>
-#include <glm/glm.hpp>
 #include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus

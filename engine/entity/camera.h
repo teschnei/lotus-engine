@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include "entity.h"
 #include "engine/renderer/memory.h"
 #include "engine/renderer/vulkan/renderer.h"
+#include <glm/glm.hpp>
 
 //i love windows
 #undef near
