@@ -47,8 +47,7 @@ set(SHADERS
     ui_vert.vert
 )
 
-add_custom_target(shaders-dir ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders)
+file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders)
 
 add_custom_target(shaders ALL
     )
@@ -57,7 +56,7 @@ foreach(SHADER ${SHADERS})
     get_filename_component(OUTPUT_FILE ${SHADER} NAME_WLE)
     set(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/${OUTPUT_FILE}.spv)
     compile_spirv(${SHADER} ${OUTPUT})
-    add_custom_target(${OUTPUT_FILE} DEPENDS shaders-dir ${OUTPUT})
+    add_custom_target(${OUTPUT_FILE} DEPENDS ${OUTPUT})
     add_dependencies(shaders ${OUTPUT_FILE})
 endforeach()
 
