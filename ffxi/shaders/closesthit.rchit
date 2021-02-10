@@ -117,7 +117,6 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
-    Material material = materials[mesh.material_index].m;
     vec4 texture_color = texture(textures[mesh.material_index], uv);
 
     shadow.light = vec4(light.light.entity.diffuse_color.rgb * light.light.entity.brightness, 1.0);

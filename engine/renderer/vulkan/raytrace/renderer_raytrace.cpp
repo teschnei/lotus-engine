@@ -1408,7 +1408,7 @@ namespace lotus
         if (texture.descriptorCount > 0)
         {
             writes.push_back(texture);
-            writes.push_back(material);
+            //writes.push_back(material);
         }
         writes.push_back(mesh_info);
         gpu->device->updateDescriptorSets(writes, nullptr);
