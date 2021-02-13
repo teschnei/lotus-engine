@@ -5,6 +5,7 @@
 
 struct FFXITime
 {
+    using milliseconds = std::chrono::duration<long long, std::ratio<60, 25 * 60 * 1000>>;
     using seconds = std::chrono::duration<long long, std::ratio<60, 25 * 60>>;
     using minutes = std::chrono::duration<long long, std::ratio<60, 25>>;
     using hours = std::chrono::duration<long long, std::ratio<60 * 60, 25>>;
@@ -13,7 +14,7 @@ struct FFXITime
     using months = std::chrono::duration<long long, std::ratio<60 * 43200, 25>>;
     using years = std::chrono::duration<long long, std::ratio<60 * 518400, 25>>;
 
-    using duration = minutes;
+    using duration = milliseconds;
     using rep = duration::rep;
     using period = duration::period;
     using time_point = std::chrono::time_point<FFXITime>;

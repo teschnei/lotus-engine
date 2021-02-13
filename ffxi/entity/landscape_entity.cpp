@@ -195,7 +195,9 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
     if (time2 != weather_data.begin()) { time1 = time2; time1--; };
     if (time2 == weather_data.end()) time2 = weather_data.begin();
 
-    float a = (float)((current_time - time1->first)) / (time2->first - time1->first);
+    float a = 1.0;
+    if (time1 != time2)
+        a = (float)((current_time - time1->first)) / (time2->first - time1->first);
 
 
     auto& light = engine->lights->light;
@@ -254,7 +256,7 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
 
 lotus::Task<> FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
 {
-    current_time = std::chrono::duration_cast<std::chrono::duration<float, FFXITime::minutes::period>>(FFXITime::vana_time() % FFXITime::days(1)).count();
+    current_time = std::chrono::duration_cast<FFXITime::milliseconds>((FFXITime::vana_time() % FFXITime::days(1))).count() / 60000.f;
 
     co_return;
 }
