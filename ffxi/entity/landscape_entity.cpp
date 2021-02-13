@@ -160,17 +160,17 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
         }
         if (collision_model_task) co_await *collision_model_task;
         co_await init_task;
-        sunlight = engine->lights->AddLight({});
-        moonlight = engine->lights->AddLight({});
+        light_id = engine->lights->AddLight({});
     }
 }
 
 void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index)
 {
-    auto nodes = quadtree.find(engine->camera->frustum);
-    for (const auto& node : nodes)
+    //auto nodes = quadtree.find(engine->camera->frustum);
+    //for (const auto& node : nodes)
+    for(const auto& [model_offset, instance_info] : model_vec)
     {
-        auto& [model_offset, instance_info] = model_vec[node];
+        //auto& [model_offset, instance_info] = model_vec[node];
         auto& model = models[model_offset];
         if (!model->meshes.empty() && model->bottom_level_as)
         {
@@ -197,22 +197,8 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
 
     float a = (float)((current_time - time1->first)) / (time2->first - time1->first);
 
-    glm::vec4 sunlight_colour_entity = glm::mix(time1->second.sunlight_diffuse_entity, time2->second.sunlight_diffuse_entity, a);
-    glm::vec4 sunlight_colour_landscape = glm::mix(time1->second.sunlight_diffuse_landscape, time2->second.sunlight_diffuse_landscape, a);
-    glm::vec4 moonlight_colour_entity = glm::mix(time1->second.moonlight_diffuse_entity, time2->second.moonlight_diffuse_entity, a);
-    glm::vec4 moonlight_colour_landscape = glm::mix(time1->second.moonlight_diffuse_landscape, time2->second.moonlight_diffuse_landscape, a);
 
     auto& light = engine->lights->light;
-    if (current_time > 360 && current_time < 1080)
-    {
-        light.entity.diffuse_color = sunlight_colour_entity;
-        light.landscape.diffuse_color = sunlight_colour_landscape;
-    }
-    else
-    {
-        light.entity.diffuse_color = moonlight_colour_entity;
-        light.landscape.diffuse_color = moonlight_colour_landscape;
-    }
     light.entity.specular_color = glm::vec4(1.f);
     light.entity.ambient_color = glm::mix(time1->second.ambient_entity, time2->second.ambient_entity, a);
     light.entity.fog_color = glm::mix(time1->second.fog_color_entity, time2->second.fog_color_entity, a);
@@ -226,6 +212,28 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
     light.landscape.max_fog = glm::mix(time1->second.max_fog_landscape, time2->second.max_fog_landscape, a);
     light.landscape.min_fog = glm::mix(time1->second.min_fog_landscape, time2->second.min_fog_landscape, a);
     light.landscape.brightness = glm::mix(time1->second.brightness_landscape, time2->second.brightness_landscape, a);
+    if (current_time > 360 && current_time < 1080)
+    {
+        glm::vec4 sunlight_colour_entity = glm::mix(time1->second.sunlight_diffuse_entity, time2->second.sunlight_diffuse_entity, a);
+        glm::vec4 sunlight_colour_landscape = glm::mix(time1->second.sunlight_diffuse_landscape, time2->second.sunlight_diffuse_landscape, a);
+        light.entity.diffuse_color = sunlight_colour_entity;
+        light.landscape.diffuse_color = sunlight_colour_landscape;
+        //sun radius: 4.7, distance 1000
+        auto rot = (current_time / 720 * glm::pi<float>()) - (glm::pi<float>() / 2);
+        glm::vec3 b = glm::rotate(glm::vec3{1000.f, 0.f, 0.f}, rot, glm::vec3{ 0.f, 0.382f, -0.924f });
+        engine->lights->UpdateLight(light_id, { b, 0.f, sunlight_colour_landscape * light.landscape.brightness, 4.7f });
+    }
+    else
+    {
+        glm::vec4 moonlight_colour_entity = glm::mix(time1->second.moonlight_diffuse_entity, time2->second.moonlight_diffuse_entity, a);
+        glm::vec4 moonlight_colour_landscape = glm::mix(time1->second.moonlight_diffuse_landscape, time2->second.moonlight_diffuse_landscape, a);
+        light.entity.diffuse_color = moonlight_colour_entity;
+        light.landscape.diffuse_color = moonlight_colour_landscape;
+        //moon radius: 4.5, distance 1000
+        auto rot = (current_time / 720 * glm::pi<float>()) - (glm::pi<float>() / 2);
+        glm::vec3 b = glm::rotate(glm::vec3{1000.f, 0.f, 0.f}, rot, glm::vec3{ 0.f, 0.382f, -0.924f });
+        engine->lights->UpdateLight(light_id, { -b, 0.f, moonlight_colour_landscape * light.landscape.brightness, 4.5f });
+    }
 
     light.skybox_altitudes1 = glm::mix(time1->second.skybox_altitudes[0], time2->second.skybox_altitudes[0], a);
     light.skybox_altitudes2 = glm::mix(time1->second.skybox_altitudes[1], time2->second.skybox_altitudes[1], a);
@@ -240,14 +248,6 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
     {
         light.skybox_colors[i] = glm::mix(time1->second.skybox_colors[i], time2->second.skybox_colors[i], a);
     }
-
-    //sun radius: 4.7, distance 1000
-    //moon radius: 4.5, distance 1000
-    auto rot = (current_time / 720 * glm::pi<float>()) + (glm::pi<float>() / 2);
-    //auto rot = -glm::pi<float>()/ 2;
-    glm::vec3 b = glm::rotate(glm::vec3{1000.f, 0.f, 0.f}, rot, glm::vec3{ 0.f, -0.382f, 0.924f });
-    engine->lights->UpdateLight(sunlight, { b, 0.f, sunlight_colour_landscape * light.landscape.brightness, 4.7f });
-    engine->lights->UpdateLight(moonlight, { -b, 0.f, moonlight_colour_landscape * light.landscape.brightness, 4.5f });
 
     co_await lotus::LandscapeEntity::render(engine, sp);
 }

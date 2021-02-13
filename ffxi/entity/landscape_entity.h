@@ -39,8 +39,7 @@ protected:
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
     float current_time{750};
     std::string current_weather = "suny";
-    lotus::LightID sunlight{ 0 };
-    lotus::LightID moonlight{ 0 };
+    lotus::LightID light_id{ 0 };
 };
 
 class CollisionMesh : public lotus::Mesh
