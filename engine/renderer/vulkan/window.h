@@ -20,6 +20,7 @@ namespace lotus
 
         std::vector<const char*> getRequiredExtensions() const;
         std::pair<int, int> getWindowDimensions() const;
+        bool isMinimized() const;
     private:
         Settings* settings;
         Config* config;

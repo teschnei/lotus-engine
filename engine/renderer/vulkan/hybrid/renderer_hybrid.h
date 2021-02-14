@@ -93,6 +93,8 @@ namespace lotus
         void createDeferredCommandBuffer();
         void createPostProcessingResources();
 
+        virtual Task<> recreateRenderer() override;
+
         void initializeCameraBuffers();
         void generateCommandBuffers();
 

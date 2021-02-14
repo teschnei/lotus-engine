@@ -19,6 +19,11 @@ namespace lotus
     public:
         WorkerPool(Engine*);
 
+        ~WorkerPool()
+        {
+            Stop();
+        }
+
         //temporary workaround for WorkerPromise's issues
         static inline WorkerPool* temp_pool;
 
@@ -57,8 +62,7 @@ namespace lotus
         std::vector<vk::CommandBuffer> getParticleGraphicsBuffers(int);
         std::vector<vk::CommandBuffer> getPrimaryComputeBuffers(int);
 
-        //TODO
-        void reset() {}
+        void Reset();
 
         //called by the main thread to wait until the game exits
         void Run();

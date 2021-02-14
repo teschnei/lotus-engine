@@ -16,6 +16,15 @@ namespace lotus::ui
         co_await self->InitWork(engine);
     }
 
+    void Element::ReInit(Engine* engine)
+    {
+        GenerateCommandBuffers(engine);
+        for (const auto& e : children)
+        {
+            e->ReInit(engine);
+        }
+    }
+
     WorkerTask<> Element::InitWork(Engine* engine)
     {
         buffer = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(ui::Element::UniformBuffer)) * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -35,6 +44,12 @@ namespace lotus::ui
         }
         buffer->unmap();
 
+        GenerateCommandBuffers(engine);
+        co_return;
+    }
+
+    void Element::GenerateCommandBuffers(Engine* engine)
+    {
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
         alloc_info.commandPool = *engine->renderer->graphics_pool;
@@ -43,7 +58,6 @@ namespace lotus::ui
         command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         engine->renderer->ui->GenerateRenderBuffers(this);
-        co_return;
     }
 
     glm::ivec2 Element::GetAbsolutePos()

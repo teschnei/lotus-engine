@@ -1031,19 +1031,10 @@ namespace lotus
         }
     }
 
-    Task<> RendererRasterization::resizeRenderer()
-    {
-        co_await recreateRenderer();
-        if (engine->camera)
-        {
-            engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
-        }
-    }
-
     Task<> RendererRasterization::recreateRenderer()
     {
         gpu->device->waitIdle();
-        engine->worker_pool.reset();
+        engine->worker_pool->Reset();
         swapchain->recreateSwapchain(current_image);
 
         createRenderpasses();
@@ -1056,6 +1047,7 @@ namespace lotus
         createAnimationResources();
         //recreate command buffers
         co_await recreateStaticCommandBuffers();
+        co_await ui->ReInit();
     }
 
     void RendererRasterization::initializeCameraBuffers()
@@ -1239,6 +1231,7 @@ namespace lotus
             co_await resizeRenderer();
         }
 
+        raytracer->clearQueries();
         current_frame = (current_frame + 1) % max_pending_frames;
     }
 

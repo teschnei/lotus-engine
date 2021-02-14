@@ -24,6 +24,7 @@ namespace lotus
         void query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback);
         bool hasQueries() const { return !queries.empty(); }
         void runQueries(uint32_t image);
+        void clearQueries() { queries.clear(); }
 
     private:
         class RaytraceQuery

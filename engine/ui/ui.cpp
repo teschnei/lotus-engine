@@ -15,8 +15,13 @@ namespace lotus::ui
         root->SetWidth(engine->renderer->swapchain->extent.width);
         root->SetHeight(engine->renderer->swapchain->extent.height);
         root->bg_colour = glm::vec4(0.f);
-        auto task = root->Init(engine, root);
-        co_await task;
+        co_await root->Init(engine, root);
+    }
+
+    Task<> Manager::ReInit()
+    {
+        root->ReInit(engine);
+        co_return;
     }
 
     Task<> Manager::addElement(std::shared_ptr<Element> ele, std::shared_ptr<Element> parent)

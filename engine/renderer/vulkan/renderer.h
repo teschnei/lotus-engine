@@ -147,9 +147,8 @@ namespace lotus
         void createAnimationResources();
 
         Task<> resizeRenderer();
-        Task<> recreateRenderer();
+        virtual Task<> recreateRenderer() = 0;
         Task<> recreateStaticCommandBuffers();
-
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;

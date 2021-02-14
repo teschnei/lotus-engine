@@ -41,61 +41,63 @@ namespace lotus
 
         render_commandbuffers.resize(getImageCount());
 
-        co_await [this]() -> WorkerTask<>
-        {
-            vk::CommandBufferAllocateInfo alloc_info = {};
-            alloc_info.level = vk::CommandBufferLevel::ePrimary;
-            alloc_info.commandPool = *engine->renderer->graphics_pool;
-            alloc_info.commandBufferCount = 1;
+        co_await InitWork();
+    }
 
-            auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-            auto command_buffer = std::move(command_buffers[0]);
+    WorkerTask<> RendererRaytrace::InitWork()
+    {
+        vk::CommandBufferAllocateInfo alloc_info = {};
+        alloc_info.level = vk::CommandBufferLevel::ePrimary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = 1;
 
-            vk::CommandBufferBeginInfo begin_info = {};
-            begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+        auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        auto command_buffer = std::move(command_buffers[0]);
 
-            command_buffer->begin(begin_info);
+        vk::CommandBufferBeginInfo begin_info = {};
+        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-            vk::ImageMemoryBarrier barrier_albedo;
-            barrier_albedo.oldLayout = vk::ImageLayout::eUndefined;
-            barrier_albedo.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            barrier_albedo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier_albedo.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier_albedo.image = rtx_gbuffer.albedo.image->image;
-            barrier_albedo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-            barrier_albedo.subresourceRange.baseMipLevel = 0;
-            barrier_albedo.subresourceRange.levelCount = 1;
-            barrier_albedo.subresourceRange.baseArrayLayer = 0;
-            barrier_albedo.subresourceRange.layerCount = 1;
-            barrier_albedo.srcAccessMask = {};
-            barrier_albedo.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+        command_buffer->begin(begin_info);
 
-            vk::ImageMemoryBarrier barrier_light_post = barrier_albedo;
-            barrier_light_post.image = rtx_gbuffer.light_post.image->image;
+        vk::ImageMemoryBarrier barrier_albedo;
+        barrier_albedo.oldLayout = vk::ImageLayout::eUndefined;
+        barrier_albedo.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        barrier_albedo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier_albedo.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier_albedo.image = rtx_gbuffer.albedo.image->image;
+        barrier_albedo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        barrier_albedo.subresourceRange.baseMipLevel = 0;
+        barrier_albedo.subresourceRange.levelCount = 1;
+        barrier_albedo.subresourceRange.baseArrayLayer = 0;
+        barrier_albedo.subresourceRange.layerCount = 1;
+        barrier_albedo.srcAccessMask = {};
+        barrier_albedo.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
 
-            vk::ImageMemoryBarrier barrier_light = barrier_albedo;
-            barrier_light.image = rtx_gbuffer.light.image->image;
-            barrier_light.newLayout = vk::ImageLayout::eGeneral;
+        vk::ImageMemoryBarrier barrier_light_post = barrier_albedo;
+        barrier_light_post.image = rtx_gbuffer.light_post.image->image;
 
-            vk::ImageMemoryBarrier barrier_normal = barrier_albedo;
-            barrier_normal.image = rtx_gbuffer.normal.image->image;
-            barrier_normal.newLayout = vk::ImageLayout::eGeneral;
+        vk::ImageMemoryBarrier barrier_light = barrier_albedo;
+        barrier_light.image = rtx_gbuffer.light.image->image;
+        barrier_light.newLayout = vk::ImageLayout::eGeneral;
 
-            std::vector<vk::ImageMemoryBarrier> barriers;
-            barriers.push_back(barrier_albedo);
-            barriers.push_back(barrier_light);
-            barriers.push_back(barrier_normal);
-            barriers.push_back(barrier_light_post);
+        vk::ImageMemoryBarrier barrier_normal = barrier_albedo;
+        barrier_normal.image = rtx_gbuffer.normal.image->image;
+        barrier_normal.newLayout = vk::ImageLayout::eGeneral;
 
-            command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, nullptr, nullptr, barriers);
+        std::vector<vk::ImageMemoryBarrier> barriers;
+        barriers.push_back(barrier_albedo);
+        barriers.push_back(barrier_light);
+        barriers.push_back(barrier_normal);
+        barriers.push_back(barrier_light_post);
 
-            command_buffer->end();
+        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, nullptr, nullptr, barriers);
 
-            engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
-            engine->worker_pool->gpuResource(std::move(command_buffer));
+        command_buffer->end();
 
-            co_return;
-        }();
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+        engine->worker_pool->gpuResource(std::move(command_buffer));
+
+        co_return;
     }
 
     void RendererRaytrace::generateCommandBuffers()
@@ -1107,19 +1109,10 @@ namespace lotus
         }
     }
 
-    Task<> RendererRaytrace::resizeRenderer()
-    {
-        co_await recreateRenderer();
-        if (engine->camera)
-        {
-            engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
-        }
-    }
-
     Task<> RendererRaytrace::recreateRenderer()
     {
         gpu->device->waitIdle();
-        engine->worker_pool.reset();
+        engine->worker_pool->Reset();
         swapchain->recreateSwapchain(current_image);
 
         createRenderpasses();
@@ -1134,6 +1127,8 @@ namespace lotus
         createPostProcessingResources();
         //recreate command buffers
         co_await recreateStaticCommandBuffers();
+        co_await InitWork();
+        co_await ui->ReInit();
     }
 
     void RendererRaytrace::initializeCameraBuffers()
@@ -1366,6 +1361,7 @@ namespace lotus
             co_await resizeRenderer();
         }
 
+        raytracer->clearQueries();
         current_frame = (current_frame + 1) % max_pending_frames;
     }
 

@@ -189,22 +189,15 @@ namespace lotus
 
     Task<> Renderer::resizeRenderer()
     {
-        co_await recreateRenderer();
-        if (engine->camera)
+        //if (auto [x, y] = window->getWindowDimensions(); x != 0 && y != 0)
+        if(!window->isMinimized())
         {
-            engine->camera->setPerspective(glm::radians(70.f), swapchain->extent.width / (float)swapchain->extent.height, 0.01f, 1000.f);
+            co_await recreateRenderer();
+            if (engine->camera)
+            {
+                engine->camera->setPerspective(glm::radians(70.f), swapchain->extent.width / (float)swapchain->extent.height, 0.01f, 1000.f);
+            }
         }
-    }
-
-    Task<> Renderer::recreateRenderer()
-    {
-        gpu->device->waitIdle();
-        engine->worker_pool.reset();
-        swapchain->recreateSwapchain(current_image);
-
-        createAnimationResources();
-        //recreate command buffers
-        co_await recreateStaticCommandBuffers();
     }
 
     Task<> Renderer::recreateStaticCommandBuffers()

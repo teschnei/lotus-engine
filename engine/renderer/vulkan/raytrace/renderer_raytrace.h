@@ -13,6 +13,7 @@ namespace lotus
         ~RendererRaytrace();
 
         virtual Task<> Init() override;
+        WorkerTask<> InitWork();
 
         virtual Task<> drawFrame() override;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) override;
@@ -71,8 +72,7 @@ namespace lotus
         void createDeferredCommandBuffer();
         void createPostProcessingResources();
 
-        Task<> resizeRenderer();
-        Task<> recreateRenderer();
+        virtual Task<> recreateRenderer() override;
 
         void initializeCameraBuffers();
         void generateCommandBuffers();

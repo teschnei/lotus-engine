@@ -1783,7 +1783,30 @@ namespace lotus
             co_await resizeRenderer();
         }
 
+        raytracer->clearQueries();
         current_frame = (current_frame + 1) % max_pending_frames;
+    }
+
+    Task<> RendererHybrid::recreateRenderer()
+    {
+        gpu->device->waitIdle();
+        engine->worker_pool->Reset();
+        swapchain->recreateSwapchain(current_image);
+
+        createRenderpasses();
+        createDepthImage();
+        //can skip this if scissor/viewport are dynamic
+        createGraphicsPipeline();
+        createFramebuffers();
+        createGBufferResources();
+        createDeferredCommandBuffer();
+        createRayTracingResources();
+        createAnimationResources();
+        createPostProcessingResources();
+        //recreate command buffers
+        co_await recreateStaticCommandBuffers();
+        co_await InitWork();
+        co_await ui->ReInit();
     }
 
     void RendererHybrid::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint64_t resource_index, uint32_t mask, uint32_t shader_binding_offset)

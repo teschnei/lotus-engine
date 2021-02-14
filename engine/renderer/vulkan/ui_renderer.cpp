@@ -20,6 +20,18 @@ namespace lotus
         co_await createBuffers();
     }
 
+    Task<> UiRenderer::ReInit()
+    {
+        createDescriptorSetLayout();
+        createRenderpass();
+        createDepthImage();
+        createFrameBuffers();
+        createPipeline();
+        command_buffers.clear();
+        command_buffers.resize(renderer->getImageCount());
+        co_await engine->ui->ReInit();
+    }
+
     vk::CommandBuffer UiRenderer::Render(int image_index)
     {
         vk::CommandBufferAllocateInfo alloc_info;
@@ -358,6 +370,7 @@ namespace lotus
 
     void UiRenderer::createFrameBuffers()
     {
+        framebuffers.clear();
         for (auto& swapchain_image_view : renderer->swapchain->image_views) {
             std::vector<vk::ImageView> attachments = {
                 *swapchain_image_view,

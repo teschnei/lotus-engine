@@ -35,10 +35,17 @@ namespace lotus
 
         return extensions;
     }
+    
     std::pair<int, int> Window::getWindowDimensions() const
     {
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
         return { width, height };
+    }
+
+    bool Window::isMinimized() const
+    {
+        auto flags = SDL_GetWindowFlags(window);
+        return (flags & SDL_WINDOW_MINIMIZED) > 0;
     }
 }

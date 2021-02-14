@@ -300,6 +300,5 @@ namespace lotus
                 query.callback(query.max);
             }
         }
-        queries.clear();
     }
 }

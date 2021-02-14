@@ -32,6 +32,7 @@ namespace lotus::ui
         };
         Element();
         static Task<> Init(Engine*, std::shared_ptr<Element>);
+        void ReInit(Engine*);
 
         glm::ivec2 GetRelativePos();
         glm::ivec2 GetAbsolutePos();
@@ -81,6 +82,7 @@ namespace lotus::ui
         void RecalculateScreenPos();
         void RecalculateScreenPosFromParent(glm::ivec2 parent);
         WorkerTask<> InitWork(Engine*);
+        void GenerateCommandBuffers(Engine*);
 
         glm::ivec2 pos{};
         glm::ivec2 screen_pos{};

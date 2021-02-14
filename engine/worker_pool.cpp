@@ -133,4 +133,9 @@ namespace lotus
     {
         deletion_tasks = {};
     }
+
+    void WorkerPool::Reset()
+    {
+
+    }
 }

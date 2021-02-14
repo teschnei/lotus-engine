@@ -17,6 +17,7 @@ namespace lotus
             Manager(Engine* engine);
 
             Task<> Init();
+            Task<> ReInit();
             Task<> addElement(std::shared_ptr<Element>, std::shared_ptr<Element> parent = nullptr);
 
             std::vector<vk::CommandBuffer> getRenderCommandBuffers(int image_index);

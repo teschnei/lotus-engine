@@ -106,8 +106,7 @@ namespace lotus
         void createGBufferResources();
         void createDeferredCommandBuffer();
 
-        Task<> resizeRenderer();
-        Task<> recreateRenderer();
+        virtual Task<> recreateRenderer() override;
 
         void initializeCameraBuffers();
         void generateCommandBuffers();
