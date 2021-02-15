@@ -15,6 +15,7 @@ layout(location = 0) rayPayloadInEXT HitValue
     float weight;
     vec3 origin;
     vec3 direction;
+    float distance;
 } hitValue;
 
 layout(std430, binding = 4, set = 1) buffer readonly Light
@@ -29,6 +30,7 @@ void main()
     hitValue.BRDF = vec3(1.0);
     hitValue.depth = 10;
     hitValue.normal = vec3(1.0);
+    hitValue.distance = gl_RayTmaxEXT;
     float dot_up = dot(gl_WorldRayDirectionEXT, vec3(0.f, -1.f, 0.f));
 
     if (dot_up < light.light.skybox_altitudes2)

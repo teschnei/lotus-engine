@@ -53,6 +53,7 @@ layout(location = 0) rayPayloadInEXT HitValue
     float weight;
     vec3 origin;
     vec3 direction;
+    float distance;
 } hitValue;
 
 layout(location = 1) rayPayloadEXT Shadow 
@@ -100,6 +101,7 @@ void main()
         hitValue.BRDF = vec3(1.0);
         hitValue.diffuse = light.light.entity.fog_color.rgb;
         hitValue.depth = 10;
+        hitValue.distance = gl_HitTEXT;
         return;
     }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
@@ -196,4 +198,5 @@ void main()
     hitValue.diffuse = diffuse;
     hitValue.weight = M_PI;
     hitValue.normal = normalized_normal;
+    hitValue.distance = gl_HitTEXT;
 }

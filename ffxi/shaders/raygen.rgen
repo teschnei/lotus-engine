@@ -27,6 +27,7 @@ layout(location = 0) rayPayloadEXT HitValue
     float weight;
     vec3 origin;
     vec3 direction;
+    float distance;
 } hitValue;
 
 void main() 
@@ -51,6 +52,7 @@ void main()
     vec3 gi_origin = hitValue.origin;
     vec3 gi_dir = hitValue.direction;
     vec3 gi_weight = hitValue.BRDF * hitValue.weight;
+    float dist = hitValue.distance;
     const int max_samples = 1;
     vec3 accumulation = vec3(0.0);
     for (int samples = 0; samples < max_samples; ++samples)
@@ -66,7 +68,7 @@ void main()
         }
     }
 
-    imageStore(albedo, ivec2(gl_LaunchIDEXT.xy), vec4(BRDF, 1.0));
+    imageStore(albedo, ivec2(gl_LaunchIDEXT.xy), vec4(BRDF, dist));
     imageStore(normal, ivec2(gl_LaunchIDEXT.xy), vec4(hit_normal, 0.0));
     imageStore(light, ivec2(gl_LaunchIDEXT.xy), vec4((accumulation / float(max_samples)) + diffuse, 1.0));
 }

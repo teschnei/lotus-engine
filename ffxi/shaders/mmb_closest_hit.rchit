@@ -55,6 +55,7 @@ layout(location = 0) rayPayloadInEXT HitValue
     float weight;
     vec3 origin;
     vec3 direction;
+    float distance;
 } hitValue;
 
 layout(location = 1) rayPayloadEXT Shadow 
@@ -110,6 +111,7 @@ void main()
         hitValue.BRDF = vec3(1.0);
         hitValue.diffuse = light.light.landscape.fog_color.rgb;
         hitValue.depth = 10;
+        hitValue.distance = gl_HitTEXT;
         return;
     }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
@@ -205,9 +207,5 @@ void main()
     //also, for lambertian, this M_PI cancels out the one in BRDF, but i'll leave it uncanceled for when more complex BRDFs arrive
     hitValue.weight = M_PI;
     hitValue.normal = normalized_normal;
-
-    if (gl_HitTEXT > light.light.landscape.min_fog)
-    {
-        hitValue.diffuse = mix(hitValue.diffuse, light.light.landscape.fog_color.rgb, (gl_HitTEXT - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));
-    }
+    hitValue.distance = gl_HitTEXT;
 }

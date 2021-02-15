@@ -50,6 +50,7 @@ layout(location = 0) rayPayloadEXT HitValue
     float weight;
     vec3 origin;
     vec3 direction;
+    float distance;
 } hitValue;
 
 layout(location = 1) rayPayloadEXT Shadow 

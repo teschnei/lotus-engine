@@ -467,6 +467,13 @@ namespace lotus
         light_sample_layout_binding.pImmutableSamplers = nullptr;
         light_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
+        vk::DescriptorSetLayoutBinding light_buffer_sample_layout_binding;
+        light_buffer_sample_layout_binding.binding = 2;
+        light_buffer_sample_layout_binding.descriptorCount = 1;
+        light_buffer_sample_layout_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
+        light_buffer_sample_layout_binding.pImmutableSamplers = nullptr;
+        light_buffer_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
         vk::DescriptorSetLayoutBinding camera_buffer_binding;
         camera_buffer_binding.binding = 9;
         camera_buffer_binding.descriptorCount = 1;
@@ -474,7 +481,8 @@ namespace lotus
         camera_buffer_binding.pImmutableSamplers = nullptr;
         camera_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
-        std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { albedo_sample_layout_binding, light_sample_layout_binding, camera_buffer_binding };
+        std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { albedo_sample_layout_binding,
+            light_sample_layout_binding, light_buffer_sample_layout_binding, camera_buffer_binding };
 
         vk::DescriptorSetLayoutCreateInfo rtx_deferred_layout_info;
         rtx_deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
@@ -939,12 +947,17 @@ namespace lotus
             light_info.imageView = *rtx_gbuffer.light_post.image_view;
             light_info.sampler = *rtx_gbuffer.sampler;
 
+            vk::DescriptorBufferInfo light_buffer_info_global;
+            light_buffer_info_global.buffer = engine->lights->light_buffer->buffer;
+            light_buffer_info_global.offset = getCurrentImage() * engine->lights->GetBufferSize();
+            light_buffer_info_global.range = engine->lights->GetBufferSize();
+
             vk::DescriptorBufferInfo camera_buffer_info;
             camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
             camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
             camera_buffer_info.range = sizeof(Camera::CameraData);
 
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {3};
+            std::vector<vk::WriteDescriptorSet> descriptorWrites {4};
 
             descriptorWrites[0].dstSet = nullptr;
             descriptorWrites[0].dstBinding = 0;
@@ -961,11 +974,18 @@ namespace lotus
             descriptorWrites[1].pImageInfo = &light_info;
 
             descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[2].dstBinding = 9;
+            descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &camera_buffer_info;
+            descriptorWrites[2].pBufferInfo = &light_buffer_info_global;
+
+            descriptorWrites[3].dstSet = nullptr;
+            descriptorWrites[3].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[3].dstBinding = 9;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pBufferInfo = &camera_buffer_info;
 
             buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites);
 
