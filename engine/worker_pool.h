@@ -142,7 +142,7 @@ namespace lotus
                 bool await_ready() const noexcept {return false;}
                 auto await_suspend(std::coroutine_handle<> handle) noexcept
                 {
-                    WorkerPool::temp_pool->background_tasks.erase(handle.address());
+                    WorkerPool::temp_pool->background_tasks.erase(handle);
                 }
                 void await_resume() noexcept {}
             };
@@ -207,8 +207,7 @@ namespace lotus
             co_await std::move(bg_task);
         }
 
-        //because MSVC messed up the hash for coroutines, we just have to use address manually
-        std::unordered_map<void*, BackgroundTask> background_tasks;
+        std::unordered_map<std::coroutine_handle<>, BackgroundTask> background_tasks;
 
         class FrameWait
         {
@@ -247,7 +246,7 @@ namespace lotus
         {
             auto bg_task = make_background(std::move(task));
             const std::coroutine_handle<> handle = bg_task.handle;
-            background_tasks.insert(std::make_pair(handle.address(), std::move(bg_task)));
+            background_tasks.insert(std::make_pair(handle, std::move(bg_task)));
             handle.resume();
         }
 

@@ -57,7 +57,7 @@ lotus::Task<> ParticleTester::ParseDir(FFXI::DatChunk* chunk)
     std::vector<lotus::Task<>> model_tasks;
     for (const auto& chunk : chunk->children)
     {
-        ParseDir(chunk.get());
+        co_await ParseDir(chunk.get());
     }
     for (const auto& chunk : chunk->children)
     {
