@@ -67,11 +67,6 @@ namespace lotus
             mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
             mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
-            vk::DescriptorBufferInfo material_index_info;
-            material_index_info.buffer = entity->mesh_index_buffer->buffer;
-            material_index_info.offset = i * renderer->uniform_buffer_align_up(sizeof(uint32_t));
-            material_index_info.range = sizeof(uint32_t);
-
             std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
             descriptorWrites[0].dstSet = nullptr;
@@ -148,11 +143,6 @@ namespace lotus
             mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
             mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
-            vk::DescriptorBufferInfo material_index_info;
-            material_index_info.buffer = entity->mesh_index_buffer->buffer;
-            material_index_info.offset = i * renderer->uniform_buffer_align_up(sizeof(uint32_t));
-            material_index_info.range = sizeof(uint32_t);
-
             std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
             descriptorWrites[0].dstSet = nullptr;
@@ -189,10 +179,7 @@ namespace lotus
     {
         auto entity = static_cast<Particle*>(this->entity);
         entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->mesh_index_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(uint32_t)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), {}));
-        entity->mesh_index_buffer_mapped = static_cast<uint8_t*>(entity->mesh_index_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(uint32_t)) * renderer->getImageCount(), {}));
     }
 
     void ParticleEntityInitializer::drawModel(Engine* engine, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout layout, size_t image)

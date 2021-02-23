@@ -22,7 +22,7 @@ layout(binding = 2, set = 0) buffer Indices
     int i[];
 } indices[1024];
 
-layout(binding = 4, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) uniform MeshInfo
 {
     Mesh m[1024];
 } meshInfo;

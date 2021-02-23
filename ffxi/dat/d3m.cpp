@@ -70,6 +70,12 @@ namespace FFXI
 
     lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
     {
+        if (!pipeline_flag.test_and_set())
+        {
+            InitPipeline(engine);
+            pipeline_latch.count_down();
+        }
+        pipeline_latch.wait();
         model->lifetime = lotus::Lifetime::Short;
         std::vector<uint8_t> vertices(d3m->num_triangles * sizeof(D3M::Vertex) * 3);
         memcpy(vertices.data(), d3m->vertex_buffer.data(), d3m->vertex_buffer.size() * sizeof(D3M::Vertex));

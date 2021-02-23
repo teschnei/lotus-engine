@@ -40,14 +40,20 @@ layout(binding = 5, set = 0) uniform MeshInfo
 layout(std430, binding = 4, set = 1) buffer readonly Light
 {
     LightBuffer light;
-    uint light_count;
     LightInfo light_info[];
 } light;
 
 layout(location = 0) rayPayloadInEXT HitValue
 {
-    vec3 albedo;
-    vec3 light;
+    vec3 BRDF;
+    vec3 diffuse;
+    vec3 normal;
+    int depth;
+    uint seed;
+    float weight;
+    vec3 origin;
+    vec3 direction;
+    float distance;
 } hitValue;
 
 layout(location = 1) rayPayloadEXT Shadow 
@@ -104,8 +110,12 @@ void main()
 {
     if (gl_HitTEXT > light.light.entity.max_fog)
     {
-        hitValue.albedo = light.light.entity.fog_color.rgb;
-        hitValue.light = vec3(1.0);
+        //for now, all particles are emitters so no GI
+        hitValue.depth = 10;
+        hitValue.BRDF = vec3(1.0);
+        hitValue.diffuse = light.light.entity.fog_color.rgb;
+        hitValue.distance = gl_HitTEXT;
+        return;
     }
     ivec3 primitive_indices = getIndex(attribs.primitive_id);
     Vertex v0 = unpackVertex(primitive_indices.x);
@@ -131,12 +141,6 @@ void main()
 
     vec3 out_light = diffuse + ambient;
     vec3 out_color = texture_color.rgb;
-    //todo: split these
-    out_color = out_light * out_color + specular;
-    if (gl_HitTEXT > light.light.entity.min_fog)
-    {
-        out_color = mix(out_color, light.light.entity.fog_color.rgb, (gl_HitTEXT - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));
-    }
 
     if (texture_color.a != 1.f)
     {
@@ -153,10 +157,14 @@ void main()
 
         vec3 origin = gl_WorldRayOriginEXT + (gl_WorldRayDirectionEXT * gl_RayTmaxEXT) + cross_vec * 0.001;
         traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 0, 0, origin.xyz, 0.0, gl_WorldRayDirectionEXT, 1000.0 - gl_RayTmaxEXT, 0);
+        vec3 behind_colour = hitValue.diffuse * hitValue.BRDF;
 
-        out_color = mix(hitValue.albedo, out_color, tex_a);
+        out_color = mix(behind_colour, out_color, tex_a);
     }
 
-    hitValue.albedo = out_color;
-    hitValue.light = vec3(1.0);
+    //for now, all particles are emitters so no GI
+    hitValue.depth = 10;
+    hitValue.normal = normalized_normal;
+    hitValue.BRDF = out_color;
+    hitValue.diffuse = vec3(1);
 }

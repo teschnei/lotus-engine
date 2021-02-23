@@ -32,17 +32,16 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
 
     if (time > start_time + next_generation)
     {
-        auto particle = co_await engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))));
+        auto model = lotus::Model::getModel(generator->id);
+        if (!model)
+            model = lotus::Model::getModel("rin ");
+        auto particle = co_await engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))), model);
         auto pos = glm::vec3(0);
         pos.x = lotus::random::GetRandomNumber(generator->gen_radius, generator->gen_radius + generator->gen_radius_fluctuation);
         //TODO: rotation (instead of randomly, spins around rotation+1 times per frame)
         pos = glm::rotateY(pos, lotus::random::GetRandomNumber(0.f, glm::pi<float>() * 2));
         pos.y -= lotus::random::GetRandomNumber(generator->gen_height, generator->gen_height + generator->gen_height_fluctuation);
         particle->billboard = generator->billboard == 1;
-        auto model = lotus::Model::getModel(generator->id);
-        if (!model)
-            model = lotus::Model::getModel("rin ");
-        particle->models.push_back(std::move(model));
         particle->setScale(generator->scale);
         particle->setPos(pos + entity->getPos());
         particle->setRot(generator->rot + gen_rot_add);

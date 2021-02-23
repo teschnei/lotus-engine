@@ -15,10 +15,6 @@ namespace lotus
         {
             uniform_buffer->unmap();
         }
-        if (mesh_index_buffer_mapped)
-        {
-            mesh_index_buffer->unmap();
-        }
     }
 
     void RenderableEntity::setScale(float x, float y, float z)

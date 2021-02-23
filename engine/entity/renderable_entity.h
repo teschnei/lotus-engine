@@ -39,9 +39,6 @@ namespace lotus
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
 
-        std::unique_ptr<Buffer> mesh_index_buffer;
-        uint8_t* mesh_index_buffer_mapped{ nullptr };
-
     protected:
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
         WorkerTask<> renderWork();

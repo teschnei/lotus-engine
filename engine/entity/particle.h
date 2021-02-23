@@ -8,8 +8,8 @@ namespace lotus
     class Particle : public RenderableEntity
     {
     public:
-        Particle(Engine*, duration lifetime);
-        static Task<std::shared_ptr<Particle>> Init(Engine* engine, duration lifetime);
+        Particle(Engine*, duration lifetime, std::shared_ptr<Model> model);
+        static Task<std::shared_ptr<Particle>> Init(Engine* engine, duration lifetime, std::shared_ptr<Model> model);
         virtual ~Particle() = default;
 
         bool billboard{ false };

@@ -153,7 +153,7 @@ void main()
         vec3 weight = albedo.rgb;
         hitValue.origin = position.xyz;
         hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normal);
-        for(hitValue.depth = 0; hitValue.depth < 1; hitValue.depth++)
+        for(; hitValue.depth < 1; hitValue.depth++)
         {
             traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 0, 1, hitValue.origin, 0.001, hitValue.direction, 1000.0, 0);
             accumulation += hitValue.BRDF * hitValue.diffuse * weight;

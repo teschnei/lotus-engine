@@ -73,10 +73,17 @@ namespace lotus
         {
             co_await entity->tick_all(time, delta);
         }
-        entities.erase(std::remove_if(entities.begin(), entities.end(), [](auto& entity)
+        auto removed = std::ranges::partition(entities, [](auto& entity)
         {
-            return entity->should_remove();
-        }), entities.end());
+            return !entity->should_remove();
+        });
+        if (std::ranges::begin(removed) != std::ranges::end(removed))
+        {
+            //remove the entities from the entity list, but keep them alive at least until their command buffers are no longer in use
+            std::vector<decltype(entities)::value_type> removed_entities(std::make_move_iterator(std::ranges::begin(removed)), std::make_move_iterator(std::ranges::end(removed)));
+            entities.erase(std::ranges::begin(removed), std::ranges::end(removed));
+            engine->worker_pool->gpuResource(std::move(removed_entities));
+        }
     }
 }
 

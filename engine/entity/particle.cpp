@@ -7,13 +7,14 @@
 
 namespace lotus
 {
-    Particle::Particle(Engine* _engine, duration _lifetime) : RenderableEntity(_engine), lifetime(_lifetime), spawn_time(engine->getSimulationTime())
+    Particle::Particle(Engine* _engine, duration _lifetime, std::shared_ptr<Model> _model) : RenderableEntity(_engine), lifetime(_lifetime), spawn_time(engine->getSimulationTime())
     {
+        models.push_back(std::move(_model));
     }
 
-    Task<std::shared_ptr<Particle>> Particle::Init(Engine* engine, duration lifetime)
+    Task<std::shared_ptr<Particle>> Particle::Init(Engine* engine, duration lifetime, std::shared_ptr<Model> model)
     {
-        auto particle = std::make_shared<Particle>(engine, lifetime);
+        auto particle = std::make_shared<Particle>(engine, lifetime, model);
         co_await particle->Load();
         co_return std::move(particle);
     }

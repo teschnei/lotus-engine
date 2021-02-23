@@ -106,12 +106,12 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
+    hitValue.distance = gl_HitTEXT;
     if (gl_HitTEXT > light.light.landscape.max_fog)
     {
         hitValue.BRDF = vec3(1.0);
         hitValue.diffuse = light.light.landscape.fog_color.rgb;
         hitValue.depth = 10;
-        hitValue.distance = gl_HitTEXT;
         return;
     }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
@@ -207,5 +207,4 @@ void main()
     //also, for lambertian, this M_PI cancels out the one in BRDF, but i'll leave it uncanceled for when more complex BRDFs arrive
     hitValue.weight = M_PI;
     hitValue.normal = normalized_normal;
-    hitValue.distance = gl_HitTEXT;
 }

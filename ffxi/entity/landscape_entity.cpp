@@ -197,8 +197,12 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
 
     float a = 1.0;
     if (time1 != time2)
-        a = (float)((current_time - time1->first)) / (time2->first - time1->first);
-
+        if (time2->first > time1->first)
+            a = (current_time - time1->first) / (time2->first - time1->first);
+        else if (current_time > time1->first)
+            a = (current_time - time1->first) / ((1440 - time2->first) + time1->first);
+        else
+            a = ((1440 - time1->first) + current_time) / ((1440 - time2->first) + time1->first);
 
     auto& light = engine->lights->light;
     light.entity.specular_color = glm::vec4(1.f);
