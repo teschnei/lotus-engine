@@ -4,6 +4,7 @@
 #include <string>
 #include <glm/glm.hpp>
 #include "dat_chunk.h"
+#include "d3m.h"
 
 namespace FFXI
 {
@@ -20,6 +21,7 @@ namespace FFXI
 #pragma pack(push,2)
         struct GeneratorHeader
         {
+            //the bone to generate on is in here somewhere if flags2==0x80 and flags3=0x08
             uint16_t flags1;
             uint8_t flags2;
             uint8_t flags3;
@@ -78,10 +80,10 @@ namespace FFXI
         glm::vec2 gen_rot2{ 0 };
         float gen_height{ 0 };
         float gen_height_fluctuation{ 0 };
-        uint32_t rotations{ 0 };;
+        uint32_t rotations{ 0 };
 
         //addition to rot every generation
-        glm::vec3 gen_rot_add;
+        glm::vec3 gen_rot_add{ 0 };
 
         //keyframe animation
         std::string kf_x_pos;
@@ -103,5 +105,9 @@ namespace FFXI
 
         std::string kf_u;
         std::string kf_v;
+
+        std::vector<D3M::Vertex> ring_vertices;
+        std::vector<uint16_t> ring_indices;
+        std::shared_ptr<lotus::Model> ring;
     };
 }

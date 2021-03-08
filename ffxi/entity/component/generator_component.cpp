@@ -32,9 +32,22 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
 
     if (time > start_time + next_generation)
     {
-        auto model = lotus::Model::getModel(generator->id);
-        if (!model)
-            model = lotus::Model::getModel("rin ");
+        std::shared_ptr<lotus::Model> model;
+        if (generator->effect_type == 0x0B || generator->effect_type == 0x0E || generator->effect_type == 0x3D || generator->effect_type == 0x1D)
+        {
+            model = lotus::Model::getModel(generator->id);
+        }
+        else if (generator->effect_type == 0x24)
+        {
+            if (!generator->ring)
+            {
+                auto [new_model, model_task] = lotus::Model::LoadModel(std::string(generator->name, 4) + "_" + generator->id,
+                    FFXI::D3MLoader::LoadModelRing, engine, std::move(generator->ring_vertices), std::move(generator->ring_indices));
+                generator->ring = new_model;
+                co_await *model_task;
+            }
+            model = generator->ring;
+        }
         auto particle = co_await engine->game->scene->AddEntity<lotus::Particle>(std::chrono::milliseconds((long long)((long long)generator->lifetime * (1000 / 30.f))), model);
         auto pos = glm::vec3(0);
         pos.x = lotus::random::GetRandomNumber(generator->gen_radius, generator->gen_radius + generator->gen_radius_fluctuation);
@@ -46,7 +59,7 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
         particle->setPos(pos + entity->getPos());
         particle->setRot(generator->rot + gen_rot_add);
         gen_rot_add += generator->gen_rot_add;
-        particle->color = glm::vec4{ (generator->color & 0xFF) / 255.f, ((generator->color & 0xFF00) >> 8) / 255.0, ((generator->color & 0xFF0000) >> 16) / 255.0, ((generator->color & 0xFF000000) >> 24) / 255.0 };
+        particle->color = glm::vec4{ (generator->color & 0xFF) / 255.f, ((generator->color & 0xFF00) >> 8) / 255.0, ((generator->color & 0xFF0000) >> 16) / 255.0, ((generator->color & 0xFF000000) >> 24) / 128.0 };
         glm::vec3 movement_per_frame = glm::vec3(lotus::random::GetRandomNumber(generator->dpos.x, generator->dpos.x + generator->dpos_fluctuation.x),
             lotus::random::GetRandomNumber(generator->dpos.y, generator->dpos.y + generator->dpos_fluctuation.y),
             lotus::random::GetRandomNumber(generator->dpos.z, generator->dpos.z + generator->dpos_fluctuation.z));
@@ -61,6 +74,7 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
             float movement = 30.f / ((float)std::chrono::nanoseconds(1s).count() / std::chrono::duration_cast<std::chrono::nanoseconds>(delta).count());
             particle_pointer->setPos(particle_pointer->getPos() + (movement * movement_per_frame));
             particle_pointer->setRot(particle_pointer->getRotEuler() + (movement * rot_per_frame));
+            particle_pointer->setScale(particle_pointer->getScale() + (generator->scale_fluctuation + glm::vec3(generator->scale_all_fluctuation)) * movement);
 
             auto spawn_delta = current_time - particle_pointer->getSpawnTime();
 
@@ -197,6 +211,7 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
                     prev_key = key;
                     prev = value;
                 }
+                particle_pointer->color.a = glm::mix(prev, next, a);
             }
             if (!generator->kf_u.empty())
             {

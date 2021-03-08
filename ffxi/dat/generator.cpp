@@ -1,5 +1,7 @@
 #include "generator.h"
+#include "d3m.h"
 #include <cstring>
+#include <glm/gtc/constants.hpp>
 
 namespace FFXI
 {
@@ -201,7 +203,42 @@ namespace FFXI
                 data2 += 12;
                 break;
             case 0x3a:
+            {
+                //generate a mesh (ring?)
+                float* radii = (float*)(data2);
+                uint32_t* colours = (uint32_t*)(data2 + 16);
+                uint8_t segments = *(uint8_t*)(data2 + 32);
+                uint8_t circles = 2 + *(uint8_t*)(data2 + 33);
+
+                for (auto r = 0; r < circles; ++r)
+                {
+                    for (auto v = 0; v < segments; ++v)
+                    {
+                        D3M::Vertex vertex;
+                        vertex.pos = glm::vec3(std::cos((v * 2 * glm::pi<float>()) / segments) * radii[r], std::sin((v * 2 * glm::pi<float>()) / segments) * radii[r], 0.0);
+                        vertex.normal = glm::vec3(0.0, 0.0, 1.0);
+                        vertex.color = glm::vec4{ ((colours[r] & 0x0000FF)) / 255.0, ((colours[r] & 0x00FF00) >> 8) / 255.0, ((colours[r] & 0xFF0000) >> 16) / 255.0, ((colours[r] & 0xFF000000) >> 24) / 128.0 };
+                        vertex.uv = glm::vec2(0.0);
+                        ring_vertices.push_back(vertex);
+                    }
+                }
+                for (auto r = 0; r < circles - 1; ++r)
+                {
+                    uint16_t base = r * segments;
+                    for (auto v = 0; v < segments; ++v)
+                    {
+                        ring_indices.push_back(base + v);
+                        ring_indices.push_back(base + v + segments);
+                        ring_indices.push_back(base + (v + 1) % segments);
+
+                        ring_indices.push_back(base + v + segments);
+                        ring_indices.push_back(base + (v + 1) % segments);
+                        ring_indices.push_back(base + (v + 1) % segments + segments);
+                    }
+                }
+
                 data2 += 36;
+            }
                 break;
             case 0x3b:
                 gen_rot_add = *(glm::vec3*)(data2);

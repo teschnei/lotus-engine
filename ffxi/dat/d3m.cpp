@@ -1,5 +1,6 @@
 #include "d3m.h"
 
+#include <numeric>
 #include "engine/core.h"
 
 namespace FFXI
@@ -63,22 +64,23 @@ namespace FFXI
         auto vertices = (DatVertex*)(buffer + 0x1E);
         for (size_t i = 0; i < num_triangles * 3; ++i)
         {
-            glm::vec4 color{ (vertices[i].color & 0xFF) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 255.0 };
+            glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF)) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 128.0 };
             vertex_buffer.push_back({ vertices[i].pos, vertices[i].normal, color, vertices[i].uv });
         }
     }
 
-    lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
+    lotus::Task<> D3MLoader::LoadModelAABB(std::shared_ptr<lotus::Model> model, lotus::Engine* engine,
+        std::vector<D3M::Vertex>& vertices, std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture> texture)
     {
         if (!pipeline_flag.test_and_set())
         {
-            InitPipeline(engine);
+            co_await InitPipeline(engine);
             pipeline_latch.count_down();
         }
         pipeline_latch.wait();
         model->lifetime = lotus::Lifetime::Short;
-        std::vector<uint8_t> vertices(d3m->num_triangles * sizeof(D3M::Vertex) * 3);
-        memcpy(vertices.data(), d3m->vertex_buffer.data(), d3m->vertex_buffer.size() * sizeof(D3M::Vertex));
+        std::vector<uint8_t> vertices_uint8(vertices.size() * sizeof(D3M::Vertex));
+        memcpy(vertices_uint8.data(), vertices.data(), vertices.size() * sizeof(D3M::Vertex));
 
         vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
         vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
@@ -91,13 +93,61 @@ namespace FFXI
             aabbs_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
         }
 
+        auto mesh = std::make_unique<lotus::Mesh>(); 
+        mesh->has_transparency = true;
+
+        std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        if (!texture)
+            texture = blank_texture;
+        mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
+
+        mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices.size() * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->aabbs_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->setIndexCount(indices.size());
+        mesh->setVertexCount(vertices.size());
+        mesh->setMaxIndex(vertices.size() - 1);
+        mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
+        mesh->setVertexInputBindingDescription(getBindingDescriptions());
+        mesh->pipeline = pipeline;
+
+        model->meshes.push_back(std::move(mesh));
+
         //assume every particle billboards (since it's set per generator, not per model)
         float max_dist = 0;
-        for (const auto& vertex : d3m->vertex_buffer)
+        for (const auto& vertex : vertices)
         {
             auto len = glm::length(vertex.pos);
             if (len > max_dist)
                 max_dist = len;
+        }
+
+        co_await model->InitWorkAABB(engine, std::move(vertices_uint8), std::move(indices), sizeof(D3M::Vertex), max_dist);
+    }
+
+    lotus::Task<> D3MLoader::LoadModelTriangle(std::shared_ptr<lotus::Model> model, lotus::Engine* engine,
+        std::vector<D3M::Vertex>& vertices, std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture> texture)
+    {
+        if (!pipeline_flag.test_and_set())
+        {
+            co_await InitPipeline(engine);
+            pipeline_latch.count_down();
+        }
+        pipeline_latch.wait();
+        model->lifetime = lotus::Lifetime::Short;
+        std::vector<uint8_t> vertices_uint8(vertices.size() * sizeof(D3M::Vertex));
+        memcpy(vertices_uint8.data(), vertices.data(), vertices.size() * sizeof(D3M::Vertex));
+        std::vector<uint8_t> indices_uint8(indices.size() * sizeof(uint16_t));
+        memcpy(indices_uint8.data(), indices.data(), indices.size() * sizeof(uint16_t));
+
+        vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+        vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
+
+        if (engine->config->renderer.RaytraceEnabled())
+        {
+            vertex_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
+            index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress;
         }
 
         auto mesh = std::make_unique<lotus::Mesh>(); 
@@ -105,26 +155,42 @@ namespace FFXI
 
         std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
             vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        std::shared_ptr<lotus::Texture> texture = lotus::Texture::getTexture(d3m->texture_name);
-        if (!texture) texture = lotus::Texture::getTexture("default");
+        if (!texture)
+            texture = blank_texture;
         mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
 
-        mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(d3m->num_triangles * 3 * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->aabbs_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->setIndexCount(d3m->num_triangles * 3);
-        mesh->setVertexCount(d3m->num_triangles * 3);
-        mesh->setMaxIndex(mesh->getIndexCount() - 1);
+        mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices.size() * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->setIndexCount(indices.size());
+        mesh->setVertexCount(vertices.size());
+        mesh->setMaxIndex(vertices.size() - 1);
         mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
         mesh->setVertexInputBindingDescription(getBindingDescriptions());
         mesh->pipeline = pipeline;
 
         model->meshes.push_back(std::move(mesh));
 
-        co_await model->InitWork(engine, std::move(vertices), sizeof(D3M::Vertex), max_dist);
+        std::vector<std::vector<uint8_t>> vertices_vector{ std::move(vertices_uint8) };
+        std::vector<std::vector<uint8_t>> indices_vector{ std::move(indices_uint8) };
+
+        co_await model->InitWork(engine, std::move(vertices_vector), std::move(indices_vector), sizeof(D3M::Vertex));
     }
 
-    void D3MLoader::InitPipeline(lotus::Engine* engine)
+    lotus::Task<> D3MLoader::LoadModelRing(std::shared_ptr<lotus::Model> model, lotus::Engine* engine,
+        std::vector<D3M::Vertex>&& vertices, std::vector<uint16_t>&& indices)
+    {
+        co_await LoadModelTriangle(model, engine, vertices, indices, blank_texture);
+    }
+
+    lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
+    {
+        std::vector<uint16_t> index_buffer(d3m->vertex_buffer.size());
+        std::iota(index_buffer.begin(), index_buffer.end(), 0);
+
+        co_await LoadModelAABB(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name));
+    }
+
+    lotus::Task<> D3MLoader::InitPipeline(lotus::Engine* engine)
     {
         auto vertex_module = engine->renderer->getShader("shaders/d3m_gbuffer_vert.spv");
         auto fragment_module = engine->renderer->getShader("shaders/particle_blend.spv");
@@ -139,7 +205,7 @@ namespace FFXI
         frag_shader_stage_info.module = *fragment_module;
         frag_shader_stage_info.pName = "main";
 
-        std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
+        std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
 
         vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
@@ -164,7 +230,7 @@ namespace FFXI
         viewport.maxDepth = 1.0f;
 
         vk::Rect2D scissor;
-        scissor.offset = vk::Offset2D{0, 0};
+        scissor.offset = vk::Offset2D{ 0, 0 };
         scissor.extent = engine->renderer->swapchain->extent;
 
         vk::PipelineViewportStateCreateInfo viewport_state;
@@ -247,6 +313,47 @@ namespace FFXI
         pipeline_info.subpass = 1;
 
         pipeline = engine->renderer->createGraphicsPipeline(pipeline_info);
+
+        blank_texture = co_await lotus::Texture::LoadTexture("d3m_blank", BlankTextureLoader::LoadTexture, engine);
+    }
+
+    lotus::Task<> D3MLoader::BlankTextureLoader::LoadTexture(std::shared_ptr<lotus::Texture>& texture, lotus::Engine* engine)
+    {
+        texture->setWidth(1);
+        texture->setHeight(1);
+        std::vector<uint8_t> texture_data{ 255, 255, 255, 255 };
+
+        texture->image = engine->renderer->gpu->memory_manager->GetImage(texture->getWidth(), texture->getHeight(), vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.image = texture->image->image;
+        image_view_info.viewType = vk::ImageViewType::e2D;
+        image_view_info.format = vk::Format::eR8G8B8A8Unorm;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = 1;
+
+        texture->image_view = engine->renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
+
+        vk::SamplerCreateInfo sampler_info = {};
+        sampler_info.magFilter = vk::Filter::eLinear;
+        sampler_info.minFilter = vk::Filter::eLinear;
+        sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+        sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+        sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+        sampler_info.anisotropyEnable = true;
+        sampler_info.maxAnisotropy = 16;
+        sampler_info.borderColor = vk::BorderColor::eIntOpaqueBlack;
+        sampler_info.unnormalizedCoordinates = false;
+        sampler_info.compareEnable = false;
+        sampler_info.compareOp = vk::CompareOp::eAlways;
+        sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+
+        texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
+
+        co_await texture->Init(engine, std::move(texture_data));
     }
 }
 

@@ -54,13 +54,13 @@ namespace lotus
             }
         }
         engine->renderer->resources->BindResources(image_index);
-        if (engine->config->renderer.RaytraceEnabled())
-        {
-           co_await top_level_as[image_index]->Build(engine);
-        }
         for (auto& task : tasks)
         {
             co_await task;
+        }
+        if (engine->config->renderer.RaytraceEnabled())
+        {
+           co_await top_level_as[image_index]->Build(engine);
         }
     }
 

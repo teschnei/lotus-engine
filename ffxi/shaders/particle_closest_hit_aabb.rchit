@@ -63,7 +63,10 @@ layout(location = 1) rayPayloadEXT Shadow
     vec4 shadow;
 } shadow;
 
-hitAttributeEXT vec2 attribs;
+hitAttributeEXT block {
+    vec2 bary_coord;
+    uint primitive_id;
+} attribs;
 
 ivec3 getIndex(uint primitive_id)
 {
@@ -113,12 +116,12 @@ void main()
         hitValue.distance = gl_HitTEXT;
         return;
     }
-    ivec3 primitive_indices = getIndex(gl_PrimitiveID);
+    ivec3 primitive_indices = getIndex(attribs.primitive_id);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
     Vertex v2 = unpackVertex(primitive_indices.z);
 
-    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    const vec3 barycentrics = vec3(1.0 - attribs.bary_coord.x - attribs.bary_coord.y, attribs.bary_coord.x, attribs.bary_coord.y);
 
     vec3 normal = v0.norm * barycentrics.x + v1.norm * barycentrics.y + v2.norm * barycentrics.z;
     vec3 transformed_normal = mat3(gl_ObjectToWorldEXT) * normal;

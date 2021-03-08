@@ -55,6 +55,7 @@ namespace lotus
             FramebufferAttachment albedo;
             FramebufferAttachment light;
             FramebufferAttachment normal;
+            FramebufferAttachment particle;
             FramebufferAttachment light_post;
 
             vk::UniqueSampler sampler;

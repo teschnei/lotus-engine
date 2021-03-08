@@ -25,16 +25,15 @@ layout(push_constant) uniform PushConstant
 } push;
 
 void main() {
-    vec4 tex = texture(texSampler, fragTexCoord);
-    vec4 particle_color = mesh.mesh.colour;
-    float tex_a = (tex.r + tex.g + tex.b) * (1.0 / 3.0);
-    if (tex_a < 1.f/16.f)
-        discard;
-    float alpha = tex_a;
+    vec4 texture_colour = texture(texSampler, fragTexCoord);
+    vec4 mesh_colour = mesh.mesh.colour;
+    vec3 colour = fragColor.rgb * 3.75 * mesh_colour.rgb * texture_colour.rgb;
+    float alpha = fragColor.a * mesh_colour.a * texture_colour.a;
+
     float a = min(1.0, alpha) * 8.0 + 0.01;
     float b = -(1.0 - gl_FragCoord.z) * 0.95 + 1.0;
     float w = clamp(a * a * a * 1e8 * b * b * b, 1e-2, 3e2);
-    outAccumulation.rgb = tex.rgb * w;
+    outAccumulation.rgb = colour * w;
     outAccumulation.a = alpha * w;
     outRevealage = alpha;
 }

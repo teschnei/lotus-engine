@@ -61,7 +61,7 @@ namespace lotus
         WorkerTask<> InitWork(Engine* engine, std::vector<std::vector<uint8_t>>&& vertex_buffers, std::vector<std::vector<uint8_t>>&& index_buffers, uint32_t vertex_stride);
 
         [[nodiscard]]
-        WorkerTask<> InitWork(Engine* engine, std::vector<uint8_t>&& vertex_buffer, uint32_t vertex_stride, float aabb_dist);
+        WorkerTask<> InitWorkAABB(Engine* engine, std::vector<uint8_t>&& vertex_buffer, std::vector<uint16_t>&&, uint32_t vertex_stride, float aabb_dist);
 
         std::string name;
         std::vector<std::unique_ptr<Mesh>> meshes;

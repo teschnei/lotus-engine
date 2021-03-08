@@ -41,18 +41,15 @@ layout(location = 0) rayPayloadInEXT HitValue
     vec3 light;
 } hitValue;
 
-layout(location = 1) rayPayloadInEXT Shadow 
-{
-    vec4 light;
-    vec4 shadow;
-} shadow;
+hitAttributeEXT block {
+    vec2 bary_coord;
+    uint primitive_id;
+} attribs;
 
-hitAttributeEXT vec2 attribs;
-
-uvec3 getIndex(uint primitive_id)
+ivec3 getIndex(uint primitive_id)
 {
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].index_offset;
-    uvec3 ret;
+    ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
     {
@@ -66,9 +63,6 @@ uvec3 getIndex(uint primitive_id)
         ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
         ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
     }
-    ret.x = base_index;
-    ret.y = base_index+1;
-    ret.z = base_index+2;
     return ret;
 }
 
@@ -92,12 +86,12 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
-    uvec3 primitive_indices = getIndex(gl_PrimitiveID);
+    uvec3 primitive_indices = getIndex(attribs.primitive_id);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
     Vertex v2 = unpackVertex(primitive_indices.z);
 
-    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    const vec3 barycentrics = vec3(1.0 - attribs.bary_coord.x - attribs.bary_coord.y, attribs.bary_coord.x, attribs.bary_coord.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     vec4 mesh_colour = v0.colour * barycentrics.x + v1.colour * barycentrics.y + v2.colour * barycentrics.z;

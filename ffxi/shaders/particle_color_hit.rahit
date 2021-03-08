@@ -9,7 +9,7 @@ struct Vertex
 {
     vec3 pos;
     vec3 norm;
-    vec4 color;
+    vec4 colour;
     vec2 uv;
 };
 
@@ -41,15 +41,12 @@ layout(location = 0) rayPayloadInEXT HitValue
     vec3 light;
 } hitValue;
 
-hitAttributeEXT block {
-    vec2 bary_coord;
-    uint primitive_id;
-} attribs;
+hitAttributeEXT vec2 attribs;
 
-uvec3 getIndex(uint primitive_id)
+ivec3 getIndex(uint primitive_id)
 {
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].index_offset;
-    uvec3 ret;
+    ivec3 ret;
     uint base_index = primitive_id * 3;
     if (base_index % 2 == 0)
     {
@@ -63,9 +60,6 @@ uvec3 getIndex(uint primitive_id)
         ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
         ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
     }
-    ret.x = base_index;
-    ret.y = base_index+1;
-    ret.z = base_index+2;
     return ret;
 }
 
@@ -82,28 +76,30 @@ Vertex unpackVertex(uint index)
 
     v.pos = d0.xyz;
     v.norm = vec3(d0.w, d1.x, d1.y);
-    v.color = vec4(d1.z, d1.w, d2.x, d2.y);
+    v.colour = vec4(d1.z, d1.w, d2.x, d2.y);
     v.uv = vec2(d2.z, d2.w);
     return v;
 }
 
 void main()
 {
-    uvec3 primitive_indices = getIndex(attribs.primitive_id);
+    uvec3 primitive_indices = getIndex(gl_PrimitiveID);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
     Vertex v2 = unpackVertex(primitive_indices.z);
 
-    const vec3 barycentrics = vec3(1.0 - attribs.bary_coord.x - attribs.bary_coord.y, attribs.bary_coord.x, attribs.bary_coord.y);
+    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    vec4 mesh_color = v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z;
+    vec4 mesh_colour = v0.colour * barycentrics.x + v1.colour * barycentrics.y + v2.colour * barycentrics.z;
     uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
-    vec4 model_color = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].colour;
-    vec4 color = texture(textures[material_index], uv); /* * mesh_color * model_color; */
-    float a = (color.r + color.g + color.b) / 3.0;
+    vec4 model_colour = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].colour;
+    vec4 texture_colour = texture(textures[material_index], uv);
+    vec3 colour = texture_colour.rgb * mesh_colour.rgb * model_colour.rgb * 3.75;
+    float a = texture_colour.a * mesh_colour.a * model_colour.a;
+    colour *= a;
 
-    if (a < 1.f/16.f)
+    if (colour.r < .5f/16.f && colour.g < .5f/16.f && colour.b < .5/16.f)
     {
         ignoreIntersectionEXT;
     }

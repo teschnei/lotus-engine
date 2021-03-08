@@ -47,7 +47,10 @@ layout(location = 1) rayPayloadInEXT Shadow
     vec4 shadow;
 } shadow;
 
-hitAttributeEXT vec2 attribs;
+hitAttributeEXT block {
+    vec2 bary_coord;
+    uint primitive_id;
+} attribs;
 
 uvec3 getIndex(uint primitive_id)
 {
@@ -92,12 +95,12 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
-    uvec3 primitive_indices = getIndex(gl_PrimitiveID);
+    uvec3 primitive_indices = getIndex(attribs.primitive_id);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
     Vertex v2 = unpackVertex(primitive_indices.z);
 
-    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    const vec3 barycentrics = vec3(1.0 - attribs.bary_coord.x - attribs.bary_coord.y, attribs.bary_coord.x, attribs.bary_coord.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     vec4 mesh_colour = v0.colour * barycentrics.x + v1.colour * barycentrics.y + v2.colour * barycentrics.z;

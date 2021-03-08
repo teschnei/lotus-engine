@@ -1,6 +1,5 @@
 #include "model.h"
 
-#include <numeric>
 #include "engine/core.h"
 #include "engine/renderer/vulkan/renderer_raytrace_base.h"
 
@@ -20,7 +19,7 @@ namespace lotus
             std::vector<uint32_t> max_primitive_count;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
-            alloc_info.commandPool = *engine->renderer->graphics_pool;
+            alloc_info.commandPool = *engine->renderer->compute_pool;
             alloc_info.commandBufferCount = 1;
 
             auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -163,13 +162,13 @@ namespace lotus
             }
             command_buffer->end();
 
-            engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+            engine->worker_pool->command_buffers.compute.queue(*command_buffer);
             engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;
     }
 
-    WorkerTask<> Model::InitWork(Engine* engine, std::vector<uint8_t>&& vertex_buffer, uint32_t vertex_stride, float aabb_dist)
+    WorkerTask<> Model::InitWorkAABB(Engine* engine, std::vector<uint8_t>&& vertex_buffer, std::vector<uint16_t>&& indices, uint32_t vertex_stride, float aabb_dist)
     {
         if (!vertex_buffer.empty())
         {
@@ -178,7 +177,7 @@ namespace lotus
             std::vector<uint32_t> max_primitives;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
-            alloc_info.commandPool = *engine->renderer->graphics_pool;
+            alloc_info.commandPool = *engine->renderer->compute_pool;
             alloc_info.commandBufferCount = 1;
 
             auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -186,10 +185,7 @@ namespace lotus
             //assumes only 1 mesh
             auto& mesh = meshes[0];
 
-            auto index_buffer = std::vector<uint16_t>(mesh->getIndexCount());
-            std::iota(index_buffer.begin(), index_buffer.end(), 0);
-
-            vk::DeviceSize staging_buffer_size = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t)) + sizeof(vk::AabbPositionsKHR);
+            vk::DeviceSize staging_buffer_size = vertex_buffer.size() + (indices.size() * sizeof(uint16_t)) + sizeof(vk::AabbPositionsKHR);
 
             auto staging_buffer = engine->renderer->gpu->memory_manager->GetBuffer(staging_buffer_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* staging_buffer_data = static_cast<uint8_t*>(staging_buffer->map(0, staging_buffer_size, {}));
@@ -205,18 +201,18 @@ namespace lotus
             vk::AabbPositionsKHR aabbs_positions{ -aabb_dist, -aabb_dist, -aabb_dist, aabb_dist, aabb_dist, aabb_dist };
 
             memcpy(staging_buffer_data, vertex_buffer.data(), vertex_buffer.size());
-            memcpy(staging_buffer_data + vertex_buffer.size(), index_buffer.data(), index_buffer.size() * sizeof(uint16_t));
-            memcpy(staging_buffer_data + vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t)), &aabbs_positions, sizeof(vk::AabbPositionsKHR));
+            memcpy(staging_buffer_data + vertex_buffer.size(), indices.data(), indices.size() * sizeof(uint16_t));
+            memcpy(staging_buffer_data + vertex_buffer.size() + (indices.size() * sizeof(uint16_t)), &aabbs_positions, sizeof(vk::AabbPositionsKHR));
 
             vk::BufferCopy copy_region;
             copy_region.srcOffset = 0;
             copy_region.size = vertex_buffer.size();
             command_buffer->copyBuffer(staging_buffer->buffer, mesh->vertex_buffer->buffer, copy_region);
-            copy_region.size = index_buffer.size() * sizeof(uint16_t);
+            copy_region.size = indices.size() * sizeof(uint16_t);
             copy_region.srcOffset = vertex_buffer.size();
             command_buffer->copyBuffer(staging_buffer->buffer, mesh->index_buffer->buffer, copy_region);
             copy_region.size = sizeof(vk::AabbPositionsKHR);
-            copy_region.srcOffset = vertex_buffer.size() + (index_buffer.size() * sizeof(uint16_t));
+            copy_region.srcOffset = vertex_buffer.size() + (indices.size() * sizeof(uint16_t));
             command_buffer->copyBuffer(staging_buffer->buffer, mesh->aabbs_buffer->buffer, copy_region);
 
             if (engine->config->renderer.RaytraceEnabled())
@@ -226,8 +222,8 @@ namespace lotus
                     sizeof(vk::AabbPositionsKHR)
                     }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
 
-                raytrace_offset_info.emplace_back(1, 0);
-
+                //1 AABB
+                raytrace_offset_info.emplace_back(1, 0, 0);
                 max_primitives.emplace_back(1);
             }
 
@@ -244,7 +240,7 @@ namespace lotus
             }
             command_buffer->end();
 
-            engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+            engine->worker_pool->command_buffers.compute.queue(*command_buffer);
             engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;

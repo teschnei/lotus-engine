@@ -15,6 +15,6 @@ namespace lotus
         //x/y of mouse when mouselook started
         int look_x{ 0 };
         int look_y{ 0 };
-        glm::vec3 moving;
+        glm::vec3 moving{};
     };
 }

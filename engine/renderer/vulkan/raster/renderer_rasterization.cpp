@@ -430,7 +430,7 @@ namespace lotus
         vk::DescriptorSetLayoutBinding light_deferred_layout_binding;
         light_deferred_layout_binding.binding = 7;
         light_deferred_layout_binding.descriptorCount = 1;
-        light_deferred_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        light_deferred_layout_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         light_deferred_layout_binding.pImmutableSamplers = nullptr;
         light_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
@@ -978,7 +978,7 @@ namespace lotus
             descriptorWrites[7].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[7].dstBinding = 7;
             descriptorWrites[7].dstArrayElement = 0;
-            descriptorWrites[7].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[7].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[7].descriptorCount = 1;
             descriptorWrites[7].pBufferInfo = &light_buffer_info;
 

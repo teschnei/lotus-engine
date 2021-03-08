@@ -171,6 +171,7 @@ namespace lotus
 
             command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
                 {}, barrier, nullptr, nullptr);
+
             BuildAccelerationStructure(*command_buffer, instance_data_vec, instance_range_vec, update ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild);
             dirty = false;
         }

@@ -27,8 +27,8 @@ public:
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
 private:
     std::vector<std::shared_ptr<lotus::Model>> models;
-    FFXI::DatParser parser;
     FFXI::DatParser parser_system;
+    FFXI::DatParser parser;
     std::map<std::string, FFXI::Generator*> generators;
     std::map<std::string, FFXI::Scheduler*> schedulers;
     std::map<std::string, FFXI::Keyframe*> keyframes;

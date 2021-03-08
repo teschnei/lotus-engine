@@ -477,49 +477,49 @@ namespace lotus
         raytrace_output_binding_light.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
         vk::DescriptorSetLayoutBinding light_binding;
-        light_binding.binding = 4;
+        light_binding.binding = 5;
         light_binding.descriptorCount = 1;
         light_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         light_binding.pImmutableSamplers = nullptr;
         light_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR;
 
         vk::DescriptorSetLayoutBinding position_sample_layout_binding;
-        position_sample_layout_binding.binding = 5;
+        position_sample_layout_binding.binding = 6;
         position_sample_layout_binding.descriptorCount = 1;
         position_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         position_sample_layout_binding.pImmutableSamplers = nullptr;
         position_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
         vk::DescriptorSetLayoutBinding normal_sample_layout_binding;
-        normal_sample_layout_binding.binding = 6;
+        normal_sample_layout_binding.binding = 7;
         normal_sample_layout_binding.descriptorCount = 1;
         normal_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         normal_sample_layout_binding.pImmutableSamplers = nullptr;
         normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
         vk::DescriptorSetLayoutBinding face_normal_sample_layout_binding;
-        face_normal_sample_layout_binding.binding = 7;
+        face_normal_sample_layout_binding.binding = 8;
         face_normal_sample_layout_binding.descriptorCount = 1;
         face_normal_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         face_normal_sample_layout_binding.pImmutableSamplers = nullptr;
         face_normal_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
         vk::DescriptorSetLayoutBinding albedo_layout_binding;
-        albedo_layout_binding.binding = 8;
+        albedo_layout_binding.binding = 9;
         albedo_layout_binding.descriptorCount = 1;
         albedo_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         albedo_layout_binding.pImmutableSamplers = nullptr;
         albedo_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
         vk::DescriptorSetLayoutBinding material_index_sample_layout_binding;
-        material_index_sample_layout_binding.binding = 9;
+        material_index_sample_layout_binding.binding = 10;
         material_index_sample_layout_binding.descriptorCount = 1;
         material_index_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         material_index_sample_layout_binding.pImmutableSamplers = nullptr;
         material_index_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
         //vk::DescriptorSetLayoutBinding camera_layout_binding;
-        camera_layout_binding.binding = 10;
+        camera_layout_binding.binding = 11;
         camera_layout_binding.descriptorCount = 1;
         camera_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         camera_layout_binding.pImmutableSamplers = nullptr;
@@ -1574,7 +1574,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_light;
         write_info_light.descriptorCount = 1;
         write_info_light.descriptorType = vk::DescriptorType::eStorageBuffer;
-        write_info_light.dstBinding = 4;
+        write_info_light.dstBinding = 5;
         write_info_light.dstArrayElement = 0;
         write_info_light.pBufferInfo = &light_buffer_info;
 
@@ -1586,7 +1586,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_position;
         write_info_position.descriptorCount = 1;
         write_info_position.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_position.dstBinding = 5;
+        write_info_position.dstBinding = 6;
         write_info_position.dstArrayElement = 0;
         write_info_position.pImageInfo = &position_info;
 
@@ -1598,7 +1598,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_normal;
         write_info_normal.descriptorCount = 1;
         write_info_normal.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_normal.dstBinding = 6;
+        write_info_normal.dstBinding = 7;
         write_info_normal.dstArrayElement = 0;
         write_info_normal.pImageInfo = &normal_info;
 
@@ -1610,7 +1610,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_face_normal;
         write_info_face_normal.descriptorCount = 1;
         write_info_face_normal.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_face_normal.dstBinding = 7;
+        write_info_face_normal.dstBinding = 8;
         write_info_face_normal.dstArrayElement = 0;
         write_info_face_normal.pImageInfo = &face_normal_info;
 
@@ -1622,7 +1622,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_albedo;
         write_info_albedo.descriptorCount = 1;
         write_info_albedo.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_albedo.dstBinding = 8;
+        write_info_albedo.dstBinding = 9;
         write_info_albedo.dstArrayElement = 0;
         write_info_albedo.pImageInfo = &albedo_info;
 
@@ -1634,7 +1634,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_material_index;
         write_info_material_index.descriptorCount = 1;
         write_info_material_index.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_material_index.dstBinding = 9;
+        write_info_material_index.dstBinding = 10;
         write_info_material_index.dstArrayElement = 0;
         write_info_material_index.pImageInfo = &material_index_info;
 
@@ -1646,7 +1646,7 @@ namespace lotus
         vk::WriteDescriptorSet write_info_camera;
         write_info_camera.descriptorCount = 1;
         write_info_camera.descriptorType = vk::DescriptorType::eUniformBuffer;
-        write_info_camera.dstBinding = 10;
+        write_info_camera.dstBinding = 11;
         write_info_camera.dstArrayElement = 0;
         write_info_camera.pBufferInfo = &camera_buffer_info;
 

@@ -82,14 +82,17 @@ namespace lotus
 
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
     {
-        for (size_t i = 0; i < models.size(); ++i)
+        if (scale.x != 0 && scale.y != 0 && scale.z != 0)
         {
-            const auto& model = models[i];
-            if (model->bottom_level_as)
+            for (size_t i = 0; i < models.size(); ++i)
             {
-                //glm is column-major so we have to transpose the model matrix for Raytrace
-                auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), 4);
+                const auto& model = models[i];
+                if (model->bottom_level_as)
+                {
+                    //glm is column-major so we have to transpose the model matrix for Raytrace
+                    auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
+                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), billboard ? 6 : 4);
+                }
             }
         }
     }

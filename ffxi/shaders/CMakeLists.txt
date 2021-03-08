@@ -30,9 +30,12 @@ set(SHADERS
     mmb_shadow_vert.vert
     particle_blend.frag
     particle_closest_hit.rchit
+    particle_closest_hit_aabb.rchit
     particle_color_hit.rahit
+    particle_color_hit_aabb.rahit
     particle_intersection.rint
     particle_shadow_color_hit.rahit
+    particle_shadow_color_hit_aabb.rahit
     particle_shadow_vert.vert
     post_process.comp
     quad.vert
