@@ -130,8 +130,8 @@ void main()
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
     vec4 texture_colour = texture(textures[mesh.material_index], uv);
     vec4 model_colour = v0.colour * barycentrics.x + v1.colour * barycentrics.y + v2.colour * barycentrics.z;
-    vec3 colour = model_colour.rgb * 3.75 * mesh.colour.rgb * texture_colour.rgb;
-    float a = model_colour.a * mesh.colour.a * texture_colour.a;
+    vec3 colour = model_colour.rgb * mesh.colour.rgb * texture_colour.rgb * 4;
+    float a = model_colour.a * mesh.colour.a * texture_colour.a * 2;
     colour *= a;
 
     vec3 transformed_v0 = mat3(gl_ObjectToWorldEXT) * v0.pos;

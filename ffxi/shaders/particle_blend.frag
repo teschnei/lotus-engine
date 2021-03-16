@@ -27,8 +27,8 @@ layout(push_constant) uniform PushConstant
 void main() {
     vec4 texture_colour = texture(texSampler, fragTexCoord);
     vec4 mesh_colour = mesh.mesh.colour;
-    vec3 colour = fragColor.rgb * 3.75 * mesh_colour.rgb * texture_colour.rgb;
-    float alpha = fragColor.a * mesh_colour.a * texture_colour.a;
+    vec3 colour = fragColor.rgb *  mesh_colour.rgb * texture_colour.rgb * 4;
+    float alpha = fragColor.a * mesh_colour.a * texture_colour.a * 2;
 
     float a = min(1.0, alpha) * 8.0 + 0.01;
     float b = -(1.0 - gl_FragCoord.z) * 0.95 + 1.0;

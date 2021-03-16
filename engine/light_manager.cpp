@@ -53,6 +53,7 @@ namespace lotus
 
     void LightManager::UpdateLight(LightID lid, Light light)
     {
+        light.id = lid;
         //TODO: multiple updates don't need to take the mutex, just for add/remove
         std::shared_lock lock{ light_buffer_mutex };
         auto l = std::ranges::find(lights, lid, &Light::id);

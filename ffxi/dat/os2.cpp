@@ -88,7 +88,7 @@ FFXI::OS2::OS2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _bu
         uint16_t cmd = *(uint16_t*)(draw_cmds);
         draw_cmds += sizeof(uint16_t);
 
-        //these probably map pretty well to opengl cmds (maybe even vulkan commands) but we need a flat VB anyways for Raytrace
+        //these probably map pretty well to opengl cmds (maybe even vulkan commands) but we need a flat VB anyways for acceleration structures
         switch (cmd)
         {
             //draw state

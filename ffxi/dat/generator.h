@@ -21,8 +21,8 @@ namespace FFXI
 #pragma pack(push,2)
         struct GeneratorHeader
         {
-            //the bone to generate on is in here somewhere if flags2==0x80 and flags3=0x08
-            uint16_t flags1;
+            uint8_t flags1;
+            uint8_t bone_point;
             uint8_t flags2;
             uint8_t flags3;
             uint32_t unknown1[3];

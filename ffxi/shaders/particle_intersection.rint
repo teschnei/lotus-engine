@@ -144,7 +144,8 @@ void main()
         {
             attribs.bary_coord = vec2(u, v);
             attribs.primitive_id = i / 3;
-            reportIntersectionEXT(t, 0u);
+            if (reportIntersectionEXT(t, 0u))
+                return;
         }
     }
 }

@@ -261,6 +261,7 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
 lotus::Task<> FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
 {
     current_time = std::chrono::duration_cast<FFXITime::milliseconds>((FFXITime::vana_time() % FFXITime::days(1))).count() / 60000.f;
+    current_time = 600;
 
     co_return;
 }

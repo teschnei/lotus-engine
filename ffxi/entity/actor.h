@@ -4,9 +4,9 @@
 #include <atomic>
 #include "engine/entity/deformable_entity.h"
 #include "engine/task.h"
+#include "dat/sk2.h"
 
 namespace FFXI {
-    class SK2;
     class OS2;
 }
 
@@ -18,6 +18,7 @@ public:
     static lotus::Task<std::shared_ptr<Actor>> Init(lotus::Engine* engine, const std::filesystem::path& dat);
 
     float speed{ 4.f };
+    std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> generator_points;
 private:
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
 };

@@ -66,9 +66,6 @@ uvec3 getIndex(uint primitive_id)
         ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
         ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
     }
-    ret.x = base_index;
-    ret.y = base_index+1;
-    ret.z = base_index+2;
     return ret;
 }
 
@@ -104,11 +101,11 @@ void main()
     uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     vec4 model_colour = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].colour;
     vec4 texture_colour = texture(textures[material_index], uv);
-    vec3 colour = texture_colour.rgb * mesh_colour.rgb * model_colour.rgb * 3.75;
-    float a = texture_colour.a * mesh_colour.a * model_colour.a;
+    vec3 colour = texture_colour.rgb * mesh_colour.rgb * model_colour.rgb * 4;
+    float a = texture_colour.a * mesh_colour.a * model_colour.a * 2;
     colour *= a;
 
-    if (colour.r < .5f/16.f && colour.g < .5f/16.f && colour.b < .5/16.f)
+    //if (colour.r < 1.f/256.f && colour.g < 1.f/256.f && colour.b < 1.f/256.f)
     {
         ignoreIntersectionEXT;
     }

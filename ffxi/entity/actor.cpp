@@ -77,6 +77,7 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
             {
                 skel->addBone(bone.parent_index, bone.rot, bone.trans);
             }
+            std::ranges::copy(sk2->generator_points, generator_points.begin());
         }
         else if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
         {

@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
+#include <array>
 
 namespace FFXI
 {
@@ -18,9 +19,20 @@ namespace FFXI
             glm::quat rot;
             glm::vec3 trans;
         };
+
+        struct GeneratorPoint
+        {
+            uint8_t bone_index;
+            uint8_t _pad;
+            float unknown[3];
+            glm::vec3 offset;
+        };
 #pragma pack(pop)
+
+        static constexpr size_t GeneratorPointMax = 120;
 
         SK2(char* _name, uint8_t* _buffer, size_t _len);
         std::vector<Bone> bones;
+        std::array<GeneratorPoint, GeneratorPointMax> generator_points;
     };
 }

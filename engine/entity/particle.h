@@ -23,6 +23,10 @@ namespace lotus
 
         uint64_t resource_index{ 0 };
 
+        glm::vec3 base_pos{};
+        glm::vec3 base_rot{};
+        glm::vec3 base_scale{};
+
     protected:
         WorkerTask<> Load();
         WorkerTask<> InitWork();
