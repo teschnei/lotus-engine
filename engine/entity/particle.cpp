@@ -49,15 +49,17 @@ namespace lotus
         }
         else
         {
-            entity_rot_mat = glm::transpose(glm::eulerAngleXYZ(rot_euler.x, rot_euler.y, rot_euler.z));
-            auto camera_mat = glm::mat4(glm::transpose(glm::mat3(engine->camera->getViewMatrix())));
-            if (!billboard)
+            if (billboard != Billboard::None)
             {
-                //non-billboard particles still billboard, but just on the y-axis only
-                camera_mat[1] = glm::vec4(0, 1, 0, 0);
-                camera_mat[2].y = 0;
+                entity_rot_mat = glm::eulerAngleXYZ(rot_euler.x, rot_euler.y, rot_euler.z);
+                auto camera_mat = glm::mat4(glm::transpose(glm::mat3(engine->camera->getViewMatrix())));
+                if (billboard == Billboard::Y)
+                {
+                    camera_mat[1] = glm::vec4(0, 1, 0, 0);
+                    camera_mat[2].y = 0;
+                }
+                rot_mat = camera_mat * entity_rot_mat;
             }
-            rot_mat = camera_mat * entity_rot_mat;
             co_await RenderableEntity::tick(time, delta);
         }
         co_return;
@@ -91,7 +93,8 @@ namespace lotus
                 {
                     //glm is column-major so we have to transpose the model matrix for Raytrace
                     auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), billboard ? 6 : 4);
+                    //engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), billboard ? 6 : 4);
+                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), 4 );
                 }
             }
         }

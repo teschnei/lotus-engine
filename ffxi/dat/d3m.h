@@ -25,10 +25,21 @@ namespace FFXI
         std::vector<Vertex> vertex_buffer;
     };
 
+    class D3A : public DatChunk
+    {
+    public:
+        D3A(char* name, uint8_t* buffer, size_t len);
+
+        std::string texture_name;
+        uint16_t num_triangles{ 0 };
+        std::vector<D3M::Vertex> vertex_buffer;
+    };
+
     class D3MLoader
     {
     public:
-        static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine*, D3M* d3m);
+        static lotus::Task<> LoadD3M(std::shared_ptr<lotus::Model>, lotus::Engine*, D3M* d3m);
+        static lotus::Task<> LoadD3A(std::shared_ptr<lotus::Model>, lotus::Engine*, D3A* d3a);
         static lotus::Task<> LoadModelRing(std::shared_ptr<lotus::Model>, lotus::Engine*, std::vector<D3M::Vertex>&& vertices,
             std::vector<uint16_t>&& indices);
     private:

@@ -10,16 +10,6 @@ namespace lotus
     {
         skeleton_bone_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer->getImageCount(),
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        //TODO: remove me
-        playAnimation("idl0");
-        for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
-        {
-            auto& bone = skeleton->bones[i];
-            bone.rot = skeleton->animations["idl0"]->transforms[0][i].rot;
-            bone.trans = skeleton->animations["idl0"]->transforms[0][i].trans;
-            bone.scale = skeleton->animations["idl0"]->transforms[0][i].scale;
-        }
     }
 
     Task<> AnimationComponent::tick(time_point time, duration delta)
@@ -124,10 +114,27 @@ namespace lotus
         changeAnimation(name, speed);
     }
 
-    void AnimationComponent::playAnimationLoop(std::string name, float speed)
+    void AnimationComponent::playAnimation(std::string name, duration anim_duration, std::optional<std::string> _next_anim)
+    {
+        auto& animation = skeleton->animations[name];
+        auto total_duration = animation->frame_duration * (animation->transforms.size() - 1);
+        auto speed = (float)total_duration.count() / anim_duration.count();
+        playAnimation(name, speed, _next_anim);
+    }
+
+    void AnimationComponent::playAnimationLoop(std::string name, float speed, uint8_t _repetitions)
     {
         loop = true;
+        repetitions = _repetitions;
         changeAnimation(name, speed);
+    }
+
+    void AnimationComponent::playAnimationLoop(std::string name, duration anim_duration, uint8_t _repetitions)
+    {
+        auto& animation = skeleton->animations[name];
+        auto total_duration = animation->frame_duration * (animation->transforms.size() - 1);
+        auto speed = (float)total_duration.count() / anim_duration.count();
+        playAnimationLoop(name, speed, _repetitions);
     }
 
     void AnimationComponent::changeAnimation(std::string name, float speed)

@@ -1,7 +1,6 @@
 #include "entity.h"
 #include <ranges>
 #include <glm/gtx/euler_angles.hpp>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
@@ -17,7 +16,7 @@ namespace lotus
         std::ranges::transform(components, components_p.begin(), [](auto& c) { return c.get(); });
         for (auto component : components_p)
         {
-            co_await component->tick(time, delta);
+            co_await component->tick_all(time, delta);
         }
         components.erase(std::remove_if(components.begin(), components.end(), [](auto& component)
         {
@@ -30,7 +29,7 @@ namespace lotus
     {
         for (auto& component : components)
         {
-            co_await component->render(engine, sp);
+            co_await component->render_all(engine, sp);
         }
         co_await render(engine, sp);
     }
@@ -50,7 +49,7 @@ namespace lotus
     void Entity::setRot(glm::vec3 rot)
     {
         rot_euler = rot;
-        this->rot_mat = glm::eulerAngleXYZ(rot.x, rot.z, rot.y);
+        this->rot_mat = glm::eulerAngleXZY(rot.x, rot.z, rot.y);
     }
 
     glm::vec3 Entity::getPos()

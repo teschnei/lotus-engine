@@ -2,8 +2,8 @@
 
 #include <charconv>
 
-#include "engine/core.h"
-#include "ffxi/dat/dat_parser.h"
+#include "ffxi.h"
+#include "ffxi/dat/dat.h"
 #include "ffxi/dat/dxt3.h"
 #include "ffxi/dat/mmb.h"
 #include "ffxi/dat/mzb.h"
@@ -17,9 +17,9 @@ lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotu
     co_return std::move(entity);
 }
 
-lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
+lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& path)
 {
-    FFXI::DatParser parser{dat, engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Raytrace};
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path);
 
     FFXI::MZB* mzb{ nullptr };
     std::map<std::string, uint32_t> model_map;
@@ -27,7 +27,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& dat)
     std::vector<lotus::Task<>> model_tasks;
 
     FFXI::DatChunk* model = nullptr;
-    for (const auto& chunk : parser.root->children)
+    for (const auto& chunk : dat.root->children)
     {
         if (memcmp(chunk->name, "mode", 4) == 0)
         {

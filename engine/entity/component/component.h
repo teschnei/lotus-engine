@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <vector>
 #include "engine/types.h"
 #include "engine/task.h"
 
@@ -16,13 +17,43 @@ namespace lotus {
         Component& operator=(const Component&) = delete;
         Component& operator=(Component&&) = default;
         virtual ~Component() = default;
+
         Task<> init() { co_return; }
+        Task<> tick_all(time_point time, duration delta);
+        Task<> render_all(Engine* engine, std::shared_ptr<Entity>& sp);
+        bool removed() { return remove; }
+
+        template<typename T, typename... Args>
+        Task<T*> addComponent(Args&&... args)
+        {
+            auto component = std::make_unique<T>(entity, engine, std::forward<Args>(args)...);
+            co_await component->init();
+            auto comp_ptr = component.get();
+            components.push_back(std::move(component));
+            co_return comp_ptr;
+        };
+
+        template<typename T>
+        T* getComponent()
+        {
+            for (const auto& component : components)
+            {
+                if (auto cast = dynamic_cast<T*>(component.get()))
+                {
+                    return cast;
+                }
+            }
+            return nullptr;
+        }
+    protected:
         virtual Task<> tick(time_point time, duration delta) { co_return; };
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) { co_return; };
-        bool removed() { return remove; }
-    protected:
+
         Entity* entity;
         Engine* engine;
         bool remove{ false };
+        bool componentsEmpty() { return components.empty(); }
+    private:
+        std::vector<std::unique_ptr<Component>> components;
     };
 }

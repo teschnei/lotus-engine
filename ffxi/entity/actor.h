@@ -5,6 +5,8 @@
 #include "engine/entity/deformable_entity.h"
 #include "engine/task.h"
 #include "dat/sk2.h"
+#include "dat/scheduler.h"
+#include "dat/generator.h"
 
 namespace FFXI {
     class OS2;
@@ -18,7 +20,9 @@ public:
     static lotus::Task<std::shared_ptr<Actor>> Init(lotus::Engine* engine, const std::filesystem::path& dat);
 
     float speed{ 4.f };
-    std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> generator_points;
+    std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> generator_points{};
+    std::map<std::string, FFXI::Scheduler*> scheduler_map;
+    std::map<std::string, FFXI::Generator*> generator_map;
 private:
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
 };

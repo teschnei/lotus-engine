@@ -7,6 +7,7 @@
 
 namespace FFXI
 {
+    class DatLoader;
     struct WeatherData
     {
         float unk[3]; //always 0?
@@ -50,16 +51,19 @@ namespace FFXI
     };
 
 
-    class DatParser
+    class Dat
     {
     public:
-        DatParser(const std::filesystem::path& filepath, bool rtx);
-        DatParser();
+        Dat(const Dat&) = delete;
+        Dat(Dat&&) = default;
+        Dat& operator=(const Dat&) = delete;
+        Dat& operator=(Dat&&) = default;
 
         std::unique_ptr<DatChunk> root;
 
     private:
-        bool rtx{ false };
+        friend class DatLoader;
+        Dat(const std::filesystem::path& filepath);
         std::vector<uint8_t> buffer;
     };
 }

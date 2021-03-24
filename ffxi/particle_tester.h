@@ -3,8 +3,9 @@
 #include <memory>
 #include "engine/entity/renderable_entity.h"
 #include "engine/renderer/model.h"
-#include "dat/dat_parser.h"
+#include "dat/dat.h"
 #include "engine/entity/component/input_component.h"
+#include "scheduler_resources.h"
 
 namespace lotus
 {
@@ -18,6 +19,8 @@ namespace FFXI
     class Scheduler;
 }
 
+class SchedulerComponent;
+
 class ParticleTester : public lotus::InputComponent
 {
 public:
@@ -27,12 +30,11 @@ public:
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
 private:
     std::vector<std::shared_ptr<lotus::Model>> models;
-    FFXI::DatParser parser_system;
-    FFXI::DatParser parser;
-    std::map<std::string, FFXI::Generator*> generators;
-    std::map<std::string, FFXI::Scheduler*> schedulers;
-    std::map<std::string, FFXI::Keyframe*> keyframes;
+    std::unique_ptr<SchedulerResources> scheduler_resources;
     std::unordered_map<std::string, std::shared_ptr<lotus::Texture>> texture_map;
-    lotus::Task<> ParseDir(FFXI::DatChunk*);
     bool add{ false };
+    bool casting{ false };
+    bool finished{ false };
+    SchedulerComponent* casting_scheduler{ nullptr };
+    lotus::time_point start_time;
 };

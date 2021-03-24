@@ -24,7 +24,7 @@ struct Element
 
 FFXI::MO2::MO2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
 {
-    name = std::string(_name, 4);
+    name = std::string(_name, 3);
     Animation* header = reinterpret_cast<Animation*>(buffer);
     Element* elements = reinterpret_cast<Element*>(header + 1);
     float* data = reinterpret_cast<float*>(elements);

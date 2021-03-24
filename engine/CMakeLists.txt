@@ -30,6 +30,8 @@ target_compile_options(engine PUBLIC $<$<PLATFORM_ID:Linux>:-fcoroutines>)
 target_link_libraries(engine $<$<PLATFORM_ID:Linux>:-ldl>)
 target_link_libraries(engine Vulkan::Vulkan SDL::SDL2 GLM::GLM)
 
+add_compile_definitions(GLM_FORCE_LEFT_HANDED)
+
 add_subdirectory(entity)
 add_subdirectory(renderer)
 add_subdirectory(ui)

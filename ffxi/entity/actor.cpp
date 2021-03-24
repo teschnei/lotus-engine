@@ -1,12 +1,13 @@
 #include "actor.h"
 
 #include <ranges>
-#include "engine/core.h"
-#include "dat/dat_parser.h"
+#include "ffxi.h"
+#include "dat/dat_loader.h"
 #include "dat/os2.h"
 #include "dat/sk2.h"
 #include "dat/dxt3.h"
 #include "dat/mo2.h"
+#include "engine/entity/component/animation_component.h"
 
 std::vector<vk::VertexInputBindingDescription> getBindingDescriptions()
 {
@@ -52,16 +53,16 @@ lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, const std
     co_return std::move(actor);
 }
 
-lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
+lotus::WorkerTask<> Actor::Load(const std::filesystem::path& path)
 {
-    FFXI::DatParser parser{ dat, engine->config->renderer.RaytraceEnabled() };
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path);
 
     auto skel = std::make_unique<lotus::Skeleton>();
     FFXI::SK2* pSk2{ nullptr };
     std::vector<FFXI::OS2*> os2s;
     std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
 
-    for (const auto& chunk : parser.root->children)
+    for (const auto& chunk : dat.root->children)
     {
         if (auto dxt3 = dynamic_cast<FFXI::DXT3*>(chunk.get()))
         {
@@ -106,6 +107,14 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
         {
             os2s.push_back(os2);
         }
+        else if (auto scheduler = dynamic_cast<FFXI::Scheduler*>(chunk.get()))
+        {
+            scheduler_map.insert({ std::string(chunk->name, 4), scheduler });
+        }
+        else if (auto generator = dynamic_cast<FFXI::Generator*>(chunk.get()))
+        {
+            generator_map.insert({ std::string(chunk->name, 4), generator });
+        }
     }
 
     co_await addSkeleton(std::move(skel));
@@ -121,6 +130,7 @@ lotus::WorkerTask<> Actor::Load(const std::filesystem::path& dat)
     }
     if (model_task) co_await *model_task;
     co_await init_task;
+    animation_component->playAnimation("idl");
 }
 
 lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, const std::vector<FFXI::OS2*>& os2s, FFXI::SK2* sk2)

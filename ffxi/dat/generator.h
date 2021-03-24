@@ -47,6 +47,7 @@ namespace FFXI
         GeneratorHeader* header{ nullptr };
         std::string id;
         uint16_t billboard{ 0 };
+        uint16_t pos_flags{ 0 };
         glm::vec3 pos{ 0 };
         uint8_t effect_type{ 0 };
         uint16_t lifetime{ 0 };
@@ -60,7 +61,7 @@ namespace FFXI
 
         //initial rotation
         glm::vec3 rot{ 0 };
-        glm::vec3 rot_fluctutation{ 0 };
+        glm::vec3 rot_fluctuation{ 0 };
 
         //rotation per frame
         glm::vec3 drot{ 0 };
@@ -71,12 +72,20 @@ namespace FFXI
         glm::vec3 scale_fluctuation{ 0 };
         float scale_all_fluctuation{ 0 };
 
+        //scale per frame
+        glm::vec3 dscale{ 0 };
+        glm::vec3 dscale_fluctuation{ 0 };
+
+        //generation sphere
+        float gen_radius_sphere{ 0 };
+        float gen_radius_sphere_fluctuation{ 0 };
+
         uint32_t color{ 0 };
 
-        //generation
+        //generation cylinder
         float gen_radius{ 0 };
         float gen_radius_fluctuation{ 0 };
-        glm::vec3 gen_rot{ 0 };
+        glm::vec3 gen_multi{ 0 };
         glm::vec2 gen_rot2{ 0 };
         float gen_height{ 0 };
         float gen_height_fluctuation{ 0 };
@@ -109,5 +118,6 @@ namespace FFXI
         std::vector<D3M::Vertex> ring_vertices;
         std::vector<uint16_t> ring_indices;
         std::shared_ptr<lotus::Model> ring;
+        std::string sub_generator;
     };
 }

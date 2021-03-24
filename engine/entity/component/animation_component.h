@@ -29,7 +29,9 @@ namespace lotus
         virtual Task<> tick(time_point time, duration delta) override;
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
         void playAnimation(std::string name, float speed = 1.f, std::optional<std::string> next_anim = {});
-        void playAnimationLoop(std::string name, float speed = 1.f );
+        void playAnimation(std::string name, duration anim_duration, std::optional<std::string> next_anim = {});
+        void playAnimationLoop(std::string name, float speed = 1.f, uint8_t repetitions = 0);
+        void playAnimationLoop(std::string name, duration anim_duration, uint8_t repetitions = 0);
 
         //acceleration structures (per model)
         std::vector<ModelTransformedGeometry> transformed_geometries;
@@ -56,5 +58,6 @@ namespace lotus
         std::vector<Skeleton::Bone> bones_interpolate;
         float anim_speed{ 1.f };
         bool loop{ true };
+        uint8_t repetitions{ 0 };
     };
 }

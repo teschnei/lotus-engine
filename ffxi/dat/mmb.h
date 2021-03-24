@@ -30,7 +30,7 @@ namespace FFXI
             std::vector<uint16_t> indices;
             vk::PrimitiveTopology topology;
         };
-        MMB(char* _name, uint8_t* _buffer, size_t _len, bool offset_vertices);
+        MMB(char* _name, uint8_t* _buffer, size_t _len);
 
         static bool DecodeMMB(uint8_t* buffer, size_t max_len);
 

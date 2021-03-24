@@ -12,7 +12,17 @@ namespace lotus
         static Task<std::shared_ptr<Particle>> Init(Engine* engine, duration lifetime, std::shared_ptr<Model> model);
         virtual ~Particle() = default;
 
-        bool billboard{ false };
+        class Billboard
+        {
+        public:
+            static constexpr uint8_t None = 0;
+            static constexpr uint8_t X = 1;
+            static constexpr uint8_t Y = 2;
+            static constexpr uint8_t Z = 4;
+            static constexpr uint8_t All = 7;
+        };
+
+        uint8_t billboard{ 0 };
         glm::vec4 color{ 1.f };
 
         duration getLifetime() { return lifetime; }

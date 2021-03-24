@@ -1,4 +1,4 @@
-#include "dat_parser.h"
+#include "dat.h"
 #include "mzb.h"
 #include "mmb.h"
 #include "os2.h"
@@ -28,12 +28,7 @@ namespace FFXI
     } DATHEAD;
 #pragma pack(pop)
 
-    DatParser::DatParser()
-    {
-
-    }
-
-    DatParser::DatParser(const std::filesystem::path& filepath, bool _rtx) : rtx(_rtx)
+    Dat::Dat(const std::filesystem::path& filepath)
     {
         std::ifstream dat{ filepath, std::ios::ate | std::ios::binary };
 
@@ -329,7 +324,7 @@ namespace FFXI
             case 0x21:
                 current_chunk->d3a++;
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<D3A>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }
@@ -434,7 +429,7 @@ namespace FFXI
                 current_chunk->mmb++;
                 if (MMB::DecodeMMB(&buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD)))
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<MMB>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD), rtx);
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<MMB>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }

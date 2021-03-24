@@ -33,7 +33,6 @@ namespace lotus
         near_clip = _near_clip;
         far_clip = _far_clip;
         camera_data.proj = glm::perspective(radians, aspect, near_clip, far_clip);
-        camera_data.proj[1][1] *= -1;
         camera_data.proj_inverse = glm::inverse(camera_data.proj);
 
         auto tangent = glm::tan(radians * 0.5);
@@ -48,7 +47,7 @@ namespace lotus
     void Camera::setPos(glm::vec3 pos)
     {
         Entity::setPos(pos);
-        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, 1.f, 0.f));
         camera_data.view_inverse = glm::inverse(camera_data.view);
         camera_data.eye_pos = glm::vec4(pos, 0.0);
         update = true;
@@ -57,8 +56,8 @@ namespace lotus
     void Camera::move(float forward_offset, float right_offset)
     {
         pos += forward_offset * camera_rot;
-        pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, -1.f, 0.f)));
-        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, 1.f, 0.f)));
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, 1.f, 0.f));
         camera_data.view_inverse = glm::inverse(camera_data.view);
         camera_data.eye_pos = glm::vec4(pos, 0.0);
         update = true;
@@ -75,7 +74,7 @@ namespace lotus
         camera_rot.y = sin(rot_x);
         camera_rot = glm::normalize(camera_rot);
 
-        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, 1.f, 0.f));
         camera_data.view_inverse = glm::inverse(camera_data.view);
         update = true;
     }

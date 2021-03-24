@@ -2,9 +2,11 @@ target_sources(ffxi
     PRIVATE
     d3m.cpp
     d3m.h
+    dat.cpp
+    dat.h
     dat_chunk.h
-    dat_parser.cpp
-    dat_parser.h
+    dat_loader.cpp
+    dat_loader.h
     dxt3.cpp
     dxt3.h
     generator.cpp

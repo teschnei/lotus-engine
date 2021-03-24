@@ -5,10 +5,17 @@
 
 namespace FFXI
 {
-    struct DatVertex
+    struct DatVertexD3M
     {
         glm::vec3 pos;
         glm::vec3 normal;
+        uint32_t color;
+        glm::vec2 uv;
+    };
+
+    struct DatVertexD3A
+    {
+        glm::vec3 pos;
         uint32_t color;
         glm::vec2 uv;
     };
@@ -61,11 +68,24 @@ namespace FFXI
         //numtri2 buffer + 0x0A
         //numtri3 buffer + 0x0C
         texture_name = std::string((char*)buffer + 0x0E, 16);
-        auto vertices = (DatVertex*)(buffer + 0x1E);
+        auto vertices = (DatVertexD3M*)(buffer + 0x1E);
         for (size_t i = 0; i < num_triangles * 3; ++i)
         {
             glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF)) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 128.0 };
             vertex_buffer.push_back({ vertices[i].pos, vertices[i].normal, color, vertices[i].uv });
+        }
+    }
+
+    D3A::D3A(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
+    {
+        num_triangles = *(uint16_t*)(buffer + 0x02);
+        //not sure what the other values are? num_triangles seems to be repeated at 0x05 and 0x06, and 0x07 is 1?
+        texture_name = std::string((char*)buffer + 0x08, 16);
+        auto vertices = (DatVertexD3A*)(buffer + 0x1C);
+        for (size_t i = 0; i < num_triangles * 3; ++i)
+        {
+            glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF)) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 128.0 };
+            vertex_buffer.push_back({ vertices[i].pos, glm::vec3(0.f,0.f,1.f), color, vertices[i].uv });
         }
     }
 
@@ -182,12 +202,22 @@ namespace FFXI
         co_await LoadModelTriangle(model, engine, vertices, indices, blank_texture);
     }
 
-    lotus::Task<> D3MLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
+    lotus::Task<> D3MLoader::LoadD3M(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
     {
         std::vector<uint16_t> index_buffer(d3m->vertex_buffer.size());
         std::iota(index_buffer.begin(), index_buffer.end(), 0);
 
-        co_await LoadModelAABB(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name));
+        //co_await LoadModelAABB(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name));
+        co_await LoadModelTriangle(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name));
+    }
+
+    lotus::Task<> D3MLoader::LoadD3A(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3A* d3a)
+    {
+        std::vector<uint16_t> index_buffer(d3a->vertex_buffer.size());
+        std::iota(index_buffer.begin(), index_buffer.end(), 0);
+
+        //co_await LoadModelAABB(model, engine, d3a->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3a->texture_name));
+        co_await LoadModelTriangle(model, engine, d3a->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3a->texture_name));
     }
 
     lotus::Task<> D3MLoader::InitPipeline(lotus::Engine* engine)

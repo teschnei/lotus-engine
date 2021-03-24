@@ -17,14 +17,14 @@ lotus::Task<> ThirdPersonEntityFFXIVInputComponent::tick(lotus::time_point time,
     {
         if (deformable)
         {
-            deformable->animation_component->playAnimationLoop("run0");
+            deformable->animation_component->playAnimationLoop("run");
         }
     }
     else if (moving_prev && !now_moving)
     {
         if (deformable)
         {
-            deformable->animation_component->playAnimationLoop("idl0");
+            deformable->animation_component->playAnimationLoop("idl");
         }
     }
     moving_prev = now_moving;

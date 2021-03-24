@@ -62,14 +62,14 @@ lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, 
         float speed = static_cast<Actor*>(entity)->speed / 6.f;
         if (deformable)
         {
-            deformable->animation_component->playAnimationLoop("run0", speed);
+            deformable->animation_component->playAnimationLoop("run", speed);
         }
     }
     else if (moving_prev && !now_moving)
     {
         if (deformable)
         {
-            deformable->animation_component->playAnimationLoop("idl0");
+            deformable->animation_component->playAnimationLoop("idl");
         }
     }
     moving_prev = now_moving;
