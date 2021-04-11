@@ -47,7 +47,7 @@ namespace lotus
     void Camera::setPos(glm::vec3 pos)
     {
         Entity::setPos(pos);
-        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, 1.f, 0.f));
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
         camera_data.view_inverse = glm::inverse(camera_data.view);
         camera_data.eye_pos = glm::vec4(pos, 0.0);
         update = true;
@@ -57,7 +57,7 @@ namespace lotus
     {
         pos += forward_offset * camera_rot;
         pos += right_offset * glm::normalize(glm::cross(camera_rot, glm::vec3(0.f, 1.f, 0.f)));
-        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, 1.f, 0.f));
+        camera_data.view = glm::lookAt(pos, pos + camera_rot, glm::vec3(0.f, -1.f, 0.f));
         camera_data.view_inverse = glm::inverse(camera_data.view);
         camera_data.eye_pos = glm::vec4(pos, 0.0);
         update = true;

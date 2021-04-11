@@ -78,7 +78,9 @@ namespace FFXI
 
     D3A::D3A(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
     {
-        num_triangles = *(uint16_t*)(buffer + 0x02);
+        //num quads?
+        num_triangles = *(uint16_t*)(buffer + 0x02) * 2;
+        DEBUG_BREAK_IF(num_triangles * sizeof(DatVertexD3A) + 0x1C > (len));
         //not sure what the other values are? num_triangles seems to be repeated at 0x05 and 0x06, and 0x07 is 1?
         texture_name = std::string((char*)buffer + 0x08, 16);
         auto vertices = (DatVertexD3A*)(buffer + 0x1C);

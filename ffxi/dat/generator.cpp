@@ -15,6 +15,7 @@ namespace FFXI
     {
         header = (GeneratorHeader*)buffer;
 
+        //data2: instructions to run at generation time
         uint8_t* data2 = buffer + header->offset2 - 16;
 
         while (data2 < buffer + header->offset3 - 16)
@@ -99,7 +100,7 @@ namespace FFXI
                 gen_radius_fluctuation = *(float*)(data2);
                 gen_radius = *(float*)(data2 + 4);
                 gen_multi = *(glm::vec3*)(data2 + 8);
-                gen_rot2 = *(glm::vec2*)(data2 + 20);
+                gen_axis_rot = *(glm::vec2*)(data2 + 20);
                 gen_height = *(float*)(data2 + 28);
                 gen_height_fluctuation = *(float*)(data2 + 32);
                 rotations = *(uint32_t*)(data2 + 40);
@@ -282,23 +283,54 @@ namespace FFXI
             data2 += (data_size - 1) * sizeof(uint32_t);
         }
 
-        data2 = buffer + header->offset3 - 16;
+        //data3: instructions to run on frame update
+        uint8_t* data3 = buffer + header->offset3 - 16;
 
-        while (data2 < buffer + header->offset4 - 16)
+        while (data3 < buffer + header->offset4 - 16)
         {
-            uint8_t data_type = *data2;
-            uint8_t data_size = *(data2 + 1) & 0xF;
-            data2 += 4;
+            uint8_t data_type = *data3;
+            uint8_t data_size = *(data3 + 1) & 0xF;
+            data3 += 4;
 
             switch (data_type)
             {
             case 0x00:
-                data2 = buffer + header->offset4 - 16;
+                data3 = buffer + header->offset4 - 16;
+                break;
+
+            case 0x03:
+                dpos_acceleration = *(glm::vec3*)(data3);
+                break;
+
+            case 0x2C:
+                dpos_exp = *(float*)(data3);
                 break;
             }
 
+            data3 += (data_size - 1) * sizeof(uint32_t);
+        }
 
-            data2 += (data_size - 1) * sizeof(uint32_t);
+        //data4: instructions to run on particle end of life
+        uint8_t* data4 = buffer + header->offset4 - 16;
+
+        while (data4 < buffer + len)
+        {
+            uint8_t data_type = *data4;
+            uint8_t data_size = *(data4 + 1) & 0xF;
+            data4 += 4;
+
+            switch (data_type)
+            {
+            case 0x00:
+                data4 = buffer + len;
+                break;
+
+            case 0x01:
+                end_generator = std::string((char*)data4 + 4, 4);
+                break;
+            }
+
+            data4 += (data_size - 1) * sizeof(uint32_t);
         }
     }
 }

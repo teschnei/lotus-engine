@@ -55,6 +55,8 @@ namespace FFXI
         //movement per frame
         glm::vec3 dpos{ 0 };
         glm::vec3 dpos_fluctuation{ 0 };
+        glm::vec3 dpos_acceleration{ 0 };
+        float dpos_exp{ 1 };
 
         //movement from/to origin
         float dpos_origin{ 0 };
@@ -86,7 +88,7 @@ namespace FFXI
         float gen_radius{ 0 };
         float gen_radius_fluctuation{ 0 };
         glm::vec3 gen_multi{ 0 };
-        glm::vec2 gen_rot2{ 0 };
+        glm::vec2 gen_axis_rot{ 0 };
         float gen_height{ 0 };
         float gen_height_fluctuation{ 0 };
         uint32_t rotations{ 0 };
@@ -119,5 +121,6 @@ namespace FFXI
         std::vector<uint16_t> ring_indices;
         std::shared_ptr<lotus::Model> ring;
         std::string sub_generator;
+        std::string end_generator;
     };
 }

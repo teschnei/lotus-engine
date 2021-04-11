@@ -61,8 +61,19 @@ namespace lotus
     {
         return this->rot;
     }
+
     glm::vec3 Entity::getRotEuler()
     {
         return rot_euler;
+    }
+
+    void Entity::setSharedPtr(std::shared_ptr<Entity> ptr)
+    {
+        self_shared = ptr;
+    }
+
+    std::shared_ptr<Entity> Entity::getSharedPtr()
+    {
+        return self_shared.lock();
     }
 }

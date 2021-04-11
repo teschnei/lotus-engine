@@ -23,6 +23,7 @@ namespace lotus
         Task<std::shared_ptr<T>> AddEntity(Args... args)
         {
             auto sp = co_await T::Init(engine, args...);
+            sp->setSharedPtr(sp);
             entities.emplace_back(sp);
             co_return sp;
         }

@@ -30,8 +30,8 @@ lotus::Task<> ParticleTester::tick(lotus::time_point time, lotus::duration delta
     auto actor = static_cast<Actor*>(entity);
     if (add)
     {
-        //auto cast_scheduler = actor->scheduler_map["cabk"];
-        //casting_scheduler = co_await entity->addComponent<SchedulerComponent>(cast_scheduler, scheduler_resources.get());
+        auto cast_scheduler = actor->scheduler_map["cabk"];
+        casting_scheduler = co_await entity->addComponent<SchedulerComponent>(cast_scheduler, scheduler_resources.get());
         start_time = time;
         add = false;
         casting = true;

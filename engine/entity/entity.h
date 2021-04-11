@@ -58,7 +58,13 @@ namespace lotus
         glm::quat getRot();
         glm::vec3 getRotEuler();
 
+        glm::mat4 getPosMat() const { return pos_mat; }
+        glm::mat4 getRotMat() const { return rot_mat; }
+
         bool should_remove() { return remove; };
+
+        void setSharedPtr(std::shared_ptr<Entity>);
+        std::shared_ptr<Entity> getSharedPtr();
 
     protected:
         virtual Task<> tick(time_point time, duration delta) { co_return; }
@@ -79,5 +85,6 @@ namespace lotus
 
     private:
         std::vector<std::unique_ptr<Component>> components;
+        std::weak_ptr<Entity> self_shared;
     };
 }

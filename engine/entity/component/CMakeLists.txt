@@ -10,6 +10,8 @@ target_sources(engine
     free_flying_camera_component.h
     input_component.cpp
     input_component.h
+    particle_parent_component.cpp
+    particle_parent_component.h
     third_person_camera_component.cpp
     third_person_camera_component.h
     third_person_entity_input_component.cpp

@@ -23,6 +23,9 @@ namespace lotus
         };
 
         uint8_t billboard{ 0 };
+
+        glm::mat4 getModelMatrix();
+
         glm::vec4 color{ 1.f };
 
         duration getLifetime() { return lifetime; }
@@ -43,7 +46,8 @@ namespace lotus
         virtual Task<> tick(time_point time, duration delta) override;
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
         WorkerTask<> renderWork();
-        glm::mat4 entity_rot_mat{};
+        friend class ParticleParentComponent;
+        glm::mat4 offset_mat{1.f};
 
         duration lifetime;
         time_point spawn_time;

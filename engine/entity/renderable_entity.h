@@ -33,6 +33,7 @@ namespace lotus
         std::vector<std::shared_ptr<Model>> models;
 
         glm::mat4 getModelMatrix();
+        glm::mat4x4 getScaleMat() const { return scale_mat; }
 
         std::unique_ptr<Buffer> uniform_buffer;
         uint8_t* uniform_buffer_mapped{ nullptr };

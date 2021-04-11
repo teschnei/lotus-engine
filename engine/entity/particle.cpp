@@ -51,7 +51,7 @@ namespace lotus
         {
             if (billboard != Billboard::None)
             {
-                entity_rot_mat = glm::eulerAngleXYZ(rot_euler.x, rot_euler.y, rot_euler.z);
+                auto entity_rot_mat = glm::eulerAngleXYZ(rot_euler.x, rot_euler.y, rot_euler.z);
                 auto camera_mat = glm::mat4(glm::transpose(glm::mat3(engine->camera->getViewMatrix())));
                 if (billboard == Billboard::Y)
                 {
@@ -80,6 +80,11 @@ namespace lotus
             engine->worker_pool->command_buffers.particle.queue(*command_buffers[image_index]);
         }
         co_return;
+    }
+
+    glm::mat4 Particle::getModelMatrix()
+    {
+        return offset_mat * RenderableEntity::getModelMatrix();
     }
 
     void Particle::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
