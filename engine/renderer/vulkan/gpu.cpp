@@ -16,7 +16,7 @@ namespace lotus
         createPhysicalDevice();
         createDevice(layers);
 
-        memory_manager = std::make_unique<MemoryManager>(physical_device, *device);
+        memory_manager = std::make_unique<MemoryManager>(physical_device, *device, instance);
     }
 
     void GPU::createPhysicalDevice()
