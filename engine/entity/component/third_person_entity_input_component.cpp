@@ -1,5 +1,3 @@
-//TODO: complain to glm that their header breaks <optional> if it's included before it
-#include <optional>
 #include "third_person_entity_input_component.h"
 #include "engine/core.h"
 #include "engine/entity/camera.h"

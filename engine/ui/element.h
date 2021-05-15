@@ -45,9 +45,8 @@ namespace lotus::ui
         void SetHeight(uint32_t height);
         void AddChild(std::shared_ptr<Element>);
 
-        template<std::weakly_incrementable wi>
-            requires std::indirectly_writable<wi, typename vk::CommandBuffer>
-        void GetCommandBuffers(wi it, int image_index)
+        void GetCommandBuffers(std::weakly_incrementable auto it, int image_index)
+            requires std::indirectly_writable<decltype(it), typename vk::CommandBuffer>
         {
             *it++ = *command_buffers[image_index];
             for (const auto& e : children)

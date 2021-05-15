@@ -1411,19 +1411,23 @@ namespace lotus
 
             //post process
             auto post_buffer = *post_command_buffers[current_image];
+            std::vector<vk::PipelineStageFlags> post_process_stage_flags = { vk::PipelineStageFlagBits::eComputeShader };
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &post_buffer;
 
             submitInfo.waitSemaphoreCount = raytrace_semaphores.size();
             submitInfo.pWaitSemaphores = raytrace_semaphores.data();
+            submitInfo.pWaitDstStageMask = post_process_stage_flags.data();
             std::vector<vk::Semaphore> post_sems = { *compute_sem };
             submitInfo.signalSemaphoreCount = post_sems.size();
             submitInfo.pSignalSemaphores = post_sems.data();
             gpu->compute_queue.submit(submitInfo, nullptr);
 
             //deferred render
+            std::vector<vk::PipelineStageFlags> deferred_render_stage_flags = { vk::PipelineStageFlagBits::eFragmentShader };
             submitInfo.waitSemaphoreCount = post_sems.size();
             submitInfo.pWaitSemaphores = post_sems.data();
+            submitInfo.pWaitDstStageMask = deferred_render_stage_flags.data();
             std::vector<vk::CommandBuffer> deferred_commands{ *deferred_command_buffers[current_image] };
 
             submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
@@ -1436,11 +1440,13 @@ namespace lotus
 
             //ui
             auto ui_buffer = ui->Render(current_image);
+            std::vector<vk::PipelineStageFlags> ui_stage_flags = { vk::PipelineStageFlagBits::eFragmentShader };
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &ui_buffer;
 
             submitInfo.waitSemaphoreCount = frame_sem.size();
             submitInfo.pWaitSemaphores = frame_sem.data();
+            submitInfo.pWaitDstStageMask = ui_stage_flags.data();
             submitInfo.signalSemaphoreCount = frame_sem.size();
             submitInfo.pSignalSemaphores = frame_sem.data();
 

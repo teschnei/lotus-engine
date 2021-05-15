@@ -105,6 +105,11 @@ namespace lotus
 
         as_features.pNext = &rt_features;
 
+        vk::PhysicalDeviceShaderClockFeaturesKHR clock_features;
+        clock_features.shaderSubgroupClock = true;
+
+        rt_features.pNext = &clock_features;
+
         std::vector<const char*> device_extensions2 = device_extensions;
         if (config->renderer.RaytraceEnabled())
         {
