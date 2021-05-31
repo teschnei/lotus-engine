@@ -13,12 +13,12 @@ struct Vertex
     vec2 uv;
 };
 
-layout(binding = 1, set = 0) buffer Vertices
+layout(binding = 1, set = 0) buffer readonly Vertices
 {
     vec4 v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer Indices
+layout(binding = 2, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
@@ -30,7 +30,7 @@ layout(binding = 4, set = 0) uniform MaterialInfo
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -100,6 +100,7 @@ void main()
     const vec3 barycentrics = vec3(1.0 - attribs.bary_coord.x - attribs.bary_coord.y, attribs.bary_coord.x, attribs.bary_coord.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
+    uv += meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].uv_offset;
     vec4 mesh_colour = v0.colour * barycentrics.x + v1.colour * barycentrics.y + v2.colour * barycentrics.z;
     uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     vec4 model_colour = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].colour;

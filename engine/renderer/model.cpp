@@ -86,7 +86,7 @@ namespace lotus
                 //TODO: test if just buffermemorybarrier is faster
                 vk::MemoryBarrier barrier;
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR | vk::AccessFlagBits::eTransferRead;
                 command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
                 bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(renderer, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(max_primitive_count), false, lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
@@ -103,14 +103,19 @@ namespace lotus
                         auto& mesh = meshes[i];
                         descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
                         descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-                        auto [buffer, offset] = mesh->material->getBuffer();
-                        descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
-                        descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-                        mesh->material->index = resource_index + i;
+                        uint32_t mesh_index = 0;
+                        if (mesh->material)
+                        {
+                            auto [buffer, offset] = mesh->material->getBuffer();
+                            descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
+                            descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                            mesh->material->index = resource_index + i;
+                            mesh_index = (uint32_t)mesh->material->index;
+                        }
                         for (size_t image = 0; image < engine->renderer->getImageCount(); ++image)
                         {
                             renderer->resources->mesh_info_buffer_mapped[image * GlobalResources::max_resource_index + resource_index + i] =
-                            { resource_index + (uint32_t)i, resource_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, glm::vec3{1.0}, 0, glm::vec4{1.f} };
+                            { resource_index + (uint32_t)i, resource_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), mesh_index, glm::vec3{1.0}, 0, glm::vec4{1.f} };
                         }
                     }
 
@@ -149,10 +154,14 @@ namespace lotus
                         write_info_index.dstSet = *renderer->rtx_descriptor_sets_const[i];
                         write_info_texture.dstSet = *renderer->rtx_descriptor_sets_const[i];
                         write_info_material.dstSet = *renderer->rtx_descriptor_sets_const[i];
-                        writes.push_back(write_info_vertex);
-                        writes.push_back(write_info_index);
-                        writes.push_back(write_info_texture);
-                        writes.push_back(write_info_material);
+                        if (write_info_vertex.descriptorCount > 0)
+                            writes.push_back(write_info_vertex);
+                        if (write_info_index.descriptorCount > 0)
+                            writes.push_back(write_info_index);
+                        if (write_info_texture.descriptorCount > 0)
+                            writes.push_back(write_info_texture);
+                        if (write_info_material.descriptorCount > 0)
+                            writes.push_back(write_info_material);
                     }
                     {
                         std::lock_guard lk{ engine->renderer->resources->resource_descriptor_mutex };

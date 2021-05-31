@@ -9,17 +9,16 @@ struct Vertex
 {
     vec3 pos;
     vec3 norm;
-    vec3 color;
+    vec4 color;
     vec2 uv;
-    float _pad;
 };
 
-layout(binding = 1, set = 0) buffer Vertices
+layout(binding = 1, set = 0) buffer readonly Vertices
 {
     vec4 v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer Indices
+layout(binding = 2, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
@@ -31,7 +30,7 @@ layout(binding = 4, set = 0) uniform MaterialInfo
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -71,8 +70,8 @@ Vertex unpackVertex(uint index)
 
     v.pos = d0.xyz;
     v.norm = vec3(d0.w, d1.x, d1.y);
-    v.color = vec3(d1.z, d1.w, d2.x);
-    v.uv = vec2(d2.y, d2.z);
+    v.color = vec4(d1.z, d1.w, d2.x, d2.y);
+    v.uv = vec2(d2.z, d2.w);
     return v;
 }
 
@@ -86,6 +85,7 @@ void main()
     const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
+    uv += meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].uv_offset;
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     float a = texture(textures[resource_index], uv).a;
     if (a < 1.f/32.f)

@@ -66,7 +66,7 @@ namespace lotus
         std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
         int indices{ 0 };
         int vertices{ 0 };
-        uint32_t max_index;
+        uint32_t max_index{ 0 };
     };
 
 }

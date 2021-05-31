@@ -11,18 +11,17 @@ struct Vertex
 {
     vec3 pos;
     vec3 norm;
-    vec3 color;
+    vec4 color;
     vec2 uv;
-    float _pad;
 };
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 1, set = 0) buffer Vertices
+layout(binding = 1, set = 0) buffer readonly Vertices
 {
     vec4 v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer Indices
+layout(binding = 2, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
@@ -34,7 +33,7 @@ layout(binding = 4, set = 0) uniform MaterialInfo
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -99,15 +98,16 @@ Vertex unpackVertex(uint index)
 
     v.pos = d0.xyz;
     v.norm = vec3(d0.w, d1.x, d1.y);
-    v.color = vec3(d1.z, d1.w, d2.x);
-    v.uv = vec2(d2.y, d2.z);
+    v.color = vec4(d1.z, d1.w, d2.x, d2.y);
+    v.uv = vec2(d2.z, d2.w);
     return v;
 }
 
 void main()
 {
-    hitValue.distance = gl_HitTEXT;
-    if (gl_HitTEXT > light.light.landscape.max_fog)
+    float distance = hitValue.distance + gl_HitTEXT;
+    hitValue.distance = distance;
+    if (distance > light.light.landscape.max_fog)
     {
         hitValue.BRDF = vec3(1.0);
         hitValue.diffuse = light.light.landscape.fog_color.rgb;
@@ -125,9 +125,10 @@ void main()
     vec3 transformed_normal = mat3(gl_ObjectToWorldEXT) * normal;
     vec3 normalized_normal = normalize(transformed_normal);
 
-    vec3 primitive_color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z);
+    vec3 primitive_color = (v0.color * barycentrics.x + v1.color * barycentrics.y + v2.color * barycentrics.z).xyz;
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
+    uv += meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].uv_offset;
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     vec3 texture_color = texture(textures[resource_index], uv).xyz;
 
@@ -185,7 +186,7 @@ void main()
                         pdf = temp_pdf;
                 }
 
-                traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10 , 1, 0, 2, trace_origin, 0.000, trace_dir, length, 1);
+                traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10, 1, 0, 2, trace_origin, 0.000, trace_dir, length, 1);
                 diffuse += shadow.shadow.rgb / pdf;
             }
         }
@@ -200,6 +201,13 @@ void main()
 
     float cos_theta = dot(hitValue.direction, normalized_normal);
     vec3 albedo = texture_color.rgb * primitive_color;
+
+    if (distance > light.light.landscape.min_fog && distance < light.light.landscape.max_fog)
+    {
+        albedo = mix(albedo, light.light.landscape.fog_color.rgb, (distance - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));   
+        diffuse = mix(diffuse, vec3(M_PI), (distance - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));   
+    }
+
     vec3 BRDF = albedo / M_PI;
     hitValue.BRDF = BRDF;
     hitValue.diffuse = diffuse;

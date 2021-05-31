@@ -35,6 +35,8 @@ namespace lotus
         glm::mat4 getModelMatrix();
         glm::mat4x4 getScaleMat() const { return scale_mat; }
 
+        glm::vec2 uv_offset{};
+
         std::unique_ptr<Buffer> uniform_buffer;
         uint8_t* uniform_buffer_mapped{ nullptr };
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;

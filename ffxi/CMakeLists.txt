@@ -10,10 +10,12 @@ add_executable( ffxi
     particle_tester.h
     scheduler_resources.cpp
     scheduler_resources.h
+    stb.cpp
+    stb.h
     system_dat.h
     system_dat.cpp
     vana_time.h
-     )
+    )
 target_include_directories(ffxi PRIVATE "." )
 target_include_directories(ffxi PRIVATE "../external/stb" )
 
@@ -24,7 +26,7 @@ if (MSVC)
     file( COPY ${SDL2_DLL} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endif()
 
-file( COPY ../textures DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+file( COPY textures DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 add_subdirectory(dat)
 add_subdirectory(entity)

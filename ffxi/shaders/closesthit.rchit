@@ -15,12 +15,12 @@ struct Vertex
 };
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 1, set = 0) buffer Vertices
+layout(binding = 1, set = 0) buffer readonly Vertices
 {
     Vertex v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer Indices
+layout(binding = 2, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
@@ -32,7 +32,7 @@ layout(binding = 4, set = 0) uniform MaterialInfo
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -96,8 +96,9 @@ Vertex unpackVertex(uint index)
 
 void main()
 {
-    hitValue.distance = gl_HitTEXT;
-    if (gl_HitTEXT > light.light.entity.max_fog)
+    float distance = hitValue.distance + gl_HitTEXT;
+    hitValue.distance = distance;
+    if (distance > light.light.entity.max_fog)
     {
         hitValue.BRDF = vec3(1.0);
         hitValue.diffuse = light.light.entity.fog_color.rgb;
@@ -193,6 +194,13 @@ void main()
 
     float cos_theta = dot(hitValue.direction, normalized_normal);
     vec3 albedo = texture_color.rgb;
+
+    if (distance > light.light.entity.min_fog && distance < light.light.entity.max_fog)
+    {
+        albedo = mix(albedo, light.light.entity.fog_color.rgb, (distance - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));   
+        diffuse = mix(diffuse, vec3(M_PI), (distance - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));   
+    }
+
     vec3 BRDF = albedo / M_PI;
     hitValue.BRDF = BRDF;
     hitValue.diffuse = diffuse;

@@ -1,3 +1,5 @@
+#define M_PI 3.141592
+
 struct Mesh
 {
     int vertex_offset;
@@ -7,6 +9,9 @@ struct Mesh
     vec3 scale;
     uint billboard;
     vec4 colour;
+    vec2 uv_offset;
+    float animation_frame;
+    float _pad;
 };
 
 struct Material

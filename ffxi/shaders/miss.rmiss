@@ -27,52 +27,52 @@ layout(std430, binding = 5, set = 1) buffer readonly Light
 
 void main()
 {
-    hitValue.BRDF = vec3(1.0);
+    hitValue.diffuse = vec3(M_PI);
     hitValue.depth = 10;
     hitValue.normal = vec3(1.0);
-    hitValue.distance = gl_RayTmaxEXT;
+    hitValue.distance = hitValue.distance + gl_RayTmaxEXT;
     float dot_up = dot(gl_WorldRayDirectionEXT, vec3(0.f, -1.f, 0.f));
 
     if (dot_up < light.light.skybox_altitudes2)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes1) / (light.light.skybox_altitudes2 - light.light.skybox_altitudes1);
-        hitValue.diffuse = mix(light.light.skybox_colors[0], light.light.skybox_colors[1], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[0], light.light.skybox_colors[1], value).xyz / M_PI;
         return;
     }
     if (dot_up < light.light.skybox_altitudes3)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes2) / (light.light.skybox_altitudes3 - light.light.skybox_altitudes2);
-        hitValue.diffuse = mix(light.light.skybox_colors[1], light.light.skybox_colors[2], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[1], light.light.skybox_colors[2], value).xyz / M_PI;
         return;
     }
     if (dot_up < light.light.skybox_altitudes4)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes3) / (light.light.skybox_altitudes4 - light.light.skybox_altitudes3);
-        hitValue.diffuse = mix(light.light.skybox_colors[2], light.light.skybox_colors[3], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[2], light.light.skybox_colors[3], value).xyz / M_PI;
         return;
     }
     if (dot_up < light.light.skybox_altitudes5)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes4) / (light.light.skybox_altitudes5 - light.light.skybox_altitudes4);
-        hitValue.diffuse = mix(light.light.skybox_colors[3], light.light.skybox_colors[4], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[3], light.light.skybox_colors[4], value).xyz / M_PI;
         return;
     }
     if (dot_up < light.light.skybox_altitudes6)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes5) / (light.light.skybox_altitudes6 - light.light.skybox_altitudes5);
-        hitValue.diffuse = mix(light.light.skybox_colors[4], light.light.skybox_colors[5], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[4], light.light.skybox_colors[5], value).xyz / M_PI;
         return;
     }
     if (dot_up < light.light.skybox_altitudes7)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes6) / (light.light.skybox_altitudes7 - light.light.skybox_altitudes6);
-        hitValue.diffuse = mix(light.light.skybox_colors[5], light.light.skybox_colors[6], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[5], light.light.skybox_colors[6], value).xyz / M_PI;
         return;
     }
     if (dot_up < light.light.skybox_altitudes8)
     {
         float value = (max(dot_up, 0.0) - light.light.skybox_altitudes7) / (light.light.skybox_altitudes8 - light.light.skybox_altitudes7);
-        hitValue.diffuse = mix(light.light.skybox_colors[6], light.light.skybox_colors[7], value).xyz;
+        hitValue.BRDF = mix(light.light.skybox_colors[6], light.light.skybox_colors[7], value).xyz / M_PI;
         return;
     }
 }

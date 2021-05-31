@@ -731,7 +731,7 @@ namespace lotus
 
         {
             //ray-tracing pipeline
-            vk::UniqueShaderModule raygen_shader_module = getShader("shaders/raygen_hybrid.spv");
+            auto raygen_shader_module = getShader("shaders/raygen_hybrid.spv");
             auto miss_shader_module = getShader("shaders/miss.spv");
             auto miss_gi_shader_module = getShader("shaders/miss_gi.spv");
             auto shadow_miss_shader_module = getShader("shaders/shadow_miss.spv");
@@ -741,8 +741,12 @@ namespace lotus
             auto landscape_color_hit_shader_module = getShader("shaders/mmb_color_hit.spv");
             auto particle_closest_hit_shader_module = getShader("shaders/particle_closest_hit.spv");
             auto particle_color_hit_shader_module = getShader("shaders/particle_color_hit.spv");
-            auto particle_intersection_shader_module = getShader("shaders/particle_intersection.spv");
             auto particle_shadow_color_hit_shader_module = getShader("shaders/particle_shadow_color_hit.spv");
+            auto particle_closest_hit_aabb_shader_module = getShader("shaders/particle_closest_hit_aabb.spv");
+            auto particle_color_hit_aabb_shader_module = getShader("shaders/particle_color_hit_aabb.spv");
+            auto particle_shadow_color_hit_aabb_shader_module = getShader("shaders/particle_shadow_color_hit_aabb.spv");
+            auto particle_intersection_shader_module = getShader("shaders/particle_intersection.spv");
+            auto water_closest_hit_shader_module = getShader("shaders/water_closest_hit.spv");
 
             vk::PipelineShaderStageCreateInfo raygen_stage_ci;
             raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenKHR;
@@ -794,18 +798,40 @@ namespace lotus
             particle_color_hit_stage_ci.module = *particle_color_hit_shader_module;
             particle_color_hit_stage_ci.pName = "main";
 
-            vk::PipelineShaderStageCreateInfo particle_intersection_stage_ci;
-            particle_intersection_stage_ci.stage = vk::ShaderStageFlagBits::eIntersectionKHR;
-            particle_intersection_stage_ci.module = *particle_intersection_shader_module;
-            particle_intersection_stage_ci.pName = "main";
-
             vk::PipelineShaderStageCreateInfo particle_shadow_color_hit_stage_ci;
             particle_shadow_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
             particle_shadow_color_hit_stage_ci.module = *particle_shadow_color_hit_shader_module;
             particle_shadow_color_hit_stage_ci.pName = "main";
 
+            vk::PipelineShaderStageCreateInfo particle_closest_hit_aabb_stage_ci;
+            particle_closest_hit_aabb_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
+            particle_closest_hit_aabb_stage_ci.module = *particle_closest_hit_aabb_shader_module;
+            particle_closest_hit_aabb_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo particle_color_hit_aabb_stage_ci;
+            particle_color_hit_aabb_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
+            particle_color_hit_aabb_stage_ci.module = *particle_color_hit_aabb_shader_module;
+            particle_color_hit_aabb_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo particle_shadow_color_hit_aabb_stage_ci;
+            particle_shadow_color_hit_aabb_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
+            particle_shadow_color_hit_aabb_stage_ci.module = *particle_shadow_color_hit_aabb_shader_module;
+            particle_shadow_color_hit_aabb_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo particle_intersection_stage_ci;
+            particle_intersection_stage_ci.stage = vk::ShaderStageFlagBits::eIntersectionKHR;
+            particle_intersection_stage_ci.module = *particle_intersection_shader_module;
+            particle_intersection_stage_ci.pName = "main";
+
+            vk::PipelineShaderStageCreateInfo water_closest_hit_stage_ci;
+            water_closest_hit_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
+            water_closest_hit_stage_ci.module = *water_closest_hit_shader_module;
+            water_closest_hit_stage_ci.pName = "main";
+
             std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, miss_gi_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci,
-                landscape_closest_stage_ci, landscape_color_hit_stage_ci, particle_closest_stage_ci, particle_color_hit_stage_ci, particle_intersection_stage_ci, particle_shadow_color_hit_stage_ci };
+                landscape_closest_stage_ci, landscape_color_hit_stage_ci, particle_closest_stage_ci, particle_color_hit_stage_ci, particle_shadow_color_hit_stage_ci, 
+                particle_closest_hit_aabb_stage_ci, particle_color_hit_aabb_stage_ci, particle_shadow_color_hit_aabb_stage_ci, particle_intersection_stage_ci, water_closest_hit_stage_ci
+                };
 
             std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
                 {
@@ -877,26 +903,64 @@ namespace lotus
                     VK_SHADER_UNUSED_KHR
                 );
             }
-
             for (int i = 0; i < shaders_per_group; ++i)
             {
                 shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
+                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
                     VK_SHADER_UNUSED_KHR,
                     8,
                     9,
-                    10
+                    VK_SHADER_UNUSED_KHR
                 );
             }
-
+            for (int i = 0; i < shaders_per_group; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR,
+                    10,
+                    VK_SHADER_UNUSED_KHR
+                );
+            }
+            for (int i = 0; i < shaders_per_group; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
+                    VK_SHADER_UNUSED_KHR,
+                    11,
+                    12,
+                    14
+                );
+            }
             for (int i = 0; i < shaders_per_group; ++i)
             {
                 shader_group_ci.emplace_back(
                     vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
                     VK_SHADER_UNUSED_KHR,
                     VK_SHADER_UNUSED_KHR,
-                    11,
-                    10
+                    13,
+                    14
+                );
+            }
+            for (int i = 0; i < shaders_per_group; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_KHR,
+                    15,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR
+                );
+            }
+            for (int i = 0; i < shaders_per_group; ++i)
+            {
+                shader_group_ci.emplace_back(
+                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR,
+                    VK_SHADER_UNUSED_KHR
                 );
             }
 

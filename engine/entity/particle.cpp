@@ -43,7 +43,7 @@ namespace lotus
 
     Task<> Particle::tick(time_point time, duration delta)
     {
-        if (time > (spawn_time + lifetime))
+        if (time > (spawn_time + lifetime) && lifetime > 0ms)
         {
             remove = true;
         }

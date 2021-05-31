@@ -12,12 +12,12 @@ struct Vertex
     vec2 uv;
 };
 
-layout(binding = 1, set = 0) buffer Vertices
+layout(binding = 1, set = 0) buffer readonly Vertices
 {
     Vertex v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer Indices
+layout(binding = 2, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
@@ -29,7 +29,7 @@ layout(binding = 4, set = 0) uniform MaterialInfo
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) uniform MeshInfo
+layout(binding = 5, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;

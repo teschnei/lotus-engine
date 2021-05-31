@@ -134,6 +134,7 @@ namespace FFXI
 
         texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
 
-        co_await texture->Init(engine, std::move(texture_data));
+        std::vector<std::vector<uint8_t>> texture_datas{ std::move(texture_data) };
+        co_await texture->Init(engine, std::move(texture_datas));
     }
 }

@@ -1,7 +1,7 @@
 #include "mzb.h"
 
 #include "key_tables.h"
-#include <algorithm>
+#include "stb.h"
 #include "engine/entity/camera.h"
 #include "engine/core.h"
 #include "entity/landscape_entity.h"
@@ -156,23 +156,6 @@ namespace FFXI
             }
         }
 
-        uint32_t maplist_offset = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x14);
-        uint32_t maplist_count = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x18);
-
-        for (uint32_t i = 0; i < maplist_count; ++i)
-        {
-            uint8_t* maplist_base = buffer + maplist_offset + 0x0C * i;
-            uint32_t mapid_encoded = *(uint32_t*)(maplist_base + 0x29 * sizeof(float));
-            uint32_t objvis_offset = *(uint32_t*)(maplist_base + 0x2a * sizeof(float));
-            uint32_t objvis_count = *(uint32_t*)(maplist_base + 0x2b * sizeof(float));
-
-            float x = *(float*)(maplist_base + 0x2c * sizeof(float));
-            float y = *(float*)(maplist_base + 0x2c * sizeof(float));
-
-            uint32_t mapid = ((mapid_encoded >> 3) & 0x7) | (((mapid_encoded >> 26) & 0x3) << 3);
-            vismap.push_back(mapid);
-        }
-
         quadtree = parseQuadTree(buffer, header->quadtreeOffset);
     }
 
@@ -263,6 +246,17 @@ namespace FFXI
 
         CollisionMeshData& mesh = meshes.emplace_back();
 
+        glm::vec3* first_vertex = (glm::vec3*)(buffer + vertices_offset);
+        mesh.bound_max = *first_vertex;
+        mesh.bound_min = *first_vertex;
+
+        for (auto buf = buffer + vertices_offset; buf < buffer + normals_offset; buf += sizeof(glm::vec3))
+        {
+            glm::vec3* vertex = (glm::vec3*)(buf);
+            mesh.bound_max = glm::max(mesh.bound_max, *vertex);
+            mesh.bound_min = glm::min(mesh.bound_min, *vertex);
+        }
+
         mesh.vertices.resize(normals_offset - vertices_offset);
         memcpy(mesh.vertices.data(), buffer + vertices_offset, normals_offset - vertices_offset);
 
@@ -285,25 +279,18 @@ namespace FFXI
     
     void MZB::parseGridEntry(uint8_t* buffer, uint32_t offset, int x, int y)
     {
-        std::vector<uint32_t> entries;
-
-        while (true)
-        {
-            uint32_t entry = *(uint32_t*)(buffer + offset);
-            if (entry == 0) break;
-            entries.push_back(entry);
-            offset += 4;
-        }
-
-        uint32_t pos = entries.front();
+        uint32_t& pos = *(uint32_t*)(buffer + offset);
         uint32_t xx = (pos >> 14) & 0x1FF;
         uint32_t yy = (pos >> 23) & 0x1FF;
-        uint32_t flags = pos & 0x3FFF;
+        uint32_t count = pos & 0x3FFF;
+        pos = count;
+        offset += 4;
 
-        for (int i = 1; i < entries.size(); i += 2)
+        for (int i = 0; i < count; ++i)
         {
-            uint32_t vis_entry_offset = entries[i];
-            uint32_t geo_entry_offset = entries[i+1];
+            uint32_t vis_entry_offset = *(uint32_t*)(buffer + offset);
+            uint32_t geo_entry_offset = *(uint32_t*)(buffer + offset + 4);
+            offset += 8;
 
             parseGridMesh(buffer, x, y, vis_entry_offset, geo_entry_offset);
         }
@@ -311,11 +298,149 @@ namespace FFXI
 
     void MZB::parseGridMesh(uint8_t* buffer, int x, int y, uint32_t vis_entry_offset, uint32_t geo_entry_offset)
     {
-        glm::mat4 transform_matrix = *(glm::mat4*)(buffer + vis_entry_offset);
+        glm::mat4& transform_matrix = *(glm::mat4*)(buffer + vis_entry_offset);
+        //glm::mat4& transform_matrix2 = *(glm::mat4*)(buffer + vis_entry_offset + 64); //no idea what this is for
+        //The top 6 bits and the bottom 4 bits are unused in this calculation, shift left to get the sign bit in the right spot,
+        // then shift back plus an extra 4 to get rid of the lowest 4 bits
+        float water_height = (((*(int32_t*)(buffer + vis_entry_offset + 164)) << 6) >> 10) / 1024.f;
 
         uint32_t mesh_offset = mesh_map[geo_entry_offset];
 
         mesh_entries.push_back({ glm::transpose(transform_matrix), mesh_offset });
+
+        if (water_height != 0)
+        {
+            //TODO: the mesh needs to be a flat plane, not a translated collision mesh
+            glm::mat4 water_matrix = transform_matrix;
+            water_matrix[3].y = water_height;
+            water_entries[water_height].push_back({ glm::transpose(water_matrix), mesh_offset });
+        }
+    }
+
+    lotus::Task<> MZB::LoadWaterModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, std::pair<glm::vec3, glm::vec3> bb)
+    {
+        model->rendered = true;
+        auto mesh = std::make_unique<lotus::Mesh>();
+
+        auto vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+        auto index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
+
+        if (engine->config->renderer.RaytraceEnabled())
+        {
+            vertex_usage_flags |= vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eStorageBuffer;
+            index_usage_flags |= vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eStorageBuffer;
+        }
+
+        std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        std::shared_ptr<lotus::Texture> texture = co_await lotus::Texture::LoadTexture("water", LoadWaterTexture, engine);
+        mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
+
+        struct WaterVertex
+        {
+            glm::vec3 pos;
+            glm::vec3 normal;
+            glm::vec2 uv;
+        };
+
+        std::vector<WaterVertex> vertices = {
+            {bb.first, {0.0,-1.0,0.0}, {bb.first.x/5,bb.first.z/5}},
+            {{bb.first.x, bb.first.y, bb.second.z}, {0.0,-1.0,0.0}, {bb.first.x/5,bb.second.z/5}},
+            {{bb.second.x, bb.first.y, bb.first.z}, {0.0,-1.0,0.0}, {bb.second.x/5,bb.first.z/5}},
+            {bb.second, {0.0,-1.0,0.0}, {bb.second.x/5, bb.second.z/5}}
+        };
+
+        std::vector<uint16_t> indices = { 2,1,0,2,1,3 };
+
+        auto vertex_buffer_size = vertices.size() * sizeof(WaterVertex);
+        auto index_buffer_size = indices.size() * sizeof(uint16_t);
+
+        mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertex_buffer_size, vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(index_buffer_size, index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->setMaxIndex(3);
+        mesh->setVertexCount(vertices.size());
+        mesh->setIndexCount(indices.size());
+
+        std::vector<uint8_t> vertices_uint8;
+        vertices_uint8.resize(vertices.size() * sizeof(WaterVertex));
+        memcpy(vertices_uint8.data(), vertices.data(), vertices_uint8.size());
+
+        std::vector<uint8_t> indices_uint8;
+        indices_uint8.resize(indices.size() * sizeof(uint16_t));
+        memcpy(indices_uint8.data(), indices.data(), indices_uint8.size());
+
+        model->meshes.push_back(std::move(mesh));
+        model->lifetime = lotus::Lifetime::Long;
+
+        std::vector<std::vector<uint8_t>> vertices_vector = { std::move(vertices_uint8) };
+        std::vector<std::vector<uint8_t>> indices_vector = { std::move(indices_uint8) };
+
+        co_await model->InitWork(engine, std::move(vertices_vector), std::move(indices_vector), sizeof(WaterVertex));
+    }
+
+    lotus::Task<> MZB::LoadWaterTexture(std::shared_ptr<lotus::Texture>& texture, lotus::Engine* engine)
+    {
+        std::vector<std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>> pixels;
+        int texWidth, texHeight, texChannels;
+        stbi_uc* p = nullptr;
+        for (auto& f : std::filesystem::directory_iterator("textures/water"))
+        {
+            if (auto path = f.path(); f.is_regular_file() && path.extension() == ".png")
+            {
+                auto p = stbi_load((const char*)path.u8string().c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+                if (!p) {
+                    throw std::runtime_error("failed to load texture image!");
+                }
+                pixels.push_back({ p, &stbi_image_free });
+            }
+        }
+        VkDeviceSize imageSize = static_cast<uint64_t>(texWidth) * static_cast<uint64_t>(texHeight) * 4;
+
+        texture->setWidth(texWidth);
+        texture->setHeight(texHeight);
+
+        std::vector<std::vector<uint8_t>> texture_datas;
+        texture_datas.reserve(pixels.size());
+
+        for (auto& p : pixels)
+        {
+            std::vector<uint8_t> pixel_data;
+            pixel_data.resize(imageSize);
+            memcpy(pixel_data.data(), p.get(), imageSize);
+            texture_datas.push_back(std::move(pixel_data));
+        }
+
+        texture->image = engine->renderer->gpu->memory_manager->GetImage(texture->getWidth(), texture->getHeight(), vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, texture_datas.size());
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.image = texture->image->image;
+        image_view_info.viewType = vk::ImageViewType::e2DArray;
+        image_view_info.format = vk::Format::eR8G8B8A8Unorm;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = texture_datas.size();
+
+        texture->image_view = engine->renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
+
+        vk::SamplerCreateInfo sampler_info = {};
+        sampler_info.magFilter = vk::Filter::eLinear;
+        sampler_info.minFilter = vk::Filter::eLinear;
+        sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
+        sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
+        sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
+        sampler_info.anisotropyEnable = true;
+        sampler_info.maxAnisotropy = 16;
+        sampler_info.borderColor = vk::BorderColor::eIntOpaqueBlack;
+        sampler_info.unnormalizedCoordinates = false;
+        sampler_info.compareEnable = false;
+        sampler_info.compareOp = vk::CompareOp::eAlways;
+        sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+
+        texture->sampler = engine->renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
+
+        co_await texture->Init(engine, std::move(texture_datas));
     }
 
     lotus::WorkerTask<> CollisionInitWork(lotus::Engine* engine, std::shared_ptr<lotus::Model> model, std::vector<FFXI::CollisionMeshData> mesh_data, std::vector<FFXI::CollisionEntry> entries, uint32_t vertex_stride)

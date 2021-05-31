@@ -57,7 +57,8 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
             std::shared_ptr<lotus::Model> model;
             if (generator->effect_type == 0x0B)
             {
-                model = lotus::Model::getModel(generator->id + "_d3m");
+                //TODO: review the particle shader and make sure it's compatible with the vertex format of mmbs
+                //model = lotus::Model::getModel(generator->id);
             }
             else if (generator->effect_type == 0x0E)
             {
@@ -247,6 +248,8 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
                     particle_pointer->base_rot += movement * rot_per_frame;
                     particle_pointer->base_scale += movement * scale_per_frame;
 
+                    particle_pointer->uv_offset += movement * generator->duv;
+
                     glm::vec3 new_origin{};
 
                     if (generator->pos_flags & 0x80)
@@ -263,190 +266,196 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
                         }
                     }
 
-                    float progress = static_cast<float>(spawn_delta.count()) / static_cast<float>(particle_pointer->getLifetime().count());
+                    auto lifetime = static_cast<float>(particle_pointer->getLifetime().count());
 
                     glm::vec3 kf_pos{ 0 };
                     glm::vec3 kf_rot{ 0 };
                     glm::vec3 kf_scale = particle_pointer->base_scale;
 
-                    if (progress > 1.0)
+                    if (lifetime > 0)
                     {
-                        if (!generator->end_generator.empty())
+                        float progress = static_cast<float>(spawn_delta.count()) / lifetime;
+
+                        if (progress > 1.0)
                         {
-                            //assume end generator is in same place as generator
-                            for (const auto& chunk : generator->parent->children)
+                            if (!generator->end_generator.empty())
                             {
-                                if (auto end_generator = dynamic_cast<FFXI::Generator*>(chunk.get()); end_generator && std::string(chunk->name, 4) == generator->end_generator)
+                                //assume end generator is in same place as generator
+                                for (const auto& chunk : generator->parent->children)
                                 {
-                                    entity_pointer->addComponent<GeneratorComponent>(end_generator, 0ms, nullptr, particle_pointer->base_pos);
-                                    break;
+                                    if (auto end_generator = dynamic_cast<FFXI::Generator*>(chunk.get()); end_generator && std::string(chunk->name, 4) == generator->end_generator)
+                                    {
+                                        entity_pointer->addComponent<GeneratorComponent>(end_generator, 0ms, nullptr, particle_pointer->base_pos);
+                                        break;
+                                    }
                                 }
                             }
+                            return true;
                         }
-                        return true;
-                    }
 
-                    if (!generator->kf_x_pos.empty())
-                    {
-                        auto keyframe = kf_map.at(generator->kf_x_pos);
-                        float prev = keyframe->intervals[0].second;
-                        float next = keyframe->intervals[1].second;
-                        for (const auto& [key, value] : keyframe->intervals)
+                        if (!generator->kf_x_pos.empty())
                         {
-                            next = value;
-                            if (progress > key)
+                            auto keyframe = kf_map.at(generator->kf_x_pos);
+                            float prev = keyframe->intervals[0].second;
+                            float next = keyframe->intervals[1].second;
+                            for (const auto& [key, value] : keyframe->intervals)
                             {
-                                break;
+                                next = value;
+                                if (progress > key)
+                                {
+                                    break;
+                                }
+                                prev = value;
                             }
-                            prev = value;
                         }
-                    }
-                    if (!generator->kf_y_pos.empty())
-                    {
-
-                    }
-                    if (!generator->kf_z_pos.empty())
-                    {
-
-                    }
-                    if (!generator->kf_x_rot.empty())
-                    {
-
-                    }
-                    if (!generator->kf_y_rot.empty())
-                    {
-
-                    }
-                    if (!generator->kf_z_rot.empty())
-                    {
-
-                    }
-                    if (!generator->kf_x_scale.empty())
-                    {
-                        auto keyframe = kf_map.at(generator->kf_x_scale);
-                        float prev = keyframe->intervals[0].second;
-                        float prev_key = keyframe->intervals[0].first;
-                        float next = keyframe->intervals[1].second;
-                        float a = 0.f;
-                        for (const auto& [key, value] : keyframe->intervals)
+                        if (!generator->kf_y_pos.empty())
                         {
-                            next = value;
-                            if (progress <= key)
+
+                        }
+                        if (!generator->kf_z_pos.empty())
+                        {
+
+                        }
+                        if (!generator->kf_x_rot.empty())
+                        {
+
+                        }
+                        if (!generator->kf_y_rot.empty())
+                        {
+
+                        }
+                        if (!generator->kf_z_rot.empty())
+                        {
+
+                        }
+                        if (!generator->kf_x_scale.empty())
+                        {
+                            auto keyframe = kf_map.at(generator->kf_x_scale);
+                            float prev = keyframe->intervals[0].second;
+                            float prev_key = keyframe->intervals[0].first;
+                            float next = keyframe->intervals[1].second;
+                            float a = 0.f;
+                            for (const auto& [key, value] : keyframe->intervals)
                             {
-                                a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
-                                break;
+                                next = value;
+                                if (progress <= key)
+                                {
+                                    a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
+                                    break;
+                                }
+                                prev_key = key;
+                                prev = value;
                             }
-                            prev_key = key;
-                            prev = value;
-                        }
-                        if (keyframe->intervals.size() == 2)
-                        {
-                            kf_scale.x = glm::mix(kf_scale.x, next, a);
-                        }
-                        else
-                        {
-                            kf_scale.x = glm::mix(prev, next, a);
-                        }
-                    }
-                    if (!generator->kf_y_scale.empty())
-                    {
-                        auto keyframe = kf_map.at(generator->kf_y_scale);
-                        float prev = keyframe->intervals[0].second;
-                        float prev_key = keyframe->intervals[0].first;
-                        float next = keyframe->intervals[1].second;
-                        float a = 0.f;
-                        for (const auto& [key, value] : keyframe->intervals)
-                        {
-                            next = value;
-                            if (progress <= key)
+                            if (keyframe->intervals.size() == 2)
                             {
-                                a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
-                                break;
+                                kf_scale.x = glm::mix(kf_scale.x, next, a);
                             }
-                            prev_key = key;
-                            prev = value;
-                        }
-                        if (keyframe->intervals.size() == 2)
-                        {
-                            kf_scale.y = glm::mix(kf_scale.y, next, a);
-                        }
-                        else
-                        {
-                            kf_scale.y = glm::mix(prev, next, a);
-                        }
-                    }
-                    if (!generator->kf_z_scale.empty())
-                    {
-                        auto keyframe = kf_map.at(generator->kf_z_scale);
-                        float prev = keyframe->intervals[0].second;
-                        float prev_key = keyframe->intervals[0].first;
-                        float next = keyframe->intervals[1].second;
-                        float a = 0.f;
-                        for (const auto& [key, value] : keyframe->intervals)
-                        {
-                            next = value;
-                            if (progress <= key)
+                            else
                             {
-                                a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
-                                break;
+                                kf_scale.x = glm::mix(prev, next, a);
                             }
-                            prev_key = key;
-                            prev = value;
                         }
-                        if (keyframe->intervals.size() == 2)
+                        if (!generator->kf_y_scale.empty())
                         {
-                            kf_scale.z = glm::mix(kf_scale.z, next, a);
-                        }
-                        else
-                        {
-                            kf_scale.z = glm::mix(prev, next, a);
-                        }
-                    }
-                    if (!generator->kf_r.empty())
-                    {
-
-                    }
-                    if (!generator->kf_g.empty())
-                    {
-
-                    }
-                    if (!generator->kf_b.empty())
-                    {
-
-                    }
-                    if (!generator->kf_a.empty())
-                    {
-                        auto keyframe = kf_map.at(generator->kf_a);
-                        float prev = keyframe->intervals[0].second;
-                        float prev_key = keyframe->intervals[0].first;
-                        float next = keyframe->intervals[1].second;
-                        float a = 0.f;
-                        for (const auto& [key, value] : keyframe->intervals)
-                        {
-                            next = value;
-                            if (progress <= key)
+                            auto keyframe = kf_map.at(generator->kf_y_scale);
+                            float prev = keyframe->intervals[0].second;
+                            float prev_key = keyframe->intervals[0].first;
+                            float next = keyframe->intervals[1].second;
+                            float a = 0.f;
+                            for (const auto& [key, value] : keyframe->intervals)
                             {
-                                a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
-                                break;
+                                next = value;
+                                if (progress <= key)
+                                {
+                                    a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
+                                    break;
+                                }
+                                prev_key = key;
+                                prev = value;
                             }
-                            prev_key = key;
-                            prev = value;
+                            if (keyframe->intervals.size() == 2)
+                            {
+                                kf_scale.y = glm::mix(kf_scale.y, next, a);
+                            }
+                            else
+                            {
+                                kf_scale.y = glm::mix(prev, next, a);
+                            }
                         }
-                        if (keyframe->intervals.size() == 2)
+                        if (!generator->kf_z_scale.empty())
                         {
-                            particle_pointer->color.a = glm::mix(colour.a, next, a);
+                            auto keyframe = kf_map.at(generator->kf_z_scale);
+                            float prev = keyframe->intervals[0].second;
+                            float prev_key = keyframe->intervals[0].first;
+                            float next = keyframe->intervals[1].second;
+                            float a = 0.f;
+                            for (const auto& [key, value] : keyframe->intervals)
+                            {
+                                next = value;
+                                if (progress <= key)
+                                {
+                                    a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
+                                    break;
+                                }
+                                prev_key = key;
+                                prev = value;
+                            }
+                            if (keyframe->intervals.size() == 2)
+                            {
+                                kf_scale.z = glm::mix(kf_scale.z, next, a);
+                            }
+                            else
+                            {
+                                kf_scale.z = glm::mix(prev, next, a);
+                            }
                         }
-                        else
+                        if (!generator->kf_r.empty())
                         {
-                            particle_pointer->color.a = glm::mix(prev, next, a);
-                        }
-                    }
-                    if (!generator->kf_u.empty())
-                    {
 
-                    }
-                    if (!generator->kf_v.empty())
-                    {
+                        }
+                        if (!generator->kf_g.empty())
+                        {
+
+                        }
+                        if (!generator->kf_b.empty())
+                        {
+
+                        }
+                        if (!generator->kf_a.empty())
+                        {
+                            auto keyframe = kf_map.at(generator->kf_a);
+                            float prev = keyframe->intervals[0].second;
+                            float prev_key = keyframe->intervals[0].first;
+                            float next = keyframe->intervals[1].second;
+                            float a = 0.f;
+                            for (const auto& [key, value] : keyframe->intervals)
+                            {
+                                next = value;
+                                if (progress <= key)
+                                {
+                                    a = key == 0.f ? 0.f : (progress - prev_key) / (key - prev_key);
+                                    break;
+                                }
+                                prev_key = key;
+                                prev = value;
+                            }
+                            if (keyframe->intervals.size() == 2)
+                            {
+                                particle_pointer->color.a = glm::mix(colour.a, next, a);
+                            }
+                            else
+                            {
+                                particle_pointer->color.a = glm::mix(prev, next, a);
+                            }
+                        }
+                        if (!generator->kf_u.empty())
+                        {
+
+                        }
+                        if (!generator->kf_v.empty())
+                        {
+
+                        }
 
                     }
 

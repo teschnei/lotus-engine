@@ -18,9 +18,8 @@ namespace FFXI
         {
             glm::vec3 pos;
             glm::vec3 normal;
-            glm::vec3 color;
+            glm::vec4 color;
             glm::vec2 tex_coord;
-            float _pad;
         };
         struct Mesh
         {
@@ -36,6 +35,7 @@ namespace FFXI
 
         char name[16];
         std::vector<Mesh> meshes;
+        uint8_t type{ 0 };
     private:
         
     };

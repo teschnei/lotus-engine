@@ -11,6 +11,7 @@ namespace lotus
     class DeformableEntity;
     class Particle;
     class Renderer;
+    class RenderableEntity;
 
     class GlobalResources
     {
@@ -19,7 +20,7 @@ namespace lotus
         ~GlobalResources();
         void BindResources(uint32_t image);
         void Reset();
-        void AddResources(Model* model);
+        void AddResources(RenderableEntity* entity);
         void AddResources(DeformableEntity* entity);
         void AddResources(Particle* entity);
 
@@ -32,10 +33,13 @@ namespace lotus
             glm::vec3 scale;
             uint32_t billboard;
             glm::vec4 colour;
+            glm::vec2 uv_offset;
+            float animation_frame;
+            float _pad;
         };
         std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped{ nullptr };
-        static constexpr uint16_t max_resource_index{ 1024 };
+        static constexpr uint16_t max_resource_index{ 4096 };
         std::mutex resource_descriptor_mutex;
 
         std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;

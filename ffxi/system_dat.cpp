@@ -62,7 +62,7 @@ void SystemDat::ParseDir(FFXI::DatChunk* chunk, std::vector<lotus::Task<std::sha
     {
         if (auto d3m = dynamic_cast<FFXI::D3M*>(child_chunk.get()))
         {
-            auto [model, model_task] = lotus::Model::LoadModel(std::string(d3m->name, 4) + "_d3m", FFXI::D3MLoader::LoadD3M, game->engine.get(), d3m);
+            auto [model, model_task] = lotus::Model::LoadModel(std::string(d3m->name, 4), FFXI::D3MLoader::LoadD3M, game->engine.get(), d3m);
             generator_models.push_back(model);
             if (model_task)
                 model_tasks.push_back(std::move(*model_task));

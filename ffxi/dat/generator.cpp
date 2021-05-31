@@ -302,6 +302,14 @@ namespace FFXI
                 dpos_acceleration = *(glm::vec3*)(data3);
                 break;
 
+            case 0x27:
+                duv.x = *(float*)(data3);
+                break;
+
+            case 0x28:
+                duv.y = *(float*)(data3);
+                break;
+
             case 0x2C:
                 dpos_exp = *(float*)(data3);
                 break;

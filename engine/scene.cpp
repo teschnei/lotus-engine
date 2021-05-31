@@ -21,24 +21,20 @@ namespace lotus
         if (engine->config->renderer.RaytraceEnabled())
         {
             top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), true);
-            //TODO: review if this is needed
-            /*
-            Model::forEachModel([this, image_index](const std::shared_ptr<Model>& model)
-            {
-                //if (model->bottom_level_as && model->lifetime != Lifetime::Long)
-                //{
-                //    top_level_as[image_index]->AddBLASResource(model.get());
-                //}
-            });*/
+
             for (const auto& entity : entities)
             {
                 if (auto deformable_entity = dynamic_cast<DeformableEntity*>(entity.get()))
                 {
                     engine->renderer->resources->AddResources(deformable_entity);
                 }
-                if (auto particle = dynamic_cast<Particle*>(entity.get()))
+                else if (auto particle = dynamic_cast<Particle*>(entity.get()))
                 {
                     engine->renderer->resources->AddResources(particle);
+                }
+                else if (auto renderable = dynamic_cast<RenderableEntity*>(entity.get()))
+                {
+                    engine->renderer->resources->AddResources(renderable);
                 }
             }
         }

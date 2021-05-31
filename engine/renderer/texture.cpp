@@ -5,13 +5,22 @@
 
 namespace lotus
 {
-    WorkerTask<> Texture::Init(Engine* engine, std::vector<uint8_t>&& texture_data)
+    WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& texture_datas)
     {
-        //priority: -2
-        auto staging_buffer = engine->renderer->gpu->memory_manager->GetBuffer(texture_data.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        size_t total_size = 0;
+        for (const auto& texture_data : texture_datas)
+        {
+            total_size += texture_data.size();
+        }
+        auto staging_buffer = engine->renderer->gpu->memory_manager->GetBuffer(total_size, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-        void* data = staging_buffer->map(0, texture_data.size(), {});
-        memcpy(data, texture_data.data(), texture_data.size());
+        void* data = staging_buffer->map(0, total_size, {});
+        size_t offset = 0;
+        for (const auto& texture_data : texture_datas)
+        {
+            memcpy((uint8_t*)data + offset, texture_data.data(), texture_data.size());
+            offset += texture_data.size();
+        }
         staging_buffer->unmap();
 
         vk::CommandBufferAllocateInfo alloc_info = {};
@@ -37,7 +46,7 @@ namespace lotus
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = texture_datas.size();
         barrier.srcAccessMask = {};
         barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
@@ -50,7 +59,7 @@ namespace lotus
         region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         region.imageSubresource.mipLevel = 0;
         region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
+        region.imageSubresource.layerCount = texture_datas.size();
         region.imageOffset = vk::Offset3D{0, 0, 0};
         region.imageExtent = vk::Extent3D{
             getWidth(),
@@ -68,7 +77,7 @@ namespace lotus
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = texture_datas.size();
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 

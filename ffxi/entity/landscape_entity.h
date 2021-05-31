@@ -37,9 +37,12 @@ protected:
     virtual lotus::Task<> render(lotus::Engine* engine, std::shared_ptr<Entity> sp) override;
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
     lotus::WorkerTask<> Load(const std::filesystem::path& dat);
+    lotus::time_point create_time{lotus::sim_clock::now()};
     float current_time{750};
     std::string current_weather = "suny";
     lotus::LightID light_id{ 0 };
+    std::vector<std::shared_ptr<lotus::Model>> generator_models;
+    std::vector<std::shared_ptr<lotus::Model>> water_models;
 };
 
 class CollisionMesh : public lotus::Mesh

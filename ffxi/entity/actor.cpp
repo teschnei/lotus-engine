@@ -48,6 +48,10 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 
 lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, const std::filesystem::path& dat)
 {
+    //modelid >= 3500: id - 3500 + 101739
+    //modelid >= 3000: id - 3000 + 99907
+    //modelid >= 1500: id - 1500 + 51795
+    // else: id + 1300
     auto actor = std::make_shared<Actor>(engine);
     co_await actor->Load(dat);
     co_return std::move(actor);

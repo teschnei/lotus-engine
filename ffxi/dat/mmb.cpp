@@ -102,7 +102,7 @@ namespace FFXI
 
         attribute_descriptions[2].binding = 0;
         attribute_descriptions[2].location = 2;
-        attribute_descriptions[2].format = vk::Format::eR32G32B32Sfloat;
+        attribute_descriptions[2].format = vk::Format::eR32G32B32A32Sfloat;
         attribute_descriptions[2].offset = offsetof(FFXI::MMB::Vertex, color);
 
         attribute_descriptions[3].binding = 0;
@@ -157,7 +157,6 @@ namespace FFXI
         offset += sizeof(SMMBHEAD);
 
         uint32_t size = 0;
-        uint8_t type = 0;
 
         if (head->id[0] == 'M' && head->id[1] == 'M' && head->id[2] == 'B')
         {
@@ -256,7 +255,7 @@ namespace FFXI
                         SMMBBlockVertex2* vertex_head = (SMMBBlockVertex2*)(buffer + offset);
                         vertex.pos = { vertex_head->x, vertex_head->y, vertex_head->z };
                         vertex.normal = { vertex_head->hx, vertex_head->hy, vertex_head->hz };
-                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f};
+                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f, ((vertex_head->color & 0xFF000000) >> 24) / 128.0};
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex2);
                     }
@@ -265,7 +264,7 @@ namespace FFXI
                         SMMBBlockVertex* vertex_head = (SMMBBlockVertex*)(buffer + offset);
                         vertex.pos = { vertex_head->x, vertex_head->y, vertex_head->z };
                         vertex.normal = { vertex_head->hx, vertex_head->hy, vertex_head->hz };
-                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f};
+                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f, ((vertex_head->color & 0xFF000000) >> 24) / 128.0};
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex);
                     }
@@ -386,6 +385,7 @@ namespace FFXI
         }
         pipeline_latch.wait();
         model->light_offset = 1;
+        model->is_static = true;
         std::vector<std::vector<uint8_t>> vertices;
         std::vector<std::vector<uint8_t>> indices;
         std::map<lotus::Mesh*, lotus::WorkerTask<std::shared_ptr<lotus::Material>>> material_map;

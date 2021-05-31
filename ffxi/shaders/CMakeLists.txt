@@ -48,6 +48,9 @@ set(SHADERS
     shadow_miss.rmiss
     ui_frag.frag
     ui_vert.vert
+    water_closest_hit.rchit
+    water_color_hit.rahit
+    water_shadow_color_hit.rahit
 )
 
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders)

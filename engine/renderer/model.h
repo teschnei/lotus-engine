@@ -65,10 +65,13 @@ namespace lotus
 
         std::string name;
         std::vector<std::unique_ptr<Mesh>> meshes;
+        bool is_static{ false };
         bool weighted{ false };
         Lifetime lifetime {Lifetime::Short};
         bool rendered{ true };
+        //TODO: probably remove this
         uint32_t light_offset{ 0 };
+        float animation_frame{ 0 };
         uint16_t resource_index{ 0 };
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;

@@ -26,6 +26,8 @@ namespace FFXI
         std::vector<uint16_t> indices;
         uint16_t flags{};
         uint32_t max_index;
+        glm::vec3 bound_min{};
+        glm::vec3 bound_max{};
     };
 
     struct CollisionEntry
@@ -61,6 +63,10 @@ namespace FFXI
         std::optional<QuadTree> quadtree;
         std::vector<CollisionMeshData> meshes;
         std::vector<CollisionEntry> mesh_entries;
+        std::unordered_map<float, std::vector<CollisionEntry>> water_entries;
+
+        static lotus::Task<> LoadWaterModel(std::shared_ptr<lotus::Model>, lotus::Engine* engine, std::pair<glm::vec3, glm::vec3> bb);
+        static lotus::Task<> LoadWaterTexture(std::shared_ptr<lotus::Texture>& texture, lotus::Engine* engine);
 
     private:
         QuadTree parseQuadTree(uint8_t* buffer, uint32_t offset);

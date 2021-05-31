@@ -74,13 +74,14 @@ void main() {
     kernel[23] = 1.0f/64.0f;
     kernel[24] = 1.0f/256.0f;
     
-    vec4 sum = vec4(0.0);
+    vec3 sum = vec3(0.0);
     float c_phi = 1.0;
     float n_phi = 0.5;
-    //float p_phi = 0.3;
-    vec4 cval = imageLoad(in_colour, pos);
+    float p_phi = 0.3;
+    vec4 brdf = imageLoad(in_colour, pos);
+    vec3 cval = brdf.rgb;
 	vec4 nval = imageLoad(in_normal, pos);
-	//vec4 pval = texelFetch(iChannel2, ivec2(pos), 0);
+	float pval = brdf.a;
     
     float cum_w = 0.0;
     for(int denoise=1; denoise<denoiseStrength; denoise++)
@@ -89,27 +90,26 @@ void main() {
         {
             vec2 uv = pos+offset[i]*denoise;
             
-            vec4 ctmp = imageLoad(in_colour, ivec2(uv));
-            vec4 t = cval - ctmp;
+            vec4 brdf_tmp = imageLoad(in_colour, ivec2(uv));
+            vec3 ctmp = brdf.rgb;
+            vec3 t = cval - ctmp;
             float dist2 = dot(t,t);
             float c_w = min(exp(-(dist2)/c_phi), 1.0);
             
             vec4 ntmp = imageLoad(in_normal, ivec2(uv));
-            t = nval - ntmp;
-            dist2 = max(dot(t,t), 0.0);
+            vec4 t4 = nval - ntmp;
+            dist2 = max(dot(t4,t4), 0.0);
             float n_w = min(exp(-(dist2)/n_phi), 1.0);
             
-            //vec4 ptmp = imageLoad(iChannel2, ivec2(uv));
-            //t = pval - ptmp;
-            //dist2 = dot(t,t);
-            //float p_w = min(exp(-(dist2)/p_phi), 1.0);
+            dist2 = pval - brdf.a;
+            float p_w = min(exp(-(dist2)/p_phi), 1.0);
             
             //float weight = c_w*n_w*p_w;
-            float weight = n_w;
+            float weight = n_w * p_w;
             sum += ctmp*weight*kernel[i];
             cum_w += weight*kernel[i];
         }
     }
-    imageStore(out_image, pos, sum / cum_w);
+    imageStore(out_image, pos, vec4(sum / cum_w, pval));
 }
 

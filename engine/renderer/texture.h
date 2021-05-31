@@ -42,7 +42,7 @@ namespace lotus
         Texture& operator=(Texture&&) = default;
         virtual ~Texture() = default;
 
-        WorkerTask<> Init(Engine* engine, std::vector<uint8_t>&& texture_data);
+        WorkerTask<> Init(Engine* engine, std::vector<std::vector<uint8_t>>&& texture_data);
 
         uint32_t getWidth() const { return width; }
         uint32_t getHeight() const { return height; }

@@ -27,10 +27,11 @@ void main() {
 
     outColor = albedo * post_light;
 
-    if (albedo.a > light.light.landscape.min_fog && albedo.a < light.light.landscape.max_fog)
+    /*if (albedo.a > light.light.landscape.min_fog && albedo.a < light.light.landscape.max_fog)
     {
         outColor.rgb = mix(outColor.rgb, light.light.landscape.fog_color.rgb, (albedo.a - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));   
     }
+    */
     outColor.rgb += particle;
 
     outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));

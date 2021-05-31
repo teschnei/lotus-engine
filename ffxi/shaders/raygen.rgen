@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_ARB_shader_clock : enable
 
+#include "common.glsl"
 #include "sampling.glsl"
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
@@ -47,8 +48,9 @@ void main()
     hitValue.seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, int(clockARB()));
     hitValue.weight = 0.0;
     hitValue.particle = vec3(0.0);
+    hitValue.distance = 0.0;
 
-    traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10, 0, 0, 0, origin.xyz, 0.001, dir.xyz, 1000.0, 0);
+    traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10 | 0x20, 0, 0, 0, origin.xyz, 0.001, dir.xyz, 1000.0, 0);
     vec3 hit_normal = hitValue.normal;
     vec3 diffuse = hitValue.diffuse;
     vec3 BRDF = hitValue.BRDF;
@@ -64,16 +66,19 @@ void main()
         vec3 weight = gi_weight;
         hitValue.origin = gi_origin;
         hitValue.direction = gi_dir;
+        hitValue.distance = 0.0;
         for(; hitValue.depth < 0; hitValue.depth++)
         {
-            traceRayEXT(topLevelAS, 0, 0x01 | 0x02, 0, 0, 1, hitValue.origin, 0.001, hitValue.direction, 1000.0, 0);
+            traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x20, 0, 0, 1, hitValue.origin, 0.001, hitValue.direction, 1000.0, 0);
             accumulation += hitValue.BRDF * hitValue.diffuse * weight;
             weight *= hitValue.weight * hitValue.BRDF;
         }
     }
 
+    vec3 light_total = (accumulation / float(max_samples)) + diffuse;
+
     imageStore(albedo, ivec2(gl_LaunchIDEXT.xy), vec4(BRDF, dist));
     imageStore(normal, ivec2(gl_LaunchIDEXT.xy), vec4(hit_normal, 0.0));
-    imageStore(light, ivec2(gl_LaunchIDEXT.xy), vec4((accumulation / float(max_samples)) + diffuse, 1.0));
+    imageStore(light, ivec2(gl_LaunchIDEXT.xy), vec4(light_total, 1.0));
     imageStore(particle, ivec2(gl_LaunchIDEXT.xy), vec4(particle_colour, 1.0));
 }

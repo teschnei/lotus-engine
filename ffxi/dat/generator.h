@@ -117,6 +117,8 @@ namespace FFXI
         std::string kf_u;
         std::string kf_v;
 
+        glm::vec2 duv{};
+
         std::vector<D3M::Vertex> ring_vertices;
         std::vector<uint16_t> ring_indices;
         std::shared_ptr<lotus::Model> ring;
