@@ -12,7 +12,7 @@ SystemDat::SystemDat(FFXIGame* _game, _private_tag) : game(_game) {}
 
 lotus::Task<std::unique_ptr<SystemDat>> SystemDat::Load(FFXIGame* game)
 {
-    const auto& ffxi_dat = game->dat_loader->GetDat(static_cast<FFXIConfig*>(game->engine->config.get())->ffxi.ffxi_install_path / "ROM/0/0.DAT");
+    const auto& ffxi_dat = game->dat_loader->GetDat(0);
     auto dat = std::make_unique<SystemDat>(game, _private_tag{});
 
     std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;

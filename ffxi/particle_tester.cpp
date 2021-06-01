@@ -21,7 +21,14 @@ ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, l
 
 lotus::Task<> ParticleTester::init()
 {
-    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path / "ROM/11/17.DAT");
+    //WS/dance/quarry: id + 3400
+    //magic: id + 2800
+    //item: id + 4912
+    //ja: id + 4412
+    //mobskill: id + 3900
+    //pet mobskill: id + 49391
+    size_t index = 2800 + 144;
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(index);
     scheduler_resources = co_await SchedulerResources::Load(static_cast<FFXIGame*>(engine->game), dat);
 }
 

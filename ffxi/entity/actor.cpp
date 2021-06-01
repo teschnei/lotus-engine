@@ -46,20 +46,25 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
 }
 
-lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, const std::filesystem::path& dat)
+lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, size_t modelid)
 {
-    //modelid >= 3500: id - 3500 + 101739
-    //modelid >= 3000: id - 3000 + 99907
-    //modelid >= 1500: id - 1500 + 51795
-    // else: id + 1300
     auto actor = std::make_shared<Actor>(engine);
-    co_await actor->Load(dat);
+    co_await actor->Load(modelid);
     co_return std::move(actor);
 }
 
-lotus::WorkerTask<> Actor::Load(const std::filesystem::path& path)
+lotus::WorkerTask<> Actor::Load(size_t modelid)
 {
-    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path);
+    size_t dat_index = 0;
+    if (modelid >= 3500)
+        dat_index = modelid - 3500 + 101739;
+    else if (modelid >= 3000)
+        dat_index = modelid - 3000 + 99907;
+    else if (modelid >= 1500)
+        dat_index = modelid - 1500 + 51795;
+    else
+        dat_index = modelid + 1300;
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_index);
 
     auto skel = std::make_unique<lotus::Skeleton>();
     FFXI::SK2* pSk2{ nullptr };

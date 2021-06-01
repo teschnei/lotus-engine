@@ -15,7 +15,7 @@
 #include <iostream>
 
 FFXIGame::FFXIGame(const lotus::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>()),
-    dat_loader(std::make_unique<FFXI::DatLoader>())
+    dat_loader(std::make_unique<FFXI::DatLoader>(static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path))
 {
 }
 
@@ -63,10 +63,10 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(path / "ROM/342/73.DAT");
-    //costumeid 3111 (arciela 3074)
-    auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/310/3.DAT");
-    //auto player = co_await loading_scene->AddEntity<Actor>(path / "ROM/309/105.DAT");
+    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(103);
+    //iroha 3111 (arciela 3074)
+    auto player = co_await loading_scene->AddEntity<Actor>(3111);
     player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
     auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
     if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)

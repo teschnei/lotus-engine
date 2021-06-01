@@ -13,16 +13,17 @@
 #include "entity/component/generator_component.h"
 #include <glm/gtx/rotate_vector.hpp>
 
-lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotus::Engine* engine, const std::filesystem::path& dat)
+lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotus::Engine* engine, size_t zoneid)
 {
     auto entity = std::make_shared<FFXILandscapeEntity>(engine);
-    co_await entity->Load(dat);
+    co_await entity->Load(zoneid);
     co_return std::move(entity);
 }
 
-lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& path)
+lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid)
 {
-    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path);
+    size_t index = zoneid < 256 ? zoneid + 100 : zoneid + 83635;
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(index);
 
     FFXI::MZB* mzb{ nullptr };
     std::map<std::string, uint32_t> model_map;
@@ -65,14 +66,14 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(const std::filesystem::path& path)
                                 uint_to_color_vec(casted->data->fog1),
                                 casted->data->max_fog_dist1,
                                 casted->data->min_fog_dist1,
-                                casted->data->brightness1 * 2.5,
+                                casted->data->brightness1 * 4.5,
                                 uint_to_color_vec(casted->data->sunlight_diffuse2),
                                 uint_to_color_vec(casted->data->moonlight_diffuse2),
                                 uint_to_color_vec(casted->data->ambient2),
                                 uint_to_color_vec(casted->data->fog2),
                                 casted->data->max_fog_dist2,
                                 casted->data->min_fog_dist2,
-                                casted->data->brightness2 * 2.5,
+                                casted->data->brightness2 * 4.5,
                                 {},
                                 {}
                             };
@@ -362,7 +363,7 @@ lotus::Task<> FFXILandscapeEntity::render(lotus::Engine* engine, std::shared_ptr
 lotus::Task<> FFXILandscapeEntity::tick(lotus::time_point time, lotus::duration delta)
 {
     current_time = std::chrono::duration_cast<FFXITime::milliseconds>((FFXITime::vana_time() % FFXITime::days(1))).count() / 60000.f;
-    current_time = 720;
+    current_time = 860;
 
     auto elapsed = time - create_time;
     auto frame = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed) * 7.5f) / std::chrono::milliseconds(1000);
