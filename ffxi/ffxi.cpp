@@ -63,8 +63,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(103);
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
     //iroha 3111 (arciela 3074)
     auto player = co_await loading_scene->AddEntity<Actor>(3111);
     player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
