@@ -28,6 +28,7 @@ endif()
 
 file( COPY textures DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
+add_subdirectory(audio)
 add_subdirectory(dat)
 add_subdirectory(entity)
 add_subdirectory(shaders)

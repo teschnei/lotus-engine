@@ -143,11 +143,11 @@ namespace FFXI
 
         uint32_t grid_offset = *(uint32_t*)(buffer + header->collisionMeshOffset + 0x10);
 
-        for (int y = 0; y < header->gridHeight * 10; ++y)
+        for (int y = 0; y < header->gridHeight * header->bucketHeight / 4; ++y)
         {
-            for (int x = 0; x < header->gridWidth * 10; ++x)
+            for (int x = 0; x < header->gridWidth * header->bucketWidth / 4; ++x)
             {
-                uint32_t offsets = (y * header->gridWidth * 10 + x) * 4;
+                uint32_t offsets = (y * header->gridWidth * header->bucketWidth / 4 + x) * 4;
                 uint32_t entry_offset = *(uint32_t*)(buffer + grid_offset + offsets);
                 if (entry_offset != 0)
                 {

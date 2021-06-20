@@ -1,12 +1,13 @@
 #pragma once
-#include "worker_pool.h"
+#include "audio.h"
 #include "config.h"
-#include "renderer/vulkan/renderer.h"
-#include "entity/camera.h"
 #include "input.h"
-#include "types.h"
 #include "light_manager.h"
 #include "random.h"
+#include "types.h"
+#include "worker_pool.h"
+#include "entity/camera.h"
+#include "renderer/vulkan/renderer.h"
 #include "ui/events.h"
 #include "ui/ui.h"
 
@@ -37,6 +38,7 @@ namespace lotus
         Settings settings;
         std::unique_ptr<Input> input;
         Camera* camera {nullptr};
+        std::unique_ptr<AudioEngine> audio;
         std::unique_ptr<WorkerPool> worker_pool;
         std::unique_ptr<LightManager> lights;
         std::unique_ptr<ui::Events> events;

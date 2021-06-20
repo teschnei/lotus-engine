@@ -2,6 +2,7 @@
 
 #include "test_loader.h"
 #include "particle_tester.h"
+#include "audio/ffxi_audio.h"
 #include "entity/landscape_entity.h"
 #include "entity/actor.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
@@ -64,6 +65,8 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     */
 
     auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
+    landscape->bgm = FFXI::Audio::loadSound(path / "sound/win/music/data/music079.bgw");
+    engine->audio->playBGM(*landscape->bgm);
     //iroha 3111 (arciela 3074)
     auto player = co_await loading_scene->AddEntity<Actor>(3111);
     player->setPos(glm::vec3(-430.f, -42.2f, 46.f));

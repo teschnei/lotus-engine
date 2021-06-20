@@ -27,3 +27,4 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin" )
 
 add_subdirectory( "engine" )
 add_subdirectory( "ffxi" )
+add_subdirectory( "external/soloud/contrib" )

@@ -1,6 +1,8 @@
 project( engine )
 
 add_library( engine
+    audio.cpp
+    audio.h
     config.cpp
     config.h
     core.cpp
@@ -20,15 +22,16 @@ add_library( engine
     worker_pool.cpp
     worker_pool.h
     worker_task.h
- )
+    )
 
 target_include_directories(engine PUBLIC "../" )
 target_include_directories(engine PUBLIC "../external/vma" )
+target_include_directories(engine PUBLIC "../external/soloud/include" )
 
 target_compile_options(engine PUBLIC $<$<PLATFORM_ID:Linux>:-fcoroutines>)
 
 target_link_libraries(engine $<$<PLATFORM_ID:Linux>:-ldl>)
-target_link_libraries(engine Vulkan::Vulkan SDL::SDL2 GLM::GLM)
+target_link_libraries(engine Vulkan::Vulkan SDL::SDL2 GLM::GLM soloud)
 
 add_compile_definitions(GLM_FORCE_LEFT_HANDED)
 

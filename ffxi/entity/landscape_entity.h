@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include "engine/entity/landscape_entity.h"
+#include "engine/audio.h"
 #include "engine/light_manager.h"
 #include "engine/renderer/mesh.h"
 #include "dat/mzb.h"
@@ -33,6 +34,7 @@ public:
     FFXI::QuadTree quadtree{glm::vec3{}, glm::vec3{}};
     std::vector<std::pair<uint32_t, InstanceInfo>> model_vec;
     std::map<std::string, std::map<uint32_t, LightTOD>> weather_light_map;
+    std::unique_ptr<SoLoud::AudioSource> bgm;
 protected:
     virtual lotus::Task<> render(lotus::Engine* engine, std::shared_ptr<Entity> sp) override;
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
