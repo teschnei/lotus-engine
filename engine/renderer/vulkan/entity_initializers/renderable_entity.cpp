@@ -89,7 +89,8 @@ namespace lotus
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
                 vertex_buffer[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
+                    vk::MemoryPropertyFlagBits::eDeviceLocal));
 
                 raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                     vk::Format::eR32G32B32Sfloat,
