@@ -13,4 +13,10 @@ namespace lotus
         engine->setProtectVoice(bgm, true);
         return bgm;
     }
+
+    SoLoud::handle AudioEngine::playSound(SoLoud::AudioSource& src)
+    {
+        auto se = engine->play(src);
+        return se;
+    }
 }

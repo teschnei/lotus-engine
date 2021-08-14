@@ -1,8 +1,12 @@
 #include "ffxi_audio.h"
 
 #include <fstream>
+
+#include "engine/core.h"
+
 #include "adpcm.h"
 #include "adpcmstream.h"
+#include "config.h"
 #include "pcm.h"
 
 enum class SampleFormat : uint32_t
@@ -47,14 +51,75 @@ struct SoundEffectHeader
     uint32_t unknown4;
 };
 
-std::unique_ptr<SoLoud::AudioSource> FFXI::Audio::loadSound(std::filesystem::path path)
+FFXI::Audio::Audio(lotus::Engine* _engine) : engine(_engine)
 {
-    std::vector<std::byte> data;
-    data.resize(8);
+    auto base_path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
+    sound_paths[0] = base_path / "sound/win";
+    for (auto i = 1u; i < 16u; ++i)
+    {
+        sound_paths[i] = base_path / std::format("sound{}/win", i);
+    }
+}
+
+void FFXI::Audio::playSound(uint32_t id)
+{
+    if (!sounds.contains(id))
+    {
+        if (auto se = loadSound(id))
+        {
+            sounds[id] = std::move(se);
+        }
+    }
+    if (sounds.contains(id))
+    {
+        engine->audio->playSound(*sounds[id]);
+    }
+}
+
+void FFXI::Audio::setMusic(uint32_t id, uint8_t type)
+{
+    if (auto music = loadMusic(id); music && type < bgm.size())
+    {
+        bgm[type] = std::move(music);
+
+        //TODO: check if this is the current music to play (day/night/battle/party/mount)
+        engine->audio->playBGM(*bgm[type]);
+    }
+}
+
+std::unique_ptr<SoLoud::AudioSource> FFXI::Audio::loadSound(uint32_t id)
+{
+    for (const auto& path : sound_paths)
+    {
+        if (auto as = loadAudioSource(path / std::format("se/se{:03}/se{:06}.spw", id / 1000, id)))
+        {
+            return as;
+        }
+    }
+    throw std::runtime_error("sound not found: " + id);
+}
+
+std::unique_ptr<SoLoud::AudioSource> FFXI::Audio::loadMusic(uint32_t id)
+{
+    for (const auto& path : sound_paths)
+    {
+        if (auto as = loadAudioSource(path / std::format("music/data/music{:03}.bgw", id)))
+        {
+            return as;
+        }
+    }
+    throw std::runtime_error("music not found: " + id);
+}
+
+std::unique_ptr<SoLoud::AudioSource> FFXI::Audio::loadAudioSource(std::filesystem::path path)
+{
     auto file = std::ifstream{ path, std::ios::binary };
 
     if (!file.good())
-        throw std::runtime_error("file not found: " + path.string());
+        return nullptr;
+
+    std::vector<std::byte> data;
+    data.resize(8);
 
     file.read((char*)data.data(), 8);
     if (std::string((const char*)data.data(), 8).starts_with("SeWave"))

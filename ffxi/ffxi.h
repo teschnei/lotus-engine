@@ -1,9 +1,10 @@
 #pragma once
 #include "config.h"
 #include "system_dat.h"
+#include "audio/ffxi_audio.h"
+#include "dat/dat_loader.h"
 #include "engine/core.h"
 #include "engine/game.h"
-#include "dat/dat_loader.h"
 
 namespace FFXI
 {
@@ -21,6 +22,7 @@ public:
 
     std::unique_ptr<FFXI::DatLoader> dat_loader;
     std::unique_ptr<SystemDat> system_dat;
+    std::unique_ptr<FFXI::Audio> audio;
 
 private:
     std::shared_ptr<lotus::Texture> default_texture;

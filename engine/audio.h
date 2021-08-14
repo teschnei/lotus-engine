@@ -12,6 +12,7 @@ namespace lotus
         AudioEngine();
 
         SoLoud::handle playBGM(SoLoud::AudioSource&);
+        SoLoud::handle playSound(SoLoud::AudioSource&);
 
     private:
         std::unique_ptr<SoLoud::Soloud> engine;

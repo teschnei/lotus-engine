@@ -16,7 +16,8 @@
 #include <iostream>
 
 FFXIGame::FFXIGame(const lotus::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>()),
-    dat_loader(std::make_unique<FFXI::DatLoader>(static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path))
+    dat_loader(std::make_unique<FFXI::DatLoader>(static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path)),
+    audio(std::make_unique<FFXI::Audio>(engine.get()))
 {
 }
 
@@ -65,8 +66,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     */
 
     auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
-    landscape->bgm = FFXI::Audio::loadSound(path / "sound/win/music/data/music079.bgw");
-    engine->audio->playBGM(*landscape->bgm);
+    audio->setMusic(79, 0);
     //iroha 3111 (arciela 3074)
     auto player = co_await loading_scene->AddEntity<Actor>(3111);
     player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
