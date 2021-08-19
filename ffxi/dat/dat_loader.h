@@ -12,7 +12,7 @@ namespace FFXI
     public:
         DatLoader(std::filesystem::path install_path);
         const Dat& GetDat(size_t index);
-        //const Dat& GetDat(const std::filesystem::path&);
+        const Dat& GetDat(const std::filesystem::path&);
     private:
         std::vector<std::byte> read_file(std::filesystem::path path);
         std::filesystem::path get_dat_path(size_t index);

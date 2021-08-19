@@ -47,6 +47,7 @@ namespace lotus
         WorkerTask<> renderWork();
         void updateUniformBuffer(int image_index);
         WorkerTask<> InitWork();
+        WorkerTask<> InitModel(std::shared_ptr<Model> model, ModelTransformedGeometry&);
         glm::vec3 scale{ 1.f, 1.f, 1.f };
         glm::mat4 scale_mat{ 1.f };
     };

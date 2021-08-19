@@ -6,6 +6,7 @@
 #include "entity/landscape_entity.h"
 #include "entity/actor.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
+#include "entity/component/equipment_test_component.h"
 #include "entity/third_person_ffxi_camera.h"
 
 #include "engine/scene.h"
@@ -68,7 +69,17 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
     audio->setMusic(79, 0);
     //iroha 3111 (arciela 3074)
-    auto player = co_await loading_scene->AddEntity<Actor>(3111);
+    //auto player = co_await loading_scene->AddEntity<Actor>(3111);
+    auto player = co_await loading_scene->AddEntity<Actor>(LookData{ .look = {
+        .race = 2,
+        .face = 14,
+        .head = 0x1000,
+        .body = 0x2000,
+        .hands = 0x3000,
+        .legs = 0x4000,
+        .feet = 0x5000
+        }
+    });
     player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
     auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
     if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
@@ -80,6 +91,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
 
     co_await player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
     co_await player->addComponent<ParticleTester>(engine->input.get());
+    co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
 
     co_await update_scene(std::move(loading_scene));
 }

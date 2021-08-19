@@ -2,45 +2,14 @@
 
 #include <ranges>
 #include "ffxi.h"
+#include "dat/dat.h"
 #include "dat/dat_loader.h"
 #include "dat/os2.h"
 #include "dat/sk2.h"
 #include "dat/dxt3.h"
 #include "dat/mo2.h"
+#include "entity/loader/actor_loader.h"
 #include "engine/entity/component/animation_component.h"
-
-std::vector<vk::VertexInputBindingDescription> getBindingDescriptions()
-{
-    std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
-
-    binding_descriptions[0].binding = 0;
-    binding_descriptions[0].stride = sizeof(FFXI::OS2::Vertex);
-    binding_descriptions[0].inputRate = vk::VertexInputRate::eVertex;
-
-    return binding_descriptions;
-}
-
-std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions()
-{
-    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(3);
-
-    attribute_descriptions[0].binding = 0;
-    attribute_descriptions[0].location = 0;
-    attribute_descriptions[0].format = vk::Format::eR32G32B32Sfloat;
-    attribute_descriptions[0].offset = offsetof(FFXI::OS2::Vertex, pos);
-
-    attribute_descriptions[1].binding = 0;
-    attribute_descriptions[1].location = 1;
-    attribute_descriptions[1].format = vk::Format::eR32G32B32Sfloat;
-    attribute_descriptions[1].offset = offsetof(FFXI::OS2::Vertex, norm);
-
-    attribute_descriptions[2].binding = 0;
-    attribute_descriptions[2].location = 2;
-    attribute_descriptions[2].format = vk::Format::eR32G32Sfloat;
-    attribute_descriptions[2].offset = offsetof(FFXI::OS2::Vertex, uv);
-
-    return attribute_descriptions;
-}
 
 Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
@@ -49,12 +18,8 @@ Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, size_t modelid)
 {
     auto actor = std::make_shared<Actor>(engine);
-    co_await actor->Load(modelid);
-    co_return std::move(actor);
-}
+    actor->model_type = ModelType::NPC;
 
-lotus::WorkerTask<> Actor::Load(size_t modelid)
-{
     size_t dat_index = 0;
     if (modelid >= 3500)
         dat_index = modelid - 3500 + 101739;
@@ -66,8 +31,139 @@ lotus::WorkerTask<> Actor::Load(size_t modelid)
         dat_index = modelid + 1300;
     const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_index);
 
+    co_await actor->Load({ dat });
+    co_return std::move(actor);
+}
+
+lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, LookData look)
+{
+    auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
+    auto actor = std::make_shared<Actor>(engine);
+    actor->look = look;
+
+    co_await actor->Load({
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/58.DAT"), //skel
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/59.DAT"), //skel2
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/60.DAT"), //skel3
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/61.DAT"), //skel4
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/77.DAT"), //face
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.head)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.body)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.hands)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.legs)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.feet))
+        });
+    co_return std::move(actor);
+}
+
+lotus::WorkerTask<> Actor::Load(std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats)
+{
     auto skel = std::make_unique<lotus::Skeleton>();
     FFXI::SK2* pSk2{ nullptr };
+    std::vector<std::vector<FFXI::OS2*>> os2s;
+    std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
+
+    for (const auto& dat : dats)
+    {
+        std::vector<FFXI::OS2*> dat_os2s;
+        for (const auto& chunk : dat.get().root->children)
+        {
+            if (auto dxt3 = dynamic_cast<FFXI::DXT3*>(chunk.get()))
+            {
+                if (dxt3->width > 0)
+                {
+                    texture_tasks.push_back(lotus::Texture::LoadTexture(dxt3->name, FFXI::DXT3Loader::LoadTexture, engine, dxt3));
+                }
+            }
+            else if (auto sk2 = dynamic_cast<FFXI::SK2*>(chunk.get()))
+            {
+                pSk2 = sk2;
+                for (const auto& bone : sk2->bones)
+                {
+                    skel->addBone(bone.parent_index, bone.rot, bone.trans);
+                }
+                std::ranges::copy(sk2->generator_points, generator_points.begin());
+            }
+            else if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
+            {
+                //TODO: instead of combining, they should be separate so they can be composed of different animations (legs vs torso etc)
+                auto anim = skel->animations.find(mo2->name);
+                if (anim == skel->animations.end())
+                {
+                    anim= skel->animations.emplace(mo2->name, std::make_unique<lotus::Animation>(skel.get())).first;
+                }
+                auto& animation = anim->second;
+                animation->name = mo2->name;
+                animation->frame_duration = std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed));
+
+                for (size_t i = 0; i < mo2->frames; ++i)
+                {
+                    for (const auto& transform : mo2->animation_data)
+                    {
+                        auto bone = transform.first;
+                        auto& mo2_transform = transform.second[i];
+                        animation->addFrameData(i, bone, { mo2_transform.rot, mo2_transform.trans, mo2_transform.scale });
+                    }
+                }
+            }
+            else if (auto os2 = dynamic_cast<FFXI::OS2*>(chunk.get()))
+            {
+                dat_os2s.push_back(os2);
+            }
+            else if (auto scheduler = dynamic_cast<FFXI::Scheduler*>(chunk.get()))
+            {
+                scheduler_map.insert({ std::string(chunk->name, 4), scheduler });
+            }
+            else if (auto generator = dynamic_cast<FFXI::Generator*>(chunk.get()))
+            {
+                generator_map.insert({ std::string(chunk->name, 4), generator });
+            }
+        }
+        if (!dat_os2s.empty())
+        {
+            os2s.push_back(std::move(dat_os2s));
+        }
+    }
+
+    co_await addSkeleton(std::move(skel));
+    std::vector<lotus::Task<>> model_tasks;
+
+    for (const auto& os2 : os2s)
+    {
+        auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + os2.front()->name, FFXIActorLoader::LoadModel, engine, os2);
+        models.push_back(model);
+        if (model_task)
+            model_tasks.push_back(std::move(*model_task));
+    }
+    auto init_task = InitWork();
+
+    //co_await all tasks
+    for (const auto& task : texture_tasks)
+    {
+        co_await task;
+    }
+    for (const auto& task : model_tasks)
+    {
+        co_await task;
+    }
+    co_await init_task;
+    animation_component->playAnimation("idl");
+}
+
+void Actor::updateEquipLook(uint16_t modelid)
+{
+    uint8_t slot = modelid >> 12;
+    if (model_type == ModelType::PC && slot < 9 && look.slots[slot] != modelid)
+    {
+        look.slots[slot] = modelid;
+        engine->worker_pool->background(updateEquipLookTask(modelid));
+    }
+}
+
+lotus::Task<> Actor::updateEquipLookTask(uint16_t modelid)
+{
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(GetModelDat(modelid));
+
     std::vector<FFXI::OS2*> os2s;
     std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
 
@@ -80,329 +176,79 @@ lotus::WorkerTask<> Actor::Load(size_t modelid)
                 texture_tasks.push_back(lotus::Texture::LoadTexture(dxt3->name, FFXI::DXT3Loader::LoadTexture, engine, dxt3));
             }
         }
-        else if (auto sk2 = dynamic_cast<FFXI::SK2*>(chunk.get()))
-        {
-            pSk2 = sk2;
-            for(const auto& bone : sk2->bones)
-            {
-                skel->addBone(bone.parent_index, bone.rot, bone.trans);
-            }
-            std::ranges::copy(sk2->generator_points, generator_points.begin());
-        }
-        else if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
-        {
-            std::unique_ptr<lotus::Animation> animation = std::make_unique<lotus::Animation>(skel.get());
-            animation->name = mo2->name;
-            animation->frame_duration = std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed));
-
-            for (size_t i = 0; i < mo2->frames; ++i)
-            {
-                for (size_t bone = 0; bone < skel->bones.size(); ++bone)
-                {
-                    if (auto transform = mo2->animation_data.find(bone); transform != mo2->animation_data.end())
-                    {
-                        auto& mo2_transform = transform->second[i];
-                        animation->addFrameData(i, bone, { mo2_transform.rot, mo2_transform.trans, mo2_transform.scale });
-                    }
-                    else
-                    {
-                        animation->addFrameData(i, bone, { glm::quat{1, 0, 0, 0}, glm::vec3{0}, glm::vec3{1} });
-                    }
-                }
-            }
-            skel->animations[animation->name] = std::move(animation);
-        }
         else if (auto os2 = dynamic_cast<FFXI::OS2*>(chunk.get()))
         {
             os2s.push_back(os2);
         }
-        else if (auto scheduler = dynamic_cast<FFXI::Scheduler*>(chunk.get()))
-        {
-            scheduler_map.insert({ std::string(chunk->name, 4), scheduler });
-        }
-        else if (auto generator = dynamic_cast<FFXI::Generator*>(chunk.get()))
-        {
-            generator_map.insert({ std::string(chunk->name, 4), generator });
-        }
     }
 
-    co_await addSkeleton(std::move(skel));
+    auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + std::string(os2s.front()->name, 4) + std::to_string(modelid), FFXIActorLoader::LoadModel, engine, os2s);
 
-    auto [model, model_task] = lotus::Model::LoadModel("iroha_test", FFXIActorLoader::LoadModel, engine, os2s, pSk2);
-    models.push_back(model);
-    auto init_task = InitWork();
+    lotus::ModelTransformedGeometry new_model_transform{};
+    auto init_task = InitModel(model, new_model_transform);
 
-    //co_await all tasks
     for (const auto& task : texture_tasks)
     {
         co_await task;
     }
-    if (model_task) co_await *model_task;
+    if (model_task)
+        co_await *model_task;
+
     co_await init_task;
-    animation_component->playAnimation("idl");
+
+    co_await engine->worker_pool->waitForFrame();
+
+    uint8_t slot = modelid >> 12;
+    std::swap(models[slot], model);
+    std::swap(animation_component->transformed_geometries[slot], new_model_transform);
+
+    engine->worker_pool->gpuResource(std::move(model));
+    engine->worker_pool->gpuResource(std::move(new_model_transform));
+
+    co_return;
 }
 
-lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, const std::vector<FFXI::OS2*>& os2s, FFXI::SK2* sk2)
+size_t Actor::GetModelDat(uint16_t modelid)
 {
-    if (!pipeline_flag.test_and_set())
+    uint16_t id = modelid & 0xFFF;
+    uint8_t slot = modelid >> 12;
+    uint8_t race = look.look.race;
+    if (race > 4)
     {
-        InitPipeline(engine);
-        pipeline_latch.count_down();
+        //tarutaru female do not have their own models
+        --race;
     }
-    pipeline_latch.wait();
-    model->light_offset = 0;
-    std::vector<std::vector<uint8_t>> vertices;
-    std::vector<std::vector<uint8_t>> indices;
-    std::map<lotus::Mesh*, lotus::WorkerTask<std::shared_ptr<lotus::Material>>> material_map;
 
-    for (const auto& os2 : os2s)
+    //armour
+    if (slot < 6)
     {
-        std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine) * os2->meshes.size(),
-            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        uint32_t material_buffer_offset = 0;
-        for (const auto& os2_mesh : os2->meshes)
+        if (id < 256)
         {
-            auto mesh = std::make_unique<lotus::Mesh>(); 
-            mesh->has_transparency = true;
-
-            std::vector<FFXI::OS2::WeightingVertex> os2_vertices;
-            std::vector<uint8_t> vertices_uint8;
-            std::vector<uint16_t> mesh_indices;
-            std::vector<uint8_t> indices_uint8;
-            std::shared_ptr<lotus::Texture> texture = lotus::Texture::getTexture(os2_mesh.tex_name);
-            if (!texture) texture = lotus::Texture::getTexture("default");
-            material_map.insert(std::make_pair(mesh.get(), lotus::Material::make_material(engine, material_buffer, material_buffer_offset, texture, 0, os2_mesh.specular_exponent, os2_mesh.specular_intensity)));
-            material_buffer_offset += lotus::Material::getMaterialBufferSize(engine);
-
-            int passes = os2->mirror ? 2 : 1;
-            for (int i = 0; i < passes; ++i)
-            {
-                for (auto [index, uv] : os2_mesh.indices)
-                {
-                    const auto& vert = os2->vertices[index];
-                    FFXI::OS2::WeightingVertex vertex;
-                    vertex.uv = uv;
-                    vertex.pos = vert.first.pos;
-                    vertex.norm = vert.first.norm;
-                    vertex.weight = vert.first.weight;
-                    if (i == 0)
-                    {
-                        vertex.bone_index = vert.first.bone_index;
-                        vertex.mirror_axis = 0;
-                    }
-                    else
-                    {
-                        vertex.bone_index = vert.first.bone_index_mirror;
-                        vertex.mirror_axis = vert.first.mirror_axis;
-                    }
-                    os2_vertices.push_back(vertex);
-                    vertex.pos = vert.second.pos;
-                    vertex.norm = vert.second.norm;
-                    vertex.weight = vert.second.weight;
-                    if (i == 0)
-                    {
-                        vertex.bone_index = vert.second.bone_index;
-                        vertex.mirror_axis = 0;
-                    }
-                    else
-                    {
-                        vertex.bone_index = vert.second.bone_index_mirror;
-                        vertex.mirror_axis = vert.second.mirror_axis;
-                    }
-                    os2_vertices.push_back(vertex);
-
-                    mesh_indices.push_back((uint16_t)mesh_indices.size());
-                }
-            }
-        vertices_uint8.resize(os2_vertices.size() * sizeof(FFXI::OS2::WeightingVertex));
-        memcpy(vertices_uint8.data(), os2_vertices.data(), vertices_uint8.size());
-        indices_uint8.resize(mesh_indices.size() * sizeof(uint16_t));
-        memcpy(indices_uint8.data(), mesh_indices.data(), indices_uint8.size());
-
-        vk::BufferUsageFlags vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer;
-        vk::BufferUsageFlags index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
-
-        if (engine->config->renderer.RaytraceEnabled())
-        {
-            vertex_usage_flags |= vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
-            index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
+            if (race > 4)
+                return 3904 + (256 * slot) + (race * 3176) + id;
+            else
+                return 3680 + (256 * slot) + (race * 3176) + id;
         }
-
-        mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->setIndexCount(mesh_indices.size());
-        mesh->setVertexCount(os2_vertices.size());
-        mesh->setMaxIndex(*std::ranges::max_element(mesh_indices));
-        mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
-        mesh->setVertexInputBindingDescription(getBindingDescriptions());
-        mesh->pipeline = pipeline;
-        mesh->pipeline_shadow = pipeline_shadowmap;
-
-        vertices.push_back(std::move(vertices_uint8));
-        indices.push_back(std::move(indices_uint8));
-        model->meshes.push_back(std::move(mesh));
+        else if (id < 320)
+        {
+            return 62811 + (64 * slot) + (race * 448) + (id - 256);
+        }
+        else if (id < 576)
+        {
+            return 69455 + (256 * slot) + (race * 1536) + (id - 320);
+        }
+        else if (id < 608)
+        {
+            return 98595 + (32 * slot) + (race * 160) + (id - 576);
+        }
+        else
+        {
+            return 102577 + (64 * slot) + (race * 320) + (id - 608);
         }
     }
-    model->lifetime = lotus::Lifetime::Short;
-    model->weighted = true;
-
-    for (auto& [mesh, task] : material_map)
+    //weapons
+    else
     {
-        mesh->material = co_await task;
+        return 0;
     }
-
-    co_await model->InitWork(engine, std::move(vertices), std::move(indices), sizeof(FFXI::OS2::WeightingVertex));
-}
-
-void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
-{
-    auto vertex_module = engine->renderer->getShader("shaders/ffxiactor_gbuffer_vert.spv");
-    auto fragment_module = engine->renderer->getShader("shaders/blend.spv");
-
-    vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
-    vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
-    vert_shader_stage_info.module = *vertex_module;
-    vert_shader_stage_info.pName = "main";
-
-    vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
-    frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
-    frag_shader_stage_info.module = *fragment_module;
-    frag_shader_stage_info.pName = "main";
-
-    std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
-
-    vk::PipelineVertexInputStateCreateInfo main_vertex_input_info;
-
-    auto main_binding_descriptions = getBindingDescriptions();
-    auto main_attribute_descriptions = getAttributeDescriptions();
-
-    main_vertex_input_info.vertexBindingDescriptionCount = static_cast<uint32_t>(main_binding_descriptions.size());
-    main_vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(main_attribute_descriptions.size());
-    main_vertex_input_info.pVertexBindingDescriptions = main_binding_descriptions.data();
-    main_vertex_input_info.pVertexAttributeDescriptions = main_attribute_descriptions.data();
-
-    vk::PipelineInputAssemblyStateCreateInfo input_assembly = {};
-    input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
-    input_assembly.primitiveRestartEnable = false;
-
-    vk::Viewport viewport;
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float)engine->renderer->swapchain->extent.width;
-    viewport.height = (float)engine->renderer->swapchain->extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    vk::Rect2D scissor;
-    scissor.offset = vk::Offset2D{0, 0};
-    scissor.extent = engine->renderer->swapchain->extent;
-
-    vk::PipelineViewportStateCreateInfo viewport_state;
-    viewport_state.viewportCount = 1;
-    viewport_state.pViewports = &viewport;
-    viewport_state.scissorCount = 1;
-    viewport_state.pScissors = &scissor;
-
-    vk::PipelineRasterizationStateCreateInfo rasterizer;
-    rasterizer.depthClampEnable = false;
-    rasterizer.rasterizerDiscardEnable = false;
-    rasterizer.polygonMode = vk::PolygonMode::eFill;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = vk::CullModeFlagBits::eNone;
-    rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
-    rasterizer.depthBiasEnable = false;
-
-    vk::PipelineMultisampleStateCreateInfo multisampling;
-    multisampling.sampleShadingEnable = false;
-    multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
-
-    vk::PipelineDepthStencilStateCreateInfo depth_stencil;
-    depth_stencil.depthTestEnable = true;
-    depth_stencil.depthWriteEnable = true;
-    depth_stencil.depthCompareOp = vk::CompareOp::eLessOrEqual;
-    depth_stencil.depthBoundsTestEnable = false;
-    depth_stencil.stencilTestEnable = false;
-
-    vk::PipelineColorBlendAttachmentState color_blend_attachment;
-    color_blend_attachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-    color_blend_attachment.blendEnable = false;
-    color_blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
-    color_blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
-    color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcColor;
-    color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-    color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-    color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
-
-    vk::PipelineColorBlendAttachmentState color_blend_attachment_accumulation = color_blend_attachment;
-    color_blend_attachment_accumulation.blendEnable = true;
-    color_blend_attachment_accumulation.srcColorBlendFactor = vk::BlendFactor::eOne;
-    color_blend_attachment_accumulation.dstColorBlendFactor = vk::BlendFactor::eOne;
-    color_blend_attachment_accumulation.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-    color_blend_attachment_accumulation.dstAlphaBlendFactor = vk::BlendFactor::eOne;
-    vk::PipelineColorBlendAttachmentState color_blend_attachment_revealage = color_blend_attachment;
-    color_blend_attachment_revealage.blendEnable = true;
-    color_blend_attachment_revealage.srcColorBlendFactor = vk::BlendFactor::eZero;
-    color_blend_attachment_revealage.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-    color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
-    color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-
-    std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
-    std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
-
-    vk::PipelineColorBlendStateCreateInfo color_blending;
-    color_blending.logicOpEnable = false;
-    color_blending.logicOp = vk::LogicOp::eCopy;
-    color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
-    color_blending.pAttachments = color_blend_attachment_states.data();
-    color_blending.blendConstants[0] = 0.0f;
-    color_blending.blendConstants[1] = 0.0f;
-    color_blending.blendConstants[2] = 0.0f;
-    color_blending.blendConstants[3] = 0.0f;
-
-    vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
-    color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
-    color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
-
-    vk::GraphicsPipelineCreateInfo pipeline_info;
-    pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-    pipeline_info.pStages = shaderStages.data();
-    pipeline_info.pVertexInputState = &main_vertex_input_info;
-    pipeline_info.pInputAssemblyState = &input_assembly;
-    pipeline_info.pViewportState = &viewport_state;
-    pipeline_info.pRasterizationState = &rasterizer;
-    pipeline_info.pMultisampleState = &multisampling;
-    pipeline_info.pDepthStencilState = &depth_stencil;
-    pipeline_info.pColorBlendState = &color_blending;
-    pipeline_info.subpass = 0;
-    pipeline_info.basePipelineHandle = nullptr;
-
-    pipeline = engine->renderer->createGraphicsPipeline(pipeline_info);
-
-    color_blending.attachmentCount = 0;
-
-    vertex_module = engine->renderer->getShader("shaders/ffxiactor_shadow_vert.spv");
-    fragment_module = engine->renderer->getShader("shaders/shadow_frag.spv");
-
-    vert_shader_stage_info.module = *vertex_module;
-    frag_shader_stage_info.module = *fragment_module;
-
-    shaderStages = { vert_shader_stage_info, frag_shader_stage_info };
-
-    pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-    pipeline_info.pStages = shaderStages.data();
-
-    viewport.width = engine->settings.renderer_settings.shadowmap_dimension;
-    viewport.height = engine->settings.renderer_settings.shadowmap_dimension;
-    scissor.extent.width = engine->settings.renderer_settings.shadowmap_dimension;
-    scissor.extent.height = engine->settings.renderer_settings.shadowmap_dimension;
-
-    rasterizer.depthClampEnable = true;
-    rasterizer.depthBiasEnable = true;
-
-    std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
-    vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
-    dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
-    dynamic_state_ci.pDynamicStates = dynamic_states.data();
-    pipeline_info.pDynamicState = &dynamic_state_ci;
-    pipeline_shadowmap = engine->renderer->createShadowmapPipeline(pipeline_info);
 }

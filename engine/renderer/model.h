@@ -7,6 +7,16 @@
 
 namespace lotus
 {
+    //for weighted models, an entity will keep one of these as its local copy of deformed geometry
+    struct ModelTransformedGeometry
+    {
+        //transformed vertex buffers (per mesh, per render target)
+        std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
+        //acceleration structures (per render target)
+        std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> bottom_level_as;
+        uint16_t resource_index{ 0 };
+    };
+
     class Model
     {
     public:
@@ -21,7 +31,9 @@ namespace lotus
                 {
                     auto ptr = found->second.lock();
                     if (ptr)
-                        return {ptr, std::optional<Task<>>{}};
+                        return { ptr, std::optional<Task<>>{} };
+                    else
+                        model_map.erase(found);
                 }
             }
             auto new_model = std::shared_ptr<Model>(new Model(modelname));

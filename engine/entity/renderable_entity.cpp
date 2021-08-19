@@ -105,6 +105,15 @@ namespace lotus
         co_return;
     }
 
+    WorkerTask<> RenderableEntity::InitModel(std::shared_ptr<Model> model, ModelTransformedGeometry& model_transform)
+    {
+        //priority: 0
+        auto initializer = std::make_unique<RenderableEntityInitializer>(this);
+        engine->renderer->initModel(initializer.get(), engine, *model, model_transform);
+        engine->worker_pool->gpuResource(std::move(initializer));
+        co_return;
+    }
+
     WorkerTask<> RenderableEntity::ReInitWork()
     {
         auto initializer = std::make_unique<RenderableEntityInitializer>(this);

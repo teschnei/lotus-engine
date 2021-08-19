@@ -144,7 +144,7 @@ void main()
         cross_vec = -cross_vec;
 
     vec3 trace_origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
-    vec3 diffuse = vec3(0);
+    vec3 diffuse = light.light.landscape.ambient_color.rgb * light.light.landscape.brightness;
 
     for (int i = 0; i < light.light.light_count; i++)
     {

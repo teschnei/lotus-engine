@@ -9,6 +9,7 @@
 #include "ui_renderer.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
+#include "engine/renderer/model.h"
 
 namespace lotus
 {
@@ -22,6 +23,7 @@ namespace lotus
     class RendererRaytrace;
     class RendererRasterization;
     class RendererHybrid;
+    class RenderableEntityInitializer;
 
     class EntityInitializer
     {
@@ -80,6 +82,7 @@ namespace lotus
 
         virtual void initEntity(EntityInitializer*, Engine*) = 0;
         virtual void drawEntity(EntityInitializer*, Engine*) = 0;
+        virtual void initModel(RenderableEntityInitializer*, Engine*, Model& model, ModelTransformedGeometry& model_transform) = 0;
 
         void resized() { resize = true; }
 

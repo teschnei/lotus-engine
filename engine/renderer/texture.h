@@ -19,7 +19,11 @@ namespace lotus
         {
             if (auto found = texture_map.find(texturename); found != texture_map.end())
             {
-                co_return found->second.lock();
+                auto ptr = found->second.lock();
+                if (ptr)
+                    co_return ptr;
+                else
+                    texture_map.erase(found);
             }
             auto new_texture = std::shared_ptr<Texture>(new Texture(texturename));
             texture_map.emplace(texturename, new_texture);

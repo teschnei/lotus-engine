@@ -7,6 +7,7 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
+#include "engine/renderer/vulkan/entity_initializers/renderable_entity.h"
 #include "engine/renderer/acceleration_structure.h"
 
 namespace lotus
@@ -1540,6 +1541,11 @@ namespace lotus
     void RendererRaytrace::drawEntity(EntityInitializer* initializer, Engine* engine)
     {
         initializer->drawEntity(this, engine);
+    }
+
+    void RendererRaytrace::initModel(RenderableEntityInitializer* initializer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
+    {
+        initializer->initModel(this, engine, model, model_transform);
     }
 
     void RendererRaytrace::bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,

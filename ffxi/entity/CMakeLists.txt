@@ -11,3 +11,4 @@ target_sources(ffxi
     )
 
 add_subdirectory(component)
+add_subdirectory(loader)

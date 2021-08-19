@@ -61,7 +61,6 @@ namespace FFXI
         }
     }
 
-    /*
     const Dat& DatLoader::GetDat(const std::filesystem::path& path)
     {
         if (auto found = dat_map.find(path); found != dat_map.end())
@@ -73,7 +72,6 @@ namespace FFXI
             return dat_map.insert({ path, Dat(path) }).first->second;
         }
     }
-    */
 
     std::vector<std::byte> DatLoader::read_file(std::filesystem::path path)
     {

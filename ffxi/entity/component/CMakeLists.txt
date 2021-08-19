@@ -1,5 +1,7 @@
 target_sources(ffxi
     PRIVATE
+    equipment_test_component.cpp
+    equipment_test_component.h
     generator_component.cpp
     generator_component.h
     scheduler_component.cpp

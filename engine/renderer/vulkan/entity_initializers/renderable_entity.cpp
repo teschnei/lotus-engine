@@ -10,9 +10,6 @@
 
 namespace lotus
 {
-    void generateVertexBuffers(RendererRaytrace* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
-        std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
-
     RenderableEntityInitializer::RenderableEntityInitializer(Entity* _entity) :
         EntityInitializer(_entity)
     {
@@ -35,17 +32,17 @@ namespace lotus
                 auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
                 command_buffer = std::move(command_buffers[0]);
 
-                animation_component->transformed_geometries.push_back({});
                 vk::CommandBufferBeginInfo begin_info = {};
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
                 command_buffer->begin(begin_info);
                 for (size_t i = 0; i < entity->models.size(); ++i)
                 {
+                    animation_component->transformed_geometries.push_back({});
                     const auto& model = entity->models[i];
                     if (model->weighted)
                     {
-                        generateVertexBuffers(renderer, *command_buffer, deformable, *model, animation_component->transformed_geometries.back().vertex_buffers);
+                        initModelWork(renderer, *command_buffer, deformable, *model, animation_component->transformed_geometries.back());
                     }
                 }
                 command_buffer->end();
@@ -53,24 +50,45 @@ namespace lotus
             }
         }
 
-        entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), {}));
+        if (!entity->uniform_buffer)
+        {
+            entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), {}));
+        }
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererRaytrace* renderer, Engine* engine)
+    void RenderableEntityInitializer::initModel(RendererRaytrace* renderer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
-        vk::CommandBufferAllocateInfo alloc_info;
-        alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *renderer->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
+        if (auto deformable = dynamic_cast<DeformableEntity*>(entity))
+        {
+            const auto& animation_component = deformable->animation_component;
+            if (animation_component)
+            {
+                vk::CommandBufferAllocateInfo alloc_info;
+                alloc_info.level = vk::CommandBufferLevel::ePrimary;
+                alloc_info.commandPool = *renderer->graphics_pool;
+                alloc_info.commandBufferCount = 1;
 
-        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-        entity->shadowmap_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+                auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+                command_buffer = std::move(command_buffers[0]);
+
+                vk::CommandBufferBeginInfo begin_info = {};
+                begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+                command_buffer->begin(begin_info);
+                if (model.weighted)
+                {
+                    initModelWork(renderer, *command_buffer, deformable, model, model_transform);
+                }
+                command_buffer->end();
+                engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+            }
+        }
     }
 
-    void generateVertexBuffers(RendererRaytrace* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
-        std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer)
+    void RenderableEntityInitializer::initModelWork(RendererRaytrace* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
+        ModelTransformedGeometry& model_transform)
     {
         std::vector<std::vector<vk::AccelerationStructureGeometryKHR>> raytrace_geometry;
         std::vector<std::vector<vk::AccelerationStructureBuildRangeInfoKHR>> raytrace_offset_info;
@@ -79,8 +97,7 @@ namespace lotus
         raytrace_geometry.resize(renderer->getImageCount());
         raytrace_offset_info.resize(renderer->getImageCount());
         max_primitives.resize(renderer->getImageCount());
-        const auto& animation_component = entity->animation_component;
-        vertex_buffer.resize(model.meshes.size());
+        model_transform.vertex_buffers.resize(model.meshes.size());
         for (size_t i = 0; i < model.meshes.size(); ++i)
         {
             const auto& mesh = model.meshes[i];
@@ -88,13 +105,13 @@ namespace lotus
             for (uint32_t image = 0; image < renderer->getImageCount(); ++image)
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                vertex_buffer[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                model_transform.vertex_buffers[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
                     vk::MemoryPropertyFlagBits::eDeviceLocal));
 
                 raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                     vk::Format::eR32G32B32Sfloat,
-                    renderer->gpu->device->getBufferAddress(vertex_buffer[i].back()->buffer),
+                    renderer->gpu->device->getBufferAddress(model_transform.vertex_buffers[i].back()->buffer),
                     vertex_size,
                     mesh->getMaxIndex(),
                     vk::IndexType::eUint16,
@@ -136,64 +153,71 @@ namespace lotus
 
             command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
-            for (size_t i = 0; i < entity->models.size(); ++i)
+            for (size_t j = 0; j < model.meshes.size(); ++j)
             {
-                for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
-                {
-                    auto& mesh = entity->models[i]->meshes[j];
-                    auto& vertex_buffer = component->transformed_geometries[i].vertex_buffers[j][image_index];
+                auto& mesh = model.meshes[j];
+                auto& vertex_buffer = model_transform.vertex_buffers[j][image_index];
 
-                    vk::DescriptorBufferInfo vertex_weights_buffer_info;
-                    vertex_weights_buffer_info.buffer = mesh->vertex_buffer->buffer;
-                    vertex_weights_buffer_info.offset = 0;
-                    vertex_weights_buffer_info.range = VK_WHOLE_SIZE;
+                vk::DescriptorBufferInfo vertex_weights_buffer_info;
+                vertex_weights_buffer_info.buffer = mesh->vertex_buffer->buffer;
+                vertex_weights_buffer_info.offset = 0;
+                vertex_weights_buffer_info.range = VK_WHOLE_SIZE;
 
-                    vk::DescriptorBufferInfo vertex_output_buffer_info;
-                    vertex_output_buffer_info.buffer = vertex_buffer->buffer;
-                    vertex_output_buffer_info.offset = 0;
-                    vertex_output_buffer_info.range = VK_WHOLE_SIZE;
+                vk::DescriptorBufferInfo vertex_output_buffer_info;
+                vertex_output_buffer_info.buffer = vertex_buffer->buffer;
+                vertex_output_buffer_info.offset = 0;
+                vertex_output_buffer_info.range = VK_WHOLE_SIZE;
 
-                    vk::WriteDescriptorSet weight_descriptor_set{};
-                    weight_descriptor_set.dstSet = nullptr;
-                    weight_descriptor_set.dstBinding = 0;
-                    weight_descriptor_set.dstArrayElement = 0;
-                    weight_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    weight_descriptor_set.descriptorCount = 1;
-                    weight_descriptor_set.pBufferInfo = &vertex_weights_buffer_info;
+                vk::WriteDescriptorSet weight_descriptor_set{};
+                weight_descriptor_set.dstSet = nullptr;
+                weight_descriptor_set.dstBinding = 0;
+                weight_descriptor_set.dstArrayElement = 0;
+                weight_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                weight_descriptor_set.descriptorCount = 1;
+                weight_descriptor_set.pBufferInfo = &vertex_weights_buffer_info;
 
-                    vk::WriteDescriptorSet output_descriptor_set{};
-                    output_descriptor_set.dstSet = nullptr;
-                    output_descriptor_set.dstBinding = 2;
-                    output_descriptor_set.dstArrayElement = 0;
-                    output_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    output_descriptor_set.descriptorCount = 1;
-                    output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
+                vk::WriteDescriptorSet output_descriptor_set{};
+                output_descriptor_set.dstSet = nullptr;
+                output_descriptor_set.dstBinding = 2;
+                output_descriptor_set.dstArrayElement = 0;
+                output_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                output_descriptor_set.descriptorCount = 1;
+                output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
 
-                    command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *renderer->animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set });
+                command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *renderer->animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set });
 
-                    command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
+                command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
-                    vk::BufferMemoryBarrier barrier;
-                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.buffer = vertex_buffer->buffer;
-                    barrier.size = VK_WHOLE_SIZE;
-                    barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-                    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                vk::BufferMemoryBarrier barrier;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.buffer = vertex_buffer->buffer;
+                barrier.size = VK_WHOLE_SIZE;
+                barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
 
-                    command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
-                }
+                command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
             }
         }
         for (size_t i = 0; i < renderer->getImageCount(); ++i)
         {
-            animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(renderer, command_buffer, std::move(raytrace_geometry[i]),
+            model_transform.bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(renderer, command_buffer, std::move(raytrace_geometry[i]),
                 std::move(raytrace_offset_info[i]), std::move(max_primitives[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
         }
     }
 
-    void generateVertexBuffers(RendererRasterization* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
-        std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
+    void RenderableEntityInitializer::drawEntity(RendererRaytrace* renderer, Engine* engine)
+    {
+        auto entity = static_cast<RenderableEntity*>(this->entity);
+        vk::CommandBufferAllocateInfo alloc_info;
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *renderer->graphics_pool;
+        alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
+
+        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        entity->shadowmap_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+    }
+
     void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, bool shadowmap, vk::PipelineLayout layout, size_t image);
     void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index, bool shadowmap);
 
@@ -213,17 +237,17 @@ namespace lotus
                 auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
                 command_buffer = std::move(command_buffers[0]);
 
-                animation_component->transformed_geometries.push_back({});
                 vk::CommandBufferBeginInfo begin_info = {};
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
                 command_buffer->begin(begin_info);
                 for (size_t i = 0; i < entity->models.size(); ++i)
                 {
+                    animation_component->transformed_geometries.push_back({});
                     const auto& model = entity->models[i];
                     if (model->weighted)
                     {
-                        generateVertexBuffers(renderer, *command_buffer, deformable, *model, animation_component->transformed_geometries.back().vertex_buffers);
+                        initModelWork(renderer, *command_buffer, deformable, *model, animation_component->transformed_geometries.back());
                     }
                 }
                 command_buffer->end();
@@ -233,6 +257,36 @@ namespace lotus
 
         entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), {}));
+    }
+
+    void RenderableEntityInitializer::initModel(RendererRasterization* renderer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
+    {
+        auto entity = static_cast<RenderableEntity*>(this->entity);
+        if (auto deformable = dynamic_cast<DeformableEntity*>(entity))
+        {
+            const auto& animation_component = deformable->animation_component;
+            if (animation_component)
+            {
+                vk::CommandBufferAllocateInfo alloc_info;
+                alloc_info.level = vk::CommandBufferLevel::ePrimary;
+                alloc_info.commandPool = *renderer->graphics_pool;
+                alloc_info.commandBufferCount = 1;
+
+                auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+                command_buffer = std::move(command_buffers[0]);
+
+                vk::CommandBufferBeginInfo begin_info = {};
+                begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+                command_buffer->begin(begin_info);
+                if (model.weighted)
+                {
+                    initModelWork(renderer, *command_buffer, deformable, model, model_transform);
+                }
+                command_buffer->end();
+                engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+            }
+        }
     }
 
     void RenderableEntityInitializer::drawEntity(RendererRasterization* renderer, Engine* engine)
@@ -439,10 +493,10 @@ namespace lotus
         command_buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0);
     }
 
-    void generateVertexBuffers(RendererRasterization* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
-        std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer)
+    void RenderableEntityInitializer::initModelWork(RendererRasterization* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
+        ModelTransformedGeometry& model_transform)
     {
-        vertex_buffer.resize(model.meshes.size());
+        model_transform.vertex_buffers.resize(model.meshes.size());
         for (size_t i = 0; i < model.meshes.size(); ++i)
         {
             const auto& mesh = model.meshes[i];
@@ -450,14 +504,11 @@ namespace lotus
             for (uint32_t image = 0; image < renderer->getImageCount(); ++image)
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                vertex_buffer[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                model_transform.vertex_buffers[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
             }
         }
     }
-
-    void generateVertexBuffers(RendererHybrid* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
-        std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer);
 
     void RenderableEntityInitializer::initEntity(RendererHybrid* renderer, Engine* engine)
     {
@@ -473,7 +524,6 @@ namespace lotus
                 alloc_info.commandBufferCount = 1;
 
                 auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-                animation_component->transformed_geometries.push_back({});
                 vk::CommandBufferBeginInfo begin_info = {};
                 begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
                 command_buffer = std::move(command_buffers[0]);
@@ -481,10 +531,11 @@ namespace lotus
                 command_buffer->begin(begin_info);
                 for (size_t i = 0; i < entity->models.size(); ++i)
                 {
+                    animation_component->transformed_geometries.push_back({});
                     const auto& model = entity->models[i];
                     if (model->weighted)
                     {
-                        generateVertexBuffers(renderer, *command_buffer, deformable, *model, animation_component->transformed_geometries.back().vertex_buffers);
+                        initModelWork(renderer, *command_buffer, deformable, *model, animation_component->transformed_geometries.back());
                     }
                 }
                 command_buffer->end();
@@ -494,6 +545,36 @@ namespace lotus
 
         entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), {}));
+    }
+
+    void RenderableEntityInitializer::initModel(RendererHybrid* renderer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
+    {
+        auto entity = static_cast<RenderableEntity*>(this->entity);
+        if (auto deformable = dynamic_cast<DeformableEntity*>(entity))
+        {
+            const auto& animation_component = deformable->animation_component;
+            if (animation_component)
+            {
+                vk::CommandBufferAllocateInfo alloc_info;
+                alloc_info.level = vk::CommandBufferLevel::ePrimary;
+                alloc_info.commandPool = *renderer->graphics_pool;
+                alloc_info.commandBufferCount = 1;
+
+                auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+                command_buffer = std::move(command_buffers[0]);
+
+                vk::CommandBufferBeginInfo begin_info = {};
+                begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+                command_buffer->begin(begin_info);
+                if (model.weighted)
+                {
+                    initModelWork(renderer, *command_buffer, deformable, model, model_transform);
+                }
+                command_buffer->end();
+                engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+            }
+        }
     }
 
     void RenderableEntityInitializer::drawEntity(RendererHybrid* renderer, Engine* engine)
@@ -568,8 +649,8 @@ namespace lotus
         }
     }
 
-    void generateVertexBuffers(RendererHybrid* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
-        std::vector<std::vector<std::unique_ptr<Buffer>>>& vertex_buffer)
+    void RenderableEntityInitializer::initModelWork(RendererHybrid* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,
+        ModelTransformedGeometry& model_transform)
     {
         std::vector<std::vector<vk::AccelerationStructureGeometryKHR>> raytrace_geometry;
         std::vector<std::vector<vk::AccelerationStructureBuildRangeInfoKHR>> raytrace_offset_info;
@@ -579,7 +660,7 @@ namespace lotus
         raytrace_offset_info.resize(renderer->getImageCount());
         max_primitives.resize(renderer->getImageCount());
         const auto& animation_component = entity->animation_component;
-        vertex_buffer.resize(model.meshes.size());
+        model_transform.vertex_buffers.resize(model.meshes.size());
         for (size_t i = 0; i < model.meshes.size(); ++i)
         {
             const auto& mesh = model.meshes[i];
@@ -587,12 +668,12 @@ namespace lotus
             for (uint32_t image = 0; image < renderer->getImageCount(); ++image)
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                vertex_buffer[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                model_transform.vertex_buffers[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
                 raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                     vk::Format::eR32G32B32Sfloat,
-                    renderer->gpu->device->getBufferAddress(vertex_buffer[i].back()->buffer),
+                    renderer->gpu->device->getBufferAddress(model_transform.vertex_buffers[i].back()->buffer),
                     vertex_size,
                     mesh->getMaxIndex(),
                     vk::IndexType::eUint16,
@@ -634,58 +715,55 @@ namespace lotus
 
             command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
-            for (size_t i = 0; i < entity->models.size(); ++i)
+            for (size_t j = 0; j < model.meshes.size(); ++j)
             {
-                for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
-                {
-                    auto& mesh = entity->models[i]->meshes[j];
-                    auto& vertex_buffer = component->transformed_geometries[i].vertex_buffers[j][image_index];
+                auto& mesh = model.meshes[j];
+                auto& vertex_buffer = model_transform.vertex_buffers[j][image_index];
 
-                    vk::DescriptorBufferInfo vertex_weights_buffer_info;
-                    vertex_weights_buffer_info.buffer = mesh->vertex_buffer->buffer;
-                    vertex_weights_buffer_info.offset = 0;
-                    vertex_weights_buffer_info.range = VK_WHOLE_SIZE;
+                vk::DescriptorBufferInfo vertex_weights_buffer_info;
+                vertex_weights_buffer_info.buffer = mesh->vertex_buffer->buffer;
+                vertex_weights_buffer_info.offset = 0;
+                vertex_weights_buffer_info.range = VK_WHOLE_SIZE;
 
-                    vk::DescriptorBufferInfo vertex_output_buffer_info;
-                    vertex_output_buffer_info.buffer = vertex_buffer->buffer;
-                    vertex_output_buffer_info.offset = 0;
-                    vertex_output_buffer_info.range = VK_WHOLE_SIZE;
+                vk::DescriptorBufferInfo vertex_output_buffer_info;
+                vertex_output_buffer_info.buffer = vertex_buffer->buffer;
+                vertex_output_buffer_info.offset = 0;
+                vertex_output_buffer_info.range = VK_WHOLE_SIZE;
 
-                    vk::WriteDescriptorSet weight_descriptor_set{};
-                    weight_descriptor_set.dstSet = nullptr;
-                    weight_descriptor_set.dstBinding = 0;
-                    weight_descriptor_set.dstArrayElement = 0;
-                    weight_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    weight_descriptor_set.descriptorCount = 1;
-                    weight_descriptor_set.pBufferInfo = &vertex_weights_buffer_info;
+                vk::WriteDescriptorSet weight_descriptor_set{};
+                weight_descriptor_set.dstSet = nullptr;
+                weight_descriptor_set.dstBinding = 0;
+                weight_descriptor_set.dstArrayElement = 0;
+                weight_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                weight_descriptor_set.descriptorCount = 1;
+                weight_descriptor_set.pBufferInfo = &vertex_weights_buffer_info;
 
-                    vk::WriteDescriptorSet output_descriptor_set{};
-                    output_descriptor_set.dstSet = nullptr;
-                    output_descriptor_set.dstBinding = 2;
-                    output_descriptor_set.dstArrayElement = 0;
-                    output_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    output_descriptor_set.descriptorCount = 1;
-                    output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
+                vk::WriteDescriptorSet output_descriptor_set{};
+                output_descriptor_set.dstSet = nullptr;
+                output_descriptor_set.dstBinding = 2;
+                output_descriptor_set.dstArrayElement = 0;
+                output_descriptor_set.descriptorType = vk::DescriptorType::eStorageBuffer;
+                output_descriptor_set.descriptorCount = 1;
+                output_descriptor_set.pBufferInfo = &vertex_output_buffer_info;
 
-                    command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *renderer->animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set });
+                command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *renderer->animation_pipeline_layout, 0, { weight_descriptor_set, output_descriptor_set });
 
-                    command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
+                command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
-                    vk::BufferMemoryBarrier barrier;
-                    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    barrier.buffer = vertex_buffer->buffer;
-                    barrier.size = VK_WHOLE_SIZE;
-                    barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-                    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                vk::BufferMemoryBarrier barrier;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.buffer = vertex_buffer->buffer;
+                barrier.size = VK_WHOLE_SIZE;
+                barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
 
-                    command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
-                }
+                command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
             }
         }
         for (size_t i = 0; i < renderer->getImageCount(); ++i)
         {
-            animation_component->transformed_geometries.back().bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(renderer, command_buffer, std::move(raytrace_geometry[i]),
+            model_transform.bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(renderer, command_buffer, std::move(raytrace_geometry[i]),
                 std::move(raytrace_offset_info[i]), std::move(max_primitives[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
         }
     }

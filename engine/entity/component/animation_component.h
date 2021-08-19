@@ -8,6 +8,7 @@
 #include "engine/renderer/acceleration_structure.h"
 #include "engine/renderer/animation.h"
 #include "engine/renderer/skeleton.h"
+#include "engine/renderer/model.h"
 
 namespace lotus
 {
@@ -15,14 +16,6 @@ namespace lotus
     class AnimationComponent : public Component
     {
     public:
-        struct ModelTransformedGeometry
-        {
-            //transformed vertex buffers (per mesh, per render target)
-            std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
-            //acceleration structures (per render target)
-            std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> bottom_level_as;
-            uint16_t resource_index{ 0 };
-        };
         explicit AnimationComponent(Entity*, Engine* engine, std::unique_ptr<Skeleton>&&);
         virtual ~AnimationComponent() override = default;
 

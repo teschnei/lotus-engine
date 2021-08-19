@@ -60,6 +60,13 @@ FFXI::MO2::MO2(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _bu
                 animation_data[ele->bone].push_back({ rot, trans, scale });
             }
         }
+        else
+        {
+            for (uint16_t f = 0; f < header->frames; ++f)
+            {
+                animation_data[ele->bone].push_back({ glm::quat{1, 0, 0, 0}, glm::vec3{0}, glm::vec3{1} });
+            }
+        }
     }
     //animations don't use frame 0 (FFXI thing?)
     frames = header->frames - 1;

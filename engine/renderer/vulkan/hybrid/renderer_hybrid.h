@@ -20,6 +20,7 @@ namespace lotus
 
         virtual void initEntity(EntityInitializer*, Engine*) override;
         virtual void drawEntity(EntityInitializer*, Engine*) override;
+        virtual void initModel(RenderableEntityInitializer*, Engine*, Model& model, ModelTransformedGeometry& model_transform) override;
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> gbuffer_render_pass;

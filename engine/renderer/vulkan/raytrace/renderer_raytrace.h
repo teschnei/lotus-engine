@@ -20,6 +20,7 @@ namespace lotus
 
         virtual void initEntity(EntityInitializer*, Engine*) override;
         virtual void drawEntity(EntityInitializer*, Engine*) override;
+        virtual void initModel(RenderableEntityInitializer*, Engine*, Model& model, ModelTransformedGeometry& model_transform) override;
 
         vk::UniqueDescriptorSetLayout static_descriptor_set_layout;
         vk::UniqueDescriptorSetLayout deferred_descriptor_set_layout;
