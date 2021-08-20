@@ -6,8 +6,10 @@
 #include "entity/landscape_entity.h"
 #include "entity/actor.h"
 #include "entity/component/third_person_ffxi_entity_input.h"
+#include "entity/component/third_person_ffxiv_entity_input.h"
 #include "entity/component/equipment_test_component.h"
 #include "entity/third_person_ffxi_camera.h"
+#include "entity/third_person_ffxiv_camera.h"
 
 #include "engine/scene.h"
 #include "engine/ui/element.h"
@@ -73,15 +75,15 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     auto player = co_await loading_scene->AddEntity<Actor>(LookData{ .look = {
         .race = 2,
         .face = 14,
-        .head = 0x1000,
-        .body = 0x2000,
-        .hands = 0x3000,
-        .legs = 0x4000,
-        .feet = 0x5000
+        .head = 0x1000 + 65,
+        .body = 0x2000 + 65,
+        .hands = 0x3000 + 65,
+        .legs = 0x4000 + 65,
+        .feet = 0x5000 + 65
         }
     });
     player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
-    auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(std::weak_ptr<lotus::Entity>(player));
+    auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(std::weak_ptr<lotus::Entity>(player));
     if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
     {
         co_await camera->addComponent<lotus::CameraCascadesComponent>();
@@ -89,7 +91,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     engine->set_camera(camera.get());
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
 
-    co_await player->addComponent<ThirdPersonEntityFFXIInputComponent>(engine->input.get());
+    co_await player->addComponent<ThirdPersonEntityFFXIVInputComponent>(engine->input.get());
     co_await player->addComponent<ParticleTester>(engine->input.get());
     co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
 

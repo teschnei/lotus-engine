@@ -14,21 +14,20 @@ bool ThirdPersonFFXIVCameraComponent::handleInput(const SDL_Event& event)
     auto camera = static_cast<ThirdPersonFFXIVCamera*>(entity);
     if (event.type == SDL_MOUSEMOTION)
     {
-        if (look == Look::LookCamera || look == Look::LookBoth)
+        if (look == Look::LookCamera)
         {
             static float speed = 0.005f;
-            camera->swivel(-event.motion.xrel * speed, -event.motion.yrel * speed);
-            if (look == Look::LookBoth)
+            camera->swivel(-event.motion.xrel * speed, event.motion.yrel * speed);
+            return true;
+        }
+        else if (look == Look::LookBoth)
+        {
+            static float speed = 0.005f;
+            camera->swivel(-event.motion.xrel * speed, event.motion.yrel * speed);
+            if (auto p = focus.lock())
             {
-                auto focus_sp = focus.lock();
-                if (focus_sp)
-                {
-                    auto focus_pos = focus_sp->getPos();
-                    auto camera_pos = entity->getPos();
-                    glm::vec2 dir = glm::normalize(glm::vec2{focus_pos.x, focus_pos.z} - glm::vec2{camera_pos.x, camera_pos.z});
-                    auto angle = glm::orientedAngle(dir, glm::vec2(1.f, 0.f));
-                    focus_sp->setRot(glm::angleAxis(-angle, glm::vec3{ 0.f, 1.f, 0.f }));
-                }
+                glm::quat yaw = glm::angleAxis(camera->getRotX() + glm::pi<float>(), glm::vec3(0.f, 1.f, 0.f));
+                p->setRot(yaw);
             }
             return true;
         }
@@ -58,6 +57,13 @@ bool ThirdPersonFFXIVCameraComponent::handleInput(const SDL_Event& event)
             SDL_SetRelativeMouseMode(SDL_FALSE);
             look = Look::NoLook;
             SDL_WarpMouseInWindow(window, look_x, look_y);
+        }
+    }
+    else if (event.type == SDL_MOUSEWHEEL)
+    {
+        if (event.wheel.y != 0)
+        {
+            camera->setDistance(std::clamp(camera->getDistance() - event.wheel.y, 1.f, 10.f));
         }
     }
     return false;
