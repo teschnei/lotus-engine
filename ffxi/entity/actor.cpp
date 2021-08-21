@@ -40,18 +40,19 @@ lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, LookData 
     auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
     auto actor = std::make_shared<Actor>(engine);
     actor->look = look;
+    auto dat_ids = GetPCSkeletonDatIDs(look.look.race, look.look.face);
 
     co_await actor->Load({
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/58.DAT"), //skel
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/59.DAT"), //skel2
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/60.DAT"), //skel3
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/61.DAT"), //skel4
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(path / "ROM/32/77.DAT"), //face
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.head)),
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.body)),
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.hands)),
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.legs)),
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetModelDat(look.look.feet))
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[0]), //skel
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[1]), //skel2
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[2]), //skel3
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[3]), //skel4
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[4]), //face
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.head)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.body)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.hands)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.legs)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.feet))
         });
     co_return std::move(actor);
 }
@@ -162,7 +163,7 @@ void Actor::updateEquipLook(uint16_t modelid)
 
 lotus::Task<> Actor::updateEquipLookTask(uint16_t modelid)
 {
-    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(GetModelDat(modelid));
+    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(GetPCModelDatID(modelid));
 
     std::vector<FFXI::OS2*> os2s;
     std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
@@ -208,12 +209,37 @@ lotus::Task<> Actor::updateEquipLookTask(uint16_t modelid)
     co_return;
 }
 
-size_t Actor::GetModelDat(uint16_t modelid)
+std::vector<size_t> Actor::GetPCSkeletonDatIDs(uint8_t race, uint8_t face)
+{
+    uint16_t face_offset = 0;
+    if (race > 5)
+    {
+        //tarutaru female do not have their own models
+        if (race == 6)
+            face_offset = 3176;
+        --race;
+    }
+
+    size_t base = 3896;
+    if (race > 5)
+    {
+        base = 4120;
+    }
+    std::vector<size_t> dats;
+    dats.push_back(base + (race * 3176));
+    dats.push_back(base + (race * 3176) + 1);
+    dats.push_back(base + (race * 3176) + 2);
+    dats.push_back(base + (race * 3176) + 3);
+    dats.push_back(base + (race * 3176) + 7 + face + face_offset);
+    return dats;
+}
+
+size_t Actor::GetPCModelDatID(uint16_t modelid)
 {
     uint16_t id = modelid & 0xFFF;
     uint8_t slot = modelid >> 12;
     uint8_t race = look.look.race;
-    if (race > 4)
+    if (race > 5)
     {
         //tarutaru female do not have their own models
         --race;
@@ -224,7 +250,7 @@ size_t Actor::GetModelDat(uint16_t modelid)
     {
         if (id < 256)
         {
-            if (race > 4)
+            if (race > 5)
                 return 3904 + (256 * slot) + (race * 3176) + id;
             else
                 return 3680 + (256 * slot) + (race * 3176) + id;

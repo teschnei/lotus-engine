@@ -43,7 +43,8 @@ public:
     std::map<std::string, FFXI::Scheduler*> scheduler_map;
     std::map<std::string, FFXI::Generator*> generator_map;
 protected:
-    size_t GetModelDat(uint16_t modelid);
+    static std::vector<size_t> GetPCSkeletonDatIDs(uint8_t race, uint8_t face);
+    size_t GetPCModelDatID(uint16_t modelid);
     lotus::WorkerTask<> Load(std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
     lotus::Task<> updateEquipLookTask(uint16_t modelid);
 

@@ -73,8 +73,8 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     //iroha 3111 (arciela 3074)
     //auto player = co_await loading_scene->AddEntity<Actor>(3111);
     auto player = co_await loading_scene->AddEntity<Actor>(LookData{ .look = {
-        .race = 2,
-        .face = 14,
+        .race = 7,
+        .face = 15,
         .head = 0x1000 + 65,
         .body = 0x2000 + 65,
         .hands = 0x3000 + 65,
