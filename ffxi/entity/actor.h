@@ -21,9 +21,9 @@ union LookData
         uint16_t hands = 0x3000;
         uint16_t legs = 0x4000;
         uint16_t feet = 0x5000;
-        uint16_t main = 0x6000;
-        uint16_t sub = 0x7000;
-        uint16_t ranged = 0x8000;
+        uint16_t weapon = 0x6000;
+        uint16_t weapon_sub = 0x7000;
+        uint16_t weapon_range = 0x8000;
     } look;
     uint16_t slots[9];
 };
