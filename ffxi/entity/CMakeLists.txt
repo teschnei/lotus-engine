@@ -2,6 +2,7 @@ target_sources(ffxi
     PRIVATE
     actor.cpp
     actor.h
+    actor_data.h
     landscape_entity.cpp
     landscape_entity.h
     third_person_ffxi_camera.cpp

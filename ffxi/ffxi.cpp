@@ -80,10 +80,12 @@ lotus::WorkerTask<> FFXIGame::load_scene()
         .hands = 0x3000 + 65,
         .legs = 0x4000 + 65,
         .feet = 0x5000 + 65,
-        .weapon = 0x6000 + 469
+        .weapon = 0x6000 + 140,
+        .weapon_sub = 0x7000 + 140
         }
     });
-    player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
+    //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
+    player->setPos(glm::vec3(259.f, -87.f, 99.f));
     auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(std::weak_ptr<lotus::Entity>(player));
     if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
     {

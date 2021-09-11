@@ -1,4 +1,5 @@
 #include "actor.h"
+#include "actor_data.h"
 
 #include <ranges>
 #include "ffxi.h"
@@ -10,30 +11,6 @@
 #include "dat/mo2.h"
 #include "entity/loader/actor_loader.h"
 #include "engine/entity/component/animation_component.h"
-
-struct PCDatIDs
-{
-    size_t skel;
-    size_t face;
-    size_t armour1;
-    size_t armour2;
-    size_t armour3;
-    size_t armour4;
-    size_t armour5;
-    size_t weapon;
-    size_t range;
-};
-
-static std::array PCDatRaceIDs {
-    PCDatIDs{ .skel = 7072, .face = 7080, .armour1 = 7112, .armour2 = 63323, .armour3 = 71247, .armour4 = 98787, .armour5 = 102961, .weapon = 8392, .range = 9416 },
-    PCDatIDs{ .skel = 10248, .face = 10256, .armour1 = 10288, .armour2 = 63771, .armour3 = 72783, .armour4 = 98947, .armour5 = 103281, .weapon = 11568, .range = 12592 },
-    PCDatIDs{ .skel = 13424, .face = 13432, .armour1 = 13464, .armour2 = 64219, .armour3 = 74319, .armour4 = 99107, .armour5 = 103601, .weapon = 14744, .range = 15768 },
-    PCDatIDs{ .skel = 16600, .face = 16608, .armour1 = 16640, .armour2 = 64667, .armour3 = 75855, .armour4 = 99267, .armour5 = 103921, .weapon = 17920, .range = 18944 },
-    PCDatIDs{ .skel = 19776, .face = 19784, .armour1 = 19816, .armour2 = 65515, .armour3 = 77391, .armour4 = 99427, .armour5 = 104241, .weapon = 21096, .range = 22120 },
-    PCDatIDs{ .skel = 19776, .face = 22960, .armour1 = 19816, .armour2 = 65515, .armour3 = 77391, .armour4 = 99427, .armour5 = 104241, .weapon = 21096, .range = 22120 },
-    PCDatIDs{ .skel = 23176, .face = 23184, .armour1 = 23216, .armour2 = 65533, .armour3 = 78927, .armour4 = 99587, .armour5 = 104561, .weapon = 24496, .range = 25520 },
-    PCDatIDs{ .skel = 26352, .face = 26360, .armour1 = 26392, .armour2 = 66011, .armour3 = 80463, .armour4 = 99747, .armour5 = 104881, .weapon = 27672, .range = 28696 }
-};
 
 Actor::Actor(lotus::Engine* engine) : lotus::DeformableEntity(engine)
 {
@@ -64,14 +41,14 @@ lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, LookData 
     auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
     auto actor = std::make_shared<Actor>(engine);
     actor->look = look;
-    auto dat_ids = GetPCSkeletonDatIDs(look.look.race, look.look.face);
+    auto dat_ids = GetPCSkeletonDatIDs(look.look.race);
 
     co_await actor->Load({
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[0]), //skel
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[1]), //skel2
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[2]), //skel3
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[3]), //skel4
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_ids[4]), //face
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.face - 1)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.head)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.body)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.hands)),
@@ -79,7 +56,7 @@ lotus::Task<std::shared_ptr<Actor>> Actor::Init(lotus::Engine* engine, LookData 
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.feet)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.weapon)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.weapon_sub)),
-        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.weapon_range)),
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(actor->GetPCModelDatID(look.look.weapon_range))
         });
     co_return std::move(actor);
 }
@@ -246,16 +223,14 @@ lotus::Task<> Actor::updateEquipLookTask(uint16_t modelid)
     co_return;
 }
 
-std::vector<size_t> Actor::GetPCSkeletonDatIDs(uint8_t race, uint8_t face)
+std::vector<size_t> Actor::GetPCSkeletonDatIDs(uint8_t race)
 {
-    size_t skel_id = PCDatRaceIDs[race - 1].skel;
-    size_t face_id = PCDatRaceIDs[race - 1].face;
+    size_t skel_id = ActorData::PCSkeletonIDs[race - 1].skel;
     std::vector<size_t> dats;
     dats.push_back(skel_id);
     dats.push_back(skel_id + 1);
     dats.push_back(skel_id + 2);
     dats.push_back(skel_id + 3);
-    dats.push_back(face_id + (face - 1));
     return dats;
 }
 
@@ -265,38 +240,10 @@ size_t Actor::GetPCModelDatID(uint16_t modelid)
     uint8_t slot = modelid >> 12;
     uint8_t race = look.look.race;
 
-    //armour
-    if (slot < 6)
+    auto [offset, dat] = *std::prev(ActorData::PCModelIDs[race - 1][slot].upper_bound(id));
+    if (dat > 0)
     {
-        if (id < 256)
-        {
-            return PCDatRaceIDs[race - 1].armour1 + (256 * (slot - 1)) + id;
-        }
-        else if (id < 320)
-        {
-            return PCDatRaceIDs[race - 1].armour2 + (64 * (slot - 1)) + (id - 256);
-        }
-        else if (id < 576)
-        {
-            return PCDatRaceIDs[race - 1].armour3 + (256 * (slot - 1)) + (id - 320);
-        }
-        else if (id < 608)
-        {
-            return PCDatRaceIDs[race - 1].armour4 + (32 * (slot - 1)) + (id - 576);
-        }
-        else
-        {
-            return PCDatRaceIDs[race - 1].armour5 + (64 * (slot - 1)) + (id - 608);
-        }
+        return dat + (id - offset);
     }
-    //weapons
-    else if (slot < 8)
-    {
-        return PCDatRaceIDs[race - 1].weapon + id;
-    }
-    //ranged
-    else if (slot < 9)
-    {
-        return PCDatRaceIDs[race - 1].range + id;
-    }
+    return 0;
 }
