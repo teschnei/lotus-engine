@@ -37,7 +37,7 @@ std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions()
     return attribute_descriptions;
 }
 
-lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, const std::vector<FFXI::OS2*>& os2s)
+lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, std::span<FFXI::OS2* const> os2s)
 {
     if (!pipeline_flag.test_and_set())
     {

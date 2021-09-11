@@ -17,9 +17,9 @@ namespace lotus
     protected:
         AccelerationStructure(RendererRaytraceBase* _renderer, vk::AccelerationStructureTypeKHR _type) : renderer(_renderer), type(_type) {}
 
-        void CreateAccelerationStructure(const std::vector<vk::AccelerationStructureGeometryKHR>& geometries, std::vector<uint32_t>& max_primitive_counts);
-        void BuildAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
-            const std::vector<vk::AccelerationStructureBuildRangeInfoKHR>& ranges, vk::BuildAccelerationStructureModeKHR mode);
+        void CreateAccelerationStructure(std::span<vk::AccelerationStructureGeometryKHR> geometries, std::span<uint32_t> max_primitive_counts);
+        void BuildAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometries,
+            std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges, vk::BuildAccelerationStructureModeKHR mode);
         void Copy(vk::CommandBuffer command_buffer, AccelerationStructure& target);
 
         const vk::AccelerationStructureTypeKHR type;
@@ -27,8 +27,8 @@ namespace lotus
 
         RendererRaytraceBase* renderer;
     public:
-        void UpdateAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometry,
-            const std::vector<vk::AccelerationStructureBuildRangeInfoKHR>& ranges);
+        void UpdateAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometry,
+            std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges);
         vk::UniqueHandle<vk::AccelerationStructureKHR, vk::DispatchLoaderDynamic> acceleration_structure;
         std::unique_ptr<Buffer> scratch_memory;
         std::unique_ptr<Buffer> object_memory;

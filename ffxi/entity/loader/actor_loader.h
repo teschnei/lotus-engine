@@ -10,7 +10,7 @@ namespace FFXI {
 class FFXIActorLoader
 {
 public:
-    static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine* engine, const std::vector<FFXI::OS2*>& os2s);
+    static lotus::Task<> LoadModel(std::shared_ptr<lotus::Model>, lotus::Engine* engine, std::span<FFXI::OS2* const> os2s);
 private:
     static void InitPipeline(lotus::Engine*);
     static inline vk::Pipeline pipeline;

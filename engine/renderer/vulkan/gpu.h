@@ -13,7 +13,7 @@ namespace lotus
     class GPU
     {
     public:
-        GPU(vk::Instance instance, vk::SurfaceKHR surface, Config* config, const std::vector<const char*>& layers);
+        GPU(vk::Instance instance, vk::SurfaceKHR surface, Config* config, std::span<const char* const> layers);
 
         vk::PhysicalDevice physical_device;
         vk::PhysicalDeviceProperties2 properties;
@@ -42,7 +42,7 @@ namespace lotus
         Config* config{ nullptr };
 
         void createPhysicalDevice();
-        void createDevice(const std::vector<const char*>& layers);
+        void createDevice(std::span<const char* const> layers);
         std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
         bool extensionsSupported(vk::PhysicalDevice device);
     };

@@ -8,7 +8,7 @@
 
 namespace lotus
 {
-    void AccelerationStructure::CreateAccelerationStructure(const std::vector<vk::AccelerationStructureGeometryKHR>& geometries, std::vector<uint32_t>& max_primitive_counts)
+    void AccelerationStructure::CreateAccelerationStructure(std::span<vk::AccelerationStructureGeometryKHR> geometries, std::span<uint32_t> max_primitive_counts)
     {
         vk::AccelerationStructureBuildGeometryInfoKHR build_info;
         build_info.type = type;
@@ -33,14 +33,14 @@ namespace lotus
     }
 
     void AccelerationStructure::UpdateAccelerationStructure(vk::CommandBuffer command_buffer,
-        const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
-        const std::vector<vk::AccelerationStructureBuildRangeInfoKHR>& ranges)
+        std::span<vk::AccelerationStructureGeometryKHR> geometries,
+        std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges)
     {
         BuildAccelerationStructure(command_buffer, geometries, ranges, vk::BuildAccelerationStructureModeKHR::eUpdate);
     }
 
-    void AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command_buffer, const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
-        const std::vector<vk::AccelerationStructureBuildRangeInfoKHR>& ranges, vk::BuildAccelerationStructureModeKHR mode)
+    void AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometries,
+        std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges, vk::BuildAccelerationStructureModeKHR mode)
     {
         vk::BufferMemoryBarrier barrier;
 

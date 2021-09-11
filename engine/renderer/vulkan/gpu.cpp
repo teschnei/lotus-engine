@@ -11,7 +11,7 @@ namespace lotus
         VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
     };
 
-    GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, const std::vector<const char*>& layers) : instance(_instance), surface(_surface), config(_config)
+    GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, std::span<const char* const> layers) : instance(_instance), surface(_surface), config(_config)
     {
         createPhysicalDevice();
         createDevice(layers);
@@ -45,7 +45,7 @@ namespace lotus
         physical_device.getProperties2(&properties);
     }
 
-    void GPU::createDevice(const std::vector<const char*>& layers)
+    void GPU::createDevice(std::span<const char* const> layers)
     {
         auto [graphics, present, compute] = getQueueFamilies(physical_device);
         graphics_queue_index = graphics.value();
