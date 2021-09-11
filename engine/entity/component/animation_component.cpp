@@ -139,15 +139,20 @@ namespace lotus
 
     void AnimationComponent::changeAnimation(std::string name, float speed)
     {
-        anim_speed = speed;
-        current_animation = skeleton->animations[name].get();
-        animation_start = sim_clock::now();
-        //copy current bones so that we can interpolate off them to the new animation
-        //bones_interpolate = skeleton->bones;
-        bones_interpolate.clear();
-        for (const auto& bone : skeleton->bones)
+        auto new_anim = skeleton->animations[name].get();
+        if (speed != anim_speed)
+            anim_speed = speed;
+        if (new_anim != current_animation)
         {
-            bones_interpolate.emplace_back(bone);
+            current_animation = new_anim;
+            animation_start = sim_clock::now();
+            //copy current bones so that we can interpolate off them to the new animation
+            //bones_interpolate = skeleton->bones;
+            bones_interpolate.clear();
+            for (const auto& bone : skeleton->bones)
+            {
+                bones_interpolate.emplace_back(bone);
+            }
         }
     }
 }

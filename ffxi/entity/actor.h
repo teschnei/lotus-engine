@@ -38,6 +38,9 @@ public:
 
     void updateEquipLook(uint16_t modelid);
 
+    void setGameRot(glm::quat rot);
+    glm::quat getGameRot();
+
     float speed{ 4.f };
     std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> generator_points{};
     std::map<std::string, FFXI::Scheduler*> scheduler_map;
@@ -47,6 +50,8 @@ protected:
     size_t GetPCModelDatID(uint16_t modelid);
     lotus::WorkerTask<> Load(std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
     lotus::Task<> updateEquipLookTask(uint16_t modelid);
+
+    glm::quat game_rot{1.f, 0.f, 0.f, 0.f};
 
     enum class ModelType
     {

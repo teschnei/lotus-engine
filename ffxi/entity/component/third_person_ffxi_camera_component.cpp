@@ -2,7 +2,7 @@
 #include "engine/entity/camera.h"
 #include "engine/input.h"
 #include <iostream>
-#include "entity/third_person_ffxiv_camera.h"
+#include "entity/third_person_ffxi_camera.h"
 #include <glm/gtx/vector_angle.hpp>
 
 ThirdPersonFFXICameraComponent::ThirdPersonFFXICameraComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input, std::weak_ptr<lotus::Entity>& _focus) : InputComponent(_entity, _engine, _input), focus(_focus)
@@ -11,7 +11,7 @@ ThirdPersonFFXICameraComponent::ThirdPersonFFXICameraComponent(lotus::Entity* _e
 
 bool ThirdPersonFFXICameraComponent::handleInput(const SDL_Event& event)
 {
-    auto camera = static_cast<ThirdPersonFFXIVCamera*>(entity);
+    auto camera = static_cast<ThirdPersonFFXICamera*>(entity);
     if (event.type == SDL_MOUSEMOTION)
     {
         if (look == Look::LookCamera)
@@ -60,7 +60,7 @@ bool ThirdPersonFFXICameraComponent::handleInput(const SDL_Event& event)
 
 lotus::Task<> ThirdPersonFFXICameraComponent::tick(lotus::time_point time, lotus::duration delta)
 {
-    auto camera = static_cast<ThirdPersonFFXIVCamera*>(entity);
+    auto camera = static_cast<ThirdPersonFFXICamera*>(entity);
     auto focus_lock = focus.lock();
     if (focus_lock)
     {

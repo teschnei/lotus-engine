@@ -1,9 +1,10 @@
 #include "third_person_ffxiv_camera_component.h"
+#include <iostream>
+#include <glm/gtx/vector_angle.hpp>
 #include "engine/entity/camera.h"
 #include "engine/input.h"
-#include <iostream>
 #include "entity/third_person_ffxiv_camera.h"
-#include <glm/gtx/vector_angle.hpp>
+#include "entity/actor.h"
 
 ThirdPersonFFXIVCameraComponent::ThirdPersonFFXIVCameraComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input, std::weak_ptr<lotus::Entity>& _focus) : InputComponent(_entity, _engine, _input), focus(_focus)
 {
@@ -27,7 +28,7 @@ bool ThirdPersonFFXIVCameraComponent::handleInput(const SDL_Event& event)
             if (auto p = focus.lock())
             {
                 glm::quat yaw = glm::angleAxis(camera->getRotX() + glm::pi<float>(), glm::vec3(0.f, 1.f, 0.f));
-                p->setRot(yaw);
+                static_cast<Actor*>(p.get())->setGameRot(yaw);
             }
             return true;
         }

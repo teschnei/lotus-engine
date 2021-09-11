@@ -2,7 +2,6 @@
 #include "entity/actor.h"
 #include "engine/core.h"
 #include "engine/input.h"
-#include "engine/entity/renderable_entity.h"
 #include "engine/entity/component/animation_component.h"
 #include "engine/renderer/raytrace_query.h"
 #include <glm/gtx/vector_angle.hpp>
@@ -55,22 +54,15 @@ lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, 
 
     //play animation
     bool now_moving = moving.x != 0.f || moving.z != 0.f;
-    auto deformable = dynamic_cast<lotus::DeformableEntity*>(entity);
     if (!moving_prev && now_moving)
     {
         //the movement animations appear to sync at 6 units/s
         float speed = static_cast<Actor*>(entity)->speed / 6.f;
-        if (deformable)
-        {
-            deformable->animation_component->playAnimationLoop("run", speed);
-        }
+        static_cast<Actor*>(entity)->animation_component->playAnimationLoop("run", speed);
     }
     else if (moving_prev && !now_moving)
     {
-        if (deformable)
-        {
-            deformable->animation_component->playAnimationLoop("idl");
-        }
+        static_cast<Actor*>(entity)->animation_component->playAnimationLoop("idl");
     }
     moving_prev = now_moving;
     co_return;

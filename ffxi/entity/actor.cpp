@@ -178,6 +178,16 @@ lotus::WorkerTask<> Actor::Load(std::initializer_list<std::reference_wrapper<con
     animation_component->playAnimation("idl");
 }
 
+void Actor::setGameRot(glm::quat rot)
+{
+    game_rot = rot;
+}
+
+glm::quat Actor::getGameRot()
+{
+    return game_rot;
+}
+
 void Actor::updateEquipLook(uint16_t modelid)
 {
     uint8_t slot = modelid >> 12;

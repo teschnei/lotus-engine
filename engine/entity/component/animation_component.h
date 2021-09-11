@@ -29,8 +29,6 @@ namespace lotus
         //acceleration structures (per model)
         std::vector<ModelTransformedGeometry> transformed_geometries;
         std::unique_ptr<Skeleton> skeleton;
-        Animation* current_animation{ nullptr };
-        time_point animation_start;
         struct BufferBone
         {
             glm::vec4 rot;
@@ -47,6 +45,8 @@ namespace lotus
 
         WorkerTask<> renderWork();
 
+        Animation* current_animation{ nullptr };
+        time_point animation_start;
         std::optional<std::string> next_anim;
         std::vector<Skeleton::Bone> bones_interpolate;
         float anim_speed{ 1.f };
