@@ -12,7 +12,7 @@ layout(binding = 3) uniform usampler2D materialIndexSampler;
 layout(binding = 4) uniform sampler2D accumulationSampler;
 layout(binding = 5) uniform sampler2D revealageSampler;
 
-layout(binding = 6, set = 0) uniform MeshInfo
+layout(binding = 6, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;

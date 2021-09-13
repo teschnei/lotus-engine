@@ -349,7 +349,7 @@ namespace lotus
             descriptorWrites[2].dstSet = nullptr;
             descriptorWrites[2].dstBinding = 3;
             descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &mesh_info;
 
@@ -636,7 +636,7 @@ namespace lotus
             descriptorWrites[2].dstSet = nullptr;
             descriptorWrites[2].dstBinding = 3;
             descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &mesh_info;
 
@@ -669,7 +669,8 @@ namespace lotus
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
                 model_transform.vertex_buffers[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal));
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR, vk::MemoryPropertyFlagBits::eDeviceLocal));
+
 
                 raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
                     vk::Format::eR32G32B32Sfloat,

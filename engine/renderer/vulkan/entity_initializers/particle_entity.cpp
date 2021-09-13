@@ -86,7 +86,7 @@ namespace lotus
             descriptorWrites[2].dstSet = nullptr;
             descriptorWrites[2].dstBinding = 3;
             descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &mesh_info;
 
@@ -162,7 +162,7 @@ namespace lotus
             descriptorWrites[2].dstSet = nullptr;
             descriptorWrites[2].dstBinding = 3;
             descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &mesh_info;
 

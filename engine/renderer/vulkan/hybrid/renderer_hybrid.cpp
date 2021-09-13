@@ -448,21 +448,21 @@ namespace lotus
         model_layout_binding.pImmutableSamplers = nullptr;
         model_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
+        vk::DescriptorSetLayoutBinding mesh_info_layout_binding;
+        mesh_info_layout_binding.binding = 3;
+        mesh_info_layout_binding.descriptorCount = 1;
+        mesh_info_layout_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
+        mesh_info_layout_binding.pImmutableSamplers = nullptr;
+        mesh_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
         vk::DescriptorSetLayoutBinding material_info_layout_binding;
-        material_info_layout_binding.binding = 3;
+        material_info_layout_binding.binding = 4;
         material_info_layout_binding.descriptorCount = 1;
         material_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         material_info_layout_binding.pImmutableSamplers = nullptr;
         material_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding mesh_info_layout_binding;
-        mesh_info_layout_binding.binding = 4;
-        mesh_info_layout_binding.descriptorCount = 1;
-        mesh_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        mesh_info_layout_binding.pImmutableSamplers = nullptr;
-        mesh_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding, material_info_layout_binding, mesh_info_layout_binding };
+        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding, mesh_info_layout_binding, material_info_layout_binding };
 
         vk::DescriptorSetLayoutCreateInfo layout_info = {};
         layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
@@ -559,7 +559,7 @@ namespace lotus
         vk::DescriptorSetLayoutBinding mesh_info_binding;
         mesh_info_binding.binding = 5;
         mesh_info_binding.descriptorCount = 1;
-        mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        mesh_info_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
         std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
@@ -646,7 +646,7 @@ namespace lotus
         //vk::DescriptorSetLayoutBinding mesh_info_binding;
         mesh_info_binding.binding = 6;
         mesh_info_binding.descriptorCount = 1;
-        mesh_info_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+        mesh_info_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding light_buffer_binding;
@@ -689,7 +689,7 @@ namespace lotus
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
-        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
+        pool_sizes_deferred.emplace_back(vk::DescriptorType::eStorageBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, GlobalResources::max_resource_index);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
@@ -1386,7 +1386,7 @@ namespace lotus
             descriptorWrites[5].pImageInfo = &revealage_info;
 
             descriptorWrites[6].dstSet = *descriptor_set_deferred[i];
-            descriptorWrites[6].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[6].descriptorType = vk::DescriptorType::eStorageBuffer;
             descriptorWrites[6].dstBinding = 6;
             descriptorWrites[6].dstArrayElement = 0;
             descriptorWrites[6].descriptorCount = 1;

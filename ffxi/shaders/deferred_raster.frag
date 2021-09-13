@@ -42,7 +42,7 @@ layout(binding = 10) uniform MaterialInfo
     Material m;
 } materials[1024];
 
-layout(binding = 11) uniform MeshInfo
+layout(binding = 11) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;

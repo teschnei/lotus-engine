@@ -6,7 +6,7 @@
 
 layout(binding = 1) uniform sampler2D texSampler;
 
-layout(binding = 3, set = 0) uniform MeshBlock
+layout(binding = 3, set = 0) buffer readonly MeshBlock
 {
     Mesh mesh;
 } mesh;
