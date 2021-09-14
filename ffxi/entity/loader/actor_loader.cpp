@@ -244,7 +244,7 @@ void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
     color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
     color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
 
-    std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
+    std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(6, color_blend_attachment);
     std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
 
     vk::PipelineColorBlendStateCreateInfo color_blending;

@@ -8,7 +8,7 @@
 layout(binding = 0) uniform sampler2D posSampler;
 layout(binding = 1) uniform sampler2D normalSampler;
 layout(binding = 2) uniform sampler2D albedoSampler;
-layout(binding = 3) uniform usampler2D materialSampler;
+layout(binding = 3) uniform usampler2D lightTypeSampler;
 layout(binding = 4) uniform sampler2D accumulationSampler;
 layout(binding = 5) uniform sampler2D revealageSampler;
 
@@ -36,16 +36,6 @@ layout(binding = 8) uniform CascadeUBO
 } cascade_ubo;
 
 layout(binding = 9) uniform sampler2DArray shadowSampler;
-
-layout(binding = 10) uniform MaterialInfo
-{
-    Material m;
-} materials[1024];
-
-layout(binding = 11) buffer readonly MeshInfo
-{
-    Mesh m[1024];
-} meshInfo;
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec4 eye_dir;
@@ -108,7 +98,7 @@ void main() {
     {
         vec3 normal = texture(normalSampler, fragTexCoord).xyz;
         vec4 albedo = texture(albedoSampler, fragTexCoord);
-        uint mesh_index = texture(materialSampler, fragTexCoord).r;
+        uint light_type = texture(lightTypeSampler, fragTexCoord).r;
         float dist = length(fragPos - camera_ubo.eye_pos.xyz);
 
         vec3 ambient_color = vec3(0.0);
@@ -119,7 +109,7 @@ void main() {
         float min_fog_dist = 0;
         float brightness = 0;
 
-        if (materials[meshInfo.m[mesh_index].material_index].m.light_type == 0)
+        if (light_type == 0)
         {
             ambient_color = light.light.entity.ambient_color.rgb;
             specular_color = light.light.entity.specular_color.rgb;
@@ -127,7 +117,7 @@ void main() {
             fog = light.light.entity.fog_color.rgb;
             max_fog_dist = light.light.entity.max_fog;
             min_fog_dist = light.light.entity.min_fog;
-            brightness = light.light.entity.brightness;
+            brightness = light.light.entity.brightness / 2;
         }
         else
         {
@@ -137,7 +127,7 @@ void main() {
             fog = light.light.landscape.fog_color.rgb;
             max_fog_dist = light.light.landscape.max_fog;
             min_fog_dist = light.light.landscape.min_fog;
-            brightness = light.light.landscape.brightness;
+            brightness = light.light.landscape.brightness / 2;
         }
 
         if (dist > max_fog_dist)

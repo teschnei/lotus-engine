@@ -73,6 +73,7 @@ namespace lotus
             FramebufferAttachment revealage;
             FramebufferAttachment material;
             FramebufferAttachment depth;
+            FramebufferAttachment light_type;
 
             vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> frame_buffer;
             vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;

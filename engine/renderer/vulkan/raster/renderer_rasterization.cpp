@@ -235,7 +235,17 @@ namespace lotus
         gbuffer_depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
         gbuffer_depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-        std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_face_normal, desc_albedo, desc_accumulation, desc_revealage, desc_material, gbuffer_depth_attachment };
+        vk::AttachmentDescription desc_light_type;
+        desc_light_type.format = vk::Format::eR8Uint;
+        desc_light_type.samples = vk::SampleCountFlagBits::e1;
+        desc_light_type.loadOp = vk::AttachmentLoadOp::eClear;
+        desc_light_type.storeOp = vk::AttachmentStoreOp::eStore;
+        desc_light_type.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        desc_light_type.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        desc_light_type.initialLayout = vk::ImageLayout::eUndefined;
+        desc_light_type.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        std::vector<vk::AttachmentDescription> gbuffer_attachments = { desc_pos, desc_normal, desc_face_normal, desc_albedo, desc_accumulation, desc_revealage, desc_material, gbuffer_depth_attachment, desc_light_type };
 
         render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
         render_pass_info.pAttachments = gbuffer_attachments.data();
@@ -272,8 +282,12 @@ namespace lotus
         gbuffer_depth_attachment_ref.attachment = 7;
         gbuffer_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
+        vk::AttachmentReference gbuffer_light_type_attachment_ref;
+        gbuffer_light_type_attachment_ref.attachment = 8;
+        gbuffer_light_type_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
         std::vector<vk::AttachmentReference> gbuffer_color_attachment_refs = { gbuffer_pos_attachment_ref, gbuffer_normal_attachment_ref, gbuffer_face_normal_attachment_ref,
-            gbuffer_albedo_attachment_ref, gbuffer_material_attachment_ref };
+            gbuffer_albedo_attachment_ref, gbuffer_material_attachment_ref, gbuffer_light_type_attachment_ref };
 
         vk::SubpassDescription subpass_deferred;
         subpass_deferred.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
@@ -283,7 +297,7 @@ namespace lotus
 
         std::vector<vk::AttachmentReference> gbuffer_color_attachment_transparent_refs = { gbuffer_accumulation_attachment_ref, gbuffer_revealage_attachment_ref };
         std::vector<uint32_t> gbuffer_preserve_attachment_transparent_refs = { gbuffer_pos_attachment_ref.attachment, gbuffer_normal_attachment_ref.attachment,
-            gbuffer_face_normal_attachment_ref.attachment, gbuffer_albedo_attachment_ref.attachment, gbuffer_material_attachment_ref.attachment };
+            gbuffer_face_normal_attachment_ref.attachment, gbuffer_albedo_attachment_ref.attachment, gbuffer_material_attachment_ref.attachment, gbuffer_light_type_attachment_ref.attachment };
         vk::SubpassDescription subpass_transparent;
         subpass_transparent.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
         subpass_transparent.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_transparent_refs.size());
@@ -400,12 +414,12 @@ namespace lotus
         albedo_sample_layout_binding.pImmutableSamplers = nullptr;
         albedo_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding material_sample_layout_binding;
-        material_sample_layout_binding.binding = 3;
-        material_sample_layout_binding.descriptorCount = 1;
-        material_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        material_sample_layout_binding.pImmutableSamplers = nullptr;
-        material_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+        vk::DescriptorSetLayoutBinding light_type_sample_layout_binding;
+        light_type_sample_layout_binding.binding = 3;
+        light_type_sample_layout_binding.descriptorCount = 1;
+        light_type_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        light_type_sample_layout_binding.pImmutableSamplers = nullptr;
+        light_type_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding accumulation_sample_layout_binding;
         accumulation_sample_layout_binding.binding = 4;
@@ -449,41 +463,22 @@ namespace lotus
         shadowmap_deferred_layout_binding.pImmutableSamplers = nullptr;
         shadowmap_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        //vk::DescriptorSetLayoutBinding material_info_layout_binding;
-        material_info_layout_binding.binding = 10;
-        material_info_layout_binding.descriptorCount = GlobalResources::max_resource_index;
-        material_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        material_info_layout_binding.pImmutableSamplers = nullptr;
-        material_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        //vk::DescriptorSetLayoutBinding mesh_info_layout_binding;
-        mesh_info_layout_binding.binding = 11;
-        mesh_info_layout_binding.descriptorCount = 1;
-        mesh_info_layout_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        mesh_info_layout_binding.pImmutableSamplers = nullptr;
-        mesh_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
         std::vector<vk::DescriptorSetLayoutBinding> deferred_bindings = {
             pos_sample_layout_binding, 
             normal_sample_layout_binding, 
             albedo_sample_layout_binding,
-            material_sample_layout_binding,
+            light_type_sample_layout_binding,
             accumulation_sample_layout_binding,
             revealage_sample_layout_binding,
             camera_deferred_layout_binding,
             light_deferred_layout_binding,
             lightsource_deferred_layout_binding,
-            shadowmap_deferred_layout_binding,
-            material_info_layout_binding,
-            mesh_info_layout_binding
+            shadowmap_deferred_layout_binding
         };
 
         layout_info.flags = {};
         layout_info.bindingCount = static_cast<uint32_t>(deferred_bindings.size());
         layout_info.pBindings = deferred_bindings.data();
-        std::vector<vk::DescriptorBindingFlags> deferred_binding_flags{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
-        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags_deferred{ static_cast<uint32_t>(deferred_binding_flags.size()), deferred_binding_flags.data() };
-        layout_info.pNext = &layout_flags_deferred;
 
         deferred_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
@@ -498,8 +493,6 @@ namespace lotus
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
         pool_sizes_deferred.emplace_back(vk::DescriptorType::eCombinedImageSampler, 1);
-        pool_sizes_deferred.emplace_back(vk::DescriptorType::eUniformBuffer, GlobalResources::max_resource_index);
-        pool_sizes_deferred.emplace_back(vk::DescriptorType::eStorageBuffer, 1);
 
         vk::DescriptorPoolCreateInfo pool_ci;
         pool_ci.maxSets = 3;
@@ -783,6 +776,7 @@ namespace lotus
         gbuffer.revealage.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.material.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16Uint, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
         gbuffer.depth.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, gpu->getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        gbuffer.light_type.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR8Uint, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = gbuffer.position.image->image;
@@ -810,13 +804,16 @@ namespace lotus
         image_view_info.image = gbuffer.material.image->image;
         image_view_info.format = vk::Format::eR16Uint;
         gbuffer.material.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
+        image_view_info.image = gbuffer.light_type.image->image;
+        image_view_info.format = vk::Format::eR8Uint;
+        gbuffer.light_type.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
         image_view_info.image = gbuffer.depth.image->image;
         image_view_info.format = gpu->getDepthFormat();
         image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
         gbuffer.depth.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
 
         std::vector<vk::ImageView> attachments = { *gbuffer.position.image_view, *gbuffer.normal.image_view, *gbuffer.face_normal.image_view,
-            *gbuffer.albedo.image_view, *gbuffer.accumulation.image_view, *gbuffer.revealage.image_view, *gbuffer.material.image_view, *gbuffer.depth.image_view };
+            *gbuffer.albedo.image_view, *gbuffer.accumulation.image_view, *gbuffer.revealage.image_view, *gbuffer.material.image_view, *gbuffer.depth.image_view, *gbuffer.light_type.image_view };
 
         vk::FramebufferCreateInfo framebuffer_info = {};
         framebuffer_info.renderPass = *gbuffer_render_pass;
@@ -890,10 +887,10 @@ namespace lotus
             albedo_info.imageView = *gbuffer.albedo.image_view;
             albedo_info.sampler = *gbuffer.sampler;
 
-            vk::DescriptorImageInfo material_info;
-            material_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            material_info.imageView = *gbuffer.material.image_view;
-            material_info.sampler = *gbuffer.sampler;
+            vk::DescriptorImageInfo light_type_info;
+            light_type_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            light_type_info.imageView = *gbuffer.light_type.image_view;
+            light_type_info.sampler = *gbuffer.sampler;
 
             vk::DescriptorImageInfo accumulation_info;
             accumulation_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -910,7 +907,7 @@ namespace lotus
             camera_buffer_info.offset = i * uniform_buffer_align_up(sizeof(Camera::CameraData));
             camera_buffer_info.range = sizeof(Camera::CameraData);
 
-            std::vector<vk::WriteDescriptorSet> descriptorWrites{ 11 };
+            std::vector<vk::WriteDescriptorSet> descriptorWrites{ 10 };
 
             descriptorWrites[0].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[0].dstBinding = 0;
@@ -938,7 +935,7 @@ namespace lotus
             descriptorWrites[3].dstArrayElement = 0;
             descriptorWrites[3].descriptorType = vk::DescriptorType::eCombinedImageSampler;
             descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &material_info;
+            descriptorWrites[3].pImageInfo = &light_type_info;
 
             descriptorWrites[4].dstSet = *deferred_descriptor_set[i];
             descriptorWrites[4].dstBinding = 4;
@@ -997,29 +994,6 @@ namespace lotus
             descriptorWrites[9].descriptorCount = 1;
             descriptorWrites[9].pImageInfo = &shadowmap_image_info;
             
-            vk::DescriptorBufferInfo mesh_info;
-            mesh_info.buffer = resources->mesh_info_buffer->buffer;
-            mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
-            mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
-
-            descriptorWrites[10].dstSet = *deferred_descriptor_set[i];
-            descriptorWrites[10].dstBinding = 11;
-            descriptorWrites[10].dstArrayElement = 0;
-            descriptorWrites[10].descriptorType = vk::DescriptorType::eStorageBuffer;
-            descriptorWrites[10].descriptorCount = 1;
-            descriptorWrites[10].pBufferInfo = &mesh_info;
-
-            if (resources->descriptor_material_info.size() > 0)
-            {
-                descriptorWrites.push_back({});
-                descriptorWrites[11].dstSet = *deferred_descriptor_set[i];
-                descriptorWrites[11].dstBinding = 10;
-                descriptorWrites[11].dstArrayElement = 0;
-                descriptorWrites[11].descriptorType = vk::DescriptorType::eUniformBuffer;
-                descriptorWrites[11].descriptorCount = resources->descriptor_material_info.size();
-                descriptorWrites[11].pBufferInfo = resources->descriptor_material_info.data();
-            }
-
             gpu->device->updateDescriptorSets(descriptorWrites, {});
             buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, *deferred_descriptor_set[i], {});
 
@@ -1102,7 +1076,7 @@ namespace lotus
 
         renderpass_info.renderPass = *gbuffer_render_pass;
         renderpass_info.framebuffer = *gbuffer.frame_buffer;
-        std::array<vk::ClearValue, 8> clearValues = {};
+        std::array<vk::ClearValue, 9> clearValues = {};
         clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
         clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
         clearValues[2].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -1111,6 +1085,7 @@ namespace lotus
         clearValues[5].color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f };
         clearValues[6].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
         clearValues[7].depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 };
+        clearValues[8].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
 
         renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderpass_info.pClearValues = clearValues.data();
