@@ -859,14 +859,16 @@ namespace lotus
 
             buffer.begin(begin_info);
 
-            std::array<vk::ClearValue, 2> clearValues;
-            clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clearValues[1].depthStencil = vk::ClearDepthStencilValue{ 1.f, 0 };
+            std::array clear_values
+            {
+                vk::ClearValue{ .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f } },
+                vk::ClearValue{ .depthStencil = 1.f }
+            };
 
             vk::RenderPassBeginInfo renderpass_info;
             renderpass_info.renderPass = *render_pass;
-            renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-            renderpass_info.pClearValues = clearValues.data();
+            renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+            renderpass_info.pClearValues = clear_values.data();
             renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
             renderpass_info.renderArea.extent = swapchain->extent;
             renderpass_info.framebuffer = *frame_buffers[i];
@@ -1076,19 +1078,20 @@ namespace lotus
 
         renderpass_info.renderPass = *gbuffer_render_pass;
         renderpass_info.framebuffer = *gbuffer.frame_buffer;
-        std::array<vk::ClearValue, 9> clearValues = {};
-        clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[2].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[3].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
-        clearValues[4].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[5].color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f };
-        clearValues[6].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[7].depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 };
-        clearValues[8].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
+        std::array clear_values = {
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+        };
 
-        renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderpass_info.pClearValues = clearValues.data();
+        renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+        renderpass_info.pClearValues = clear_values.data();
         renderpass_info.renderArea.extent = swapchain->extent;
 
         buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);

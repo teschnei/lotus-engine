@@ -126,9 +126,9 @@ namespace lotus
             }
             shader_binding_table->unmap();
 
-            raygenSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_raygen, nonhit_shader_stride, nonhit_shader_stride * shader_raygencount };
-            missSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_miss, nonhit_shader_stride, nonhit_shader_stride * shader_misscount };
-            hitSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_hit, hit_shader_stride, hit_shader_stride * shader_hitcount };
+            raygenSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_raygen, nonhit_shader_stride, nonhit_shader_stride * shader_raygencount };
+            missSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_miss, nonhit_shader_stride, nonhit_shader_stride * shader_misscount };
+            hitSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_hit, hit_shader_stride, hit_shader_stride * shader_hitcount };
 
             std::vector<vk::DescriptorPoolSize> pool_sizes_const;
             pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureKHR, 1);
@@ -590,7 +590,7 @@ namespace lotus
 
         std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
             vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
-        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ static_cast<uint32_t>(binding_flags.size()), binding_flags.data() };
+        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ .bindingCount =  static_cast<uint32_t>(binding_flags.size()), .pBindingFlags = binding_flags.data() };
         rtx_layout_info_const.pNext = &layout_flags;
 
         vk::DescriptorSetLayoutCreateInfo rtx_layout_info_dynamic;
@@ -678,7 +678,7 @@ namespace lotus
         rtx_deferred_layout_info.bindingCount = static_cast<uint32_t>(rtx_deferred_bindings.size());
         rtx_deferred_layout_info.pBindings = rtx_deferred_bindings.data();
         std::vector<vk::DescriptorBindingFlags> binding_flags_deferred{ {}, {}, {}, {}, {}, {}, {}, {}, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
-        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags_deferred{ static_cast<uint32_t>(binding_flags_deferred.size()), binding_flags_deferred.data() };
+        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags_deferred { .bindingCount =  static_cast<uint32_t>(binding_flags_deferred.size()), .pBindingFlags = binding_flags_deferred.data() };
         rtx_deferred_layout_info.pNext = &layout_flags_deferred;
 
         rtx_descriptor_layout_deferred = gpu->device->createDescriptorSetLayoutUnique(rtx_deferred_layout_info, nullptr);
@@ -836,133 +836,133 @@ namespace lotus
 
             std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
                 {
-                vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                0,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR
+                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                .generalShader = 0,
+                .closestHitShader = VK_SHADER_UNUSED_KHR,
+                .anyHitShader = VK_SHADER_UNUSED_KHR,
+                .intersectionShader = VK_SHADER_UNUSED_KHR
                 },
                 {
-                vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                1,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR
+                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                .generalShader = 1,
+                .closestHitShader = VK_SHADER_UNUSED_KHR,
+                .anyHitShader = VK_SHADER_UNUSED_KHR,
+                .intersectionShader = VK_SHADER_UNUSED_KHR
                 },
                 {
-                vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                2,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR
+                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                .generalShader = 2,
+                .closestHitShader = VK_SHADER_UNUSED_KHR,
+                .anyHitShader = VK_SHADER_UNUSED_KHR,
+                .intersectionShader = VK_SHADER_UNUSED_KHR
                 },
                 {
-                vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                3,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR
+                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                .generalShader = 3,
+                .closestHitShader = VK_SHADER_UNUSED_KHR,
+                .anyHitShader = VK_SHADER_UNUSED_KHR,
+                .intersectionShader = VK_SHADER_UNUSED_KHR
                 }
             };
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    4,
-                    5,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = 4,
+                    .anyHitShader = 5,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    5,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = VK_SHADER_UNUSED_KHR,
+                    .anyHitShader = 5,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    6,
-                    7,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = 6,
+                    .anyHitShader = 7,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    7,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = VK_SHADER_UNUSED_KHR,
+                    .anyHitShader = 7,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    8,
-                    9,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = 8,
+                    .anyHitShader = 9,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    10,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = VK_SHADER_UNUSED_KHR,
+                    .anyHitShader = 10,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    11,
-                    12,
-                    14
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = 11,
+                    .anyHitShader = 12,
+                    .intersectionShader = 14
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    13,
-                    14
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = VK_SHADER_UNUSED_KHR,
+                    .anyHitShader = 13,
+                    .intersectionShader = 14
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    15,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = 15,
+                    .anyHitShader = VK_SHADER_UNUSED_KHR,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
             for (int i = 0; i < shaders_per_group; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = VK_SHADER_UNUSED_KHR,
+                    .anyHitShader = VK_SHADER_UNUSED_KHR,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
 
             std::vector<vk::DescriptorSetLayout> rtx_descriptor_layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_dynamic };
@@ -1281,9 +1281,11 @@ namespace lotus
 
             buffer.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, light_barrier);
 
-            std::array<vk::ClearValue, 2> clear_values;
-            clear_values[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-            clear_values[1].depthStencil = 1.f;
+            std::array clear_values
+            {
+                vk::ClearValue{ .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f } },
+                vk::ClearValue{ .depthStencil = 1.f }
+            };
 
             vk::RenderPassBeginInfo renderpass_info;
             renderpass_info.renderPass = *rtx_render_pass;
@@ -1592,18 +1594,20 @@ namespace lotus
 
         renderpass_info.renderPass = *gbuffer_render_pass;
         renderpass_info.framebuffer = *gbuffer.frame_buffer;
-        std::array<vk::ClearValue, 8> clearValues = {};
-        clearValues[0].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[1].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[2].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[3].color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f };
-        clearValues[4].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[5].color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f };
-        clearValues[6].color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f };
-        clearValues[7].depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 };
 
-        renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderpass_info.pClearValues = clearValues.data();
+        std::array clear_values = {
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f }},
+            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            vk::ClearValue { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }},
+        };
+
+        renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+        renderpass_info.pClearValues = clear_values.data();
         renderpass_info.renderArea.extent = swapchain->extent;
 
         buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);
@@ -1874,15 +1878,17 @@ namespace lotus
         co_await ui->ReInit();
     }
 
-    void RendererHybrid::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint64_t resource_index, uint32_t mask, uint32_t shader_binding_offset)
+    void RendererHybrid::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint32_t resource_index, uint32_t mask, uint32_t shader_binding_offset)
     {
-        vk::AccelerationStructureInstanceKHR instance{};
+        vk::AccelerationStructureInstanceKHR instance
+        {
+            .instanceCustomIndex = resource_index,
+            .mask = mask,
+            .instanceShaderBindingTableRecordOffset = shaders_per_group * shader_binding_offset,
+            .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,
+            .accelerationStructureReference = blas->handle
+        };
         memcpy(&instance.transform, &mat, sizeof(mat));
-        instance.accelerationStructureReference = blas->handle;
-        instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-        instance.mask = mask;
-        instance.instanceShaderBindingTableRecordOffset = shaders_per_group * shader_binding_offset;
-        instance.instanceCustomIndex = resource_index;
         blas->instanceid = tlas->AddInstance(instance);
     }
 

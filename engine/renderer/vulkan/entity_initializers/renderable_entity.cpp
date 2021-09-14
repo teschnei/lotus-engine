@@ -109,16 +109,22 @@ namespace lotus
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
                     vk::MemoryPropertyFlagBits::eDeviceLocal));
 
-                raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
-                    vk::Format::eR32G32B32Sfloat,
-                    renderer->gpu->device->getBufferAddress(model_transform.vertex_buffers[i].back()->buffer),
-                    vertex_size,
-                    mesh->getMaxIndex(),
-                    vk::IndexType::eUint16,
-                    renderer->gpu->device->getBufferAddress(mesh->index_buffer->buffer)
-                    }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
+                raytrace_geometry[image].push_back(vk::AccelerationStructureGeometryKHR{
+                    .geometryType = vk::GeometryTypeKHR::eTriangles,
+                    .geometry = { .triangles = vk::AccelerationStructureGeometryTrianglesDataKHR {
+                        .vertexFormat = vk::Format::eR32G32B32Sfloat,
+                        .vertexData = renderer->gpu->device->getBufferAddress({.buffer = model_transform.vertex_buffers[i].back()->buffer}),
+                        .vertexStride = vertex_size,
+                        .maxVertex = mesh->getMaxIndex(),
+                        .indexType = vk::IndexType::eUint16,
+                        .indexData = renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer})
+                    }},
+                    .flags = mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque
+                });
 
-                raytrace_offset_info[image].emplace_back(mesh->getIndexCount() / 3, 0, 0);
+                raytrace_offset_info[image].push_back({
+                    .primitiveCount = static_cast<uint32_t>(mesh->getIndexCount() / 3)
+                });
 
                 max_primitives[image].emplace_back(static_cast<uint32_t>(mesh->getIndexCount() / 3));
             }
@@ -671,17 +677,22 @@ namespace lotus
                 model_transform.vertex_buffers[i].push_back(renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR, vk::MemoryPropertyFlagBits::eDeviceLocal));
 
+                raytrace_geometry[image].push_back(vk::AccelerationStructureGeometryKHR{
+                    .geometryType = vk::GeometryTypeKHR::eTriangles,
+                    .geometry = { .triangles = vk::AccelerationStructureGeometryTrianglesDataKHR {
+                        .vertexFormat = vk::Format::eR32G32B32Sfloat,
+                        .vertexData = renderer->gpu->device->getBufferAddress({.buffer = model_transform.vertex_buffers[i].back()->buffer}),
+                        .vertexStride = vertex_size,
+                        .maxVertex = mesh->getMaxIndex(),
+                        .indexType = vk::IndexType::eUint16,
+                        .indexData = renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer})
+                    }},
+                    .flags = mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque
+                });
 
-                raytrace_geometry[image].emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
-                    vk::Format::eR32G32B32Sfloat,
-                    renderer->gpu->device->getBufferAddress(model_transform.vertex_buffers[i].back()->buffer),
-                    vertex_size,
-                    mesh->getMaxIndex(),
-                    vk::IndexType::eUint16,
-                    renderer->gpu->device->getBufferAddress(mesh->index_buffer->buffer)
-                    }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
-
-                raytrace_offset_info[image].emplace_back(mesh->getIndexCount() / 3, 0, 0);
+                raytrace_offset_info[image].push_back({
+                    .primitiveCount = static_cast<uint32_t>(mesh->getIndexCount() / 3)
+                });
 
                 max_primitives[image].emplace_back(static_cast<uint32_t>(mesh->getIndexCount() / 3));
             }

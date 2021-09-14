@@ -63,16 +63,22 @@ namespace lotus
 
                 if (engine->config->renderer.RaytraceEnabled() && !weighted)
                 {
-                    raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
-                        vk::Format::eR32G32B32Sfloat,
-                        engine->renderer->gpu->device->getBufferAddress(mesh->vertex_buffer->buffer),
-                        vertex_stride,
-                        mesh->getMaxIndex(),
-                        vk::IndexType::eUint16,
-                        engine->renderer->gpu->device->getBufferAddress(mesh->index_buffer->buffer)
-                        }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
+                    raytrace_geometry.push_back({
+                        .geometryType = vk::GeometryTypeKHR::eTriangles,
+                        .geometry = { .triangles = vk::AccelerationStructureGeometryTrianglesDataKHR {
+                            .vertexFormat = vk::Format::eR32G32B32Sfloat,
+                            .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
+                            .vertexStride = vertex_stride,
+                            .maxVertex = mesh->getMaxIndex(),
+                            .indexType = vk::IndexType::eUint16,
+                            .indexData = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer})
+                        }},
+                        .flags = mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque
+                    });
 
-                    raytrace_offset_info.emplace_back(static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t))/3), 0, 0);
+                    raytrace_offset_info.push_back({
+                        .primitiveCount = static_cast<uint32_t>(index_buffer.size() / sizeof(uint16_t)) / 3
+                    });
                     max_primitive_count.emplace_back(static_cast<uint32_t>((index_buffer.size() / sizeof(uint16_t))/3));
                 }
 
@@ -226,13 +232,18 @@ namespace lotus
 
             if (engine->config->renderer.RaytraceEnabled())
             {
-                raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eAabbs, vk::AccelerationStructureGeometryAabbsDataKHR{
-                    engine->renderer->gpu->device->getBufferAddress(mesh->aabbs_buffer->buffer),
-                    sizeof(vk::AabbPositionsKHR)
-                    }, mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque);
+                raytrace_geometry.push_back({
+                    .geometryType = vk::GeometryTypeKHR::eAabbs,
+                    .geometry = { .aabbs = vk::AccelerationStructureGeometryAabbsDataKHR
+                    {
+                        .data = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->aabbs_buffer->buffer}),
+                        .stride = sizeof(vk::AabbPositionsKHR)
+                    }},
+                    .flags = mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque
+                });
 
                 //1 AABB
-                raytrace_offset_info.emplace_back(1, 0, 0);
+                raytrace_offset_info.push_back( { .primitiveCount = 1 });
                 max_primitives.emplace_back(1);
             }
 

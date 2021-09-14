@@ -483,17 +483,26 @@ namespace FFXI
 
                 FFXI::CollisionMeshData& data = mesh_data[entry.mesh_entry];
 
-                raytrace_geometry.emplace_back(vk::GeometryTypeKHR::eTriangles, vk::AccelerationStructureGeometryTrianglesDataKHR{
-                    vk::Format::eR32G32B32Sfloat,
-                    engine->renderer->gpu->device->getBufferAddress(mesh->vertex_buffer->buffer),
-                    vertex_stride,
-                    data.max_index,
-                    vk::IndexType::eUint16,
-                    engine->renderer->gpu->device->getBufferAddress(mesh->index_buffer->buffer),
-                    engine->renderer->gpu->device->getBufferAddress(mesh->transform_buffer->buffer)
-                    }, vk::GeometryFlagBitsKHR::eOpaque);
+                raytrace_geometry.push_back({
+                    .geometryType = vk::GeometryTypeKHR::eTriangles,
+                    .geometry = { .triangles = vk::AccelerationStructureGeometryTrianglesDataKHR {
+                        .vertexFormat = vk::Format::eR32G32B32Sfloat,
+                        .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
+                        .vertexStride = vertex_stride,
+                        .maxVertex = data.max_index,
+                        .indexType = vk::IndexType::eUint16,
+                        .indexData = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer}),
+                        .transformData = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->transform_buffer->buffer})
+                    }},
+                    .flags = vk::GeometryFlagBitsKHR::eOpaque
+                });
 
-                raytrace_offset_info.emplace_back(static_cast<uint32_t>(data.indices.size() / 3), index_offsets[entry.mesh_entry], vertex_offsets[entry.mesh_entry] / vertex_stride, transform_offset);
+                raytrace_offset_info.push_back({
+                    .primitiveCount = static_cast<uint32_t>(data.indices.size() / 3),
+                    .primitiveOffset = static_cast<uint32_t>(index_offsets[entry.mesh_entry]),
+                    .firstVertex = static_cast<uint32_t>(vertex_offsets[entry.mesh_entry] / vertex_stride),
+                    .transformOffset = static_cast<uint32_t>(transform_offset)
+                });
 
                 max_primitives.emplace_back(static_cast<uint32_t>(data.indices.size() / 3));
 

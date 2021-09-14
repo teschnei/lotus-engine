@@ -38,30 +38,30 @@ namespace lotus
 
             std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
                 {
-                vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                0,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR
+                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                .generalShader = 0,
+                .closestHitShader = VK_SHADER_UNUSED_KHR,
+                .anyHitShader = VK_SHADER_UNUSED_KHR,
+                .intersectionShader = VK_SHADER_UNUSED_KHR
                 },
                 {
-                vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                1,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR,
-                VK_SHADER_UNUSED_KHR
+                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                .generalShader = 1,
+                .closestHitShader = VK_SHADER_UNUSED_KHR,
+                .anyHitShader = VK_SHADER_UNUSED_KHR,
+                .intersectionShader = VK_SHADER_UNUSED_KHR
                 }
             };
 
             for (int i = 0; i < shader_hitcount; ++i)
             {
-                shader_group_ci.emplace_back(
-                    vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    VK_SHADER_UNUSED_KHR,
-                    2,
-                    VK_SHADER_UNUSED_KHR,
-                    VK_SHADER_UNUSED_KHR
-                );
+                shader_group_ci.push_back({
+                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
+                    .generalShader = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader = 2,
+                    .anyHitShader = VK_SHADER_UNUSED_KHR,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                });
             }
 
             vk::DeviceSize shader_stride = engine->renderer->gpu->ray_tracing_properties.shaderGroupHandleSize;
@@ -160,9 +160,9 @@ namespace lotus
             }
             shader_binding_table->unmap();
 
-            raygenSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_raygen, shader_stride, shader_stride * shader_raygencount };
-            missSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_miss, shader_stride, shader_stride * shader_misscount };
-            hitSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress(shader_binding_table->buffer) + shader_offset_hit, shader_stride, shader_stride * shader_hitcount };
+            raygenSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_raygen, shader_stride, shader_stride * shader_raygencount };
+            missSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_miss, shader_stride, shader_stride * shader_misscount };
+            hitSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_hit, shader_stride, shader_stride * shader_hitcount };
         }
         raytrace_query_queue = engine->renderer->gpu->device->getQueue(engine->renderer->gpu->compute_queue_index, 1);
         vk::FenceCreateInfo fence_info;

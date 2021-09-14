@@ -46,14 +46,17 @@ namespace lotus
 
         buffers[0]->begin(begin_info);
 
-        std::vector<vk::ClearValue> clearvalues(2);
-        clearvalues[1].color = std::array<float, 4>{{0.f, 0.f, 0.f, 0.f}};
+        std::array clear_values
+        {
+            vk::ClearValue{ .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f } },
+            vk::ClearValue{ .depthStencil = 1.f }
+        };
 
         vk::RenderPassBeginInfo renderpass_begin;
         renderpass_begin.renderPass = *renderpass;
         renderpass_begin.renderArea.extent = renderer->swapchain->extent;
-        renderpass_begin.clearValueCount = static_cast<uint32_t>(clearvalues.size());
-        renderpass_begin.pClearValues = clearvalues.data();
+        renderpass_begin.clearValueCount = static_cast<uint32_t>(clear_values.size());
+        renderpass_begin.pClearValues = clear_values.data();
         renderpass_begin.framebuffer = *framebuffers[image_index];
 
         buffers[0]->beginRenderPass(renderpass_begin, vk::SubpassContents::eSecondaryCommandBuffers);

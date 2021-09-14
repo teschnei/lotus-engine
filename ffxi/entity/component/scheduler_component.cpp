@@ -63,7 +63,6 @@ lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration d
                 {
                     co_await addComponent<GeneratorComponent>(system_generator->second, real_duration);
                 }
-                std::cout << std::endl;
             }
             break;
         }
@@ -83,7 +82,6 @@ lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration d
             {
                 co_await addComponent<SchedulerComponent>(system_scheduler->second, resources);
             }
-            std::cout << std::endl;
             break;
         }
         case 0x05:

@@ -78,7 +78,7 @@ namespace lotus
         size_t align_up(size_t in_size, size_t alignment) const;
 
         virtual Task<> drawFrame() = 0;
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) = 0;
+        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) = 0;
 
         virtual void initEntity(EntityInitializer*, Engine*) = 0;
         virtual void drawEntity(EntityInitializer*, Engine*) = 0;

@@ -16,7 +16,7 @@ namespace lotus
         WorkerTask<> InitWork();
 
         virtual Task<> drawFrame() override;
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint64_t, uint32_t, uint32_t) override;
+        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) override;
 
         virtual void initEntity(EntityInitializer*, Engine*) override;
         virtual void drawEntity(EntityInitializer*, Engine*) override;
