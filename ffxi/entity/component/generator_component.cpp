@@ -70,10 +70,21 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
             {
                 model = lotus::Model::getModel(generator->id);
             }
-            //0x3D is sound effect
-            else if (generator->effect_type == 0x3D)
-            {}
             */
+            else if (generator->effect_type == 0x3D)
+            {
+                //assume sep is in same place as generator
+                for (const auto& chunk : generator->parent->children)
+                {
+                    /*
+                    if (auto sep = dynamic_cast<FFXI::Sep*>(chunk.get()); sep && std::string(chunk->name, 4) == generator->id)
+                    {
+                        sep->playSound();
+                        break;
+                    }
+                    */
+                }
+            }
             else if (generator->effect_type == 0x24)
             {
                 if (!generator->ring)
