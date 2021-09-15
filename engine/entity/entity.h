@@ -27,7 +27,7 @@ namespace lotus
         Task<> render_all(Engine* engine, std::shared_ptr<Entity>& sp);
         virtual WorkerTask<> ReInitWork() { co_return; };
 
-        template<typename T, typename... Args>
+        template<typename T, typename... Args> requires std::derived_from<T, Component>
         Task<T*> addComponent(Args&&... args)
         {
             auto component = std::make_unique<T>(this, engine, std::forward<Args>(args)...);
@@ -37,12 +37,25 @@ namespace lotus
             co_return comp_ptr;
         };
 
-        template<typename T>
+        template<typename T> requires std::derived_from<T, Component>
         T* getComponent()
         {
             for (const auto& component : components)
             {
                 if (auto cast = dynamic_cast<T*>(component.get()))
+                {
+                    return cast;
+                }
+            }
+            return nullptr;
+        }
+
+        template<typename T, typename F> requires std::derived_from<T, Component> && std::predicate<F, T*>
+        T* getComponent(F func)
+        {
+            for (const auto& component : components)
+            {
+                if (auto cast = dynamic_cast<T*>(component.get()); cast && func(cast))
                 {
                     return cast;
                 }

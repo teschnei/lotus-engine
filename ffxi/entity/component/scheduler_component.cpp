@@ -15,6 +15,11 @@ SchedulerComponent::SchedulerComponent(lotus::Entity* entity, lotus::Engine* eng
 {
 }
 
+std::string SchedulerComponent::getName()
+{
+    return std::string(scheduler->name, 4);
+}
+
 lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration delta)
 {
     if (finished)
@@ -26,6 +31,8 @@ lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration d
     }
     auto frame_number = std::chrono::duration_cast<std::chrono::milliseconds>(time - start_time).count() * (60.f / 1000.f);
     auto [buffer, next_frame] = scheduler->getStage(stage);
+
+    std::string current_scheduler;
 
     while (frame_number > next_frame && !finished)
     {
@@ -72,15 +79,15 @@ lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration d
         {
             if (auto scheduler = resources->schedulers.find(std::string(id, 4)); scheduler != resources->schedulers.end())
             {
-                co_await addComponent<SchedulerComponent>(scheduler->second, resources);
+                co_await entity->addComponent<SchedulerComponent>(scheduler->second, resources);
             }
             else if (auto scheduler = actor->scheduler_map.find(std::string(id, 4)); scheduler != actor->scheduler_map.end())
             {
-                co_await addComponent<SchedulerComponent>(scheduler->second, resources);
+                co_await entity->addComponent<SchedulerComponent>(scheduler->second, resources);
             }
             else if (auto system_scheduler = ffxigame->system_dat->schedulers.find(std::string(id, 4)); system_scheduler != ffxigame->system_dat->schedulers.end())
             {
-                co_await addComponent<SchedulerComponent>(system_scheduler->second, resources);
+                co_await entity->addComponent<SchedulerComponent>(system_scheduler->second, resources);
             }
             break;
         }
@@ -101,6 +108,36 @@ lotus::Task<> SchedulerComponent::tick(lotus::time_point time, lotus::duration d
         case 0x53:
         {
             //sound effect
+            break;
+        }
+        case 0x1e:
+        case 0x2d:
+        {
+            if (current_scheduler.empty())
+            {
+                removeComponent([id](Component* c) {
+                    auto generator = dynamic_cast<GeneratorComponent*>(c);
+                    return generator && generator->getName() == std::string(id, 4);
+                });
+            }
+            else
+            {
+                auto s = entity->getComponent<SchedulerComponent>([current_scheduler](SchedulerComponent* c) { return c->getName() == current_scheduler; });
+                if (s)
+                {
+                    s->removeComponent([id](Component* c) {
+                        auto generator = dynamic_cast<GeneratorComponent*>(c);
+                        return generator && generator->getName() == std::string(id, 4);
+                    });
+                }
+            }
+            break;
+        }
+        case 0x5f:
+        {
+            current_scheduler = std::string(id, 4);
+            auto s = entity->getComponent<SchedulerComponent>([current_scheduler](SchedulerComponent* c) { return c->getName() == current_scheduler; });
+            s->cancel();
         }
         }
         stage++;

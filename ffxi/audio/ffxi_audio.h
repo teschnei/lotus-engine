@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <array>
 #include <unordered_map>
+#include "engine/audio.h"
 
 namespace SoLoud
 {
@@ -20,7 +21,7 @@ namespace FFXI
     {
     public:
         Audio(lotus::Engine* _engine);
-        void playSound(uint32_t id);
+        std::optional<lotus::AudioEngine::AudioInstance> playSound(uint32_t id);
         void setMusic(uint32_t id, uint8_t type);
     private:
         std::unique_ptr<SoLoud::AudioSource> loadSound(uint32_t id);
@@ -30,6 +31,7 @@ namespace FFXI
         std::array<std::filesystem::path, 16> sound_paths;
         std::array<std::unique_ptr<SoLoud::AudioSource>, 5> bgm;
         std::unordered_map<uint32_t, std::unique_ptr<SoLoud::AudioSource>> sounds;
+        std::optional<lotus::AudioEngine::AudioInstance> bgm_instance;
         lotus::Engine* engine;
     };
 }

@@ -10,6 +10,9 @@
 
 #include "entity/actor.h"
 
+#include "ffxi.h"
+#include "dat/sep.h"
+
 #include <glm/gtc/random.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/euler_angles.hpp>
@@ -24,6 +27,11 @@ GeneratorComponent::GeneratorComponent(lotus::Entity* entity, lotus::Engine* eng
             keyframes.insert(std::make_pair(std::string(keyframe->name, 4), keyframe));
         }
     }
+}
+
+std::string GeneratorComponent::getName()
+{
+    return std::string(generator->name, 4);
 }
 
 lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration delta)
@@ -41,16 +49,8 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
         }
         co_return;
     }
-    else if (duration == 0ms && generated > 0)
-    {
-        if (componentsEmpty())
-        {
-            remove = true;
-        }
-        co_return;
-    }
 
-    if (time > start_time + next_generation)
+    if (time > start_time + next_generation && generated <= total_generations)
     {
         for (int occ = 0; occ < generator->header->occurences + 1; ++occ)
         {
@@ -76,13 +76,11 @@ lotus::Task<> GeneratorComponent::tick(lotus::time_point time, lotus::duration d
                 //assume sep is in same place as generator
                 for (const auto& chunk : generator->parent->children)
                 {
-                    /*
                     if (auto sep = dynamic_cast<FFXI::Sep*>(chunk.get()); sep && std::string(chunk->name, 4) == generator->id)
                     {
-                        sep->playSound();
+                        sound = sep->playSound(static_cast<FFXIGame*>(engine->game)->audio.get());
                         break;
                     }
-                    */
                 }
             }
             else if (generator->effect_type == 0x24)

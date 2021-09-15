@@ -20,6 +20,7 @@ public:
     virtual ~SchedulerComponent() = default;
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
     void cancel();
+    std::string getName();
 
 protected:
     FFXI::Scheduler* scheduler;

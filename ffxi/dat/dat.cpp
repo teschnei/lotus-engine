@@ -5,6 +5,7 @@
 #include "mo2.h"
 #include "sk2.h"
 #include "dxt3.h"
+#include "sep.h"
 #include "scheduler.h"
 #include "generator.h"
 #include "d3m.h"
@@ -549,7 +550,7 @@ namespace FFXI
             case 0x3D:
                 current_chunk->sep++;
                 {
-                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<DatChunk>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
+                    std::unique_ptr<DatChunk> new_chunk = std::make_unique<Sep>(dathead->id, &buffer[offset + sizeof(DATHEAD)], len - sizeof(DATHEAD));
                     new_chunk->parent = current_chunk;
                     current_chunk->children.push_back(std::move(new_chunk));
                 }

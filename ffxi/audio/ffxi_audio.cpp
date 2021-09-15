@@ -61,7 +61,7 @@ FFXI::Audio::Audio(lotus::Engine* _engine) : engine(_engine)
     }
 }
 
-void FFXI::Audio::playSound(uint32_t id)
+std::optional<lotus::AudioEngine::AudioInstance> FFXI::Audio::playSound(uint32_t id)
 {
     if (!sounds.contains(id))
     {
@@ -72,8 +72,9 @@ void FFXI::Audio::playSound(uint32_t id)
     }
     if (sounds.contains(id))
     {
-        engine->audio->playSound(*sounds[id]);
+        return engine->audio->playSound(*sounds[id]);
     }
+    return {};
 }
 
 void FFXI::Audio::setMusic(uint32_t id, uint8_t type)
@@ -83,7 +84,7 @@ void FFXI::Audio::setMusic(uint32_t id, uint8_t type)
         bgm[type] = std::move(music);
 
         //TODO: check if this is the current music to play (day/night/battle/party/mount)
-        engine->audio->playBGM(*bgm[type]);
+        bgm_instance = engine->audio->playBGM(*bgm[type]);
     }
 }
 

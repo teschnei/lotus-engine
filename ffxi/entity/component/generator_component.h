@@ -4,16 +4,18 @@
 
 #include <map>
 #include "dat/generator.h"
+#include "engine/audio.h"
 
 class GeneratorComponent : public lotus::Component
 {
 public:
     GeneratorComponent(lotus::Entity* entity, lotus::Engine* engine, FFXI::Generator* generator, lotus::duration duration, std::shared_ptr<lotus::Particle> parent = {}, glm::vec3 offset = {});
-    virtual ~GeneratorComponent() = default;
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
+    std::string getName();
 
 protected:
-    FFXI::Generator* generator;
+    FFXI::Generator* generator{};
+    std::optional<lotus::AudioEngine::AudioInstance> sound;
     lotus::duration duration;
     std::shared_ptr<lotus::Particle> parent;
     glm::vec3 offset;

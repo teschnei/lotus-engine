@@ -20,6 +20,8 @@ target_sources(ffxi
     mzb.h
     os2.cpp
     os2.h
+    sep.cpp
+    sep.h
     scheduler.cpp
     scheduler.h
     sk2.cpp

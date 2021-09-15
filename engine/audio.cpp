@@ -7,16 +7,23 @@ namespace lotus
         engine->init();
     }
 
-    SoLoud::handle AudioEngine::playBGM(SoLoud::AudioSource& src)
+    AudioEngine::AudioInstance AudioEngine::playBGM(SoLoud::AudioSource& src)
     {
         auto bgm = engine->playBackground(src);
         engine->setProtectVoice(bgm, true);
-        return bgm;
+        return AudioInstance{ this, bgm };
     }
 
-    SoLoud::handle AudioEngine::playSound(SoLoud::AudioSource& src)
+    AudioEngine::AudioInstance AudioEngine::playSound(SoLoud::AudioSource& src)
     {
         auto se = engine->play(src);
-        return se;
+        return AudioInstance{ this, se };
+    }
+
+    AudioEngine::AudioInstance::AudioInstance(AudioEngine* _engine, SoLoud::handle _handle) : engine(_engine), handle(_handle) {}
+    AudioEngine::AudioInstance::~AudioInstance()
+    {
+        if (handle)
+            engine->engine->stop(handle);
     }
 }

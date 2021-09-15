@@ -23,7 +23,7 @@ namespace lotus {
         Task<> render_all(Engine* engine, std::shared_ptr<Entity>& sp);
         bool removed() { return remove; }
 
-        template<typename T, typename... Args>
+        template<typename T, typename... Args> requires std::derived_from<T, Component>
         Task<T*> addComponent(Args&&... args)
         {
             auto component = std::make_unique<T>(entity, engine, std::forward<Args>(args)...);
@@ -33,7 +33,7 @@ namespace lotus {
             co_return comp_ptr;
         };
 
-        template<typename T>
+        template<typename T> requires std::derived_from<T, Component>
         T* getComponent()
         {
             for (const auto& component : components)
@@ -45,6 +45,19 @@ namespace lotus {
             }
             return nullptr;
         }
+
+        template<typename T> requires std::predicate<T, Component*>
+        void removeComponent(T func)
+        {
+            for (const auto& component : components)
+            {
+                if (func(component.get()))
+                {
+                    component->remove = true;
+                }
+            }
+        }
+
     protected:
         virtual Task<> tick(time_point time, duration delta) { co_return; };
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) { co_return; };

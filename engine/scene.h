@@ -20,7 +20,7 @@ namespace lotus
 
         template <typename T, typename... Args>
         [[nodiscard("Work must be awaited to be processed")]]
-        Task<std::shared_ptr<T>> AddEntity(Args... args)
+        Task<std::shared_ptr<T>> AddEntity(Args... args) requires std::derived_from<T, Entity>
         {
             auto sp = co_await T::Init(engine, args...);
             sp->setSharedPtr(sp);
