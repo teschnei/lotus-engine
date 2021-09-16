@@ -93,16 +93,16 @@ namespace lotus
 
         //this is part of the 1.2 spec but not in Vulkan12Features...?
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features;
-        as_features.accelerationStructure = true;
-        as_features.descriptorBindingAccelerationStructureUpdateAfterBind = true;
+        as_features.accelerationStructure = config->renderer.RaytraceEnabled();
+        as_features.descriptorBindingAccelerationStructureUpdateAfterBind = config->renderer.RaytraceEnabled();
         //some day nvidia will support this
         //as_features.accelerationStructureHostCommands = true;
 
         vk_12_features.pNext = &as_features;
 
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rt_features;
-        rt_features.rayTracingPipeline = true;
-        rt_features.rayTracingPipelineTraceRaysIndirect = true;
+        rt_features.rayTracingPipeline = config->renderer.RaytraceEnabled();
+        rt_features.rayTracingPipelineTraceRaysIndirect = config->renderer.RaytraceEnabled();
 
         as_features.pNext = &rt_features;
 
