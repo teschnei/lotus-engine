@@ -154,15 +154,22 @@ namespace lotus
 
                 command_buffer->dispatch(mesh->getVertexCount(), 1, 1);
 
-                vk::BufferMemoryBarrier barrier;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.buffer = vertex_buffer->buffer;
-                barrier.size = VK_WHOLE_SIZE;
-                barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                vk::BufferMemoryBarrier2KHR barrier
+                {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite| vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .buffer = vertex_buffer->buffer,
+                    .size = VK_WHOLE_SIZE
+                };
 
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
+                command_buffer->pipelineBarrier2KHR({
+                    .bufferMemoryBarrierCount = 1,
+                    .pBufferMemoryBarriers = &barrier
+                });
             }
             if (engine->config->renderer.RaytraceEnabled())
             {

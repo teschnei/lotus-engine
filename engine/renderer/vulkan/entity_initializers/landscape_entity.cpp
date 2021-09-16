@@ -228,15 +228,22 @@ namespace lotus
 
         command_buffer->begin(begin_info);
 
-        vk::BufferMemoryBarrier barrier;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.buffer = entity->instance_buffer->buffer;
-        barrier.size = VK_WHOLE_SIZE;
-        barrier.srcAccessMask = {};
-        barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+        vk::BufferMemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .buffer = entity->instance_buffer->buffer,
+            .size = VK_WHOLE_SIZE
+        };
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, barrier, nullptr);
+        command_buffer->pipelineBarrier2KHR({
+            .bufferMemoryBarrierCount = 1,
+            .pBufferMemoryBarriers = &barrier
+        });
 
         vk::BufferCopy copy_region = {};
         copy_region.size = buffer_size;

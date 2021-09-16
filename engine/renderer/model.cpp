@@ -90,10 +90,19 @@ namespace lotus
             {
                 RendererRaytraceBase* renderer = static_cast<RendererRaytraceBase*>(engine->renderer.get());
                 //TODO: test if just buffermemorybarrier is faster
-                vk::MemoryBarrier barrier;
-                barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR | vk::AccessFlagBits::eTransferRead;
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
+                vk::MemoryBarrier2KHR barrier
+                {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+                    .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eTransferRead,
+                };
+
+                command_buffer->pipelineBarrier2KHR({
+                    .memoryBarrierCount = 1,
+                    .pMemoryBarriers = &barrier
+                });
+
                 bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(renderer, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(max_primitive_count), false, lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
 
@@ -251,10 +260,18 @@ namespace lotus
 
             if (engine->config->renderer.RaytraceEnabled())
             {
-                vk::MemoryBarrier barrier;
-                barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-                command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
+                vk::MemoryBarrier2KHR barrier
+                {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+                    .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eTransferRead,
+                };
+
+                command_buffer->pipelineBarrier2KHR({
+                    .memoryBarrierCount = 1,
+                    .pMemoryBarriers = &barrier
+                });
                 bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(max_primitives), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
             }

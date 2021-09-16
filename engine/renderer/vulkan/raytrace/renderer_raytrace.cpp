@@ -60,7 +60,7 @@ namespace lotus
 
         command_buffer->begin(begin_info);
 
-        vk::ImageMemoryBarrier barrier_albedo;
+        vk::ImageMemoryBarrier2KHR barrier_albedo;
         barrier_albedo.oldLayout = vk::ImageLayout::eUndefined;
         barrier_albedo.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         barrier_albedo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -71,31 +71,36 @@ namespace lotus
         barrier_albedo.subresourceRange.levelCount = 1;
         barrier_albedo.subresourceRange.baseArrayLayer = 0;
         barrier_albedo.subresourceRange.layerCount = 1;
-        barrier_albedo.srcAccessMask = {};
-        barrier_albedo.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+        barrier_albedo.srcAccessMask = vk::AccessFlagBits2KHR::eNone;
+        barrier_albedo.dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite;
+        barrier_albedo.srcStageMask = vk::PipelineStageFlagBits2KHR::eNone;
+        barrier_albedo.dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader;
 
-        vk::ImageMemoryBarrier barrier_particle = barrier_albedo;
+        vk::ImageMemoryBarrier2KHR barrier_particle = barrier_albedo;
         barrier_particle.image = rtx_gbuffer.particle.image->image;
 
-        vk::ImageMemoryBarrier barrier_light_post = barrier_albedo;
+        vk::ImageMemoryBarrier2KHR barrier_light_post = barrier_albedo;
         barrier_light_post.image = rtx_gbuffer.light_post.image->image;
 
-        vk::ImageMemoryBarrier barrier_light = barrier_albedo;
+        vk::ImageMemoryBarrier2KHR barrier_light = barrier_albedo;
         barrier_light.image = rtx_gbuffer.light.image->image;
         barrier_light.newLayout = vk::ImageLayout::eGeneral;
 
-        vk::ImageMemoryBarrier barrier_normal = barrier_albedo;
+        vk::ImageMemoryBarrier2KHR barrier_normal = barrier_albedo;
         barrier_normal.image = rtx_gbuffer.normal.image->image;
         barrier_normal.newLayout = vk::ImageLayout::eGeneral;
 
-        std::vector<vk::ImageMemoryBarrier> barriers;
+        std::vector<vk::ImageMemoryBarrier2KHR> barriers;
         barriers.push_back(barrier_albedo);
         barriers.push_back(barrier_light);
         barriers.push_back(barrier_normal);
         barriers.push_back(barrier_light_post);
         barriers.push_back(barrier_particle);
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, nullptr, nullptr, barriers);
+        command_buffer->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()),
+            .pImageMemoryBarriers = barriers.data()
+        });
 
         command_buffer->end();
 
@@ -1003,27 +1008,67 @@ namespace lotus
 
             buffer.begin(begin_info);
 
-            vk::ImageMemoryBarrier albedo_barrier;
-            albedo_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            albedo_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            albedo_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-            albedo_barrier.subresourceRange.baseMipLevel = 0;
-            albedo_barrier.subresourceRange.levelCount = 1;
-            albedo_barrier.subresourceRange.baseArrayLayer = 0;
-            albedo_barrier.subresourceRange.layerCount = 1;
-            albedo_barrier.image = rtx_gbuffer.albedo.image->image;
-            albedo_barrier.oldLayout = vk::ImageLayout::eGeneral;
-            albedo_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            albedo_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-            albedo_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+            std::array barriers = {
+                vk::ImageMemoryBarrier2KHR {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .oldLayout = vk::ImageLayout::eGeneral,
+                    .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = rtx_gbuffer.albedo.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                },
+                vk::ImageMemoryBarrier2KHR {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .oldLayout = vk::ImageLayout::eGeneral,
+                    .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = rtx_gbuffer.particle.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                },
+                vk::ImageMemoryBarrier2KHR {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .oldLayout = vk::ImageLayout::eGeneral,
+                    .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = rtx_gbuffer.light_post.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                },
+            };
 
-            vk::ImageMemoryBarrier light_barrier = albedo_barrier;
-            light_barrier.image = rtx_gbuffer.light_post.image->image;
-            vk::ImageMemoryBarrier particle_barrier = albedo_barrier;
-            particle_barrier.image = rtx_gbuffer.particle.image->image;
-
-            buffer.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR | vk::PipelineStageFlagBits::eComputeShader,
-                vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, {albedo_barrier, light_barrier, particle_barrier});
+            buffer.pipelineBarrier2KHR({
+                .imageMemoryBarrierCount = barriers.size(),
+                .pImageMemoryBarriers = barriers.data()
+            });
 
             std::array clear_values
             {
@@ -1185,21 +1230,30 @@ namespace lotus
 
             buffer.begin(begin_info);
 
-            vk::ImageMemoryBarrier barrier;
-            barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            barrier.newLayout = vk::ImageLayout::eGeneral;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = rtx_gbuffer.light_post.image->image;
-            barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = 1;
-            barrier.srcAccessMask = {};
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+            vk::ImageMemoryBarrier2KHR barrier
+            {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .newLayout = vk::ImageLayout::eGeneral,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = rtx_gbuffer.light_post.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            };
 
-            buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, nullptr, nullptr, barrier);
+            buffer.pipelineBarrier2KHR({
+                .imageMemoryBarrierCount = 1,
+                .pImageMemoryBarriers = &barrier
+            });
 
             buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *post_pipeline);
 
@@ -1293,25 +1347,49 @@ namespace lotus
 
         buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {});
 
-        vk::ImageMemoryBarrier albedo_barrier;
-        albedo_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        albedo_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        albedo_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        albedo_barrier.subresourceRange.baseMipLevel = 0;
-        albedo_barrier.subresourceRange.levelCount = 1;
-        albedo_barrier.subresourceRange.baseArrayLayer = 0;
-        albedo_barrier.subresourceRange.layerCount = 1;
-        albedo_barrier.image = rtx_gbuffer.albedo.image->image;
-        albedo_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        albedo_barrier.newLayout = vk::ImageLayout::eGeneral;
-        albedo_barrier.srcAccessMask = {};
-        albedo_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+        std::array barriers = {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .newLayout = vk::ImageLayout::eGeneral,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = rtx_gbuffer.albedo.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            },
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .newLayout = vk::ImageLayout::eGeneral,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = rtx_gbuffer.particle.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
+        };
 
-        auto particle_barrier = albedo_barrier;
-        particle_barrier.image = rtx_gbuffer.particle.image->image;
-
-        buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR,
-            {}, {}, {}, { albedo_barrier, particle_barrier });
+        buffer[0]->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = barriers.size(),
+            .pImageMemoryBarriers = barriers.data()
+        });
 
         vk::WriteDescriptorSet write_info_target_albedo;
         write_info_target_albedo.descriptorCount = 1;

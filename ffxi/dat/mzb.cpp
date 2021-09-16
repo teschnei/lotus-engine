@@ -541,10 +541,19 @@ namespace FFXI
 
         if (engine->config->renderer.RaytraceEnabled())
         {
-            vk::MemoryBarrier barrier;
-            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-            barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-            command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, barrier, nullptr, nullptr);
+            vk::MemoryBarrier2KHR barrier
+            {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+                .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eAccelerationStructureWrite
+            };
+
+            command_buffer->pipelineBarrier2KHR({
+                .memoryBarrierCount = 1,
+                .pMemoryBarriers = &barrier
+            });
+
             model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(static_cast<lotus::RendererRaytraceBase*>(engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                 std::move(max_primitives), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
         }

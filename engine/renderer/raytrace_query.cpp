@@ -260,13 +260,18 @@ namespace lotus
                     std::vector<vk::WriteDescriptorSet> writes = { write_info_as, write_info_input, write_info_output };
                     engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
 
-                    vk::MemoryBarrier barrier;
+                    vk::MemoryBarrier2KHR barrier
+                    {
+                        .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                        .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
+                        .dstStageMask =  vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                        .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead
+                    };
 
-                    barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR;
-                    barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
-
-                    buffer[0]->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eRayTracingShaderKHR,
-                        {}, barrier, nullptr, nullptr);
+                    buffer[0]->pipelineBarrier2KHR({
+                        .memoryBarrierCount = 1,
+                        .pMemoryBarriers = &barrier
+                    });
 
                     buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {});
                     buffer[0]->traceRaysKHR(raygenSBT,

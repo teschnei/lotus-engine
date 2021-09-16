@@ -59,25 +59,49 @@ namespace lotus
 
         command_buffer->begin(begin_info);
 
-        vk::ImageMemoryBarrier post_barrier;
-        post_barrier.oldLayout = vk::ImageLayout::eUndefined;
-        post_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        post_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        post_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        post_barrier.image = rtx_gbuffer.post_colour.image->image;
-        post_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        post_barrier.subresourceRange.baseMipLevel = 0;
-        post_barrier.subresourceRange.levelCount = 1;
-        post_barrier.subresourceRange.baseArrayLayer = 0;
-        post_barrier.subresourceRange.layerCount = 1;
-        post_barrier.srcAccessMask = {};
-        post_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+        std::array barriers = {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = rtx_gbuffer.post_colour.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            },
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eGeneral,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = rtx_gbuffer.colour.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
+        };
 
-        vk::ImageMemoryBarrier barrier = post_barrier;
-        post_barrier.image = rtx_gbuffer.colour.image->image;
-        post_barrier.newLayout = vk::ImageLayout::eGeneral;
-
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eRayTracingShaderKHR, {}, nullptr, nullptr, { barrier, post_barrier });
+        command_buffer->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = barriers.size(),
+            .pImageMemoryBarriers = barriers.data()
+        });
 
         command_buffer->end();
 
@@ -1265,21 +1289,30 @@ namespace lotus
 
             buffer.begin(begin_info);
 
-            vk::ImageMemoryBarrier light_barrier;
-            light_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            light_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            light_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-            light_barrier.subresourceRange.baseMipLevel = 0;
-            light_barrier.subresourceRange.levelCount = 1;
-            light_barrier.subresourceRange.baseArrayLayer = 0;
-            light_barrier.subresourceRange.layerCount = 1;
-            light_barrier.image = rtx_gbuffer.post_colour.image->image;
-            light_barrier.oldLayout = vk::ImageLayout::eGeneral;
-            light_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            light_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-            light_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+            vk::ImageMemoryBarrier2KHR light_barrier
+            {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                .oldLayout = vk::ImageLayout::eGeneral,
+                .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = rtx_gbuffer.post_colour.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            };
 
-            buffer.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, light_barrier);
+            buffer.pipelineBarrier2KHR({
+                .imageMemoryBarrierCount = 1,
+                .pImageMemoryBarriers = &light_barrier
+            });
 
             std::array clear_values
             {
@@ -1502,27 +1535,49 @@ namespace lotus
 
             buffer.begin(begin_info);
 
-            vk::ImageMemoryBarrier barrier;
-            barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            barrier.newLayout = vk::ImageLayout::eGeneral;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = rtx_gbuffer.post_colour.image->image;
-            barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = 1;
-            barrier.srcAccessMask = {};
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+            std::array barriers = {
+                vk::ImageMemoryBarrier2KHR {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                    .newLayout = vk::ImageLayout::eGeneral,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = rtx_gbuffer.post_colour.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                },
+                vk::ImageMemoryBarrier2KHR {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                    .newLayout = vk::ImageLayout::eGeneral,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = gbuffer.normal.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                },
+            };
 
-            //TODO: maybe this should be ReadOnlyOptimal? but renderer_raytrace would also need to be ReadOnlyOptimal
-            auto normal_barrier = barrier;
-            barrier.image = gbuffer.normal.image->image;
-            barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-            buffer.pipelineBarrier(vk::PipelineStageFlagBits::eRayTracingShaderKHR, vk::PipelineStageFlagBits::eComputeShader, {}, nullptr, nullptr, {barrier, normal_barrier});
+            buffer.pipelineBarrier2KHR({
+                .imageMemoryBarrierCount = barriers.size(),
+                .pImageMemoryBarriers = barriers.data()
+            });
 
             buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *post_pipeline);
 

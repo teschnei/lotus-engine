@@ -90,16 +90,23 @@ namespace lotus
         copy_region.size = skeleton->bones.size() * sizeof(AnimationComponent::BufferBone);
         command_buffer->copyBuffer(staging_buffer->buffer, anim_component->skeleton_bone_buffer->buffer, copy_region);
 
-        vk::BufferMemoryBarrier barrier;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.buffer = anim_component->skeleton_bone_buffer->buffer;
-        barrier.offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentImage();
-        barrier.size = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size();
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+        vk::BufferMemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .buffer = anim_component->skeleton_bone_buffer->buffer,
+            .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentImage(),
+            .size = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size()
+        };
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, nullptr, barrier, nullptr);
+        command_buffer->pipelineBarrier2KHR({
+            .bufferMemoryBarrierCount = 1,
+            .pBufferMemoryBarriers = &barrier
+        });
         command_buffer->end();
 
         engine->worker_pool->command_buffers.compute.queue(*command_buffer);

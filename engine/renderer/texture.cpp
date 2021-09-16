@@ -36,21 +36,30 @@ namespace lotus
 
         command_buffer->begin(begin_info);
 
-        vk::ImageMemoryBarrier barrier;
-        barrier.oldLayout = vk::ImageLayout::eUndefined;
-        barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = image->image;
-        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = texture_datas.size();
-        barrier.srcAccessMask = {};
-        barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+        vk::ImageMemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .oldLayout = vk::ImageLayout::eUndefined,
+            .newLayout = vk::ImageLayout::eTransferDstOptimal,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image->image,
+            .subresourceRange = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = static_cast<uint32_t>(texture_datas.size()),
+            }
+        };
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, nullptr, nullptr, barrier);
+        command_buffer->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrier
+        });
 
         vk::BufferImageCopy region;
         region.bufferOffset = 0;
@@ -68,20 +77,29 @@ namespace lotus
         };
         command_buffer->copyBufferToImage(staging_buffer->buffer, image->image, vk::ImageLayout::eTransferDstOptimal, region);
 
-        barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = image->image;
-        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = texture_datas.size();
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+        barrier = {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .oldLayout = vk::ImageLayout::eTransferDstOptimal,
+            .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image->image,
+            .subresourceRange = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = static_cast<uint32_t>(texture_datas.size())
+            }
+        };
 
-        command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, nullptr, nullptr, barrier);
+        command_buffer->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrier
+        });
 
         command_buffer->end();
 

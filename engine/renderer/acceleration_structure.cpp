@@ -42,17 +42,22 @@ namespace lotus
     void AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometries,
         std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges, vk::BuildAccelerationStructureModeKHR mode)
     {
-        vk::BufferMemoryBarrier barrier;
+        vk::BufferMemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .buffer = scratch_memory->buffer,
+            .size = VK_WHOLE_SIZE,
+        };
 
-        barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-        barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.buffer = scratch_memory->buffer;
-        barrier.size = VK_WHOLE_SIZE;
-
-        command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
-            {}, nullptr, barrier, nullptr);
+        command_buffer.pipelineBarrier2KHR({
+            .bufferMemoryBarrierCount = 1,
+            .pBufferMemoryBarriers = &barrier
+        });
 
         vk::AccelerationStructureBuildGeometryInfoKHR build_info {
             .type = type,
@@ -181,13 +186,18 @@ namespace lotus
             memcpy(data, instances.data(), instances.size() * sizeof(vk::AccelerationStructureInstanceKHR));
             instance_memory->unmap();
 
-            vk::MemoryBarrier barrier;
+            vk::MemoryBarrier2KHR barrier
+            {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            };
 
-            barrier.srcAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-            barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureWriteKHR | vk::AccessFlagBits::eAccelerationStructureReadKHR;
-
-            command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
-                {}, barrier, nullptr, nullptr);
+            command_buffer->pipelineBarrier2KHR({
+                .memoryBarrierCount = 1,
+                .pMemoryBarriers = &barrier
+            });
 
             BuildAccelerationStructure(*command_buffer, instance_data_vec, instance_range_vec, update ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild);
             dirty = false;

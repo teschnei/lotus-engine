@@ -8,7 +8,8 @@ namespace lotus
 {
     const std::vector<const char*> device_extensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+        VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+        VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
     };
 
     GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, std::span<const char* const> layers) : instance(_instance), surface(_surface), config(_config)
@@ -109,6 +110,13 @@ namespace lotus
         clock_features.shaderSubgroupClock = true;
 
         rt_features.pNext = &clock_features;
+
+        vk::PhysicalDeviceSynchronization2FeaturesKHR sync_features
+        {
+            .synchronization2 = true
+        };
+
+        clock_features.pNext = &sync_features;
 
         std::vector<const char*> device_extensions2 = device_extensions;
         if (config->renderer.RaytraceEnabled())

@@ -132,10 +132,18 @@ namespace lotus
 
         //transform skeleton with default animation before building AS to improve the bounding box accuracy
         //make sure all vertex and index buffers are finished transferring
-        vk::MemoryBarrier transfer_barrier;
-        transfer_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        transfer_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-        command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, transfer_barrier, nullptr, nullptr);
+        vk::MemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .dstStageMask =  vk::PipelineStageFlagBits2KHR::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead
+        };
+
+        command_buffer.pipelineBarrier2KHR({
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &barrier
+        });
 
         auto component = entity->animation_component;
         auto& skeleton = component->skeleton;
@@ -194,15 +202,22 @@ namespace lotus
 
                 command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
-                vk::BufferMemoryBarrier barrier;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.buffer = vertex_buffer->buffer;
-                barrier.size = VK_WHOLE_SIZE;
-                barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                vk::BufferMemoryBarrier2KHR barrier
+                {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .buffer = vertex_buffer->buffer,
+                    .size = VK_WHOLE_SIZE
+                };
 
-                command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
+                command_buffer.pipelineBarrier2KHR({
+                    .bufferMemoryBarrierCount = 1,
+                    .pBufferMemoryBarriers = &barrier
+                });
             }
         }
         for (size_t i = 0; i < renderer->getImageCount(); ++i)
@@ -700,10 +715,18 @@ namespace lotus
 
         //transform skeleton with default animation before building AS to improve the bounding box accuracy
         //make sure all vertex and index buffers are finished transferring
-        vk::MemoryBarrier transfer_barrier;
-        transfer_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        transfer_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-        command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, transfer_barrier, nullptr, nullptr);
+        vk::MemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .dstStageMask =  vk::PipelineStageFlagBits2KHR::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead
+        };
+
+        command_buffer.pipelineBarrier2KHR({
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &barrier
+        });
 
         auto component = entity->animation_component;
         auto& skeleton = component->skeleton;
@@ -762,15 +785,22 @@ namespace lotus
 
                 command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
-                vk::BufferMemoryBarrier barrier;
-                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                barrier.buffer = vertex_buffer->buffer;
-                barrier.size = VK_WHOLE_SIZE;
-                barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-                barrier.dstAccessMask = vk::AccessFlagBits::eAccelerationStructureReadKHR;
+                vk::BufferMemoryBarrier2KHR barrier
+                {
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .buffer = vertex_buffer->buffer,
+                    .size = VK_WHOLE_SIZE
+                };
 
-                command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR, {}, nullptr, barrier, nullptr);
+                command_buffer.pipelineBarrier2KHR({
+                    .bufferMemoryBarrierCount = 1,
+                    .pBufferMemoryBarriers = &barrier
+                });
             }
         }
         for (size_t i = 0; i < renderer->getImageCount(); ++i)
