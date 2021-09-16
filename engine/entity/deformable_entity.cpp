@@ -173,7 +173,8 @@ namespace lotus
             }
             if (engine->config->renderer.RaytraceEnabled())
             {
-                component->transformed_geometries[i].bottom_level_as[image_index]->Update(*command_buffer);
+                if (component->transformed_geometries[i].bottom_level_as[image_index])
+                    component->transformed_geometries[i].bottom_level_as[image_index]->Update(*command_buffer);
             }
         }
         command_buffer->end();

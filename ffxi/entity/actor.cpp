@@ -135,13 +135,10 @@ lotus::WorkerTask<> Actor::Load(std::initializer_list<std::reference_wrapper<con
 
     for (const auto& os2 : os2s)
     {
-        if (std::ranges::any_of(os2, [](auto o) { return !o->meshes.empty(); }))
-        {
-            auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + os2.front()->name, FFXIActorLoader::LoadModel, engine, os2);
-            models.push_back(model);
-            if (model_task)
-                model_tasks.push_back(std::move(*model_task));
-        }
+        auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + os2.front()->name, FFXIActorLoader::LoadModel, engine, os2);
+        models.push_back(model);
+        if (model_task)
+            model_tasks.push_back(std::move(*model_task));
     }
     auto init_task = InitWork();
 
