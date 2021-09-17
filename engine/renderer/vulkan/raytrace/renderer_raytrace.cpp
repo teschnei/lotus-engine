@@ -1197,6 +1197,16 @@ namespace lotus
         pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(layouts.size());
         pipeline_layout_ci.pSetLayouts = layouts.data();
 
+        vk::PushConstantRange push_constant_range
+        {
+            .stageFlags = vk::ShaderStageFlagBits::eCompute,
+            .offset = 0,
+            .size = sizeof(post_process_factor)
+        };
+
+        pipeline_layout_ci.pPushConstantRanges = &push_constant_range;
+        pipeline_layout_ci.pushConstantRangeCount = 1;
+
         post_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_ci, nullptr);
 
         //pipeline
@@ -1213,91 +1223,6 @@ namespace lotus
         pipeline_ci.stage = shader_stage_info;
 
         post_pipeline = gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
-
-        vk::CommandBufferAllocateInfo alloc_info = {};
-        alloc_info.commandPool = *local_compute_pool;
-        alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandBufferCount = getImageCount();
-
-        post_command_buffers = gpu->device->allocateCommandBuffersUnique(alloc_info);
-
-        for (int i = 0; i < post_command_buffers.size(); ++i)
-        {
-            vk::CommandBuffer buffer = *post_command_buffers[i];
-
-            vk::CommandBufferBeginInfo begin_info = {};
-            begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-
-            buffer.begin(begin_info);
-
-            vk::ImageMemoryBarrier2KHR barrier
-            {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-                .newLayout = vk::ImageLayout::eGeneral,
-                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = rtx_gbuffer.light_post.image->image,
-                .subresourceRange = {
-                    .aspectMask = vk::ImageAspectFlagBits::eColor,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1
-                }
-            };
-
-            buffer.pipelineBarrier2KHR({
-                .imageMemoryBarrierCount = 1,
-                .pImageMemoryBarriers = &barrier
-            });
-
-            buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *post_pipeline);
-
-            vk::DescriptorImageInfo input_colour_info;
-            input_colour_info.imageLayout = vk::ImageLayout::eGeneral;
-            input_colour_info.imageView = *rtx_gbuffer.light.image_view;
-
-            vk::DescriptorImageInfo input_normal_info;
-            input_normal_info.imageLayout = vk::ImageLayout::eGeneral;
-            input_normal_info.imageView = *rtx_gbuffer.normal.image_view;
-
-            vk::DescriptorImageInfo output_image_info;
-            output_image_info.imageLayout = vk::ImageLayout::eGeneral;
-            output_image_info.imageView = *rtx_gbuffer.light_post.image_view;
-
-            std::vector<vk::WriteDescriptorSet> descriptorWrites {3};
-
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eStorageImage;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pImageInfo = &input_colour_info;
-
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eStorageImage;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &input_normal_info;
-
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageImage;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &output_image_info;
-
-            buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *post_pipeline_layout, 0, descriptorWrites);
-
-            buffer.dispatch((swapchain->extent.width / 16) + 1, (swapchain->extent.height / 16) + 1, 1);
-
-            buffer.end();
-        }
     }
 
     Task<> RendererRaytrace::recreateRenderer()
@@ -1466,6 +1391,92 @@ namespace lotus
         return *render_commandbuffers[image_index];
     }
 
+    vk::UniqueCommandBuffer RendererRaytrace::getPostProcessCommandBuffer(uint32_t image_index)
+    {
+        vk::CommandBufferAllocateInfo alloc_info = {};
+        alloc_info.commandPool = *local_compute_pool;
+        alloc_info.level = vk::CommandBufferLevel::ePrimary;
+        alloc_info.commandBufferCount = 1;
+
+        auto buffer = gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        vk::CommandBufferBeginInfo begin_info = {};
+        begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+        buffer[0]->begin(begin_info);
+
+        vk::ImageMemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .newLayout = vk::ImageLayout::eGeneral,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = rtx_gbuffer.light_post.image->image,
+            .subresourceRange = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            }
+        };
+
+        buffer[0]->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrier
+        });
+
+        buffer[0]->bindPipeline(vk::PipelineBindPoint::eCompute, *post_pipeline);
+
+        vk::DescriptorImageInfo input_colour_info;
+        input_colour_info.imageLayout = vk::ImageLayout::eGeneral;
+        input_colour_info.imageView = *rtx_gbuffer.light.image_view;
+
+        vk::DescriptorImageInfo input_normal_info;
+        input_normal_info.imageLayout = vk::ImageLayout::eGeneral;
+        input_normal_info.imageView = *rtx_gbuffer.normal.image_view;
+
+        vk::DescriptorImageInfo output_image_info;
+        output_image_info.imageLayout = vk::ImageLayout::eGeneral;
+        output_image_info.imageView = *rtx_gbuffer.light_post.image_view;
+
+        std::vector<vk::WriteDescriptorSet> descriptorWrites {3};
+
+        descriptorWrites[0].dstSet = nullptr;
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eStorageImage;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pImageInfo = &input_colour_info;
+
+        descriptorWrites[1].dstSet = nullptr;
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eStorageImage;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &input_normal_info;
+
+        descriptorWrites[2].dstSet = nullptr;
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageImage;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pImageInfo = &output_image_info;
+
+        buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *post_pipeline_layout, 0, descriptorWrites);
+
+        buffer[0]->pushConstants<uint64_t>(*post_pipeline_layout, vk::ShaderStageFlagBits::eCompute, 0, { post_process_factor++ });
+
+        buffer[0]->dispatch((swapchain->extent.width / 16) + 1, (swapchain->extent.height / 16) + 1, 1);
+
+        buffer[0]->end();
+        return std::move(buffer[0]);
+    }
+
     Task<> RendererRaytrace::drawFrame()
     {
         if (!engine->game || !engine->game->scene)
@@ -1528,10 +1539,10 @@ namespace lotus
             gpu->graphics_queue.submit(submitInfo, nullptr);
 
             //post process
-            auto post_buffer = *post_command_buffers[current_image];
+            auto post_buffer = getPostProcessCommandBuffer(current_image);
             std::vector<vk::PipelineStageFlags> post_process_stage_flags = { vk::PipelineStageFlagBits::eComputeShader };
             submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &post_buffer;
+            submitInfo.pCommandBuffers = &*post_buffer;
 
             submitInfo.waitSemaphoreCount = raytrace_semaphores.size();
             submitInfo.pWaitSemaphores = raytrace_semaphores.data();
@@ -1540,6 +1551,8 @@ namespace lotus
             submitInfo.signalSemaphoreCount = post_sems.size();
             submitInfo.pSignalSemaphores = post_sems.data();
             gpu->compute_queue.submit(submitInfo, nullptr);
+
+            engine->worker_pool->gpuResource(std::move(post_buffer));
 
             //deferred render
             std::vector<vk::PipelineStageFlags> deferred_render_stage_flags = { vk::PipelineStageFlagBits::eFragmentShader };

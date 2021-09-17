@@ -142,6 +142,8 @@ namespace lotus
             normal = glm::normalize(glm::cross(Y, aux));
             point = -glm::dot(normal, nc + X * nw);
             frustum.right.x = normal.x; frustum.right.y = normal.y; frustum.right.z = normal.z; frustum.right.w = point;
+            update = false;
+            engine->renderer->post_process_factor = 0;
         }
         co_return;
     }

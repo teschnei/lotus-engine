@@ -80,5 +80,6 @@ namespace lotus
         void generateCommandBuffers();
 
         virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
+        vk::UniqueCommandBuffer getPostProcessCommandBuffer(uint32_t image_index);
     };
 }

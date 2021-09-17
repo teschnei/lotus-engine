@@ -78,6 +78,7 @@ lotus::Task<> ThirdPersonFFXIVCameraComponent::tick(lotus::time_point time, lotu
     {
         if (last_focus_pos != focus_lock->getPos())
         {
+            last_focus_pos = focus_lock->getPos();
             camera->update_camera();
         }
     }

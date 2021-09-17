@@ -140,7 +140,7 @@ namespace lotus
         vk::UniqueDescriptorSetLayout post_descriptor_set_layout;
         vk::UniquePipelineLayout post_pipeline_layout;
         vk::UniquePipeline post_pipeline;
-        std::vector<vk::UniqueCommandBuffer> post_command_buffers;
+        uint64_t post_process_factor{ 0 };
         /* Post processing */
 
     protected:
