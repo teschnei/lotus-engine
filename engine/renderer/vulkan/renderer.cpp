@@ -58,6 +58,7 @@ namespace lotus
 
         createSwapchain();
         resources = std::make_unique<GlobalResources>(engine, this);
+        post_process = std::make_unique<PostProcess>(this);
     }
 
     Renderer::~Renderer()
@@ -70,6 +71,11 @@ namespace lotus
         raytracer = std::make_unique<Raytracer>(engine);
         ui = std::make_unique<UiRenderer>(engine, this);
         co_await ui->Init();
+    }
+
+    void Renderer::runRaytracerQueries()
+    {
+        raytracer->runQueries(current_image);
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)

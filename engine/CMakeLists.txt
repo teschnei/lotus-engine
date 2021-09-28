@@ -1,6 +1,7 @@
 project( engine )
 
 add_library( engine
+    async_queue.h
     audio.cpp
     audio.h
     config.cpp

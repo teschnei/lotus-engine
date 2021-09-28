@@ -6,6 +6,7 @@
 #include <memory>
 #include <exception>
 #include <unordered_map>
+#include "async_queue.h"
 #include "task.h"
 #include "shared_linked_list.h"
 #include "renderer/vulkan/vulkan_inc.h"
@@ -209,25 +210,7 @@ namespace lotus
 
         std::unordered_map<std::coroutine_handle<>, BackgroundTask> background_tasks;
 
-        class FrameWait
-        {
-        public:
-            FrameWait(WorkerPool* _pool) : pool(_pool) {}
-
-            bool await_ready() noexcept { return false; }
-            void await_suspend(std::coroutine_handle<> awaiter) noexcept
-            {
-                awaiting = awaiter;
-                pool->frame_waiting_tasks.queue(this);
-            }
-            void await_resume() noexcept {}
-
-        private:
-            friend class WorkerPool;
-            WorkerPool* pool;
-            std::coroutine_handle<> awaiting;
-        };
-        SharedLinkedList<FrameWait*> frame_waiting_tasks;
+        AsyncQueue<> frame_waiting_queue;
 
     public:
 
@@ -254,7 +237,7 @@ namespace lotus
         [[nodiscard]]
         Task<> waitForFrame() 
         {
-            co_await FrameWait(this);
+            co_await frame_waiting_queue.wait();
         }
 
         void processFrameWaits();

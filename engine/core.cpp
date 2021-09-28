@@ -63,7 +63,10 @@ namespace lotus
                 //make sure we're on the main thread for any SDL events
                 co_await worker_pool->mainThread();
                 input->GetInput();
-                co_await game->tick_all(simulation_time, sim_delta);
+                auto tick_task = game->tick_all(simulation_time, sim_delta);
+                //ticks may request raytracer queries, which will block their tasks until we run them manually (in order to allow them to be grouped into one invocation)
+                renderer->runRaytracerQueries();
+                co_await tick_task;
                 co_await renderer->drawFrame();
             }
         }

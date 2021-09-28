@@ -113,7 +113,7 @@ namespace lotus
 
     void WorkerPool::processFrameWaits()
     {
-        for (auto& task : frame_waiting_tasks.getAll())
+        for (auto& task : frame_waiting_queue.getAll())
         {
             task->awaiting.resume();
         }

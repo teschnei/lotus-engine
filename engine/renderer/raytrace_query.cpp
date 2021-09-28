@@ -174,22 +174,21 @@ namespace lotus
         command_pool = engine->renderer->gpu->device->createCommandPoolUnique(pool_info, nullptr);
     }
 
-    void Raytracer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback)
+    Task<float> Raytracer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max)
     {
-        queries.emplace_back(object_flags, origin, direction, min, max, callback);
+        co_return (co_await async_query_queue.wait(RaytraceQuery{object_flags, origin, direction, min, max})).result;
     }
 
     void Raytracer::runQueries(uint32_t image)
     {
         if (engine->config->renderer.RaytraceEnabled())
         {
-            if (engine->game->scene->top_level_as[image])
+            if (engine->game->scene && engine->game->scene->top_level_as[image])
             {
-                while (!queries.empty())
-                {
-                    auto processing_queries = std::move(queries);
-                    queries.clear();
+                auto processing_queries = async_query_queue.getAll();
 
+                if (!processing_queries.empty())
+                {
                     size_t input_buffer_size = sizeof(RaytraceInput) * processing_queries.size();
                     size_t output_buffer_size = sizeof(RaytraceOutput) * processing_queries.size();
                     input_buffer = engine->renderer->gpu->memory_manager->GetBuffer(input_buffer_size, vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -198,11 +197,11 @@ namespace lotus
                     for (size_t i = 0; i < processing_queries.size(); ++i)
                     {
                         const auto& query = processing_queries[i];
-                        input_mapped[i].origin = query.origin;
-                        input_mapped[i].min = query.min;
-                        input_mapped[i].direction = query.direction;
-                        input_mapped[i].max = query.max;
-                        input_mapped[i].flags = static_cast<uint32_t>(query.object_flags);
+                        input_mapped[i].origin = query->data.origin;
+                        input_mapped[i].min = query->data.min;
+                        input_mapped[i].direction = query->data.direction;
+                        input_mapped[i].max = query->data.max;
+                        input_mapped[i].flags = static_cast<uint32_t>(query->data.object_flags);
                     }
                     input_buffer->unmap();
 
@@ -264,14 +263,14 @@ namespace lotus
                     {
                         .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
                         .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
-                        .dstStageMask =  vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                        .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
                         .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead
                     };
 
                     buffer[0]->pipelineBarrier2KHR({
                         .memoryBarrierCount = 1,
                         .pMemoryBarriers = &barrier
-                    });
+                        });
 
                     buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {});
                     buffer[0]->traceRaysKHR(raygenSBT,
@@ -291,19 +290,18 @@ namespace lotus
                     for (size_t i = 0; i < processing_queries.size(); ++i)
                     {
                         const auto& query = processing_queries[i];
-                        query.callback(output_mapped[i].intersection_dist);
+                        query->data.result = output_mapped[i].intersection_dist;
+                        query->awaiting.resume();
                     }
                     output_buffer->unmap();
+                    return;
                 }
             }
         }
-        else
+        for (auto& query : async_query_queue.getAll())
         {
-            for (size_t i = 0; i < queries.size(); ++i)
-            {
-                const auto& query = queries[i];
-                query.callback(query.max);
-            }
+            query->data.result = query->data.max;
+            query->awaiting.resume();
         }
     }
 }

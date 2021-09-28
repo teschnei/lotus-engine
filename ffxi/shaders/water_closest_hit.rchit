@@ -36,7 +36,7 @@ layout(binding = 5, set = 0) buffer readonly MeshInfo
     Mesh m[4096];
 } meshInfo;
 
-layout(std430, binding = 5, set = 1) buffer readonly Light
+layout(std430, binding = 6, set = 1) buffer readonly Light
 {
     LightBuffer light;
     LightInfo light_info[];

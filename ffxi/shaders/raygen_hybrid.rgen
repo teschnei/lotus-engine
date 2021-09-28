@@ -20,24 +20,26 @@ layout(binding = 5, set = 0) buffer readonly MeshInfo
 } meshInfo;
 
 layout(binding = 0, set = 1, rgba32f) uniform image2D light_out;
+layout(binding = 1, set = 1) uniform sampler2D position_in;
+layout(binding = 2, set = 1) uniform sampler2D normal_in;
+layout(binding = 3, set = 1) uniform sampler2D face_normal_in;
+layout(binding = 4, set = 1) uniform sampler2D albedo_in;
+layout(binding = 5, set = 1) uniform usampler2D material_index_in;
 
-layout(std430, binding = 5, set = 1) buffer readonly Light
+layout(std430, binding = 6, set = 1) buffer readonly Light
 {
     LightBuffer light;
     LightInfo light_info[];
 } light;
 
-layout(binding = 6, set = 1) uniform sampler2D position_in;
-layout(binding = 7, set = 1) uniform sampler2D normal_in;
-layout(binding = 8, set = 1) uniform sampler2D face_normal_in;
-layout(binding = 9, set = 1) uniform sampler2D albedo_in;
-layout(binding = 10, set = 1) uniform usampler2D material_index_in;
-layout(binding = 11, set = 1) uniform Camera {
+layout(binding = 7, set = 1) uniform Camera {
     mat4 proj;
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    vec3 pos;
+    mat4 proj_prev;
+    mat4 view_prev;
+    vec4 eye_pos;
 } camera;
 
 layout(location = 0) rayPayloadEXT HitValue

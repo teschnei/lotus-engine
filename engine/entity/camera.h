@@ -44,7 +44,9 @@ namespace lotus
             glm::mat4 view{};
             glm::mat4 proj_inverse{};
             glm::mat4 view_inverse{};
-            glm::vec4 eye_pos;
+            glm::mat4 proj_prev{};
+            glm::mat4 view_prev{};
+            glm::vec4 eye_pos{};
         } camera_data;
 
         struct Frustum
@@ -66,6 +68,7 @@ namespace lotus
         float near_clip{ 0.f };
         float far_clip{ 0.f };
         glm::vec3 camera_rot{};
+        glm::mat4 view_prev_temp{};
 
         float nh{};
         float nw{};

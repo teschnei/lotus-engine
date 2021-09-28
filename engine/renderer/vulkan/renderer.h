@@ -7,6 +7,7 @@
 #include "swapchain.h"
 #include "global_resources.h"
 #include "ui_renderer.h"
+#include "common/post_process.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
 #include "engine/renderer/model.h"
@@ -125,7 +126,6 @@ namespace lotus
         };
 
         std::vector<vk::UniqueFramebuffer> frame_buffers;
-        std::vector<vk::UniqueCommandBuffer> deferred_command_buffers;
 
         /* Animation pipeline */
         vk::UniqueDescriptorSetLayout animation_descriptor_set_layout;
@@ -134,14 +134,11 @@ namespace lotus
         /* Animation pipeline */
 
         std::unique_ptr<Raytracer> raytracer;
+        friend class PostProcess;
+        std::unique_ptr<PostProcess> post_process;
         std::unique_ptr<UiRenderer> ui;
 
-        /* Post processing */
-        vk::UniqueDescriptorSetLayout post_descriptor_set_layout;
-        vk::UniquePipelineLayout post_pipeline_layout;
-        vk::UniquePipeline post_pipeline;
-        uint64_t post_process_factor{ 0 };
-        /* Post processing */
+        void runRaytracerQueries();
 
     protected:
         void createInstance(const std::string& app_name, uint32_t app_version);

@@ -11,12 +11,16 @@ layout(binding = 0, set = 1) uniform writeonly restrict image2D albedo;
 layout(binding = 1, set = 1) uniform writeonly restrict image2D normal;
 layout(binding = 2, set = 1) uniform writeonly restrict image2D light;
 layout(binding = 3, set = 1) uniform writeonly restrict image2D particle;
-layout(binding = 4, set = 1) uniform Camera
+layout(binding = 4, set = 1) uniform writeonly restrict image2D motion_vector;
+layout(binding = 5, set = 1) uniform Camera
 {
     mat4 proj;
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
+    mat4 proj_prev;
+    mat4 view_prev;
+    vec4 eye_pos;
 } camera;
 
 layout(location = 0) rayPayloadEXT HitValue
@@ -81,4 +85,5 @@ void main()
     imageStore(normal, ivec2(gl_LaunchIDEXT.xy), vec4(hit_normal, 0.0));
     imageStore(light, ivec2(gl_LaunchIDEXT.xy), vec4(light_total, 1.0));
     imageStore(particle, ivec2(gl_LaunchIDEXT.xy), vec4(particle_colour, 1.0));
+    imageStore(motion_vector, ivec2(gl_LaunchIDEXT.xy), vec4(0.0));
 }

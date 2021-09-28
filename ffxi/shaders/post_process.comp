@@ -5,12 +5,9 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout(binding = 0, rgba32f) uniform readonly restrict image2D in_colour;
 layout(binding = 1, rgba32f) uniform readonly restrict image2D in_normal;
-layout(binding = 2, rgba32f) uniform restrict image2D out_image;
-
-layout(push_constant) uniform PushConstant
-{
-    uint factor;
-} push;
+layout(binding = 2, rgba32f) uniform readonly restrict image2D in_motionvector;
+layout(binding = 3) uniform sampler2D in_image_prev;
+layout(binding = 4, rgba32f) uniform writeonly restrict image2D out_image;
 
 float denoiseStrength = 3.0f;
 
@@ -79,6 +76,18 @@ void main() {
     kernel[23] = 1.0f/64.0f;
     kernel[24] = 1.0f/256.0f;
     
+    vec4 mv = imageLoad(in_motionvector, pos);
+    mv.xy *= imageSize(out_image).xy;
+    vec2 texcoord = vec2(gl_GlobalInvocationID.xy);
+    /*
+    if (abs(mv.x) < 0.0001)
+        mv.x = 0;
+    if (abs(mv.y) < 0.0001)
+        mv.y = 0;
+        */
+    //pos+(0.5,0.5) to get the center of the desired pixel
+    vec4 hist_colour = texture(in_image_prev, pos+vec2(0.5,0.5)-mv.xy);
+
     vec3 sum = vec3(0.0);
     float c_phi = 1.0;
     float n_phi = 0.5;
@@ -115,8 +124,13 @@ void main() {
             cum_w += weight*kernel[i];
         }
     }
-    vec4 c = imageLoad(out_image, pos) * push.factor;
-    c = (c + vec4(sum / cum_w, pval)) / (push.factor + 1);
-    imageStore(out_image, pos, c);
+    uint factor = uint(hist_colour.w);
+    //if ((hist_offset.x != 0 || hist_offset.y != 0) && factor > 0)
+    //   factor = 5;
+    if (abs(mv.z - mv.w) > 1)
+		factor = 0;
+    vec3 color = hist_colour.xyz * factor;
+    color = (color + (sum / cum_w)) / (factor + 1);
+    imageStore(out_image, pos, vec4(color, factor + 1));
 }
 

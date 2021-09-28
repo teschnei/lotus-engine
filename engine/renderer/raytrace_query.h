@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "engine/renderer/memory.h"
+#include "engine/task.h"
+#include "engine/worker_pool.h"
 
 //class for doing generic raytracing queries
 namespace lotus
@@ -22,24 +24,22 @@ namespace lotus
             Water = 32
         };
         Raytracer(Engine* engine);
-        void query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max, std::function<void(float)> callback);
-        bool hasQueries() const { return !queries.empty(); }
+        Task<float> query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max);
         void runQueries(uint32_t image);
-        void clearQueries() { queries.clear(); }
 
     private:
         class RaytraceQuery
         {
         public:
-            RaytraceQuery(ObjectFlags _object_flags, glm::vec3 _origin, glm::vec3 _direction, float _min, float _max, std::function<void(float)> _callback) :
-                object_flags(_object_flags), origin(_origin), direction(_direction), min(_min), max(_max), callback(std::move(_callback)) {}
+            RaytraceQuery(ObjectFlags _object_flags, glm::vec3 _origin, glm::vec3 _direction, float _min, float _max) :
+                object_flags(_object_flags), origin(_origin), direction(_direction), min(_min), max(_max) {}
 
             ObjectFlags object_flags;
             glm::vec3 origin;
             glm::vec3 direction;
             float min;
             float max;
-            std::function<void(float)> callback;
+            float result{};
         };
         struct RaytraceInput
         {
@@ -55,11 +55,13 @@ namespace lotus
             float intersection_dist;
             float _pad[3];
         };
-        std::vector<RaytraceQuery> queries;
         Engine* engine;
 
         static constexpr size_t max_queries{ 1024 };
         vk::Queue raytrace_query_queue;
+
+        AsyncQueue<RaytraceQuery> async_query_queue;
+
         //RTX
         std::unique_ptr<Buffer> shader_binding_table;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout;

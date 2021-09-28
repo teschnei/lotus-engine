@@ -46,6 +46,7 @@ namespace lotus
             FramebufferAttachment accumulation;
             FramebufferAttachment revealage;
             FramebufferAttachment material;
+            FramebufferAttachment motion_vector;
             FramebufferAttachment depth;
 
             vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> frame_buffer;
@@ -74,7 +75,6 @@ namespace lotus
         struct RaytraceGBuffer
         {
             FramebufferAttachment colour;
-            FramebufferAttachment post_colour;
 
             vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
         } rtx_gbuffer;
@@ -91,8 +91,6 @@ namespace lotus
         void createFramebuffers();
         void createSyncs();
         void createGBufferResources();
-        void createDeferredCommandBuffer();
-        void createPostProcessingResources();
 
         virtual Task<> recreateRenderer() override;
 
@@ -100,6 +98,6 @@ namespace lotus
         void generateCommandBuffers();
 
         virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
-        vk::UniqueCommandBuffer getPostProcessCommandBuffer(uint32_t image_index);
+        vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
     };
 }

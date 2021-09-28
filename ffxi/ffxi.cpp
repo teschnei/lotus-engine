@@ -93,6 +93,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     }
     engine->set_camera(camera.get());
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
+    engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
 
     co_await player->addComponent<ThirdPersonEntityFFXIVInputComponent>(engine->input.get());
     co_await player->addComponent<ParticleTester>(engine->input.get());

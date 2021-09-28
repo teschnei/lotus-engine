@@ -57,7 +57,7 @@ namespace lotus
             FramebufferAttachment light;
             FramebufferAttachment normal;
             FramebufferAttachment particle;
-            FramebufferAttachment light_post;
+            FramebufferAttachment motion_vector;
 
             vk::UniqueSampler sampler;
         } rtx_gbuffer;
@@ -71,8 +71,6 @@ namespace lotus
         void createFramebuffers();
         void createSyncs();
         void createGBufferResources();
-        void createDeferredCommandBuffer();
-        void createPostProcessingResources();
 
         virtual Task<> recreateRenderer() override;
 
@@ -80,6 +78,6 @@ namespace lotus
         void generateCommandBuffers();
 
         virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
-        vk::UniqueCommandBuffer getPostProcessCommandBuffer(uint32_t image_index);
+        vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
     };
 }

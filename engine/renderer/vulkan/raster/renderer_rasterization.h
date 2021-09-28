@@ -106,7 +106,6 @@ namespace lotus
         void createSyncs();
         void createShadowmapResources();
         void createGBufferResources();
-        void createDeferredCommandBuffer();
 
         virtual Task<> recreateRenderer() override;
 
@@ -116,5 +115,6 @@ namespace lotus
         void updateCameraBuffers();
 
         virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
+        vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
     };
 }

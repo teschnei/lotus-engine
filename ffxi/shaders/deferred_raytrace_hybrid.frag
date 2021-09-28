@@ -34,7 +34,9 @@ layout(binding = 9) uniform Camera {
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    vec3 pos;
+    mat4 proj_prev;
+    mat4 view_prev;
+    vec4 eye_pos;
 } camera;
 
 layout(location = 0) in vec2 fragTexCoord;
@@ -91,7 +93,7 @@ void main() {
     {
         vec4 colour = texture(albedoSampler, fragTexCoord) * texture(lightSampler, fragTexCoord);
         uint mesh_index = texture(materialIndexSampler, fragTexCoord).r;
-        float dist = length(fragPos - camera.pos.xyz);
+        float dist = length(fragPos - camera.eye_pos.xyz);
 
         vec3 fog = vec3(0.0);
         float max_fog_dist = 0;

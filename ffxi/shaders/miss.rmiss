@@ -18,7 +18,7 @@ layout(location = 0) rayPayloadInEXT HitValue
     float distance;
 } hitValue;
 
-layout(std430, binding = 5, set = 1) buffer readonly Light
+layout(std430, binding = 6, set = 1) buffer readonly Light
 {
     LightBuffer light;
     uint light_count;

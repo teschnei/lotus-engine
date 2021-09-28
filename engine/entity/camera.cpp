@@ -32,6 +32,7 @@ namespace lotus
     {
         near_clip = _near_clip;
         far_clip = _far_clip;
+        camera_data.proj_prev = camera_data.proj;
         camera_data.proj = glm::perspective(radians, aspect, near_clip, far_clip);
         camera_data.proj_inverse = glm::inverse(camera_data.proj);
 
@@ -142,9 +143,12 @@ namespace lotus
             normal = glm::normalize(glm::cross(Y, aux));
             point = -glm::dot(normal, nc + X * nw);
             frustum.right.x = normal.x; frustum.right.y = normal.y; frustum.right.z = normal.z; frustum.right.w = point;
+
             update = false;
-            engine->renderer->post_process_factor = 0;
         }
+        camera_data.view_prev = view_prev_temp;
+        view_prev_temp = camera_data.view;
+
         co_return;
     }
 

@@ -6,6 +6,8 @@
 #include "renderer/vulkan/renderer.h"
 #include "renderer/vulkan/renderer_raytrace_base.h"
 
+#include <ranges>
+
 namespace lotus
 {
     Scene::Scene(Engine* _engine) : engine(_engine)
@@ -65,10 +67,17 @@ namespace lotus
         co_await tick(time, delta);
         std::vector<decltype(entities)::value_type::element_type*> entities_p{entities.size()};
         std::ranges::transform(entities, entities_p.begin(), [](auto& c) { return c.get(); });
-        for (auto entity : entities_p)
+
+        //start all tick tasks before awaiting any
+        std::vector<Task<>> tick_tasks;
+        tick_tasks.reserve(entities_p.size());
+        std::ranges::for_each(entities_p, [time, delta, &tick_tasks](auto p) { tick_tasks.push_back(p->tick_all(time, delta)); });
+
+        for (auto& t : tick_tasks)
         {
-            co_await entity->tick_all(time, delta);
+            co_await t;
         }
+
         auto removed = std::ranges::partition(entities, [](auto& entity)
         {
             return !entity->should_remove();

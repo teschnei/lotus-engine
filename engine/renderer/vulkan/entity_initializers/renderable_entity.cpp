@@ -812,8 +812,15 @@ namespace lotus
         }
         for (size_t i = 0; i < renderer->getImageCount(); ++i)
         {
-            model_transform.bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(renderer, command_buffer, std::move(raytrace_geometry[i]),
-                std::move(raytrace_offset_info[i]), std::move(max_primitives[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
+            if (std::ranges::any_of(raytrace_geometry, [](auto geo) { return !geo.empty(); }))
+            {
+                model_transform.bottom_level_as.push_back(std::make_unique<BottomLevelAccelerationStructure>(renderer, command_buffer, std::move(raytrace_geometry[i]),
+                    std::move(raytrace_offset_info[i]), std::move(max_primitives[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
+            }
+            else
+            {
+                model_transform.bottom_level_as.push_back({});
+            }
         }
     }
 }

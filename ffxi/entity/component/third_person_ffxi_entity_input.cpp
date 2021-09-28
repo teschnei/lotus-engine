@@ -24,16 +24,14 @@ lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, 
         auto pos = entity->getPos();
         auto width = 0.3f;
 
-        engine->renderer->raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, pos + step_height, glm::normalize(offset), 0.f, glm::length(offset) + width, [this, pos, offset, width](float new_distance)
+        auto new_pos = pos + (glm::length(offset)) * glm::normalize(offset);
+        auto step_task = engine->renderer->raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, pos + step_height, glm::normalize(offset), 0.f, glm::length(offset) + width);
+        auto pos_task = engine->renderer->raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, new_pos + step_height, glm::vec3{ 0.f, 1.f, 0.f }, 0.f, 500.f);
+
+        if (co_await step_task == glm::length(offset) + width)
         {
-            if (new_distance == glm::length(offset) + width)
-            {
-                auto new_pos = pos + (new_distance - width) * glm::normalize(offset);
-                engine->renderer->raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, new_pos + step_height, glm::vec3{ 0.f, 1.f, 0.f }, 0.f, 500.f, [this, new_pos](float new_distance) {
-                    entity->setPos(new_pos + step_height + (glm::vec3{ 0.f, 1.f, 0.f } *new_distance));
-                });
-            }
-        });
+            entity->setPos(new_pos + step_height + (glm::vec3{ 0.f, 1.f, 0.f } * co_await pos_task));
+        }
 
         auto entity_quat = entity->getRot();
 

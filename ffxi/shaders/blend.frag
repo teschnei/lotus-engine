@@ -15,6 +15,8 @@ layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
 layout(location = 3) in vec3 normal;
+layout(location = 4) in vec4 pos;
+layout(location = 5) in vec4 prevPos;
 
 layout(location = 0) out vec4 outPosition;
 layout(location = 1) out vec4 outNormal;
@@ -22,6 +24,7 @@ layout(location = 2) out vec4 outFaceNormal;
 layout(location = 3) out vec4 outAlbedo;
 layout(location = 4) out uint outMaterialIndex;
 layout(location = 5) out uint outLightType;
+layout(location = 6) out vec4 outMotionVector;
 
 layout(push_constant) uniform PushConstant
 {
@@ -46,5 +49,9 @@ void main() {
         discard;
     outMaterialIndex = push.material_index;
     outLightType = material.material.light_type;
+    vec2 curScreenPos = (pos.xy / pos.w) * 0.5 + 0.5;
+    vec2 prevScreenPos = (prevPos.xy / prevPos.w) * 0.5 + 0.5;
+    outMotionVector.xy = vec2(curScreenPos - prevScreenPos);
+    outMotionVector.zw = vec2(pos.z, prevPos.z);
 }
 
