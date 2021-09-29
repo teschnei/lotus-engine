@@ -59,6 +59,7 @@ void main()
     vec3 diffuse = hitValue.diffuse;
     vec3 BRDF = hitValue.BRDF;
     vec3 gi_origin = hitValue.origin;
+    vec3 pos = hitValue.origin;
     vec3 gi_dir = hitValue.direction;
     vec3 gi_weight = hitValue.BRDF * hitValue.weight;
     vec3 particle_colour = hitValue.particle;
@@ -81,9 +82,15 @@ void main()
 
     vec3 light_total = (accumulation / float(max_samples)) + diffuse;
 
+    vec4 pos_proj = camera.proj * camera.view * vec4(pos, 1.0);
+    vec4 prev_pos_proj = camera.proj_prev * camera.view_prev * vec4(pos, 1.0);
+
+    vec2 curScreenPos = (pos_proj.xy / pos_proj.w) * 0.5 + 0.5;
+    vec2 prevScreenPos = (prev_pos_proj.xy / prev_pos_proj.w) * 0.5 + 0.5;
+
     imageStore(albedo, ivec2(gl_LaunchIDEXT.xy), vec4(BRDF, dist));
     imageStore(normal, ivec2(gl_LaunchIDEXT.xy), vec4(hit_normal, 0.0));
     imageStore(light, ivec2(gl_LaunchIDEXT.xy), vec4(light_total, 1.0));
     imageStore(particle, ivec2(gl_LaunchIDEXT.xy), vec4(particle_colour, 1.0));
-    imageStore(motion_vector, ivec2(gl_LaunchIDEXT.xy), vec4(0.0));
+    imageStore(motion_vector, ivec2(gl_LaunchIDEXT.xy), vec4(vec2(curScreenPos - prevScreenPos), pos_proj.z, prev_pos_proj.z));
 }

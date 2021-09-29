@@ -6,8 +6,10 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 layout(binding = 0, rgba32f) uniform readonly restrict image2D in_colour;
 layout(binding = 1, rgba32f) uniform readonly restrict image2D in_normal;
 layout(binding = 2, rgba32f) uniform readonly restrict image2D in_motionvector;
-layout(binding = 3) uniform sampler2D in_image_prev;
-layout(binding = 4, rgba32f) uniform writeonly restrict image2D out_image;
+layout(binding = 3) uniform usampler2D in_factor;
+layout(binding = 4) uniform sampler2D in_image_prev;
+layout(binding = 5, r8ui) uniform writeonly restrict uimage2D out_factor;
+layout(binding = 6, rgba32f) uniform writeonly restrict image2D out_image;
 
 float denoiseStrength = 3.0f;
 
@@ -77,16 +79,13 @@ void main() {
     kernel[24] = 1.0f/256.0f;
     
     vec4 mv = imageLoad(in_motionvector, pos);
-    mv.xy *= imageSize(out_image).xy;
+    vec2 output_dimensions = imageSize(out_image).xy;
+    mv.xy *= output_dimensions;
     vec2 texcoord = vec2(gl_GlobalInvocationID.xy);
-    /*
-    if (abs(mv.x) < 0.0001)
-        mv.x = 0;
-    if (abs(mv.y) < 0.0001)
-        mv.y = 0;
-        */
+
     //pos+(0.5,0.5) to get the center of the desired pixel
-    vec4 hist_colour = texture(in_image_prev, pos+vec2(0.5,0.5)-mv.xy);
+    vec2 hist_pos = pos + vec2(0.5, 0.5) - mv.xy;
+    vec4 hist_colour = texture(in_image_prev, hist_pos);
 
     vec3 sum = vec3(0.0);
     float c_phi = 1.0;
@@ -94,8 +93,8 @@ void main() {
     float p_phi = 0.3;
     vec4 brdf = imageLoad(in_colour, pos);
     vec3 cval = brdf.rgb;
-	vec4 nval = imageLoad(in_normal, pos);
-	float pval = brdf.a;
+    vec4 nval = imageLoad(in_normal, pos);
+    float pval = brdf.a;
     
     float cum_w = 0.0;
     for(int denoise=1; denoise<denoiseStrength; denoise++)
@@ -124,13 +123,14 @@ void main() {
             cum_w += weight*kernel[i];
         }
     }
-    uint factor = uint(hist_colour.w);
-    //if ((hist_offset.x != 0 || hist_offset.y != 0) && factor > 0)
-    //   factor = 5;
-    if (abs(mv.z - mv.w) > 1)
-		factor = 0;
+    uint factor = min(30, texture(in_factor, hist_pos).r);
+
+    //TODO: this on its own is probably insufficient - also probably want some kind of entity id check? if the history point is on a different entity we can be reasonably sure it's not the same thing
+    if (abs(mv.z - hist_colour.w) > 1)
+        factor = 0;
     vec3 color = hist_colour.xyz * factor;
     color = (color + (sum / cum_w)) / (factor + 1);
-    imageStore(out_image, pos, vec4(color, factor + 1));
+    imageStore(out_factor, pos, uvec4(factor + 1));
+    imageStore(out_image, pos, vec4(color, mv.z));
 }
 

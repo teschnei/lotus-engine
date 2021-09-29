@@ -38,7 +38,7 @@ namespace lotus
                 .stageFlags = vk::ShaderStageFlagBits::eCompute,
                 .pImmutableSamplers = nullptr
             },
-            //input history frame
+            //input blend factors
             vk::DescriptorSetLayoutBinding
             {
                 .binding = 3,
@@ -47,10 +47,28 @@ namespace lotus
                 .stageFlags = vk::ShaderStageFlagBits::eCompute,
                 .pImmutableSamplers = nullptr
             },
-            //output image
+            //input history frame
             vk::DescriptorSetLayoutBinding
             {
                 .binding = 4,
+                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eCompute,
+                .pImmutableSamplers = nullptr
+            },
+            //output blend factor
+            vk::DescriptorSetLayoutBinding
+            {
+                .binding = 5,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eCompute,
+                .pImmutableSamplers = nullptr
+            },
+            //output image
+            vk::DescriptorSetLayoutBinding
+            {
+                .binding = 6,
                 .descriptorType = vk::DescriptorType::eStorageImage,
                 .descriptorCount = 1,
                 .stageFlags = vk::ShaderStageFlagBits::eCompute,
@@ -104,6 +122,18 @@ namespace lotus
             );
         }
 
+        for (auto& buffer : factor_buffers)
+        {
+            buffer.image = renderer->gpu->memory_manager->GetImage(
+                renderer->swapchain->extent.width,
+                renderer->swapchain->extent.height,
+                vk::Format::eR8Uint,
+                vk::ImageTiling::eOptimal,
+                vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage,
+                vk::MemoryPropertyFlagBits::eDeviceLocal
+            );
+        }
+
         vk::ImageViewCreateInfo image_view_info
         {
             .viewType = vk::ImageViewType::e2D,
@@ -122,8 +152,14 @@ namespace lotus
             buffer.image_view = renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
         }
 
-        vk::SamplerCreateInfo sampler_info
+        image_view_info.format = vk::Format::eR8Uint;
+        for (auto& buffer : factor_buffers)
         {
+            image_view_info.image = buffer.image->image;
+            buffer.image_view = renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
+        }
+
+        history_sampler = renderer->gpu->device->createSamplerUnique({
             .magFilter = vk::Filter::eLinear,
             .minFilter = vk::Filter::eLinear,
             .mipmapMode = vk::SamplerMipmapMode::eNearest,
@@ -136,9 +172,22 @@ namespace lotus
             .compareOp = vk::CompareOp::eAlways,
             .borderColor = vk::BorderColor::eFloatOpaqueBlack,
             .unnormalizedCoordinates = true
-        };
+        });
 
-        history_sampler = renderer->gpu->device->createSamplerUnique(sampler_info, nullptr);
+        factor_sampler = renderer->gpu->device->createSamplerUnique({
+            .magFilter = vk::Filter::eNearest,
+            .minFilter = vk::Filter::eNearest,
+            .mipmapMode = vk::SamplerMipmapMode::eNearest,
+            .addressModeU = vk::SamplerAddressMode::eClampToBorder,
+            .addressModeV = vk::SamplerAddressMode::eClampToBorder,
+            .addressModeW = vk::SamplerAddressMode::eClampToBorder,
+            .anisotropyEnable = false,
+            .maxAnisotropy = 1.f,
+            .compareEnable = false,
+            .compareOp = vk::CompareOp::eAlways,
+            .borderColor = vk::BorderColor::eIntOpaqueWhite,
+            .unnormalizedCoordinates = true
+        });
     }
 
     void PostProcess::InitWork(vk::CommandBuffer buffer)
@@ -150,8 +199,31 @@ namespace lotus
                 vk::ImageMemoryBarrier2KHR{
                     .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
                     .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .oldLayout = vk::ImageLayout::eUndefined,
+                    .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = buffer.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                }
+            );
+        }
+        for (const auto& buffer : factor_buffers)
+        {
+            barriers.push_back(
+                vk::ImageMemoryBarrier2KHR{
+                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                    .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
+                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
                     .oldLayout = vk::ImageLayout::eUndefined,
                     .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -209,6 +281,13 @@ namespace lotus
             .imageLayout = vk::ImageLayout::eGeneral
         };
 
+        vk::DescriptorImageInfo input_factor_info
+        {
+            .sampler = *factor_sampler,
+            .imageView = *factor_buffers[buffer_index].image_view,
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+        };
+
         vk::DescriptorImageInfo input_image_info
         {
             .sampler = *history_sampler,
@@ -217,6 +296,12 @@ namespace lotus
         };
 
         buffer_index = (buffer_index + 1) % image_buffers.size();
+
+        vk::DescriptorImageInfo output_factor_info
+        {
+            .imageView = *factor_buffers[buffer_index].image_view,
+            .imageLayout = vk::ImageLayout::eGeneral
+        };
 
         vk::DescriptorImageInfo output_image_info
         {
@@ -256,11 +341,27 @@ namespace lotus
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .pImageInfo = &input_image_info
+                .pImageInfo = &input_factor_info
             },
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
                 .dstBinding = 4,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+                .pImageInfo = &input_image_info
+            },
+            vk::WriteDescriptorSet {
+                .dstSet = nullptr,
+                .dstBinding = 5,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .pImageInfo = &output_factor_info
+            },
+            vk::WriteDescriptorSet {
+                .dstSet = nullptr,
+                .dstBinding = 6,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = vk::DescriptorType::eStorageImage,
@@ -268,7 +369,7 @@ namespace lotus
             }
         };
 
-        std::array before_barriers = {
+        std::array before_barriers {
             vk::ImageMemoryBarrier2KHR{
                 .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
                 .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
@@ -279,6 +380,24 @@ namespace lotus
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = image_buffers[buffer_index].image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            },
+            vk::ImageMemoryBarrier2KHR{
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .newLayout = vk::ImageLayout::eGeneral,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = factor_buffers[buffer_index].image->image,
                 .subresourceRange = {
                     .aspectMask = vk::ImageAspectFlagBits::eColor,
                     .baseMipLevel = 0,
@@ -298,29 +417,48 @@ namespace lotus
 
         buffer[0]->dispatch((renderer->swapchain->extent.width / 16) + 1, (renderer->swapchain->extent.height / 16) + 1, 1);
 
-        vk::ImageMemoryBarrier2KHR after_barrier
-        {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eNone,
-            .oldLayout = vk::ImageLayout::eGeneral,
-            .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image_buffers[buffer_index].image->image,
-            .subresourceRange = {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-            }
+        std::array after_barriers {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .oldLayout = vk::ImageLayout::eGeneral,
+                .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = image_buffers[buffer_index].image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            },
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eNone,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .oldLayout = vk::ImageLayout::eGeneral,
+                .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = factor_buffers[buffer_index].image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            },
         };
 
         buffer[0]->pipelineBarrier2KHR({
-            .imageMemoryBarrierCount = 1,
-            .pImageMemoryBarriers = &after_barrier
+            .imageMemoryBarrierCount = after_barriers.size(),
+            .pImageMemoryBarriers = after_barriers.data()
         });
 
         buffer[0]->end();

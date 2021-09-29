@@ -28,6 +28,8 @@ namespace lotus
 
         std::array<ImageData, 2> image_buffers;
         vk::UniqueSampler history_sampler;
+        std::array<ImageData, 2> factor_buffers;
+        vk::UniqueSampler factor_sampler;
         uint8_t buffer_index{ 0 };
 
         vk::UniqueDescriptorSetLayout descriptor_set_layout;
