@@ -35,6 +35,7 @@ layout(location = 0) rayPayloadEXT HitValue
     vec3 direction;
     float distance;
     vec3 particle;
+    vec3 prev_pos;
 } hitValue;
 
 void main() 
@@ -60,6 +61,7 @@ void main()
     vec3 BRDF = hitValue.BRDF;
     vec3 gi_origin = hitValue.origin;
     vec3 pos = hitValue.origin;
+    vec3 pos_prev = hitValue.prev_pos;
     vec3 gi_dir = hitValue.direction;
     vec3 gi_weight = hitValue.BRDF * hitValue.weight;
     vec3 particle_colour = hitValue.particle;
@@ -83,7 +85,7 @@ void main()
     vec3 light_total = (accumulation / float(max_samples)) + diffuse;
 
     vec4 pos_proj = camera.proj * camera.view * vec4(pos, 1.0);
-    vec4 prev_pos_proj = camera.proj_prev * camera.view_prev * vec4(pos, 1.0);
+    vec4 prev_pos_proj = camera.proj_prev * camera.view_prev * vec4(pos_prev, 1.0);
 
     vec2 curScreenPos = (pos_proj.xy / pos_proj.w) * 0.5 + 0.5;
     vec2 prevScreenPos = (prev_pos_proj.xy / prev_pos_proj.w) * 0.5 + 0.5;

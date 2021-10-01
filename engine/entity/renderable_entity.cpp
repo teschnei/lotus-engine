@@ -60,8 +60,11 @@ namespace lotus
     void RenderableEntity::updateUniformBuffer(int image_index)
     {
         RenderableEntity::UniformBufferObject* ubo = reinterpret_cast<RenderableEntity::UniformBufferObject*>(uniform_buffer_mapped + (image_index * engine->renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject))));
+        ubo->model_prev = model_prev;
         ubo->model = getModelMatrix();
         ubo->modelIT = glm::transpose(glm::inverse(glm::mat3(ubo->model)));
+        //save the current model matrix for next frame's model_prev
+        model_prev = ubo->model;
     }
 
     void RenderableEntity::populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
@@ -93,6 +96,11 @@ namespace lotus
     glm::mat4 RenderableEntity::getModelMatrix()
     {
         return this->pos_mat * this->rot_mat * this->scale_mat;
+    }
+
+    glm::mat4 RenderableEntity::getPrevModelMatrix()
+    {
+        return this->model_prev;
     }
 
     WorkerTask<> RenderableEntity::InitWork()

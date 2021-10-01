@@ -144,21 +144,21 @@ namespace lotus
                     vk::WriteDescriptorSet write_info_index;
                     write_info_index.descriptorType = vk::DescriptorType::eStorageBuffer;
                     write_info_index.dstArrayElement = resource_index;
-                    write_info_index.dstBinding = 2;
+                    write_info_index.dstBinding = 3;
                     write_info_index.descriptorCount = static_cast<uint32_t>(descriptor_index_info.size());
                     write_info_index.pBufferInfo = descriptor_index_info.data();
 
                     vk::WriteDescriptorSet write_info_texture;
                     write_info_texture.descriptorType = vk::DescriptorType::eCombinedImageSampler;
                     write_info_texture.dstArrayElement = resource_index;
-                    write_info_texture.dstBinding = 3;
+                    write_info_texture.dstBinding = 4;
                     write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
                     write_info_texture.pImageInfo = descriptor_texture_info.data();
 
                     vk::WriteDescriptorSet write_info_material;
                     write_info_material.descriptorType = vk::DescriptorType::eUniformBuffer;
                     write_info_material.dstArrayElement = resource_index;
-                    write_info_material.dstBinding = 4;
+                    write_info_material.dstBinding = 5;
                     write_info_material.descriptorCount = static_cast<uint32_t>(descriptor_material_info.size());
                     write_info_material.pBufferInfo = descriptor_material_info.data();
 

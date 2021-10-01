@@ -16,6 +16,7 @@ namespace lotus
         struct UniformBufferObject {
             glm::mat4 model;
             glm::mat4 modelIT;
+            glm::mat4 model_prev;
         };
 
         explicit RenderableEntity(Engine*);
@@ -33,6 +34,7 @@ namespace lotus
         std::vector<std::shared_ptr<Model>> models;
 
         glm::mat4 getModelMatrix();
+        glm::mat4 getPrevModelMatrix();
         glm::mat4x4 getScaleMat() const { return scale_mat; }
 
         glm::vec2 uv_offset{};
@@ -50,5 +52,7 @@ namespace lotus
         WorkerTask<> InitModel(std::shared_ptr<Model> model, ModelTransformedGeometry&);
         glm::vec3 scale{ 1.f, 1.f, 1.f };
         glm::mat4 scale_mat{ 1.f };
+
+        glm::mat4 model_prev{};
     };
 }

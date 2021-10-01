@@ -11,7 +11,8 @@ struct Mesh
     vec4 colour;
     vec2 uv_offset;
     float animation_frame;
-    float _pad;
+    uint vertex_prev_offset;
+    mat4x4 model_prev;
 };
 
 struct Material

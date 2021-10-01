@@ -562,6 +562,12 @@ namespace lotus
         vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
+        vk::DescriptorSetLayoutBinding vertex_prev_buffer_binding;
+        vertex_prev_buffer_binding.binding = 1;
+        vertex_prev_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
+        vertex_prev_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
+        vertex_prev_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
+
         vk::DescriptorSetLayoutBinding index_buffer_binding;
         index_buffer_binding.binding = 2;
         index_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
@@ -590,6 +596,7 @@ namespace lotus
         {
             acceleration_structure_binding,
             vertex_buffer_binding,
+            vertex_prev_buffer_binding,
             index_buffer_binding,
             texture_bindings,
             material_buffer_binding,
@@ -613,7 +620,7 @@ namespace lotus
         rtx_layout_info_const.pBindings = rtx_bindings_const.data();
 
         std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
-            vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
+            vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
         vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ .bindingCount =  static_cast<uint32_t>(binding_flags.size()), .pBindingFlags = binding_flags.data() };
         rtx_layout_info_const.pNext = &layout_flags;
 
@@ -1813,26 +1820,19 @@ namespace lotus
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
     }
 
-    void RendererHybrid::bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
-        vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info)
+    void RendererHybrid::bindResources(uint32_t image, std::span<vk::WriteDescriptorSet> descriptors)
     {
         std::vector<vk::WriteDescriptorSet> writes;
 
-        vertex.dstSet = *rtx_descriptor_sets_const[image];
-        index.dstSet = *rtx_descriptor_sets_const[image];
-        texture.dstSet = *rtx_descriptor_sets_const[image];
-        material.dstSet = *rtx_descriptor_sets_const[image];
-        mesh_info.dstSet = *rtx_descriptor_sets_const[image];
-        if (vertex.descriptorCount > 0)
-            writes.push_back(vertex);
-        if (index.descriptorCount > 0)
-            writes.push_back(index);
-        if (texture.descriptorCount > 0)
+        for (auto& descriptor : descriptors)
         {
-            writes.push_back(texture);
-            writes.push_back(material);
+            if (descriptor.descriptorCount > 0)
+            {
+                descriptor.dstSet = *rtx_descriptor_sets_const[image];
+                writes.push_back(descriptor);
+            }
         }
-        writes.push_back(mesh_info);
+
         gpu->device->updateDescriptorSets(writes, nullptr);
     }
 }

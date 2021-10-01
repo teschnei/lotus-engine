@@ -73,7 +73,8 @@ namespace lotus
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
-        void setCurrentImage(int _current_image) { current_image = _current_image; }
+        uint32_t getPreviousImage() const { return previous_image; }
+        void setCurrentImage(int _current_image) { previous_image = current_image; current_image = _current_image; }
         size_t uniform_buffer_align_up(size_t in_size) const;
         size_t storage_buffer_align_up(size_t in_size) const;
         size_t align_up(size_t in_size, size_t alignment) const;
@@ -91,8 +92,7 @@ namespace lotus
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
 
-        virtual void bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
-            vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info) = 0;
+        virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) = 0;
 
         vk::UniqueInstance instance;
 
@@ -162,6 +162,7 @@ namespace lotus
         std::vector<vk::UniqueSemaphore> frame_finish_sem;
         vk::UniqueSemaphore compute_sem;
         uint32_t current_image{ 0 };
+        uint32_t previous_image{ 0 };
         static constexpr uint32_t max_pending_frames{ 2 };
         uint32_t current_frame{ 0 };
 

@@ -26,8 +26,8 @@ namespace lotus
 
         struct MeshInfo
         {
-            uint32_t vertex_index_offset;
-            uint32_t texture_offset;
+            uint32_t vertex_offset;
+            uint32_t index_offset;
             uint32_t indices;
             uint32_t material_index;
             glm::vec3 scale;
@@ -35,7 +35,8 @@ namespace lotus
             glm::vec4 colour;
             glm::vec2 uv_offset;
             float animation_frame;
-            float _pad;
+            uint32_t vertex_prev_offset;
+            glm::mat4x4 model_prev;
         };
         std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped{ nullptr };
@@ -43,6 +44,7 @@ namespace lotus
         std::mutex resource_descriptor_mutex;
 
         std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
+        std::vector<vk::DescriptorBufferInfo> descriptor_vertex_prev_info;
         std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
         std::vector<vk::DescriptorBufferInfo> descriptor_material_info;
         std::vector<vk::DescriptorImageInfo> descriptor_texture_info;

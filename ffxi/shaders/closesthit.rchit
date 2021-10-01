@@ -20,19 +20,24 @@ layout(binding = 1, set = 0) buffer readonly Vertices
     Vertex v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer readonly Indices
+layout(binding = 2, set = 0) buffer readonly Vertices_Prev
+{
+    Vertex v[];
+} vertices_prev[1024];
+
+layout(binding = 3, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
 
-layout(binding = 3, set = 0) uniform sampler2D textures[1024];
+layout(binding = 4, set = 0) uniform sampler2D textures[1024];
 
-layout(binding = 4, set = 0) uniform MaterialInfo
+layout(binding = 5, set = 0) uniform MaterialInfo
 {
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) buffer readonly MeshInfo
+layout(binding = 6, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;
@@ -54,6 +59,8 @@ layout(location = 0) rayPayloadInEXT HitValue
     vec3 origin;
     vec3 direction;
     float distance;
+    vec3 particle;
+    vec3 prev_pos;
 } hitValue;
 
 layout(location = 1) rayPayloadEXT Shadow 
@@ -90,6 +97,14 @@ Vertex unpackVertex(uint index)
 {
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_offset;
     Vertex v = vertices[resource_index].v[index];
+
+    return v;
+}
+
+Vertex unpackPrevVertex(uint index)
+{
+    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_prev_offset;
+    Vertex v = vertices_prev[resource_index].v[index];
 
     return v;
 }
@@ -189,6 +204,14 @@ void main()
     createCoordinateSystem(normalized_normal, tangent, bitangent);
     hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normalized_normal);
     hitValue.origin = trace_origin.xyz;
+    if (hitValue.depth == 0)
+    {
+        Vertex v0 = unpackPrevVertex(primitive_indices.x);
+        Vertex v1 = unpackPrevVertex(primitive_indices.y);
+        Vertex v2 = unpackPrevVertex(primitive_indices.z);
+        vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
+        hitValue.prev_pos = (mesh.model_prev * vec4(pos, 1.0)).xyz;
+    }
 
     //const float p = cos_theta / M_PI;
 

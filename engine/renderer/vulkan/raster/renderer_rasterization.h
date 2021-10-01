@@ -42,8 +42,7 @@ namespace lotus
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info);
 
-        virtual void bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
-            vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info) override;
+        virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) override {}
 
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;
         std::unique_ptr<Image> depth_image;

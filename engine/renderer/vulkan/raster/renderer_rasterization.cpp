@@ -1242,9 +1242,4 @@ namespace lotus
         std::lock_guard lk{ shutdown_mutex };
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
     }
-
-    void RendererRasterization::bindResources(uint32_t image, vk::WriteDescriptorSet vertex, vk::WriteDescriptorSet index,
-        vk::WriteDescriptorSet material, vk::WriteDescriptorSet texture, vk::WriteDescriptorSet mesh_info)
-    {
-    }
 }

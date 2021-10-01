@@ -19,19 +19,19 @@ layout(binding = 1, set = 0) buffer readonly Vertices
     vec4 v[];
 } vertices[1024];
 
-layout(binding = 2, set = 0) buffer readonly Indices
+layout(binding = 3, set = 0) buffer readonly Indices
 {
     int i[];
 } indices[1024];
 
-layout(binding = 3, set = 0) uniform sampler2DArray textures[1024];
+layout(binding = 4, set = 0) uniform sampler2DArray textures[1024];
 
-layout(binding = 4, set = 0) uniform MaterialInfo
+layout(binding = 5, set = 0) uniform MaterialInfo
 {
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) buffer readonly MeshInfo
+layout(binding = 6, set = 0) buffer readonly MeshInfo
 {
     Mesh m[4096];
 } meshInfo;

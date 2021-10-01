@@ -14,6 +14,8 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(binding = 2) uniform ModelUBO {
     mat4 model;
     mat3 model_IT;
+    vec4 _pad;
+    mat4 model_prev;
 } model;
 
 layout(location = 0) in vec3 inPosition;
