@@ -9,12 +9,12 @@
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 
-layout(binding = 4, set = 0) uniform MaterialInfo
+layout(binding = 5, set = 0) uniform MaterialInfo
 {
     Material m;
 } materials[1024];
 
-layout(binding = 5, set = 0) buffer readonly MeshInfo
+layout(binding = 6, set = 0) buffer readonly MeshInfo
 {
     Mesh m[1024];
 } meshInfo;

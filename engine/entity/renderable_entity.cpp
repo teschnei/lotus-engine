@@ -50,9 +50,11 @@ namespace lotus
 
         if (engine->config->renderer.RasterizationEnabled())
         {
-            engine->worker_pool->command_buffers.graphics_secondary.queue(*command_buffers[image_index]);
-            if (!shadowmap_buffers.empty())
-                engine->worker_pool->command_buffers.shadowmap.queue(*shadowmap_buffers[image_index]);
+            auto [render_command, shadowmap_command] = getRenderCommand();
+            engine->worker_pool->command_buffers.graphics_secondary.queue(*render_command);
+            if (engine->config->renderer.RendererShadowmappingEnabled())
+                engine->worker_pool->command_buffers.shadowmap.queue(*shadowmap_command);
+            engine->worker_pool->gpuResource(std::move(render_command), std::move(shadowmap_command));
         }
         co_return;
     }
@@ -107,8 +109,7 @@ namespace lotus
     {
         //priority: 0
         auto initializer = std::make_unique<RenderableEntityInitializer>(this);
-        engine->renderer->initEntity(initializer.get(), engine);
-        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->renderer->initEntity(initializer.get());
         engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }
@@ -117,16 +118,32 @@ namespace lotus
     {
         //priority: 0
         auto initializer = std::make_unique<RenderableEntityInitializer>(this);
-        engine->renderer->initModel(initializer.get(), engine, *model, model_transform);
+        engine->renderer->initModel(initializer.get(), *model, model_transform);
         engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }
 
     WorkerTask<> RenderableEntity::ReInitWork()
     {
-        auto initializer = std::make_unique<RenderableEntityInitializer>(this);
-        engine->renderer->drawEntity(initializer.get(), engine);
-        engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
+    }
+
+    std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> RenderableEntity::getRenderCommand()
+    {
+        auto initializer = std::make_unique<RenderableEntityInitializer>(this);
+
+        vk::CommandBufferAllocateInfo alloc_info;
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = 2;
+
+        auto command_buffer = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        engine->renderer->drawEntity(initializer.get(), *command_buffer[0], engine->renderer->getCurrentImage());
+        engine->renderer->drawEntityShadowmap(initializer.get(), *command_buffer[1], engine->renderer->getCurrentImage());
+
+        engine->worker_pool->gpuResource(std::move(initializer));
+
+        return { std::move(command_buffer[0]), std::move(command_buffer[1]) };
     }
 }

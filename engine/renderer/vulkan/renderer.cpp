@@ -8,6 +8,7 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
+#include "engine/entity/landscape_entity.h"
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
@@ -209,9 +210,10 @@ namespace lotus
     Task<> Renderer::recreateStaticCommandBuffers()
     {
         //delete all the existing buffers first, single-threadedly (the destructor uses the pool it was created on)
+        //TODO: generalize this? only baked commands need to be cleared here, and either no commands should be baked or just landscape should be
         engine->game->scene->forEachEntity([](std::shared_ptr<Entity>& entity)
         {
-            if (auto ren = std::dynamic_pointer_cast<RenderableEntity>(entity))
+            if (auto ren = std::dynamic_pointer_cast<LandscapeEntity>(entity))
             {
                 ren->command_buffers.clear();
                 ren->shadowmap_buffers.clear();

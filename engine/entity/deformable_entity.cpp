@@ -68,15 +68,8 @@ namespace lotus
     WorkerTask<> DeformableEntity::renderWork()
     {
         auto image_index = engine->renderer->getCurrentImage();
-        updateUniformBuffer(image_index);
         updateAnimationVertices(image_index);
-
-        if (engine->config->renderer.RasterizationEnabled())
-        {
-            engine->worker_pool->command_buffers.graphics_secondary.queue(*command_buffers[image_index]);
-            if (!shadowmap_buffers.empty())
-                engine->worker_pool->command_buffers.shadowmap.queue(*shadowmap_buffers[image_index]);
-        }
+        co_await RenderableEntity::renderWork();
         co_return;
     }
 

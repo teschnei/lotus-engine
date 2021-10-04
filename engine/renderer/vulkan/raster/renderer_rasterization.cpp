@@ -1212,17 +1212,22 @@ namespace lotus
         current_frame = (current_frame + 1) % max_pending_frames;
     }
 
-    void RendererRasterization::initEntity(EntityInitializer* initializer, Engine* engine)
+    void RendererRasterization::initEntity(EntityInitializer* initializer)
     {
         initializer->initEntity(this, engine);
     }
 
-    void RendererRasterization::drawEntity(EntityInitializer* initializer, Engine* engine)
+    void RendererRasterization::drawEntity(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
     {
-        initializer->drawEntity(this, engine);
+        initializer->drawEntity(this, engine, buffer, image);
     }
 
-    void RendererRasterization::initModel(RenderableEntityInitializer* initializer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
+    void RendererRasterization::drawEntityShadowmap(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
+    {
+        initializer->drawEntityShadowmap(this, engine, buffer, image);
+    }
+
+    void RendererRasterization::initModel(RenderableEntityInitializer* initializer, Model& model, ModelTransformedGeometry& model_transform)
     {
         initializer->initModel(this, engine, model, model_transform);
     }

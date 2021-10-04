@@ -33,13 +33,16 @@ namespace lotus
         virtual ~EntityInitializer() {}
 
         virtual void initEntity(RendererRaytrace* renderer, Engine* engine) = 0;
-        virtual void drawEntity(RendererRaytrace* renderer, Engine* engine) = 0;
+        virtual void drawEntity(RendererRaytrace* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) {};
+        virtual void drawEntityShadowmap(RendererRaytrace* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) {};
 
         virtual void initEntity(RendererRasterization* renderer, Engine* engine) = 0;
-        virtual void drawEntity(RendererRasterization* renderer, Engine* engine) = 0;
+        virtual void drawEntity(RendererRasterization* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) = 0;
+        virtual void drawEntityShadowmap(RendererRasterization* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) = 0;
 
         virtual void initEntity(RendererHybrid* renderer, Engine* engine) = 0;
-        virtual void drawEntity(RendererHybrid* renderer, Engine* engine) = 0;
+        virtual void drawEntity(RendererHybrid* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) = 0;
+        virtual void drawEntityShadowmap(RendererHybrid* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) {};
     protected:
         Entity* entity;
     };
@@ -82,9 +85,10 @@ namespace lotus
         virtual Task<> drawFrame() = 0;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) = 0;
 
-        virtual void initEntity(EntityInitializer*, Engine*) = 0;
-        virtual void drawEntity(EntityInitializer*, Engine*) = 0;
-        virtual void initModel(RenderableEntityInitializer*, Engine*, Model& model, ModelTransformedGeometry& model_transform) = 0;
+        virtual void initEntity(EntityInitializer*) = 0;
+        virtual void drawEntity(EntityInitializer*, vk::CommandBuffer buffer, uint32_t image) = 0;
+        virtual void drawEntityShadowmap(EntityInitializer*, vk::CommandBuffer buffer, uint32_t image) = 0;
+        virtual void initModel(RenderableEntityInitializer*, Model& model, ModelTransformedGeometry& model_transform) = 0;
 
         void resized() { resize = true; }
 

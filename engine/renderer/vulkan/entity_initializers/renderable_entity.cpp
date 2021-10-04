@@ -234,18 +234,6 @@ namespace lotus
         }
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererRaytrace* renderer, Engine* engine)
-    {
-        auto entity = static_cast<RenderableEntity*>(this->entity);
-        vk::CommandBufferAllocateInfo alloc_info;
-        alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *renderer->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
-
-        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-        entity->shadowmap_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-    }
-
     void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, bool shadowmap, vk::PipelineLayout layout, size_t image);
     void drawMesh(Engine* engine, vk::CommandBuffer command_buffer, const Mesh& mesh, vk::PipelineLayout layout, uint32_t material_index, bool shadowmap);
 
@@ -317,127 +305,115 @@ namespace lotus
         }
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererRasterization* renderer, Engine* engine)
+    void RenderableEntityInitializer::drawEntity(RendererRasterization* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
-        vk::CommandBufferAllocateInfo alloc_info;
-        alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *renderer->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
-
-        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-        entity->shadowmap_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-
         auto deformable = dynamic_cast<DeformableEntity*>(entity);
 
-        for (size_t i = 0; i < entity->command_buffers.size(); ++i)
-        {
-            auto& command_buffer = entity->command_buffers[i];
-            vk::CommandBufferInheritanceInfo inheritInfo = {};
-            inheritInfo.renderPass = *renderer->gbuffer_render_pass;
-            inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
+        vk::CommandBufferInheritanceInfo inheritInfo = {};
+        inheritInfo.renderPass = *renderer->gbuffer_render_pass;
+        inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
 
-            vk::CommandBufferBeginInfo beginInfo = {};
-            beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
-            beginInfo.pInheritanceInfo = &inheritInfo;
+        vk::CommandBufferBeginInfo beginInfo = {};
+        beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
+        beginInfo.pInheritanceInfo = &inheritInfo;
 
-            command_buffer->begin(beginInfo);
+        buffer.begin(beginInfo);
 
-            vk::DescriptorBufferInfo camera_buffer_info;
-            camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
-            camera_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
-            camera_buffer_info.range = sizeof(Camera::CameraData);
+        vk::DescriptorBufferInfo camera_buffer_info;
+        camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
+        camera_buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
+        camera_buffer_info.range = sizeof(Camera::CameraData);
 
-            vk::DescriptorBufferInfo model_buffer_info;
-            model_buffer_info.buffer = entity->uniform_buffer->buffer;
-            model_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
-            model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
+        vk::DescriptorBufferInfo model_buffer_info;
+        model_buffer_info.buffer = entity->uniform_buffer->buffer;
+        model_buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+        model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-            vk::DescriptorBufferInfo mesh_info;
-            mesh_info.buffer = renderer->resources->mesh_info_buffer->buffer;
-            mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
-            mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
+        vk::DescriptorBufferInfo mesh_info;
+        mesh_info.buffer = renderer->resources->mesh_info_buffer->buffer;
+        mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * image;
+        mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
-            std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
+        std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &camera_buffer_info;
+        descriptorWrites[0].dstSet = nullptr;
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &camera_buffer_info;
 
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 2;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &model_buffer_info;
+        descriptorWrites[1].dstSet = nullptr;
+        descriptorWrites[1].dstBinding = 2;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &model_buffer_info;
 
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 3;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &mesh_info;
+        descriptorWrites[2].dstSet = nullptr;
+        descriptorWrites[2].dstBinding = 3;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = &mesh_info;
 
-            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, entity, *command_buffer, deformable, false, false, *renderer->pipeline_layout, i);
-            drawModel(engine, entity, *command_buffer, deformable, true, false, *renderer->pipeline_layout, i);
+        drawModel(engine, entity, buffer, deformable, false, false, *renderer->pipeline_layout, image);
+        drawModel(engine, entity, buffer, deformable, true, false, *renderer->pipeline_layout, image);
 
-            command_buffer->end();
-        }
+        buffer.end();
+    }
 
-        for (size_t i = 0; i < entity->shadowmap_buffers.size(); ++i)
-        {
-            auto& command_buffer = entity->shadowmap_buffers[i];
-            vk::CommandBufferInheritanceInfo inheritInfo = {};
-            inheritInfo.renderPass = *renderer->shadowmap_render_pass;
-            //used in multiple framebuffers so we can't give the hint
-            //inheritInfo.framebuffer = *renderer->shadowmap_frame_buffer;
+    void RenderableEntityInitializer::drawEntityShadowmap(RendererRasterization* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image)
+    {
+        auto entity = static_cast<RenderableEntity*>(this->entity);
+        auto deformable = dynamic_cast<DeformableEntity*>(entity);
 
-            vk::CommandBufferBeginInfo beginInfo = {};
-            beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
-            beginInfo.pInheritanceInfo = &inheritInfo;
+        vk::CommandBufferInheritanceInfo inheritInfo = {};
+        inheritInfo.renderPass = *renderer->shadowmap_render_pass;
 
-            command_buffer->begin(beginInfo);
+        vk::CommandBufferBeginInfo beginInfo = {};
+        beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
+        beginInfo.pInheritanceInfo = &inheritInfo;
 
-            vk::DescriptorBufferInfo buffer_info;
-            buffer_info.buffer = entity->uniform_buffer->buffer;
-            buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
-            buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
+        buffer.begin(beginInfo);
 
-            vk::DescriptorBufferInfo cascade_buffer_info;
-            cascade_buffer_info.buffer = renderer->camera_buffers.cascade_data_ubo->buffer;
-            cascade_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(renderer->cascade_data));
-            cascade_buffer_info.range = sizeof(renderer->cascade_data);
+        vk::DescriptorBufferInfo buffer_info;
+        buffer_info.buffer = entity->uniform_buffer->buffer;
+        buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+        buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-            std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
+        vk::DescriptorBufferInfo cascade_buffer_info;
+        cascade_buffer_info.buffer = renderer->camera_buffers.cascade_data_ubo->buffer;
+        cascade_buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(renderer->cascade_data));
+        cascade_buffer_info.range = sizeof(renderer->cascade_data);
 
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 2;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &buffer_info;
+        std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {};
 
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 3;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &cascade_buffer_info;
+        descriptorWrites[0].dstSet = nullptr;
+        descriptorWrites[0].dstBinding = 2;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &buffer_info;
 
-            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->shadowmap_pipeline_layout, 0, descriptorWrites);
+        descriptorWrites[1].dstSet = nullptr;
+        descriptorWrites[1].dstBinding = 3;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &cascade_buffer_info;
 
-            command_buffer->setDepthBias(1.25f, 0, 1.75f);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->shadowmap_pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, entity, *command_buffer, deformable, false, true, *renderer->shadowmap_pipeline_layout, i);
-            drawModel(engine, entity, *command_buffer, deformable, true, true, *renderer->shadowmap_pipeline_layout, i);
+        buffer.setDepthBias(1.25f, 0, 1.75f);
 
-            command_buffer->end();
-        }
+        drawModel(engine, entity, buffer, deformable, false, true, *renderer->shadowmap_pipeline_layout, image);
+        drawModel(engine, entity, buffer, deformable, true, true, *renderer->shadowmap_pipeline_layout, image);
+
+        buffer.end();
     }
 
     void drawModel(Engine* engine, RenderableEntity* entity, vk::CommandBuffer command_buffer, DeformableEntity* deformable, bool transparency, bool shadowmap, vk::PipelineLayout layout, size_t image)
@@ -445,7 +421,7 @@ namespace lotus
         for (size_t model_i = 0; model_i < entity->models.size(); ++model_i)
         {
             Model* model = entity->models[model_i].get();
-            if (!model->meshes.empty())
+            if (!model->meshes.empty() && model->rendered)
             {
                 uint32_t material_index = 0;
                 for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
@@ -456,11 +432,13 @@ namespace lotus
                         if (deformable)
                         {
                             command_buffer.bindVertexBuffers(0, deformable->animation_component->transformed_geometries[model_i].vertex_buffers[mesh_i][image]->buffer, {0});
+                            command_buffer.bindVertexBuffers(1, deformable->animation_component->transformed_geometries[model_i].vertex_buffers[mesh_i][engine->renderer->getPreviousImage()]->buffer, {0});
                             material_index = deformable->animation_component->transformed_geometries[model_i].resource_index + mesh_i;
                         }
                         else
                         {
                             command_buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, {0});
+                            command_buffer.bindVertexBuffers(1, mesh->vertex_buffer->buffer, {0});
                             material_index = model->resource_index + mesh_i;
                         }
                         drawMesh(engine, command_buffer, *mesh, layout, material_index, shadowmap);
@@ -605,76 +583,65 @@ namespace lotus
         }
     }
 
-    void RenderableEntityInitializer::drawEntity(RendererHybrid* renderer, Engine* engine)
+    void RenderableEntityInitializer::drawEntity(RendererHybrid* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image)
     {
         auto entity = static_cast<RenderableEntity*>(this->entity);
-        vk::CommandBufferAllocateInfo alloc_info;
-        alloc_info.level = vk::CommandBufferLevel::eSecondary;
-        alloc_info.commandPool = *renderer->graphics_pool;
-        alloc_info.commandBufferCount = static_cast<uint32_t>(renderer->getImageCount());
-
-        entity->command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
-
         auto deformable = dynamic_cast<DeformableEntity*>(entity);
 
-        for (size_t i = 0; i < entity->command_buffers.size(); ++i)
-        {
-            auto& command_buffer = entity->command_buffers[i];
-            vk::CommandBufferInheritanceInfo inheritInfo = {};
-            inheritInfo.renderPass = *renderer->gbuffer_render_pass;
-            inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
+        vk::CommandBufferInheritanceInfo inheritInfo = {};
+        inheritInfo.renderPass = *renderer->gbuffer_render_pass;
+        inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
 
-            vk::CommandBufferBeginInfo beginInfo = {};
-            beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
-            beginInfo.pInheritanceInfo = &inheritInfo;
+        vk::CommandBufferBeginInfo beginInfo = {};
+        beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
+        beginInfo.pInheritanceInfo = &inheritInfo;
 
-            command_buffer->begin(beginInfo);
+        buffer.begin(beginInfo);
 
-            vk::DescriptorBufferInfo camera_buffer_info;
-            camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
-            camera_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
-            camera_buffer_info.range = sizeof(Camera::CameraData);
+        vk::DescriptorBufferInfo camera_buffer_info;
+        camera_buffer_info.buffer = renderer->camera_buffers.view_proj_ubo->buffer;
+        camera_buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(Camera::CameraData));
+        camera_buffer_info.range = sizeof(Camera::CameraData);
 
-            vk::DescriptorBufferInfo model_buffer_info;
-            model_buffer_info.buffer = entity->uniform_buffer->buffer;
-            model_buffer_info.offset = i * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
-            model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
+        vk::DescriptorBufferInfo model_buffer_info;
+        model_buffer_info.buffer = entity->uniform_buffer->buffer;
+        model_buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
+        model_buffer_info.range = sizeof(RenderableEntity::UniformBufferObject);
 
-            vk::DescriptorBufferInfo mesh_info;
-            mesh_info.buffer = renderer->resources->mesh_info_buffer->buffer;
-            mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * i;
-            mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
+        vk::DescriptorBufferInfo mesh_info;
+        mesh_info.buffer = renderer->resources->mesh_info_buffer->buffer;
+        mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * image;
+        mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
 
-            std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
+        std::array<vk::WriteDescriptorSet, 3> descriptorWrites = {};
 
-            descriptorWrites[0].dstSet = nullptr;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &camera_buffer_info;
+        descriptorWrites[0].dstSet = nullptr;
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &camera_buffer_info;
 
-            descriptorWrites[1].dstSet = nullptr;
-            descriptorWrites[1].dstBinding = 2;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &model_buffer_info;
+        descriptorWrites[1].dstSet = nullptr;
+        descriptorWrites[1].dstBinding = 2;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &model_buffer_info;
 
-            descriptorWrites[2].dstSet = nullptr;
-            descriptorWrites[2].dstBinding = 3;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &mesh_info;
+        descriptorWrites[2].dstSet = nullptr;
+        descriptorWrites[2].dstBinding = 3;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = &mesh_info;
 
-            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
 
-            drawModel(engine, entity, *command_buffer, deformable, false, false, *renderer->pipeline_layout, i);
-            drawModel(engine, entity, *command_buffer, deformable, true, false, *renderer->pipeline_layout, i);
+        drawModel(engine, entity, buffer, deformable, false, false, *renderer->pipeline_layout, image);
+        drawModel(engine, entity, buffer, deformable, true, false, *renderer->pipeline_layout, image);
 
-            command_buffer->end();
-        }
+        buffer.end();
     }
 
     void RenderableEntityInitializer::initModelWork(RendererHybrid* renderer, vk::CommandBuffer command_buffer, DeformableEntity* entity, const Model& model,

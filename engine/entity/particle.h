@@ -40,6 +40,10 @@ namespace lotus
         glm::vec3 base_rot{};
         glm::vec3 base_scale{};
 
+        //TODO: remove pre-baked commands in favour of commands generated per frame
+        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
+        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
+
     protected:
         WorkerTask<> Load();
         WorkerTask<> InitWork();

@@ -17,14 +17,14 @@ namespace lotus
     public:
         ParticleEntityInitializer(Entity* _entity);
 
-        virtual void initEntity(RendererRaytrace*, Engine*) override;
-        virtual void drawEntity(RendererRaytrace*, Engine*) override;
+        virtual void initEntity(RendererRaytrace* renderer, Engine* engine) override;
 
-        virtual void initEntity(RendererRasterization*, Engine*) override;
-        virtual void drawEntity(RendererRasterization*, Engine*) override;
+        virtual void initEntity(RendererRasterization* renderer, Engine* engine) override;
+        virtual void drawEntity(RendererRasterization* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) override;
+        virtual void drawEntityShadowmap(RendererRasterization* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) {}
 
-        virtual void initEntity(RendererHybrid*, Engine*) override;
-        virtual void drawEntity(RendererHybrid*, Engine*) override;
+        virtual void initEntity(RendererHybrid* renderer, Engine* engine) override;
+        virtual void drawEntity(RendererHybrid* renderer, Engine* engine, vk::CommandBuffer buffer, uint32_t image) override;
     private:
         void createBuffers(Renderer*, Engine*);
         void drawModel(Engine* engine, vk::CommandBuffer buffer, bool transparency, vk::PipelineLayout, size_t image);

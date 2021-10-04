@@ -563,31 +563,31 @@ namespace lotus
         vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
         vk::DescriptorSetLayoutBinding vertex_prev_buffer_binding;
-        vertex_prev_buffer_binding.binding = 1;
+        vertex_prev_buffer_binding.binding = 2;
         vertex_prev_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
         vertex_prev_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         vertex_prev_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
 
         vk::DescriptorSetLayoutBinding index_buffer_binding;
-        index_buffer_binding.binding = 2;
+        index_buffer_binding.binding = 3;
         index_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
         index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
         vk::DescriptorSetLayoutBinding texture_bindings;
-        texture_bindings.binding = 3;
+        texture_bindings.binding = 4;
         texture_bindings.descriptorCount = GlobalResources::max_resource_index;
         texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
 
         vk::DescriptorSetLayoutBinding material_buffer_binding;
-        material_buffer_binding.binding = 4;
+        material_buffer_binding.binding = 5;
         material_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
         material_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         material_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
 
         vk::DescriptorSetLayoutBinding mesh_info_binding;
-        mesh_info_binding.binding = 5;
+        mesh_info_binding.binding = 6;
         mesh_info_binding.descriptorCount = 1;
         mesh_info_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
@@ -1797,17 +1797,17 @@ namespace lotus
         blas->instanceid = tlas->AddInstance(instance);
     }
 
-    void RendererHybrid::initEntity(EntityInitializer* initializer, Engine* engine)
+    void RendererHybrid::initEntity(EntityInitializer* initializer)
     {
         initializer->initEntity(this, engine);
     }
 
-    void RendererHybrid::drawEntity(EntityInitializer* initializer, Engine* engine)
+    void RendererHybrid::drawEntity(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
     {
-        initializer->drawEntity(this, engine);
+        initializer->drawEntity(this, engine, buffer, image);
     }
     
-    void RendererHybrid::initModel(RenderableEntityInitializer* initializer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
+    void RendererHybrid::initModel(RenderableEntityInitializer* initializer, Model& model, ModelTransformedGeometry& model_transform)
     {
         initializer->initModel(this, engine, model, model_transform);
     }

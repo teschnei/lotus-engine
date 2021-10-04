@@ -319,7 +319,7 @@ namespace FFXI
 
     lotus::Task<> MZB::LoadWaterModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, std::pair<glm::vec3, glm::vec3> bb)
     {
-        model->rendered = true;
+        model->rendered = false;
         auto mesh = std::make_unique<lotus::Mesh>();
 
         auto vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;

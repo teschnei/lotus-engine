@@ -23,6 +23,7 @@ namespace lotus
 
             bool RaytraceEnabled();
             bool RasterizationEnabled();
+            bool RendererShadowmappingEnabled();
 
         } renderer {};
     };

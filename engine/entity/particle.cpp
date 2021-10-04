@@ -27,8 +27,19 @@ namespace lotus
     WorkerTask<> Particle::InitWork()
     {
         auto initializer = std::make_unique<ParticleEntityInitializer>(this);
-        engine->renderer->initEntity(initializer.get(), engine);
-        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->renderer->initEntity(initializer.get());
+
+        vk::CommandBufferAllocateInfo alloc_info = {};
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = static_cast<uint32_t>(engine->renderer->getImageCount());
+        
+        command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        for (size_t i = 0; i < command_buffers.size(); ++i)
+        {
+            engine->renderer->drawEntity(initializer.get(), *command_buffers[i], i);
+        }
         engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }
@@ -36,7 +47,17 @@ namespace lotus
     WorkerTask<> Particle::ReInitWork()
     {
         auto initializer = std::make_unique<ParticleEntityInitializer>(this);
-        engine->renderer->drawEntity(initializer.get(), engine);
+        vk::CommandBufferAllocateInfo alloc_info = {};
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = static_cast<uint32_t>(engine->renderer->getImageCount());
+        
+        command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        for (size_t i = 0; i < command_buffers.size(); ++i)
+        {
+            engine->renderer->drawEntity(initializer.get(), *command_buffers[i], i);
+        }
         engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }

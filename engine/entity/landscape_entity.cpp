@@ -28,12 +28,44 @@ namespace lotus
         //landscape can't move so no need to update
     }
 
+    Task<> LandscapeEntity::render(Engine* engine, std::shared_ptr<Entity> sp)
+    {
+        co_await renderWork();
+    }
+
+    WorkerTask<> LandscapeEntity::renderWork()
+    {
+        auto image_index = engine->renderer->getCurrentImage();
+        updateUniformBuffer(image_index);
+
+        if (engine->config->renderer.RasterizationEnabled())
+        {
+            engine->worker_pool->command_buffers.graphics_secondary.queue(*command_buffers[image_index]);
+            if (!shadowmap_buffers.empty())
+                engine->worker_pool->command_buffers.shadowmap.queue(*shadowmap_buffers[image_index]);
+        }
+        co_return;
+    }
+
     WorkerTask<> LandscapeEntity::InitWork(std::vector<InstanceInfo>&& instance_info)
     {
         //priority: 0
         auto initializer = std::make_unique<LandscapeEntityInitializer>(this, std::move(instance_info));
-        engine->renderer->initEntity(initializer.get(), engine);
-        engine->renderer->drawEntity(initializer.get(), engine);
+        engine->renderer->initEntity(initializer.get());
+
+        vk::CommandBufferAllocateInfo alloc_info;
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = static_cast<uint32_t>(engine->renderer->getImageCount());
+        
+        command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        shadowmap_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        for (size_t i = 0; i < command_buffers.size(); ++i)
+        {
+            engine->renderer->drawEntity(initializer.get(), *command_buffers[i], i);
+            engine->renderer->drawEntityShadowmap(initializer.get(), *shadowmap_buffers[i], i);
+        }
         engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }
@@ -42,7 +74,19 @@ namespace lotus
     {
         //priority: 0
         auto initializer = std::make_unique<LandscapeEntityInitializer>(this, std::vector<InstanceInfo>());
-        engine->renderer->drawEntity(initializer.get(), engine);
+        vk::CommandBufferAllocateInfo alloc_info;
+        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandBufferCount = static_cast<uint32_t>(engine->renderer->getImageCount());
+        
+        command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        shadowmap_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+
+        for (size_t i = 0; i < command_buffers.size(); ++i)
+        {
+            engine->renderer->drawEntity(initializer.get(), *command_buffers[i], i);
+            engine->renderer->drawEntityShadowmap(initializer.get(), *shadowmap_buffers[i], i);
+        }
         engine->worker_pool->gpuResource(std::move(initializer));
         co_return;
     }

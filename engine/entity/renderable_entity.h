@@ -41,8 +41,6 @@ namespace lotus
 
         std::unique_ptr<Buffer> uniform_buffer;
         uint8_t* uniform_buffer_mapped{ nullptr };
-        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
-        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
 
     protected:
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
@@ -54,5 +52,7 @@ namespace lotus
         glm::mat4 scale_mat{ 1.f };
 
         glm::mat4 model_prev{};
+
+        std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> getRenderCommand();
     };
 }

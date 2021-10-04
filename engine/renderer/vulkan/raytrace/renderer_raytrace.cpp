@@ -1487,17 +1487,17 @@ namespace lotus
         blas->instanceid = tlas->AddInstance(instance);
     }
 
-    void RendererRaytrace::initEntity(EntityInitializer* initializer, Engine* engine)
+    void RendererRaytrace::initEntity(EntityInitializer* initializer)
     {
         initializer->initEntity(this, engine);
     }
 
-    void RendererRaytrace::drawEntity(EntityInitializer* initializer, Engine* engine)
+    void RendererRaytrace::drawEntity(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
     {
-        initializer->drawEntity(this, engine);
+        initializer->drawEntity(this, engine, buffer, image);
     }
 
-    void RendererRaytrace::initModel(RenderableEntityInitializer* initializer, Engine* engine, Model& model, ModelTransformedGeometry& model_transform)
+    void RendererRaytrace::initModel(RenderableEntityInitializer* initializer, Model& model, ModelTransformedGeometry& model_transform)
     {
         initializer->initModel(this, engine, model, model_transform);
     }

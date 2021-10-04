@@ -24,7 +24,12 @@ namespace lotus
 
         std::vector<std::shared_ptr<Model>> collision_models;
         std::shared_ptr<TopLevelAccelerationStructure> collision_as;
+
+        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> command_buffers;
+        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> shadowmap_buffers;
     protected:
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
+        WorkerTask<> renderWork();
         WorkerTask<> InitWork(std::vector<InstanceInfo>&&);
     };
 }

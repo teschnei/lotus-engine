@@ -22,6 +22,8 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
 
+layout(location = 3, set = 1) in vec3 inPrevPosition;
+
 layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragPos;
@@ -31,7 +33,7 @@ layout(location = 5) out vec4 prevPos;
 
 void main() {
     pos = camera.proj * camera.view * model.model * vec4(inPosition, 1.0);
-    prevPos = camera.proj_prev * camera.view_prev * model.model_prev * vec4(inPosition, 1.0);
+    prevPos = camera.proj_prev * camera.view_prev * model.model_prev * vec4(inPrevPosition, 1.0);
     gl_Position = pos;
     fragColor = vec4(1.0);
     fragTexCoord = inTexCoord;

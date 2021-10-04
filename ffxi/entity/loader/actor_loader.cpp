@@ -6,35 +6,50 @@
 
 std::vector<vk::VertexInputBindingDescription> getBindingDescriptions()
 {
-    std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
-
-    binding_descriptions[0].binding = 0;
-    binding_descriptions[0].stride = sizeof(FFXI::OS2::Vertex);
-    binding_descriptions[0].inputRate = vk::VertexInputRate::eVertex;
-
-    return binding_descriptions;
+    return std::vector<vk::VertexInputBindingDescription>
+    {
+        {
+            .binding = 0,
+            .stride = sizeof(FFXI::OS2::Vertex),
+            .inputRate = vk::VertexInputRate::eVertex,
+        },
+        {
+            .binding = 1,
+            .stride = sizeof(FFXI::OS2::Vertex),
+            .inputRate = vk::VertexInputRate::eVertex,
+        }
+    };
 }
 
 std::vector<vk::VertexInputAttributeDescription> getAttributeDescriptions()
 {
-    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(3);
-
-    attribute_descriptions[0].binding = 0;
-    attribute_descriptions[0].location = 0;
-    attribute_descriptions[0].format = vk::Format::eR32G32B32Sfloat;
-    attribute_descriptions[0].offset = offsetof(FFXI::OS2::Vertex, pos);
-
-    attribute_descriptions[1].binding = 0;
-    attribute_descriptions[1].location = 1;
-    attribute_descriptions[1].format = vk::Format::eR32G32B32Sfloat;
-    attribute_descriptions[1].offset = offsetof(FFXI::OS2::Vertex, norm);
-
-    attribute_descriptions[2].binding = 0;
-    attribute_descriptions[2].location = 2;
-    attribute_descriptions[2].format = vk::Format::eR32G32Sfloat;
-    attribute_descriptions[2].offset = offsetof(FFXI::OS2::Vertex, uv);
-
-    return attribute_descriptions;
+    return std::vector<vk::VertexInputAttributeDescription>
+    {
+        {
+            .location = 0,
+            .binding = 0,
+            .format = vk::Format::eR32G32B32Sfloat,
+            .offset = offsetof(FFXI::OS2::Vertex, pos),
+        },
+        {
+            .location = 1,
+            .binding = 0,
+            .format = vk::Format::eR32G32B32Sfloat,
+            .offset = offsetof(FFXI::OS2::Vertex, norm),
+        },
+        {
+            .location = 2,
+            .binding = 0,
+            .format = vk::Format::eR32G32Sfloat,
+            .offset = offsetof(FFXI::OS2::Vertex, uv),
+        },
+        {
+            .location = 3,
+            .binding = 1,
+            .format = vk::Format::eR32G32B32Sfloat,
+            .offset = offsetof(FFXI::OS2::Vertex, pos),
+        },
+    };
 }
 
 lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, std::span<FFXI::OS2* const> os2s)
