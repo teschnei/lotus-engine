@@ -28,8 +28,8 @@ namespace lotus
         auto entity = static_cast<Particle*>(this->entity);
 
         vk::CommandBufferInheritanceInfo inherit_info = {};
-        inherit_info.renderPass = *renderer->gbuffer_render_pass;
-        inherit_info.framebuffer = *renderer->gbuffer.frame_buffer;
+        inherit_info.renderPass = renderer->rasterizer->getRenderPass();
+        inherit_info.framebuffer = *renderer->rasterizer->getGBuffer().frame_buffer;
         inherit_info.subpass = 1;
 
         vk::CommandBufferBeginInfo begin_info = {};
@@ -76,9 +76,9 @@ namespace lotus
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pBufferInfo = &mesh_info;
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
-        drawModel(engine, buffer, true, *renderer->pipeline_layout, image);
+        drawModel(engine, buffer, true, renderer->rasterizer->getPipelineLayout(), image);
 
         buffer.end();
     }
@@ -103,8 +103,8 @@ namespace lotus
             auto& command_buffer = entity->command_buffers[i];
 
             vk::CommandBufferInheritanceInfo inherit_info = {};
-            inherit_info.renderPass = *renderer->gbuffer_render_pass;
-            inherit_info.framebuffer = *renderer->gbuffer.frame_buffer;
+            inherit_info.renderPass = renderer->rasterizer->getRenderPass();
+            inherit_info.framebuffer = *renderer->rasterizer->getGBuffer().frame_buffer;
             inherit_info.subpass = 1;
 
             vk::CommandBufferBeginInfo begin_info = {};
@@ -151,13 +151,12 @@ namespace lotus
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &mesh_info;
 
-            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
-            drawModel(engine, *command_buffer, true, *renderer->pipeline_layout, i);
+            drawModel(engine, *command_buffer, true, renderer->rasterizer->getPipelineLayout(), i);
 
             command_buffer->end();
         }
-
     }
 
     void ParticleEntityInitializer::createBuffers(Renderer* renderer, Engine* engine)

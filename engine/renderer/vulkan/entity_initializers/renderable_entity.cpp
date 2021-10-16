@@ -311,8 +311,8 @@ namespace lotus
         auto deformable = dynamic_cast<DeformableEntity*>(entity);
 
         vk::CommandBufferInheritanceInfo inheritInfo = {};
-        inheritInfo.renderPass = *renderer->gbuffer_render_pass;
-        inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
+        inheritInfo.renderPass = renderer->rasterizer->getRenderPass();
+        inheritInfo.framebuffer = *renderer->rasterizer->getGBuffer().frame_buffer;
 
         vk::CommandBufferBeginInfo beginInfo = {};
         beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -358,10 +358,10 @@ namespace lotus
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pBufferInfo = &mesh_info;
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
-        drawModel(engine, entity, buffer, deformable, false, false, *renderer->pipeline_layout, image);
-        drawModel(engine, entity, buffer, deformable, true, false, *renderer->pipeline_layout, image);
+        drawModel(engine, entity, buffer, deformable, false, false, renderer->rasterizer->getPipelineLayout(), image);
+        drawModel(engine, entity, buffer, deformable, true, false, renderer->rasterizer->getPipelineLayout(), image);
 
         buffer.end();
     }
@@ -375,7 +375,7 @@ namespace lotus
         inheritInfo.renderPass = *renderer->shadowmap_render_pass;
 
         vk::CommandBufferBeginInfo beginInfo = {};
-        beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
+        beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
         beginInfo.pInheritanceInfo = &inheritInfo;
 
         buffer.begin(beginInfo);
@@ -589,8 +589,8 @@ namespace lotus
         auto deformable = dynamic_cast<DeformableEntity*>(entity);
 
         vk::CommandBufferInheritanceInfo inheritInfo = {};
-        inheritInfo.renderPass = *renderer->gbuffer_render_pass;
-        inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
+        inheritInfo.renderPass = renderer->rasterizer->getRenderPass();
+        inheritInfo.framebuffer = *renderer->rasterizer->getGBuffer().frame_buffer;
 
         vk::CommandBufferBeginInfo beginInfo = {};
         beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -636,10 +636,10 @@ namespace lotus
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pBufferInfo = &mesh_info;
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
-        drawModel(engine, entity, buffer, deformable, false, false, *renderer->pipeline_layout, image);
-        drawModel(engine, entity, buffer, deformable, true, false, *renderer->pipeline_layout, image);
+        drawModel(engine, entity, buffer, deformable, false, false, renderer->rasterizer->getPipelineLayout(), image);
+        drawModel(engine, entity, buffer, deformable, true, false, renderer->rasterizer->getPipelineLayout(), image);
 
         buffer.end();
     }

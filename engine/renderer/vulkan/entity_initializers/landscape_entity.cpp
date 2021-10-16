@@ -28,8 +28,8 @@ namespace lotus
         auto entity = static_cast<LandscapeEntity*>(this->entity);
 
         vk::CommandBufferInheritanceInfo inheritInfo = {};
-        inheritInfo.renderPass = *renderer->gbuffer_render_pass;
-        inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
+        inheritInfo.renderPass = renderer->rasterizer->getRenderPass();
+        inheritInfo.framebuffer = *renderer->rasterizer->getGBuffer().frame_buffer;
 
         vk::CommandBufferBeginInfo beginInfo = {};
         beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -63,10 +63,10 @@ namespace lotus
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pBufferInfo = &mesh_info;
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
-        drawModel(engine, buffer, false, false, *renderer->pipeline_layout);
-        drawModel(engine, buffer, true, false, *renderer->pipeline_layout);
+        drawModel(engine, buffer, false, false, renderer->rasterizer->getPipelineLayout());
+        drawModel(engine, buffer, true, false, renderer->rasterizer->getPipelineLayout());
 
         buffer.end();
     }
@@ -131,8 +131,8 @@ namespace lotus
         auto entity = static_cast<LandscapeEntity*>(this->entity);
 
         vk::CommandBufferInheritanceInfo inheritInfo = {};
-        inheritInfo.renderPass = *renderer->gbuffer_render_pass;
-        inheritInfo.framebuffer = *renderer->gbuffer.frame_buffer;
+        inheritInfo.renderPass = renderer->rasterizer->getRenderPass();
+        inheritInfo.framebuffer = *renderer->rasterizer->getGBuffer().frame_buffer;
 
         vk::CommandBufferBeginInfo beginInfo = {};
         beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
@@ -166,10 +166,10 @@ namespace lotus
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pBufferInfo = &mesh_info;
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->pipeline_layout, 0, descriptorWrites);
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
-        drawModel(engine, buffer, false, false, *renderer->pipeline_layout);
-        drawModel(engine, buffer, true, false, *renderer->pipeline_layout);
+        drawModel(engine, buffer, false, false, renderer->rasterizer->getPipelineLayout());
+        drawModel(engine, buffer, true, false, renderer->rasterizer->getPipelineLayout());
 
         buffer.end();
     }

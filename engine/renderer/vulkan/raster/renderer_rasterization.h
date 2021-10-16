@@ -22,11 +22,8 @@ namespace lotus
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
-        vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> gbuffer_render_pass;
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> static_descriptor_set_layout;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> shadowmap_descriptor_set_layout;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> deferred_descriptor_set_layout;
-        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> shadowmap_pipeline_layout;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> deferred_pipeline_layout;
         vk::UniqueDescriptorPool deferred_descriptor_pool;
@@ -63,22 +60,6 @@ namespace lotus
         std::unique_ptr<Image> shadowmap_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
 
-        struct GBuffer
-        {
-            FramebufferAttachment position;
-            FramebufferAttachment normal;
-            FramebufferAttachment face_normal;
-            FramebufferAttachment albedo;
-            FramebufferAttachment accumulation;
-            FramebufferAttachment revealage;
-            FramebufferAttachment material;
-            FramebufferAttachment depth;
-            FramebufferAttachment light_type;
-
-            vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> frame_buffer;
-            vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
-        } gbuffer;
-
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> gbuffer_sem;
 
         struct
@@ -105,7 +86,6 @@ namespace lotus
         void createFramebuffers();
         void createSyncs();
         void createShadowmapResources();
-        void createGBufferResources();
 
         virtual Task<> recreateRenderer() override;
 

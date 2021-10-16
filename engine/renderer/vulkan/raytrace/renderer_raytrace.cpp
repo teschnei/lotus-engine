@@ -42,6 +42,8 @@ namespace lotus
 
         render_commandbuffers.resize(getImageCount());
 
+        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+
         co_await InitWork();
     }
 
@@ -1343,16 +1345,13 @@ namespace lotus
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
 
-        auto prev_image = current_image;
         try
         {
-            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
-
             engine->worker_pool->clearProcessed(current_image);
             swapchain->checkOldSwapchain(current_image);
 
             auto render_task = engine->game->scene->render();
-            raytracer->runQueries(prev_image);
+            raytracer->runQueries(current_image);
             co_await render_task;
 
             engine->worker_pool->beginProcessing(current_image);
@@ -1458,6 +1457,9 @@ namespace lotus
 
             co_await engine->worker_pool->mainThread();
             gpu->present_queue.presentKHR(presentInfo);
+
+            current_frame = (current_frame + 1) % max_pending_frames;
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
         }
         catch (vk::OutOfDateKHRError&)
         {
@@ -1469,8 +1471,6 @@ namespace lotus
             resize = false;
             co_await resizeRenderer();
         }
-
-        current_frame = (current_frame + 1) % max_pending_frames;
     }
 
     void RendererRaytrace::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint32_t resource_index, uint32_t mask, uint32_t shader_binding_offset)

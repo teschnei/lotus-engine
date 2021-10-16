@@ -24,9 +24,6 @@ namespace lotus
         virtual void initModel(RenderableEntityInitializer*, Model& model, ModelTransformedGeometry& model_transform) override;
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
-        vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> gbuffer_render_pass;
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> static_descriptor_set_layout;
-        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> pipeline_layout;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
@@ -36,22 +33,6 @@ namespace lotus
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
-
-        struct GBuffer
-        {
-            FramebufferAttachment position;
-            FramebufferAttachment normal;
-            FramebufferAttachment face_normal;
-            FramebufferAttachment albedo;
-            FramebufferAttachment accumulation;
-            FramebufferAttachment revealage;
-            FramebufferAttachment material;
-            FramebufferAttachment motion_vector;
-            FramebufferAttachment depth;
-
-            vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> frame_buffer;
-            vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
-        } gbuffer;
 
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> gbuffer_sem;
 

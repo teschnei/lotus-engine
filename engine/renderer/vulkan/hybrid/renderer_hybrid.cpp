@@ -26,6 +26,7 @@ namespace lotus
     {
         createRenderpasses();
         createDescriptorSetLayout();
+        rasterizer = std::make_unique<Rasterizer>(this);
         createGraphicsPipeline();
         createDepthImage();
         createFramebuffers();
@@ -40,6 +41,8 @@ namespace lotus
         generateCommandBuffers();
 
         render_commandbuffers.resize(getImageCount());
+
+        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
 
         co_await InitWork();
     }
@@ -216,176 +219,6 @@ namespace lotus
             render_pass_info.pDependencies = &dependency;
 
             render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
-
-            std::array gbuffer_attachments {
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR32G32B32A32Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR32G32B32A32Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR32G32B32A32Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR32G32B32A32Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR16G16B16A16Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR16Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR16Uint,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eClear,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-                },
-                vk::AttachmentDescription{
-                    .format = vk::Format::eR32G32B32A32Sfloat,
-                    .samples = vk::SampleCountFlagBits::e1,
-                    .loadOp = vk::AttachmentLoadOp::eDontCare,
-                    .storeOp = vk::AttachmentStoreOp::eStore,
-                    .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                    .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                    .initialLayout = vk::ImageLayout::eUndefined,
-                    .finalLayout = vk::ImageLayout::eGeneral,
-                },
-                depth_attachment
-            };
-
-            render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
-            render_pass_info.pAttachments = gbuffer_attachments.data();
-
-            vk::AttachmentReference gbuffer_pos_attachment_ref;
-            gbuffer_pos_attachment_ref.attachment = 0;
-            gbuffer_pos_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_normal_attachment_ref;
-            gbuffer_normal_attachment_ref.attachment = 1;
-            gbuffer_normal_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_face_normal_attachment_ref;
-            gbuffer_face_normal_attachment_ref.attachment = 2;
-            gbuffer_face_normal_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_albedo_attachment_ref;
-            gbuffer_albedo_attachment_ref.attachment = 3;
-            gbuffer_albedo_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_accumulation_attachment_ref;
-            gbuffer_accumulation_attachment_ref.attachment = 4;
-            gbuffer_accumulation_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_revealage_attachment_ref;
-            gbuffer_revealage_attachment_ref.attachment = 5;
-            gbuffer_revealage_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_material_attachment_ref;
-            gbuffer_material_attachment_ref.attachment = 6;
-            gbuffer_material_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_motion_vector_attachment_ref;
-            gbuffer_motion_vector_attachment_ref.attachment = 7;
-            gbuffer_motion_vector_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference gbuffer_depth_attachment_ref;
-            gbuffer_depth_attachment_ref.attachment = 8;
-            gbuffer_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-            std::vector<vk::AttachmentReference> gbuffer_color_attachment_refs = { gbuffer_pos_attachment_ref, gbuffer_normal_attachment_ref, gbuffer_face_normal_attachment_ref,
-                gbuffer_albedo_attachment_ref, gbuffer_material_attachment_ref, gbuffer_material_attachment_ref, gbuffer_motion_vector_attachment_ref };
-            //TODO: somehow separate the number of colour attachments from the rasterizer one so i don't have to make sure the counts match
-
-            vk::SubpassDescription subpass_deferred;
-            subpass_deferred.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-            subpass_deferred.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_refs.size());
-            subpass_deferred.pColorAttachments = gbuffer_color_attachment_refs.data();
-            subpass_deferred.pDepthStencilAttachment = &gbuffer_depth_attachment_ref;
-
-            std::vector<vk::AttachmentReference> gbuffer_color_attachment_transparent_refs = { gbuffer_accumulation_attachment_ref, gbuffer_revealage_attachment_ref };
-            std::vector<uint32_t> gbuffer_preserve_attachment_transparent_refs = { gbuffer_pos_attachment_ref.attachment, gbuffer_normal_attachment_ref.attachment,
-                gbuffer_face_normal_attachment_ref.attachment, gbuffer_albedo_attachment_ref.attachment, gbuffer_material_attachment_ref.attachment, gbuffer_motion_vector_attachment_ref.attachment };
-            vk::SubpassDescription subpass_transparent;
-            subpass_transparent.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-            subpass_transparent.colorAttachmentCount = static_cast<uint32_t>(gbuffer_color_attachment_transparent_refs.size());
-            subpass_transparent.pColorAttachments = gbuffer_color_attachment_transparent_refs.data();
-            subpass_transparent.preserveAttachmentCount = gbuffer_preserve_attachment_transparent_refs.size();
-            subpass_transparent.pPreserveAttachments = gbuffer_preserve_attachment_transparent_refs.data();
-            subpass_transparent.pDepthStencilAttachment = &gbuffer_depth_attachment_ref;
-
-            vk::SubpassDependency gbuffer_dependency_end;
-            gbuffer_dependency_end.srcSubpass = 0;
-            gbuffer_dependency_end.dstSubpass = VK_SUBPASS_EXTERNAL;
-            gbuffer_dependency_end.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            gbuffer_dependency_end.dstStageMask = vk::PipelineStageFlagBits::eRayTracingShaderKHR;
-            gbuffer_dependency_end.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-            gbuffer_dependency_end.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-            vk::SubpassDependency gbuffer_dependency_transparent;
-            gbuffer_dependency_transparent.srcSubpass = 0;
-            gbuffer_dependency_transparent.dstSubpass = 1;
-            gbuffer_dependency_transparent.srcStageMask = vk::PipelineStageFlagBits::eLateFragmentTests;
-            gbuffer_dependency_transparent.dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
-            gbuffer_dependency_transparent.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-            gbuffer_dependency_transparent.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead;
-
-            std::vector<vk::SubpassDependency> dependencies = { dependency, gbuffer_dependency_end, gbuffer_dependency_transparent };
-            std::vector<vk::SubpassDescription> subpasses = { subpass_deferred, subpass_transparent };
-
-            render_pass_info.dependencyCount = dependencies.size();
-            render_pass_info.pDependencies = dependencies.data();
-            render_pass_info.subpassCount = subpasses.size();
-            render_pass_info.pSubpasses = subpasses.data();
-
-            gbuffer_render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
         }
         {
             vk::AttachmentDescription output_attachment;
@@ -451,49 +284,8 @@ namespace lotus
 
     void RendererHybrid::createDescriptorSetLayout()
     {
-        vk::DescriptorSetLayoutBinding camera_layout_binding;
-        camera_layout_binding.binding = 0;
-        camera_layout_binding.descriptorCount = 1;
-        camera_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        camera_layout_binding.pImmutableSamplers = nullptr;
-        camera_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
-
-        vk::DescriptorSetLayoutBinding sample_layout_binding;
-        sample_layout_binding.binding = 1;
-        sample_layout_binding.descriptorCount = 1;
-        sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        sample_layout_binding.pImmutableSamplers = nullptr;
-        sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        vk::DescriptorSetLayoutBinding model_layout_binding;
-        model_layout_binding.binding = 2;
-        model_layout_binding.descriptorCount = 1;
-        model_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        model_layout_binding.pImmutableSamplers = nullptr;
-        model_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
-
-        vk::DescriptorSetLayoutBinding mesh_info_layout_binding;
-        mesh_info_layout_binding.binding = 3;
-        mesh_info_layout_binding.descriptorCount = 1;
-        mesh_info_layout_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        mesh_info_layout_binding.pImmutableSamplers = nullptr;
-        mesh_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        vk::DescriptorSetLayoutBinding material_info_layout_binding;
-        material_info_layout_binding.binding = 4;
-        material_info_layout_binding.descriptorCount = 1;
-        material_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        material_info_layout_binding.pImmutableSamplers = nullptr;
-        material_info_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-        std::vector<vk::DescriptorSetLayoutBinding> static_bindings = { camera_layout_binding, model_layout_binding, sample_layout_binding, mesh_info_layout_binding, material_info_layout_binding };
-
         vk::DescriptorSetLayoutCreateInfo layout_info = {};
         layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
-        layout_info.bindingCount = static_cast<uint32_t>(static_bindings.size());
-        layout_info.pBindings = static_bindings.data();
-
-        static_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
         vk::DescriptorSetLayoutBinding raytrace_output_binding_light;
         raytrace_output_binding_light.binding = 0;
@@ -543,7 +335,7 @@ namespace lotus
         material_index_sample_layout_binding.pImmutableSamplers = nullptr;
         material_index_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
-        //vk::DescriptorSetLayoutBinding camera_layout_binding;
+        vk::DescriptorSetLayoutBinding camera_layout_binding;
         camera_layout_binding.binding = 7;
         camera_layout_binding.descriptorCount = 1;
         camera_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -687,7 +479,7 @@ namespace lotus
         light_buffer_binding.pImmutableSamplers = nullptr;
         light_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
- //       vk::DescriptorSetLayoutBinding material_info_layout_binding;
+        vk::DescriptorSetLayoutBinding material_info_layout_binding;
         material_info_layout_binding.binding = 8;
         material_info_layout_binding.descriptorCount = GlobalResources::max_resource_index;
         material_info_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -744,23 +536,6 @@ namespace lotus
 
     void RendererHybrid::createGraphicsPipeline()
     {
-        std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *static_descriptor_set_layout };
-
-        vk::PipelineLayoutCreateInfo pipeline_layout_info;
-        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
-        pipeline_layout_info.pSetLayouts = descriptor_layouts.data();
-
-        //material index
-        vk::PushConstantRange push_constant_range;
-        push_constant_range.stageFlags = vk::ShaderStageFlagBits::eFragment;
-        push_constant_range.size = 4;
-        push_constant_range.offset = 0;
-
-        pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-        pipeline_layout_info.pushConstantRangeCount = 1;
-
-        pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
-
         {
             //ray-tracing pipeline
             auto raygen_shader_module = getShader("shaders/raygen_hybrid.spv");
@@ -1177,80 +952,9 @@ namespace lotus
 
     void RendererHybrid::createGBufferResources()
     {
-        gbuffer.position.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.normal.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.face_normal.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.albedo.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.accumulation.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16G16B16A16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.revealage.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.material.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR16Uint, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.motion_vector.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        gbuffer.depth.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, gpu->getDepthFormat(), vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        vk::ImageViewCreateInfo image_view_info;
-        image_view_info.image = gbuffer.position.image->image;
-        image_view_info.viewType = vk::ImageViewType::e2D;
-        image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
-        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        image_view_info.subresourceRange.baseMipLevel = 0;
-        image_view_info.subresourceRange.levelCount = 1;
-        image_view_info.subresourceRange.baseArrayLayer = 0;
-        image_view_info.subresourceRange.layerCount = 1;
-        gbuffer.position.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.normal.image->image;
-        gbuffer.normal.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.face_normal.image->image;
-        gbuffer.face_normal.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.albedo.image->image;
-        gbuffer.albedo.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.motion_vector.image->image;
-        gbuffer.motion_vector.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.accumulation.image->image;
-        image_view_info.format = vk::Format::eR16G16B16A16Sfloat;
-        gbuffer.accumulation.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.revealage.image->image;
-        image_view_info.format = vk::Format::eR16Sfloat;
-        gbuffer.revealage.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.material.image->image;
-        image_view_info.format = vk::Format::eR16Uint;
-        gbuffer.material.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-        image_view_info.image = gbuffer.depth.image->image;
-        image_view_info.format = gpu->getDepthFormat();
-        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-        gbuffer.depth.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-
-        std::vector<vk::ImageView> attachments = { *gbuffer.position.image_view, *gbuffer.normal.image_view, *gbuffer.face_normal.image_view,
-            *gbuffer.albedo.image_view, *gbuffer.accumulation.image_view, *gbuffer.revealage.image_view, *gbuffer.material.image_view, *gbuffer.motion_vector.image_view, *gbuffer.depth.image_view };
-
-        vk::FramebufferCreateInfo framebuffer_info = {};
-        framebuffer_info.renderPass = *gbuffer_render_pass;
-        framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebuffer_info.pAttachments = attachments.data();
-        framebuffer_info.width = swapchain->extent.width;
-        framebuffer_info.height = swapchain->extent.height;
-        framebuffer_info.layers = 1;
-
-        gbuffer.frame_buffer = gpu->device->createFramebufferUnique(framebuffer_info, nullptr);
-
-        vk::SamplerCreateInfo sampler_info = {};
-        sampler_info.magFilter = vk::Filter::eNearest;
-        sampler_info.minFilter = vk::Filter::eNearest;
-        sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
-        sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-        sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
-        sampler_info.anisotropyEnable = false;
-        sampler_info.maxAnisotropy = 1.f;
-        sampler_info.borderColor = vk::BorderColor::eFloatOpaqueBlack;
-        sampler_info.unnormalizedCoordinates = false;
-        sampler_info.compareEnable = false;
-        sampler_info.compareOp = vk::CompareOp::eAlways;
-        sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
-
-        gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
-
         rtx_gbuffer.colour.image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, vk::Format::eR32G32B32A32Sfloat, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-        //vk::ImageViewCreateInfo image_view_info;
+        vk::ImageViewCreateInfo image_view_info;
         image_view_info.image = rtx_gbuffer.colour.image->image;
         image_view_info.viewType = vk::ImageViewType::e2D;
         image_view_info.format = vk::Format::eR32G32B32A32Sfloat;
@@ -1261,7 +965,7 @@ namespace lotus
         image_view_info.subresourceRange.layerCount = 1;
         rtx_gbuffer.colour.image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
 
-        //vk::SamplerCreateInfo sampler_info = {};
+        vk::SamplerCreateInfo sampler_info = {};
         sampler_info.magFilter = vk::Filter::eNearest;
         sampler_info.minFilter = vk::Filter::eNearest;
         sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
@@ -1313,33 +1017,33 @@ namespace lotus
 
         vk::DescriptorImageInfo albedo_info;
         albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        albedo_info.imageView = *gbuffer.albedo.image_view;
-        albedo_info.sampler = *gbuffer.sampler;
+        albedo_info.imageView = *rasterizer->getGBuffer().albedo.image_view;
+        albedo_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::DescriptorImageInfo light_info;
         light_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         light_info.imageView = post_process->getOutputImageView();
-        light_info.sampler = *gbuffer.sampler;
+        light_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::DescriptorImageInfo position_info;
         position_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        position_info.imageView = *gbuffer.position.image_view;
-        position_info.sampler = *gbuffer.sampler;
+        position_info.imageView = *rasterizer->getGBuffer().position.image_view;
+        position_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::DescriptorImageInfo deferred_material_index_info;
         deferred_material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        deferred_material_index_info.imageView = *gbuffer.material.image_view;
-        deferred_material_index_info.sampler = *gbuffer.sampler;
+        deferred_material_index_info.imageView = *rasterizer->getGBuffer().material.image_view;
+        deferred_material_index_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::DescriptorImageInfo accumulation_info;
         accumulation_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        accumulation_info.imageView = *gbuffer.accumulation.image_view;
-        accumulation_info.sampler = *gbuffer.sampler;
+        accumulation_info.imageView = *rasterizer->getGBuffer().accumulation.image_view;
+        accumulation_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::DescriptorImageInfo revealage_info;
         revealage_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        revealage_info.imageView = *gbuffer.revealage.image_view;
-        revealage_info.sampler = *gbuffer.sampler;
+        revealage_info.imageView = *rasterizer->getGBuffer().revealage.image_view;
+        revealage_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::DescriptorBufferInfo mesh_info;
         mesh_info.buffer = resources->mesh_info_buffer->buffer;
@@ -1467,20 +1171,10 @@ namespace lotus
         vk::RenderPassBeginInfo renderpass_info = {};
         renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
 
-        renderpass_info.renderPass = *gbuffer_render_pass;
-        renderpass_info.framebuffer = *gbuffer.frame_buffer;
+        renderpass_info.renderPass = rasterizer->getRenderPass();
+        renderpass_info.framebuffer = *rasterizer->getGBuffer().frame_buffer;
 
-        std::array clear_values = {
-            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            vk::ClearValue { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            vk::ClearValue { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }},
-        };
+        auto clear_values = rasterizer->getRenderPassClearValues();
 
         renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
         renderpass_info.pClearValues = clear_values.data();
@@ -1525,8 +1219,8 @@ namespace lotus
 
         vk::DescriptorImageInfo position_info;
         position_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        position_info.imageView = *gbuffer.position.image_view;
-        position_info.sampler = *gbuffer.sampler;
+        position_info.imageView = *rasterizer->getGBuffer().position.image_view;
+        position_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::WriteDescriptorSet write_info_position;
         write_info_position.descriptorCount = 1;
@@ -1537,8 +1231,8 @@ namespace lotus
 
         vk::DescriptorImageInfo normal_info;
         normal_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        normal_info.imageView = *gbuffer.normal.image_view;
-        normal_info.sampler = *gbuffer.sampler;
+        normal_info.imageView = *rasterizer->getGBuffer().normal.image_view;
+        normal_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::WriteDescriptorSet write_info_normal;
         write_info_normal.descriptorCount = 1;
@@ -1549,8 +1243,8 @@ namespace lotus
 
         vk::DescriptorImageInfo face_normal_info;
         face_normal_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        face_normal_info.imageView = *gbuffer.face_normal.image_view;
-        face_normal_info.sampler = *gbuffer.sampler;
+        face_normal_info.imageView = *rasterizer->getGBuffer().face_normal.image_view;
+        face_normal_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::WriteDescriptorSet write_info_face_normal;
         write_info_face_normal.descriptorCount = 1;
@@ -1561,8 +1255,8 @@ namespace lotus
 
         vk::DescriptorImageInfo albedo_info;
         albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        albedo_info.imageView = *gbuffer.albedo.image_view;
-        albedo_info.sampler = *gbuffer.sampler;
+        albedo_info.imageView = *rasterizer->getGBuffer().albedo.image_view;
+        albedo_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::WriteDescriptorSet write_info_albedo;
         write_info_albedo.descriptorCount = 1;
@@ -1573,8 +1267,8 @@ namespace lotus
 
         vk::DescriptorImageInfo material_index_info;
         material_index_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        material_index_info.imageView = *gbuffer.material.image_view;
-        material_index_info.sampler = *gbuffer.sampler;
+        material_index_info.imageView = *rasterizer->getGBuffer().material.image_view;
+        material_index_info.sampler = *rasterizer->getGBuffer().sampler;
 
         vk::WriteDescriptorSet write_info_material_index;
         write_info_material_index.descriptorCount = 1;
@@ -1611,7 +1305,7 @@ namespace lotus
             .newLayout = vk::ImageLayout::eGeneral,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = gbuffer.normal.image->image,
+            .image = rasterizer->getGBuffer().normal.image->image,
             .subresourceRange = {
                 .aspectMask = vk::ImageAspectFlagBits::eColor,
                 .baseMipLevel = 0,
@@ -1639,16 +1333,13 @@ namespace lotus
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
 
-        auto prev_image = current_image;
         try
         {
-            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
-
             engine->worker_pool->clearProcessed(current_image);
             swapchain->checkOldSwapchain(current_image);
 
             auto render_task = engine->game->scene->render();
-            raytracer->runQueries(prev_image);
+            raytracer->runQueries(current_image);
             co_await render_task;
 
             engine->worker_pool->beginProcessing(current_image);
@@ -1692,7 +1383,7 @@ namespace lotus
             gpu->graphics_queue.submit(submitInfo, nullptr);
 
             //post process
-            auto post_buffer = post_process->getCommandBuffer(current_image, *rtx_gbuffer.colour.image_view, *gbuffer.normal.image_view, *gbuffer.motion_vector.image_view);
+            auto post_buffer = post_process->getCommandBuffer(current_image, *rtx_gbuffer.colour.image_view, *rasterizer->getGBuffer().normal.image_view, *rasterizer->getGBuffer().motion_vector.image_view);
             std::vector<vk::PipelineStageFlags> post_process_stage_flags = { vk::PipelineStageFlagBits::eComputeShader };
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &*post_buffer;
@@ -1747,6 +1438,9 @@ namespace lotus
 
             co_await engine->worker_pool->mainThread();
             gpu->present_queue.presentKHR(presentInfo);
+
+            current_frame = (current_frame + 1) % max_pending_frames;
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
         }
         catch (vk::OutOfDateKHRError&)
         {
@@ -1758,8 +1452,6 @@ namespace lotus
             resize = false;
             co_await resizeRenderer();
         }
-
-        current_frame = (current_frame + 1) % max_pending_frames;
     }
 
     Task<> RendererHybrid::recreateRenderer()
@@ -1814,8 +1506,8 @@ namespace lotus
 
     vk::Pipeline RendererHybrid::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
-        info.layout = *pipeline_layout;
-        info.renderPass = *gbuffer_render_pass;
+        info.layout = rasterizer->getPipelineLayout();
+        info.renderPass = rasterizer->getRenderPass();
         std::lock_guard lk{ shutdown_mutex };
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
     }

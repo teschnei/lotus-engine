@@ -7,6 +7,7 @@
 #include "swapchain.h"
 #include "global_resources.h"
 #include "ui_renderer.h"
+#include "common/rasterizer.h"
 #include "common/post_process.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
@@ -138,6 +139,7 @@ namespace lotus
         /* Animation pipeline */
 
         std::unique_ptr<Raytracer> raytracer;
+        std::unique_ptr<Rasterizer> rasterizer;
         friend class PostProcess;
         std::unique_ptr<PostProcess> post_process;
         std::unique_ptr<UiRenderer> ui;
