@@ -8,8 +8,8 @@
 
 namespace lotus
 {
-    LandscapeEntityInitializer::LandscapeEntityInitializer(LandscapeEntity* _entity, std::vector<LandscapeEntity::InstanceInfo>&& _instance_info) :
-        EntityInitializer(_entity), instance_info(std::move(_instance_info))
+    LandscapeEntityInitializer::LandscapeEntityInitializer(LandscapeEntity* _entity) :
+        EntityInitializer(_entity)
     {
     }
 
@@ -85,6 +85,7 @@ namespace lotus
 
         buffer.begin(beginInfo);
 
+        /*
         vk::DescriptorBufferInfo buffer_info;
         buffer_info.buffer = entity->uniform_buffer->buffer;
         buffer_info.offset = image * renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject));
@@ -114,6 +115,7 @@ namespace lotus
         buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *renderer->shadowmap_pipeline_layout, 0, descriptorWrites);
 
         buffer.setDepthBias(1.25f, 0, 1.75f);
+        */
 
         drawModel(engine, buffer, false, true, *renderer->shadowmap_pipeline_layout);
         drawModel(engine, buffer, true, true, *renderer->shadowmap_pipeline_layout);
@@ -176,6 +178,7 @@ namespace lotus
 
     void LandscapeEntityInitializer::createBuffers(Renderer* renderer, Engine* engine)
     {
+        /*
         auto entity = static_cast<LandscapeEntity*>(this->entity);
         entity->uniform_buffer = renderer->gpu->memory_manager->GetBuffer(renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         entity->uniform_buffer_mapped = static_cast<uint8_t*>(entity->uniform_buffer->map(0, renderer->uniform_buffer_align_up(sizeof(RenderableEntity::UniformBufferObject)) * renderer->getImageCount(), {}));
@@ -227,6 +230,7 @@ namespace lotus
         command_buffer->end();
 
         engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+        */
     }
 
     void LandscapeEntityInitializer::drawModel(Engine* engine, vk::CommandBuffer command_buffer, bool transparency, bool shadowmap, vk::PipelineLayout layout)
@@ -237,7 +241,7 @@ namespace lotus
             auto [offset, count] = entity->instance_offsets[model->name];
             if (count > 0 && !model->meshes.empty())
             {
-                command_buffer.bindVertexBuffers(1, entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo));
+                //command_buffer.bindVertexBuffers(1, entity->instance_buffer->buffer, offset * sizeof(LandscapeEntity::InstanceInfo));
                 uint32_t material_index = 1;
                 for (size_t i = 0; i < model->meshes.size(); ++i)
                 {

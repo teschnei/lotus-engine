@@ -59,7 +59,7 @@ namespace lotus
 
         createSwapchain();
         resources = std::make_unique<GlobalResources>(engine, this);
-        post_process = std::make_unique<PostProcess>(this);
+        post_process = std::make_unique<PostProcessPipeline>(this);
     }
 
     Renderer::~Renderer()
@@ -69,14 +69,14 @@ namespace lotus
 
     Task<> Renderer::InitCommon()
     {
-        raytracer = std::make_unique<Raytracer>(engine);
+        raytrace_queryer = std::make_unique<RaytraceQueryer>(engine);
         ui = std::make_unique<UiRenderer>(engine, this);
         co_await ui->Init();
     }
 
     void Renderer::runRaytracerQueries()
     {
-        raytracer->runQueries(current_image);
+        raytrace_queryer->runQueries(current_image);
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -85,12 +85,13 @@ namespace lotus
             throw std::runtime_error("validation layers requested, but not available!");
         }
 
-        vk::ApplicationInfo appInfo = {};
-        appInfo.pApplicationName = app_name.c_str();
-        appInfo.applicationVersion = app_version;
-        appInfo.pEngineName = "lotus";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_2;
+        vk::ApplicationInfo appInfo {
+            .pApplicationName = app_name.c_str(),
+            .applicationVersion = app_version,
+            .pEngineName = "lotus",
+            .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+            .apiVersion = VK_API_VERSION_1_2
+        };
 
         vk::InstanceCreateInfo createInfo = {};
         createInfo.pApplicationInfo = &appInfo;

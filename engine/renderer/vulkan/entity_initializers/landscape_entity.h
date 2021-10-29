@@ -13,7 +13,7 @@ namespace lotus
     class LandscapeEntityInitializer : public EntityInitializer
     {
     public:
-        LandscapeEntityInitializer(LandscapeEntity* _entity, std::vector<LandscapeEntity::InstanceInfo>&& instance_info);
+        LandscapeEntityInitializer(LandscapeEntity* _entity);
 
         virtual void initEntity(RendererRaytrace* renderer, Engine* engine) override;
 
@@ -28,7 +28,6 @@ namespace lotus
         void drawModel(Engine* engine, vk::CommandBuffer buffer, bool transparency, bool shadowmap, vk::PipelineLayout);
         void drawMesh(Engine* engine, vk::CommandBuffer buffer, const Mesh& mesh, uint32_t count, vk::PipelineLayout, uint32_t material_index, bool shadowmap);
 
-        std::vector<LandscapeEntity::InstanceInfo> instance_info;
         std::unique_ptr<Buffer> staging_buffer;
         vk::UniqueCommandBuffer command_buffer;
     };

@@ -16,6 +16,13 @@
 #include "engine/entity/free_flying_camera.h"
 #include "engine/entity/component/camera_cascades_component.h"
 
+#include "engine/entity/component/animation_component.h"
+#include "engine/entity/component/component_rewrite_test/deformable_raster_component.h"
+#include "engine/entity/component/component_rewrite_test/deformable_raytrace_component.h"
+
+#include "engine/entity/component/component_rewrite_test/instanced_raster_component.h"
+#include "engine/entity/component/component_rewrite_test/instanced_raytrace_component.h"
+
 #include <iostream>
 
 FFXIGame::FFXIGame(const lotus::Settings& settings) : lotus::Game(settings, std::make_unique<FFXIConfig>()),
@@ -60,6 +67,15 @@ lotus::Task<> FFXIGame::tick(lotus::time_point, lotus::duration)
 lotus::WorkerTask<> FFXIGame::load_scene()
 {
     loading_scene = std::make_unique<lotus::Scene>(engine.get());
+    loading_scene->component_runners->registerComponent<lotus::Test::AnimationComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::PhysicsComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::DeformedMeshComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::DeformableRasterComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::DeformableRaytraceComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::InstancedModelsComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::InstancedRasterComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Test::InstancedRaytraceComponent>();
+
     auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
     /* zone dats vtable:
     (i < 256 ? i + 100  : i + 83635) // Model
@@ -68,7 +84,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291, loading_scene.get());
     audio->setMusic(79, 0);
     //iroha 3111 (arciela 3074)
     //auto player = co_await loading_scene->AddEntity<Actor>(3111);
@@ -99,5 +115,27 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     co_await player->addComponent<ParticleTester>(engine->input.get());
     co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
 
+    auto& old_skelly = *player->getComponent<lotus::AnimationComponent>()->skeleton;
+    auto new_skelly = std::make_unique<lotus::Skeleton>();
+
+    for (auto& b : old_skelly.bones)
+    {
+        new_skelly->bones.emplace_back(b.parent_bone, b.rot, b.trans);
+    }
+
+    for (auto& [a, b] : old_skelly.animations)
+    {
+        new_skelly->animations.emplace(a, std::make_unique<lotus::Animation>(*b));
+    }
+
+    auto a = loading_scene->component_runners->addComponent<lotus::Test::AnimationComponent>(player.get(), std::move(new_skelly));
+    auto p = co_await loading_scene->component_runners->addComponent<lotus::Test::PhysicsComponent>(player.get());
+    auto d = co_await loading_scene->component_runners->addComponent<lotus::Test::DeformedMeshComponent>(player.get(), *a, player->models);
+    if (engine->config->renderer.RasterizationEnabled())
+        auto r = loading_scene->component_runners->addComponent<lotus::Test::DeformableRasterComponent>(player.get(), *d, *p);
+    if (engine->config->renderer.RaytraceEnabled())
+    auto rt = co_await loading_scene->component_runners->addComponent<lotus::Test::DeformableRaytraceComponent>(player.get(), *d, *p);
+
     co_await update_scene(std::move(loading_scene));
+
 }

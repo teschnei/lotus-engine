@@ -82,7 +82,7 @@ namespace lotus
         });
     }
 
-    BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(RendererRaytraceBase* _renderer, class vk::CommandBuffer command_buffer,
+    BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(Renderer* _renderer, class vk::CommandBuffer command_buffer,
         std::vector<vk::AccelerationStructureGeometryKHR>&& geometry, std::vector<vk::AccelerationStructureBuildRangeInfoKHR>&& ranges,
         std::vector<uint32_t>&& primitive_counts, bool updateable, bool compact, Performance performance) :
         AccelerationStructure(_renderer, vk::AccelerationStructureTypeKHR::eBottomLevel)
@@ -108,100 +108,96 @@ namespace lotus
         UpdateAccelerationStructure(buffer, geometries, geometry_ranges);
     }
 
-    TopLevelAccelerationStructure::TopLevelAccelerationStructure(RendererRaytraceBase* _renderer, bool _updateable) : AccelerationStructure(_renderer, vk::AccelerationStructureTypeKHR::eTopLevel), updateable(_updateable)
+    TopLevelAccelerationStructure::TopLevelAccelerationStructure(Renderer* _renderer, TopLevelAccelerationStructureInstances& _instances, bool _updateable) :
+        AccelerationStructure(_renderer, vk::AccelerationStructureTypeKHR::eTopLevel), instances(_instances), updateable(_updateable)
     {
-        instances.reserve(GlobalResources::max_resource_index);
         if (updateable)
             flags |= vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
     }
 
     uint32_t TopLevelAccelerationStructure::AddInstance(vk::AccelerationStructureInstanceKHR instance)
     {
-        uint32_t instanceid = static_cast<uint32_t>(instances.size());
-        instances.push_back(instance);
-        dirty = true;
+        uint32_t instanceid = instance_index.fetch_add(1);
+        instances.SetInstance(instance, instanceid);
         return instanceid;
     }
 
     WorkerTask<> TopLevelAccelerationStructure::Build(Engine* engine)
     {
+        uint32_t instance_count = instance_index.load();
         //priority: 2
-        vk::CommandBufferAllocateInfo alloc_info = {};
-        alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *engine->renderer->compute_pool;
-        alloc_info.commandBufferCount = 1;
+        vk::CommandBufferAllocateInfo alloc_info {
+            .commandPool = *renderer->compute_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 1,
+        };
 
-        auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
+        auto command_buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
         auto command_buffer = std::move(command_buffers[0]);
 
-        vk::CommandBufferBeginInfo begin_info = {};
-        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+        command_buffer->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
 
-        command_buffer->begin(begin_info);
+        bool update = true;
 
-        if (dirty)
+        if (!instance_memory)
         {
-            bool update = true;
-            uint32_t i = renderer->getCurrentImage();
-
-            if (!instance_memory)
-            {
-                instance_memory = renderer->gpu->memory_manager->GetBuffer(instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-                update = false;
-            }
-
-            std::vector<vk::AccelerationStructureGeometryKHR> instance_data_vec {
-                {
-                    .geometryType =  vk::GeometryTypeKHR::eInstances,
-                    .geometry = { .instances = vk::AccelerationStructureGeometryInstancesDataKHR{
-                        .arrayOfPointers = false,
-                        .data = renderer->gpu->device->getBufferAddress({.buffer = instance_memory->buffer})
-                    }} 
-                }
-            };
-            vk::AccelerationStructureBuildRangeInfoKHR build_range{ .primitiveCount = static_cast<uint32_t>(instances.size()) };
-            std::vector<vk::AccelerationStructureBuildRangeInfoKHR> instance_range_vec{ build_range };
-
-            if (!update)
-            {
-                //info.allowsTransforms = true;
-                std::vector<uint32_t> max_primitives { {static_cast<uint32_t>(instances.size())} };
-                CreateAccelerationStructure(instance_data_vec, max_primitives);
-
-                vk::WriteDescriptorSet write_info_as;
-                write_info_as.descriptorCount = 1;
-                write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
-                write_info_as.dstBinding = 0;
-                write_info_as.dstArrayElement = 0;
-
-                vk::WriteDescriptorSetAccelerationStructureKHR write_as;
-                write_as.accelerationStructureCount = 1;
-                write_as.pAccelerationStructures = &*acceleration_structure;
-                write_info_as.pNext = &write_as;
-
-                write_info_as.dstSet = *renderer->rtx_descriptor_sets_const[i];
-                renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
-            }
-            auto data = instance_memory->map(0, instances.size() * sizeof(vk::AccelerationStructureInstanceKHR), {});
-            memcpy(data, instances.data(), instances.size() * sizeof(vk::AccelerationStructureInstanceKHR));
-            instance_memory->unmap();
-
-            vk::MemoryBarrier2KHR barrier
-            {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-            };
-
-            command_buffer->pipelineBarrier2KHR({
-                .memoryBarrierCount = 1,
-                .pMemoryBarriers = &barrier
-            });
-
-            BuildAccelerationStructure(*command_buffer, instance_data_vec, instance_range_vec, update ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild);
-            dirty = false;
+            instance_memory = renderer->gpu->memory_manager->GetBuffer(instance_count * sizeof(vk::AccelerationStructureInstanceKHR), vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            update = false;
         }
+
+        std::vector<vk::AccelerationStructureGeometryKHR> instance_data_vec {
+            {
+                .geometryType =  vk::GeometryTypeKHR::eInstances,
+                .geometry = { .instances = vk::AccelerationStructureGeometryInstancesDataKHR{
+                    .arrayOfPointers = false,
+                    .data = renderer->gpu->device->getBufferAddress({.buffer = instance_memory->buffer})
+                }} 
+            }
+        };
+        vk::AccelerationStructureBuildRangeInfoKHR build_range{ .primitiveCount = instance_count };
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR> instance_range_vec{ build_range };
+
+        if (!update)
+        {
+            //info.allowsTransforms = true;
+            std::vector<uint32_t> max_primitives { { instance_count } };
+            CreateAccelerationStructure(instance_data_vec, max_primitives);
+
+            vk::WriteDescriptorSet write_info_as;
+            write_info_as.descriptorCount = 1;
+            write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
+            write_info_as.dstBinding = 0;
+            write_info_as.dstArrayElement = 0;
+
+            vk::WriteDescriptorSetAccelerationStructureKHR write_as;
+            write_as.accelerationStructureCount = 1;
+            write_as.pAccelerationStructures = &*acceleration_structure;
+            write_info_as.pNext = &write_as;
+
+            write_info_as.dstSet = renderer->raytracer->getResourceDescriptorSet(renderer->getCurrentImage());
+            renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
+        }
+        auto data = instance_memory->map(0, instance_count * sizeof(vk::AccelerationStructureInstanceKHR), {});
+        memcpy(data, instances.GetData(), instance_count * sizeof(vk::AccelerationStructureInstanceKHR));
+        instance_memory->unmap();
+
+        vk::MemoryBarrier2KHR barrier
+        {
+            .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+            .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+            .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+        };
+
+        command_buffer->pipelineBarrier2KHR({
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &barrier
+        });
+
+        BuildAccelerationStructure(*command_buffer, instance_data_vec, instance_range_vec, update ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild);
+
         command_buffer->end();
 
         engine->worker_pool->command_buffers.compute.queue(*command_buffer);
@@ -209,12 +205,28 @@ namespace lotus
         co_return;
     }
 
-    void TopLevelAccelerationStructure::UpdateInstance(uint32_t instance_id, glm::mat3x4 transform)
+    void TopLevelAccelerationStructure::TopLevelAccelerationStructureInstances::SetInstance(vk::AccelerationStructureInstanceKHR instance, size_t index)
     {
-        if (instance_memory)
+        if (index >= size)
         {
-            memcpy(&instances[instance_id].transform, &transform, sizeof(vk::TransformMatrixKHR));
-            dirty = true;
+            if (!reallocating.test_and_set())
+            {
+                ReallocateInstances();
+                reallocating_cv.notify_all();
+                reallocating.clear();
+            }
+            else
+            {
+                std::unique_lock lk(reallocating_mutex);
+                reallocating_cv.wait(lk, [this, index] { return index < size; });
+            }
         }
+        instances[index] = instance;
+    }
+
+    void TopLevelAccelerationStructure::TopLevelAccelerationStructureInstances::ReallocateInstances()
+    {
+        instances.resize(size * 2);
+        size *= 2;
     }
 }

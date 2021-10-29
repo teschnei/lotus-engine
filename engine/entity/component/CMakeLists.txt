@@ -18,3 +18,5 @@ target_sources(engine
     third_person_entity_input_component.h
     tick_component.h
     )
+
+add_subdirectory(component_rewrite_test)

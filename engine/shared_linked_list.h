@@ -5,6 +5,8 @@
 
 namespace lotus
 {
+    //Atomic queue
+    // Does support getting single objects, but cannot report size
     template<typename T>
     class SharedLinkedList
     {

@@ -13,7 +13,6 @@ namespace lotus
         Task<> addSkeleton(std::unique_ptr<Skeleton>&& skeleton);
 
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
-        virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
 
         AnimationComponent* animation_component {nullptr};
     protected:

@@ -10,6 +10,7 @@ add_library( engine
     core.h
     game.cpp
     game.h
+    idgenerator.h
     input.cpp
     input.h
     light_manager.cpp

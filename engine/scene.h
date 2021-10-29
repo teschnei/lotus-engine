@@ -6,6 +6,7 @@
 #include "engine/core.h"
 #include "engine/worker_pool.h"
 #include "renderer/acceleration_structure.h"
+#include "entity/component/component_rewrite_test/component.h"
 
 namespace lotus
 {
@@ -35,7 +36,7 @@ namespace lotus
                 func(entity);
             }
         }
-        std::vector<std::shared_ptr<TopLevelAccelerationStructure>> top_level_as;
+        std::unique_ptr<Test::ComponentRunners> component_runners;
     protected:
         virtual Task<> tick(time_point time, duration delta) { co_return; }
 

@@ -11,7 +11,7 @@
 namespace lotus
 {
     class Engine;
-    class Raytracer
+    class RaytraceQueryer
     {
     public:
         enum class ObjectFlags
@@ -23,7 +23,7 @@ namespace lotus
             Particle = 16,
             Water = 32
         };
-        Raytracer(Engine* engine);
+        RaytraceQueryer(Engine* engine);
         Task<float> query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max);
         void runQueries(uint32_t image);
 

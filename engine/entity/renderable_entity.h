@@ -29,7 +29,6 @@ namespace lotus
         glm::vec3 getScale();
 
         virtual void populate_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
-        virtual void update_AS(TopLevelAccelerationStructure* as, uint32_t image_index);
 
         std::vector<std::shared_ptr<Model>> models;
 

@@ -1,12 +1,12 @@
-#include "post_process.h"
+#include "post_process_pipeline.h"
 
 #include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {
-    PostProcess::PostProcess(Renderer* _renderer) : renderer(_renderer) {}
+    PostProcessPipeline::PostProcessPipeline(Renderer* _renderer) : renderer(_renderer) {}
 
-    void PostProcess::Init()
+    void PostProcessPipeline::Init()
     {
         //descriptor set layout
         std::array descriptors
@@ -190,7 +190,7 @@ namespace lotus
         });
     }
 
-    void PostProcess::InitWork(vk::CommandBuffer buffer)
+    void PostProcessPipeline::InitWork(vk::CommandBuffer buffer)
     {
         std::vector<vk::ImageMemoryBarrier2KHR> barriers;
         for (const auto& buffer : image_buffers)
@@ -247,7 +247,7 @@ namespace lotus
 
     }
 
-    vk::UniqueCommandBuffer PostProcess::getCommandBuffer(uint32_t image_index, vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)
+    vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(uint32_t image_index, vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)
     {
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.commandPool = *renderer->local_compute_pool;
@@ -466,7 +466,7 @@ namespace lotus
         return std::move(buffer[0]);
     }
 
-    vk::ImageView PostProcess::getOutputImageView()
+    vk::ImageView PostProcessPipeline::getOutputImageView()
     {
         return *image_buffers[buffer_index].image_view;
     }

@@ -13,7 +13,7 @@ struct VertexWeight
     vec2 uv;
 };
 
-layout(std430, binding = 0) buffer VertexWeights
+layout(std430, binding = 0) buffer readonly restrict VertexWeights
 {
     VertexWeight weights[];
 } in_buffer;
@@ -25,7 +25,7 @@ struct Bone
     vec3 scale;
 };
 
-layout(std430, binding = 1) buffer Skeleton
+layout(std430, binding = 1) buffer readonly restrict Skeleton
 {
     Bone bones[];
 } skeleton;
@@ -37,7 +37,7 @@ struct Vertex
     vec2 uv;
 };
 
-layout(std430, binding = 2) buffer VertexBuffer
+layout(std430, binding = 2) buffer writeonly restrict VertexBuffer
 {
     Vertex vertices[];
 } out_buffer;

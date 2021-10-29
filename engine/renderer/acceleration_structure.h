@@ -1,21 +1,24 @@
 #pragma once
 #include <unordered_map>
 #include <glm/glm.hpp>
+#include <condition_variable>
+#include <mutex>
 #include "memory.h"
 #include "engine/types.h"
 #include "engine/worker_task.h"
+#include "engine/renderer/vulkan/global_resources.h"
 
 namespace lotus
 {
     class DeformableEntity;
     class Model;
     class Particle;
-    class RendererRaytraceBase;
+    class Renderer;
 
     class AccelerationStructure
     {
     protected:
-        AccelerationStructure(RendererRaytraceBase* _renderer, vk::AccelerationStructureTypeKHR _type) : renderer(_renderer), type(_type) {}
+        AccelerationStructure(Renderer* _renderer, vk::AccelerationStructureTypeKHR _type) : renderer(_renderer), type(_type) {}
 
         void CreateAccelerationStructure(std::span<vk::AccelerationStructureGeometryKHR> geometries, std::span<uint32_t> max_primitive_counts);
         void BuildAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometries,
@@ -25,7 +28,7 @@ namespace lotus
         const vk::AccelerationStructureTypeKHR type;
         vk::BuildAccelerationStructureFlagsKHR flags;
 
-        RendererRaytraceBase* renderer;
+        Renderer* renderer;
     public:
         void UpdateAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometry,
             std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges);
@@ -43,7 +46,7 @@ namespace lotus
             FastTrace,
             FastBuild
         };
-        BottomLevelAccelerationStructure(RendererRaytraceBase* _renderer, vk::CommandBuffer command_buffer, std::vector<vk::AccelerationStructureGeometryKHR>&& geometry,
+        BottomLevelAccelerationStructure(Renderer* _renderer, vk::CommandBuffer command_buffer, std::vector<vk::AccelerationStructureGeometryKHR>&& geometry,
             std::vector<vk::AccelerationStructureBuildRangeInfoKHR>&& geometry_ranges, std::vector<uint32_t>&& max_primitive_counts, bool updateable, bool compact, Performance performance);
         void Update(vk::CommandBuffer buffer);
         uint32_t instanceid{ 0 };
@@ -56,16 +59,31 @@ namespace lotus
     class TopLevelAccelerationStructure : public AccelerationStructure
     {
     public:
-        TopLevelAccelerationStructure(RendererRaytraceBase* _renderer, bool updateable);
+        class TopLevelAccelerationStructureInstances
+        {
+        public:
+            TopLevelAccelerationStructureInstances() { instances.resize(size); }
+            auto GetData() { return instances.data(); }
+            void SetInstance(vk::AccelerationStructureInstanceKHR instance, size_t index);
+        private:
+            std::vector<vk::AccelerationStructureInstanceKHR> instances;
+            size_t size{ 1024 };
+            void ReallocateInstances();
+            //TODO: there must be a better mechanism for this... latch/barrier would be the best option if they worked
+            std::atomic_flag reallocating;
+            std::mutex reallocating_mutex;
+            std::condition_variable reallocating_cv;
+        };
+        TopLevelAccelerationStructure(Renderer* _renderer, TopLevelAccelerationStructureInstances& instances, bool updateable);
 
         uint32_t AddInstance(vk::AccelerationStructureInstanceKHR instance);
         WorkerTask<> Build(Engine*);
-        void UpdateInstance(uint32_t instance_id, glm::mat3x4 instance);
 
     private:
-        std::vector<vk::AccelerationStructureInstanceKHR> instances;
+        TopLevelAccelerationStructureInstances& instances;
+        std::atomic<uint32_t> instance_index{ 0 };
         std::unique_ptr<Buffer> instance_memory;
         bool updateable{ false };
-        bool dirty{ false };
     };
+
 }

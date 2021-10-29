@@ -25,8 +25,8 @@ lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, 
         auto width = 0.3f;
 
         auto new_pos = pos + (glm::length(offset)) * glm::normalize(offset);
-        auto step_task = engine->renderer->raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, pos + step_height, glm::normalize(offset), 0.f, glm::length(offset) + width);
-        auto pos_task = engine->renderer->raytracer->query(lotus::Raytracer::ObjectFlags::LevelCollision, new_pos + step_height, glm::vec3{ 0.f, 1.f, 0.f }, 0.f, 500.f);
+        auto step_task = engine->renderer->raytrace_queryer->query(lotus::RaytraceQueryer::ObjectFlags::LevelCollision, pos + step_height, glm::normalize(offset), 0.f, glm::length(offset) + width);
+        auto pos_task = engine->renderer->raytrace_queryer->query(lotus::RaytraceQueryer::ObjectFlags::LevelCollision, new_pos + step_height, glm::vec3{ 0.f, 1.f, 0.f }, 0.f, 500.f);
 
         if (co_await step_task == glm::length(offset) + width)
         {

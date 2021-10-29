@@ -27,13 +27,13 @@ namespace lotus
     {
         createRenderpasses();
         createDescriptorSetLayout();
+        createRaytracingPipeline();
         createGraphicsPipeline();
         createDepthImage();
         createFramebuffers();
         createSyncs();
         createCommandPool();
         createGBufferResources();
-        createRayTracingResources();
         createAnimationResources();
         post_process->Init();
 
@@ -43,6 +43,7 @@ namespace lotus
         render_commandbuffers.resize(getImageCount());
 
         current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+        raytracer->prepareNextFrame();
 
         co_await InitWork();
     }
@@ -117,70 +118,6 @@ namespace lotus
 
     void RendererRaytrace::generateCommandBuffers()
     {
-    }
-
-    void RendererRaytrace::createRayTracingResources()
-    {
-        if (!shader_binding_table)
-        {
-            constexpr uint32_t shader_raygencount = 1;
-            constexpr uint32_t shader_misscount = 3;
-            constexpr uint32_t shader_nonhitcount = shader_raygencount + shader_misscount;
-            constexpr uint32_t shader_hitcount = shaders_per_group * 10;
-            vk::DeviceSize shader_handle_size = gpu->ray_tracing_properties.shaderGroupHandleSize;
-            vk::DeviceSize nonhit_shader_stride = shader_handle_size;
-            vk::DeviceSize hit_shader_stride = nonhit_shader_stride;
-            vk::DeviceSize shader_offset_raygen = 0;
-            vk::DeviceSize shader_offset_miss = (((nonhit_shader_stride * shader_raygencount) / engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment;
-            vk::DeviceSize shader_offset_hit = shader_offset_miss + (((nonhit_shader_stride * shader_misscount) / engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment;
-            vk::DeviceSize sbt_size = (hit_shader_stride * shader_hitcount) + shader_offset_hit;
-            shader_binding_table = gpu->memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible);
-
-            uint8_t* shader_mapped = static_cast<uint8_t*>(shader_binding_table->map(0, sbt_size, {}));
-
-            std::vector<uint8_t> shader_handle_storage((shader_hitcount + shader_nonhitcount) * shader_handle_size);
-            gpu->device->getRayTracingShaderGroupHandlesKHR(*rtx_pipeline, 0, shader_nonhitcount + shader_hitcount, shader_handle_storage.size(), shader_handle_storage.data());
-            for (uint32_t i = 0; i < shader_raygencount; ++i)
-            {
-                memcpy(shader_mapped + shader_offset_raygen + (i * nonhit_shader_stride), shader_handle_storage.data() + (i * shader_handle_size), shader_handle_size);
-            }
-            for (uint32_t i = 0; i < shader_misscount; ++i)
-            {
-                memcpy(shader_mapped + shader_offset_miss + (i * nonhit_shader_stride), shader_handle_storage.data() + (shader_handle_size * shader_raygencount) + (i * shader_handle_size), shader_handle_size);
-            }
-            for (uint32_t i = 0; i < shader_hitcount; ++i)
-            {
-                memcpy(shader_mapped + shader_offset_hit + (i * hit_shader_stride), shader_handle_storage.data() + (shader_handle_size * shader_nonhitcount) + (i * shader_handle_size), shader_handle_size);
-            }
-            shader_binding_table->unmap();
-
-            raygenSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_raygen, nonhit_shader_stride, nonhit_shader_stride * shader_raygencount };
-            missSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_miss, nonhit_shader_stride, nonhit_shader_stride * shader_misscount };
-            hitSBT = vk::StridedDeviceAddressRegionKHR{ gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_hit, hit_shader_stride, hit_shader_stride * shader_hitcount };
-
-            std::vector<vk::DescriptorPoolSize> pool_sizes_const;
-            pool_sizes_const.emplace_back(vk::DescriptorType::eAccelerationStructureKHR, 1);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eCombinedImageSampler, GlobalResources::max_resource_index);
-            pool_sizes_const.emplace_back(vk::DescriptorType::eUniformBuffer, 1);
-
-            vk::DescriptorPoolCreateInfo pool_ci;
-            pool_ci.maxSets = 3;
-            pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes_const.size());
-            pool_ci.pPoolSizes = pool_sizes_const.data();
-            pool_ci.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-
-            rtx_descriptor_pool_const = gpu->device->createDescriptorPoolUnique(pool_ci, nullptr);
-
-            std::vector<vk::DescriptorSetLayout> layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_const, *rtx_descriptor_layout_const };
-
-            vk::DescriptorSetAllocateInfo set_ci;
-            set_ci.descriptorPool = *rtx_descriptor_pool_const;
-            set_ci.descriptorSetCount = layouts.size();
-            set_ci.pSetLayouts = layouts.data();
-            rtx_descriptor_sets_const = gpu->device->allocateDescriptorSetsUnique(set_ci);
-        }
     }
 
     void RendererRaytrace::createRenderpasses()
@@ -364,130 +301,6 @@ namespace lotus
 
         deferred_descriptor_set_layout = gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
-        vk::DescriptorSetLayoutBinding raytrace_output_binding_albedo;
-        raytrace_output_binding_albedo.binding = 0;
-        raytrace_output_binding_albedo.descriptorCount = 1;
-        raytrace_output_binding_albedo.descriptorType = vk::DescriptorType::eStorageImage;
-        raytrace_output_binding_albedo.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding raytrace_output_binding_light;
-        raytrace_output_binding_light.binding = 1;
-        raytrace_output_binding_light.descriptorCount = 1;
-        raytrace_output_binding_light.descriptorType = vk::DescriptorType::eStorageImage;
-        raytrace_output_binding_light.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding raytrace_output_binding_normal;
-        raytrace_output_binding_normal.binding = 2;
-        raytrace_output_binding_normal.descriptorCount = 1;
-        raytrace_output_binding_normal.descriptorType = vk::DescriptorType::eStorageImage;
-        raytrace_output_binding_normal.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding raytrace_output_binding_particle;
-        raytrace_output_binding_particle.binding = 3;
-        raytrace_output_binding_particle.descriptorCount = 1;
-        raytrace_output_binding_particle.descriptorType = vk::DescriptorType::eStorageImage;
-        raytrace_output_binding_particle.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding raytrace_output_binding_motion_vector;
-        raytrace_output_binding_motion_vector.binding = 4;
-        raytrace_output_binding_motion_vector.descriptorCount = 1;
-        raytrace_output_binding_motion_vector.descriptorType = vk::DescriptorType::eStorageImage;
-        raytrace_output_binding_motion_vector.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding camera_ubo_binding;
-        camera_ubo_binding.binding = 5;
-        camera_ubo_binding.descriptorCount = 1;
-        camera_ubo_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        camera_ubo_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding light_binding;
-        light_binding.binding = 6;
-        light_binding.descriptorCount = 1;
-        light_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        light_binding.pImmutableSamplers = nullptr;
-        light_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR;
-
-        vk::DescriptorSetLayoutBinding acceleration_structure_binding;
-        acceleration_structure_binding.binding = 0;
-        acceleration_structure_binding.descriptorCount = 1;
-        acceleration_structure_binding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
-        acceleration_structure_binding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR;
-
-        vk::DescriptorSetLayoutBinding vertex_buffer_binding;
-        vertex_buffer_binding.binding = 1;
-        vertex_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
-        vertex_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        vertex_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
-
-        vk::DescriptorSetLayoutBinding vertex_prev_buffer_binding;
-        vertex_prev_buffer_binding.binding = 2;
-        vertex_prev_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
-        vertex_prev_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        vertex_prev_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
-
-        vk::DescriptorSetLayoutBinding index_buffer_binding;
-        index_buffer_binding.binding = 3;
-        index_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
-        index_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        index_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
-
-        vk::DescriptorSetLayoutBinding texture_bindings;
-        texture_bindings.binding = 4;
-        texture_bindings.descriptorCount = GlobalResources::max_resource_index;
-        texture_bindings.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        texture_bindings.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR;
-
-        vk::DescriptorSetLayoutBinding material_buffer_binding;
-        material_buffer_binding.binding = 5;
-        material_buffer_binding.descriptorCount = GlobalResources::max_resource_index;
-        material_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-        material_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
-
-        vk::DescriptorSetLayoutBinding mesh_info_binding;
-        mesh_info_binding.binding = 6;
-        mesh_info_binding.descriptorCount = 1;
-        mesh_info_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR;
-
-        std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_const
-        {
-            acceleration_structure_binding,
-            vertex_buffer_binding,
-            vertex_prev_buffer_binding,
-            index_buffer_binding,
-            texture_bindings,
-            material_buffer_binding,
-            mesh_info_binding
-        };
-
-        std::vector<vk::DescriptorSetLayoutBinding> rtx_bindings_dynamic
-        {
-            raytrace_output_binding_albedo,
-            raytrace_output_binding_light,
-            raytrace_output_binding_normal,
-            raytrace_output_binding_particle,
-            raytrace_output_binding_motion_vector,
-            camera_ubo_binding,
-            light_binding
-        };
-
-        vk::DescriptorSetLayoutCreateInfo rtx_layout_info_const;
-        rtx_layout_info_const.bindingCount = static_cast<uint32_t>(rtx_bindings_const.size());
-        rtx_layout_info_const.pBindings = rtx_bindings_const.data();
-
-        std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
-            vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
-        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ .bindingCount =  static_cast<uint32_t>(binding_flags.size()), .pBindingFlags = binding_flags.data() };
-        rtx_layout_info_const.pNext = &layout_flags;
-
-        vk::DescriptorSetLayoutCreateInfo rtx_layout_info_dynamic;
-        rtx_layout_info_dynamic.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
-        rtx_layout_info_dynamic.bindingCount = static_cast<uint32_t>(rtx_bindings_dynamic.size());
-        rtx_layout_info_dynamic.pBindings = rtx_bindings_dynamic.data();
-
-        rtx_descriptor_layout_const = gpu->device->createDescriptorSetLayoutUnique(rtx_layout_info_const, nullptr);
-        rtx_descriptor_layout_dynamic = gpu->device->createDescriptorSetLayoutUnique(rtx_layout_info_dynamic, nullptr);
-
         //vk::DescriptorSetLayoutBinding albedo_sample_layout_binding;
         albedo_sample_layout_binding.binding = 0;
         albedo_sample_layout_binding.descriptorCount = 1;
@@ -534,275 +347,59 @@ namespace lotus
         rtx_descriptor_layout_deferred = gpu->device->createDescriptorSetLayoutUnique(rtx_deferred_layout_info, nullptr);
     }
 
+    void RendererRaytrace::createRaytracingPipeline()
+    {
+        std::array descriptors {
+            vk::DescriptorSetLayoutBinding { //albedo output
+                .binding = 0,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+            },
+            vk::DescriptorSetLayoutBinding { //light output
+                .binding = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+            },
+            vk::DescriptorSetLayoutBinding { //normal output
+                .binding = 2,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+            },
+            vk::DescriptorSetLayoutBinding { //particle output
+                .binding = 3,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+            },
+            vk::DescriptorSetLayoutBinding { //motion vector output
+                .binding = 4,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+            },
+            vk::DescriptorSetLayoutBinding { //camera ubo input
+                .binding = 5,
+                .descriptorType = vk::DescriptorType::eUniformBuffer,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
+            },
+            vk::DescriptorSetLayoutBinding { //light
+                .binding = 6,
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .descriptorCount = 1,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR,
+                .pImmutableSamplers = nullptr
+            },
+        };
+
+        raytracer = std::make_unique<RaytracePipeline>(this, "raygen.spv", descriptors);
+    }
+
     void RendererRaytrace::createGraphicsPipeline()
     {
-        {
-            //ray-tracing pipeline
-            auto raygen_shader_module = getShader("shaders/raygen.spv");
-            auto miss_shader_module = getShader("shaders/miss.spv");
-            auto miss_gi_shader_module = getShader("shaders/miss_gi.spv");
-            auto shadow_miss_shader_module = getShader("shaders/shadow_miss.spv");
-            auto closest_hit_shader_module = getShader("shaders/closesthit.spv");
-            auto color_hit_shader_module = getShader("shaders/color_hit.spv");
-            auto landscape_closest_hit_shader_module = getShader("shaders/mmb_closest_hit.spv");
-            auto landscape_color_hit_shader_module = getShader("shaders/mmb_color_hit.spv");
-            auto particle_closest_hit_shader_module = getShader("shaders/particle_closest_hit.spv");
-            auto particle_color_hit_shader_module = getShader("shaders/particle_color_hit.spv");
-            auto particle_shadow_color_hit_shader_module = getShader("shaders/particle_shadow_color_hit.spv");
-            auto particle_closest_hit_aabb_shader_module = getShader("shaders/particle_closest_hit_aabb.spv");
-            auto particle_color_hit_aabb_shader_module = getShader("shaders/particle_color_hit_aabb.spv");
-            auto particle_shadow_color_hit_aabb_shader_module = getShader("shaders/particle_shadow_color_hit_aabb.spv");
-            auto particle_intersection_shader_module = getShader("shaders/particle_intersection.spv");
-            auto water_closest_hit_shader_module = getShader("shaders/water_closest_hit.spv");
-            //auto water_color_hit_shader_module = getShader("shaders/water_color_hit.spv");
-            //auto water_shadow_color_hit_shader_module = getShader("shaders/water_shadow_color_hit.spv");
-
-            vk::PipelineShaderStageCreateInfo raygen_stage_ci;
-            raygen_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenKHR;
-            raygen_stage_ci.module = *raygen_shader_module;
-            raygen_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo miss_stage_ci;
-            miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
-            miss_stage_ci.module = *miss_shader_module;
-            miss_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo miss_gi_stage_ci;
-            miss_gi_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
-            miss_gi_stage_ci.module = *miss_gi_shader_module;
-            miss_gi_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo shadow_miss_stage_ci;
-            shadow_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
-            shadow_miss_stage_ci.module = *shadow_miss_shader_module;
-            shadow_miss_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo closest_stage_ci;
-            closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
-            closest_stage_ci.module = *closest_hit_shader_module;
-            closest_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo color_hit_stage_ci;
-            color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            color_hit_stage_ci.module = *color_hit_shader_module;
-            color_hit_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo landscape_closest_stage_ci;
-            landscape_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
-            landscape_closest_stage_ci.module = *landscape_closest_hit_shader_module;
-            landscape_closest_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo landscape_color_hit_stage_ci;
-            landscape_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            landscape_color_hit_stage_ci.module = *landscape_color_hit_shader_module;
-            landscape_color_hit_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_closest_stage_ci;
-            particle_closest_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
-            particle_closest_stage_ci.module = *particle_closest_hit_shader_module;
-            particle_closest_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_color_hit_stage_ci;
-            particle_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            particle_color_hit_stage_ci.module = *particle_color_hit_shader_module;
-            particle_color_hit_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_shadow_color_hit_stage_ci;
-            particle_shadow_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            particle_shadow_color_hit_stage_ci.module = *particle_shadow_color_hit_shader_module;
-            particle_shadow_color_hit_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_closest_hit_aabb_stage_ci;
-            particle_closest_hit_aabb_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
-            particle_closest_hit_aabb_stage_ci.module = *particle_closest_hit_aabb_shader_module;
-            particle_closest_hit_aabb_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_color_hit_aabb_stage_ci;
-            particle_color_hit_aabb_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            particle_color_hit_aabb_stage_ci.module = *particle_color_hit_aabb_shader_module;
-            particle_color_hit_aabb_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_shadow_color_hit_aabb_stage_ci;
-            particle_shadow_color_hit_aabb_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            particle_shadow_color_hit_aabb_stage_ci.module = *particle_shadow_color_hit_aabb_shader_module;
-            particle_shadow_color_hit_aabb_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo particle_intersection_stage_ci;
-            particle_intersection_stage_ci.stage = vk::ShaderStageFlagBits::eIntersectionKHR;
-            particle_intersection_stage_ci.module = *particle_intersection_shader_module;
-            particle_intersection_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo water_closest_hit_stage_ci;
-            water_closest_hit_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
-            water_closest_hit_stage_ci.module = *water_closest_hit_shader_module;
-            water_closest_hit_stage_ci.pName = "main";
-
-            /*
-            vk::PipelineShaderStageCreateInfo water_color_hit_stage_ci;
-            water_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            water_color_hit_stage_ci.module = *water_color_hit_shader_module;
-            water_color_hit_stage_ci.pName = "main";
-
-            vk::PipelineShaderStageCreateInfo water_shadow_color_hit_stage_ci;
-            water_shadow_color_hit_stage_ci.stage = vk::ShaderStageFlagBits::eAnyHitKHR;
-            water_shadow_color_hit_stage_ci.module = *water_shadow_color_hit_shader_module;
-            water_shadow_color_hit_stage_ci.pName = "main";
-            */
-
-            std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { raygen_stage_ci, miss_stage_ci, miss_gi_stage_ci, shadow_miss_stage_ci, closest_stage_ci, color_hit_stage_ci,
-                landscape_closest_stage_ci, landscape_color_hit_stage_ci, particle_closest_stage_ci, particle_color_hit_stage_ci, particle_shadow_color_hit_stage_ci, 
-                particle_closest_hit_aabb_stage_ci, particle_color_hit_aabb_stage_ci, particle_shadow_color_hit_aabb_stage_ci, particle_intersection_stage_ci, water_closest_hit_stage_ci
-                /*water_color_hit_stage_ci, water_shadow_color_hit_stage_ci*/};
-
-            std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
-                {
-                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                .generalShader = 0,
-                .closestHitShader = VK_SHADER_UNUSED_KHR,
-                .anyHitShader = VK_SHADER_UNUSED_KHR,
-                .intersectionShader = VK_SHADER_UNUSED_KHR
-                },
-                {
-                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                .generalShader = 1,
-                .closestHitShader = VK_SHADER_UNUSED_KHR,
-                .anyHitShader = VK_SHADER_UNUSED_KHR,
-                .intersectionShader = VK_SHADER_UNUSED_KHR
-                },
-                {
-                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                .generalShader = 2,
-                .closestHitShader = VK_SHADER_UNUSED_KHR,
-                .anyHitShader = VK_SHADER_UNUSED_KHR,
-                .intersectionShader = VK_SHADER_UNUSED_KHR
-                },
-                {
-                .type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
-                .generalShader = 3,
-                .closestHitShader = VK_SHADER_UNUSED_KHR,
-                .anyHitShader = VK_SHADER_UNUSED_KHR,
-                .intersectionShader = VK_SHADER_UNUSED_KHR
-                }
-            };
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = 4,
-                    .anyHitShader = 5,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = VK_SHADER_UNUSED_KHR,
-                    .anyHitShader = 5,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = 6,
-                    .anyHitShader = 7,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = VK_SHADER_UNUSED_KHR,
-                    .anyHitShader = 7,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = 8,
-                    .anyHitShader = 9,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = VK_SHADER_UNUSED_KHR,
-                    .anyHitShader = 10,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = 11,
-                    .anyHitShader = 12,
-                    .intersectionShader = 14
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = VK_SHADER_UNUSED_KHR,
-                    .anyHitShader = 13,
-                    .intersectionShader = 14
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = 15,
-                    .anyHitShader = VK_SHADER_UNUSED_KHR,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-            for (int i = 0; i < shaders_per_group; ++i)
-            {
-                shader_group_ci.push_back({
-                    .type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                    .generalShader = VK_SHADER_UNUSED_KHR,
-                    .closestHitShader = VK_SHADER_UNUSED_KHR,
-                    .anyHitShader = VK_SHADER_UNUSED_KHR,
-                    .intersectionShader = VK_SHADER_UNUSED_KHR
-                });
-            }
-
-            std::vector<vk::DescriptorSetLayout> rtx_descriptor_layouts = { *rtx_descriptor_layout_const, *rtx_descriptor_layout_dynamic };
-            vk::PipelineLayoutCreateInfo rtx_pipeline_layout_ci;
-            rtx_pipeline_layout_ci.pSetLayouts = rtx_descriptor_layouts.data();
-            rtx_pipeline_layout_ci.setLayoutCount = static_cast<uint32_t>(rtx_descriptor_layouts.size());
-
-            rtx_pipeline_layout = gpu->device->createPipelineLayoutUnique(rtx_pipeline_layout_ci, nullptr);
-
-            vk::RayTracingPipelineCreateInfoKHR rtx_pipeline_ci;
-            rtx_pipeline_ci.maxPipelineRayRecursionDepth = 10;
-            rtx_pipeline_ci.stageCount = static_cast<uint32_t>(shaders_ci.size());
-            rtx_pipeline_ci.pStages = shaders_ci.data();
-            rtx_pipeline_ci.groupCount = static_cast<uint32_t>(shader_group_ci.size());
-            rtx_pipeline_ci.pGroups = shader_group_ci.data();
-            rtx_pipeline_ci.layout = *rtx_pipeline_layout;
-
-            auto result = gpu->device->createRayTracingPipelineKHRUnique(nullptr, nullptr, rtx_pipeline_ci, nullptr);
-            rtx_pipeline = std::move(result.value);
-        }
         {
             //deferred pipeline
             auto vertex_module = getShader("shaders/quad.spv");
@@ -1169,7 +766,6 @@ namespace lotus
         createGraphicsPipeline();
         createFramebuffers();
         createGBufferResources();
-        createRayTracingResources();
         createAnimationResources();
         post_process->Init();
         //recreate command buffers
@@ -1186,23 +782,6 @@ namespace lotus
 
     vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer(uint32_t image_index)
     {
-        vk::CommandBufferAllocateInfo alloc_info = {};
-        alloc_info.commandPool = *command_pool;
-        alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandBufferCount = 1;
-
-        auto buffer = gpu->device->allocateCommandBuffersUnique(alloc_info);
-
-        vk::CommandBufferBeginInfo begin_info = {};
-        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-
-        buffer[0]->begin(begin_info);
-
-        //there's no renderpass for raytraced-only pipeline
-        buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline);
-
-        buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_sets_const[image_index], {});
-
         std::array before_barriers = {
             vk::ImageMemoryBarrier2KHR {
                 .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
@@ -1242,98 +821,97 @@ namespace lotus
             }
         };
 
-        buffer[0]->pipelineBarrier2KHR({
-            .imageMemoryBarrierCount = before_barriers.size(),
-            .pImageMemoryBarriers = before_barriers.data()
-        });
+        vk::DescriptorImageInfo target_image_info_albedo {
+            .imageView = *rtx_gbuffer.albedo.image_view,
+            .imageLayout = vk::ImageLayout::eGeneral
+        };
 
-        vk::WriteDescriptorSet write_info_target_albedo;
-        write_info_target_albedo.descriptorCount = 1;
-        write_info_target_albedo.descriptorType = vk::DescriptorType::eStorageImage;
-        write_info_target_albedo.dstBinding = 0;
-        write_info_target_albedo.dstArrayElement = 0;
-        vk::DescriptorImageInfo target_image_info_albedo;
-        target_image_info_albedo.imageView = *rtx_gbuffer.albedo.image_view;
-        target_image_info_albedo.imageLayout = vk::ImageLayout::eGeneral;
-        write_info_target_albedo.pImageInfo = &target_image_info_albedo;
+        vk::DescriptorImageInfo target_image_info_normal {
+            .imageView = *rtx_gbuffer.normal.image_view,
+            .imageLayout = vk::ImageLayout::eGeneral
+        };
 
-        vk::WriteDescriptorSet write_info_target_normal;
-        write_info_target_normal.descriptorCount = 1;
-        write_info_target_normal.descriptorType = vk::DescriptorType::eStorageImage;
-        write_info_target_normal.dstBinding = 1;
-        write_info_target_normal.dstArrayElement = 0;
-        vk::DescriptorImageInfo target_image_info_normal;
-        target_image_info_normal.imageView = *rtx_gbuffer.normal.image_view;
-        target_image_info_normal.imageLayout = vk::ImageLayout::eGeneral;
-        write_info_target_normal.pImageInfo = &target_image_info_normal;
+        vk::DescriptorImageInfo target_image_info_light{
+            .imageView = *rtx_gbuffer.light.image_view,
+            .imageLayout = vk::ImageLayout::eGeneral
+        };
 
-        vk::WriteDescriptorSet write_info_target_light;
-        write_info_target_light.descriptorCount = 1;
-        write_info_target_light.descriptorType = vk::DescriptorType::eStorageImage;
-        write_info_target_light.dstBinding = 2;
-        write_info_target_light.dstArrayElement = 0;
-        vk::DescriptorImageInfo target_image_info_light;
-        target_image_info_light.imageView = *rtx_gbuffer.light.image_view;
-        target_image_info_light.imageLayout = vk::ImageLayout::eGeneral;
-        write_info_target_light.pImageInfo = &target_image_info_light;
+        vk::DescriptorImageInfo target_image_info_particle {
+            .imageView = *rtx_gbuffer.particle.image_view,
+            .imageLayout = vk::ImageLayout::eGeneral
+        };
 
-        vk::WriteDescriptorSet write_info_target_particle;
-        write_info_target_particle.descriptorCount = 1;
-        write_info_target_particle.descriptorType = vk::DescriptorType::eStorageImage;
-        write_info_target_particle.dstBinding = 3;
-        write_info_target_particle.dstArrayElement = 0;
-        vk::DescriptorImageInfo target_image_info_particle;
-        target_image_info_particle.imageView = *rtx_gbuffer.particle.image_view;
-        target_image_info_particle.imageLayout = vk::ImageLayout::eGeneral;
-        write_info_target_particle.pImageInfo = &target_image_info_particle;
-
-        vk::DescriptorImageInfo target_image_info_motion_vector
-        {
+        vk::DescriptorImageInfo target_image_info_motion_vector {
             .imageView = *rtx_gbuffer.motion_vector.image_view,
             .imageLayout = vk::ImageLayout::eGeneral
         };
 
-        vk::WriteDescriptorSet write_info_target_motion_vector
-        {
-            .dstBinding = 4,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = vk::DescriptorType::eStorageImage,
-            .pImageInfo = &target_image_info_motion_vector
+        vk::DescriptorBufferInfo cam_buffer_info {
+            .buffer = camera_buffers.view_proj_ubo->buffer,
+            .offset = uniform_buffer_align_up(sizeof(Camera::CameraData)) * getCurrentImage(),
+            .range = sizeof(Camera::CameraData)
         };
 
-        vk::DescriptorBufferInfo cam_buffer_info;
-        cam_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
-        cam_buffer_info.offset = uniform_buffer_align_up(sizeof(Camera::CameraData)) * getCurrentImage();
-        cam_buffer_info.range = sizeof(Camera::CameraData);
+        vk::DescriptorBufferInfo light_buffer_info_global {
+            .buffer = engine->lights->light_buffer->buffer,
+            .offset = getCurrentImage() * engine->lights->GetBufferSize(),
+            .range = engine->lights->GetBufferSize()
+        };
 
-        vk::WriteDescriptorSet write_info_cam;
-        write_info_cam.descriptorCount = 1;
-        write_info_cam.descriptorType = vk::DescriptorType::eUniformBuffer;
-        write_info_cam.dstBinding = 5;
-        write_info_cam.dstArrayElement = 0;
-        write_info_cam.pBufferInfo = &cam_buffer_info;
+        std::array descriptors
+        {
+            vk::WriteDescriptorSet { //albedo
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .pImageInfo = &target_image_info_albedo,
+            },
+            vk::WriteDescriptorSet { //normal output
+                .dstBinding = 1,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .pImageInfo = &target_image_info_normal,
+            },
+            vk::WriteDescriptorSet { //light output
+                .dstBinding = 2,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .pImageInfo = &target_image_info_light,
+            },
+            vk::WriteDescriptorSet { //particle output
+                .dstBinding = 3,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .pImageInfo = &target_image_info_particle,
+            },
+            vk::WriteDescriptorSet { //motion vector output
+                .dstBinding = 4,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageImage,
+                .pImageInfo = &target_image_info_motion_vector
+            },
+            vk::WriteDescriptorSet { //camera input
+                .dstBinding = 5,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eUniformBuffer,
+                .pBufferInfo = &cam_buffer_info,
+            },
+            vk::WriteDescriptorSet { //light input
+                .dstBinding = 6,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .pBufferInfo = &light_buffer_info_global,
+            }
+        };
 
-        vk::DescriptorBufferInfo light_buffer_info_global;
-        light_buffer_info_global.buffer = engine->lights->light_buffer->buffer;
-        light_buffer_info_global.offset = getCurrentImage() * engine->lights->GetBufferSize();
-        light_buffer_info_global.range = engine->lights->GetBufferSize();
-
-        vk::WriteDescriptorSet write_info_light;
-        write_info_light.descriptorCount = 1;
-        write_info_light.descriptorType = vk::DescriptorType::eStorageBuffer;
-        write_info_light.dstBinding = 6;
-        write_info_light.dstArrayElement = 0;
-        write_info_light.pBufferInfo = &light_buffer_info_global;
-
-        buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 1,
-            { write_info_target_albedo, write_info_target_normal, write_info_target_light,
-              write_info_target_particle, write_info_target_motion_vector, write_info_cam, write_info_light });
-
-        buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, swapchain->extent.width, swapchain->extent.height, 1);
-
-        buffer[0]->end();
-        render_commandbuffers[image_index] = std::move(buffer[0]);
+        render_commandbuffers[image_index] = raytracer->getCommandBuffer(descriptors, before_barriers, {});
         return *render_commandbuffers[image_index];
     }
 
@@ -1342,6 +920,7 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
+        resources->BindResources(current_image);
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
 
@@ -1351,8 +930,10 @@ namespace lotus
             swapchain->checkOldSwapchain(current_image);
 
             auto render_task = engine->game->scene->render();
-            raytracer->runQueries(current_image);
+            raytrace_queryer->runQueries(current_image);
             co_await render_task;
+
+            co_await raytracer->prepareFrame(engine);
 
             engine->worker_pool->beginProcessing(current_image);
 
@@ -1460,6 +1041,7 @@ namespace lotus
 
             current_frame = (current_frame + 1) % max_pending_frames;
             current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+            raytracer->prepareNextFrame();
         }
         catch (vk::OutOfDateKHRError&)
         {
@@ -1479,7 +1061,7 @@ namespace lotus
         {
             .instanceCustomIndex = resource_index,
             .mask = mask,
-            .instanceShaderBindingTableRecordOffset = shaders_per_group * shader_binding_offset,
+            .instanceShaderBindingTableRecordOffset = RaytracePipeline::shaders_per_group * shader_binding_offset,
             .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,
             .accelerationStructureReference = blas->handle
         };
@@ -1510,7 +1092,7 @@ namespace lotus
         {
             if (descriptor.descriptorCount > 0)
             {
-                descriptor.dstSet = *rtx_descriptor_sets_const[image];
+                descriptor.dstSet = raytracer->getResourceDescriptorSet(image);
                 writes.push_back(descriptor);
             }
         }

@@ -32,21 +32,11 @@ namespace lotus
 
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
-        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
 
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> gbuffer_sem;
 
-        struct
-        {
-            std::unique_ptr<Buffer> view_proj_ubo;
-            uint8_t* view_proj_mapped{ nullptr };
-        } camera_buffers;
-
         /* Ray tracing */
-        vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_dynamic;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> rtx_descriptor_layout_deferred;
-        vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_pipeline_layout;
-        vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_pipeline;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> rtx_render_pass;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_deferred_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_deferred_pipeline;
@@ -61,12 +51,9 @@ namespace lotus
         } rtx_gbuffer;
 
     private:
-        void createRayTracingResources();
-        /* Ray tracing */
-
-    private:
         void createRenderpasses();
         void createDescriptorSetLayout();
+        void createRaytracingPipeline();
         void createGraphicsPipeline();
         void createDepthImage();
         void createFramebuffers();
@@ -78,7 +65,7 @@ namespace lotus
         void initializeCameraBuffers();
         void generateCommandBuffers();
 
-        virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
+        std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> getRenderCommandbuffers(uint32_t image_index);
         vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
     };
 }

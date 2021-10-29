@@ -1,4 +1,4 @@
-#include "rasterizer.h"
+#include "raster_pipeline.h"
 
 #include <ranges>
 
@@ -6,7 +6,7 @@
 
 namespace lotus
 {
-    Rasterizer::Rasterizer(Renderer* _renderer) : renderer(_renderer)
+    RasterPipeline::RasterPipeline(Renderer* _renderer) : renderer(_renderer)
     {
         descriptor_set_layout = initializeDescriptorSetLayout(renderer);
         pipeline_layout = initializePipelineLayout(renderer, *descriptor_set_layout);
@@ -14,7 +14,7 @@ namespace lotus
         gbuffer = initializeGBuffer(renderer, *render_pass);
     }
 
-    vk::UniqueDescriptorSetLayout Rasterizer::initializeDescriptorSetLayout(Renderer* renderer)
+    vk::UniqueDescriptorSetLayout RasterPipeline::initializeDescriptorSetLayout(Renderer* renderer)
     {
         std::array static_bindings
         {
@@ -57,7 +57,7 @@ namespace lotus
         }, nullptr);
     }
 
-    vk::UniquePipelineLayout Rasterizer::initializePipelineLayout(Renderer* renderer, vk::DescriptorSetLayout descriptor_set_layout)
+    vk::UniquePipelineLayout RasterPipeline::initializePipelineLayout(Renderer* renderer, vk::DescriptorSetLayout descriptor_set_layout)
     {
         std::array descriptor_layouts = { descriptor_set_layout };
 
@@ -77,7 +77,7 @@ namespace lotus
         }, nullptr);
     }
 
-    vk::UniqueRenderPass Rasterizer::initializeRenderPass(Renderer* renderer, vk::PipelineLayout pipeline_layout)
+    vk::UniqueRenderPass RasterPipeline::initializeRenderPass(Renderer* renderer, vk::PipelineLayout pipeline_layout)
     {
         std::array attachments {
             vk::AttachmentDescription { //position
@@ -287,7 +287,7 @@ namespace lotus
         }, nullptr);
     }
 
-    Rasterizer::FramebufferAttachment Rasterizer::initializeFramebufferAttachment(Renderer* renderer, vk::Extent2D extent, vk::Format format, vk::ImageUsageFlags usage_flags)
+    RasterPipeline::FramebufferAttachment RasterPipeline::initializeFramebufferAttachment(Renderer* renderer, vk::Extent2D extent, vk::Format format, vk::ImageUsageFlags usage_flags)
     {
         vk::ImageAspectFlags aspectMask = (usage_flags & vk::ImageUsageFlagBits::eColorAttachment) ? vk::ImageAspectFlagBits::eColor : vk::ImageAspectFlagBits::eDepth;
         std::unique_ptr<Image> image = renderer->gpu->memory_manager->GetImage(extent.width, extent.height, format, vk::ImageTiling::eOptimal, usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -309,7 +309,7 @@ namespace lotus
         };
     }
 
-    Rasterizer::GBuffer Rasterizer::initializeGBuffer(Renderer* renderer, vk::RenderPass render_pass)
+    RasterPipeline::GBuffer RasterPipeline::initializeGBuffer(Renderer* renderer, vk::RenderPass render_pass)
     {
         auto extent = renderer->swapchain->extent;
         GBuffer gbuffer{
@@ -365,7 +365,7 @@ namespace lotus
         return gbuffer;
     }
 
-    std::vector<vk::ClearValue> Rasterizer::getRenderPassClearValues()
+    std::vector<vk::ClearValue> RasterPipeline::getRenderPassClearValues()
     {
         return {
             { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},

@@ -28,15 +28,15 @@ public:
         glm::vec4 skybox_colors[8];
     };
     FFXILandscapeEntity(lotus::Engine* engine) : LandscapeEntity(engine) {}
-    static lotus::Task<std::shared_ptr<FFXILandscapeEntity>> Init(lotus::Engine* engine, size_t zoneid);
+    static lotus::Task<std::shared_ptr<FFXILandscapeEntity>> Init(lotus::Engine* engine, size_t zoneid, lotus::Scene* scene);
     virtual void populate_AS(lotus::TopLevelAccelerationStructure* as, uint32_t image_index) override;
     FFXI::QuadTree quadtree{glm::vec3{}, glm::vec3{}};
-    std::vector<std::pair<uint32_t, InstanceInfo>> model_vec;
+    std::vector<std::pair<uint32_t, lotus::Test::InstancedModelsComponent::InstanceInfo>> model_vec;
     std::map<std::string, std::map<uint32_t, LightTOD>> weather_light_map;
 protected:
     virtual lotus::Task<> render(lotus::Engine* engine, std::shared_ptr<Entity> sp) override;
     virtual lotus::Task<> tick(lotus::time_point time, lotus::duration delta) override;
-    lotus::WorkerTask<> Load(size_t zoneid);
+    lotus::WorkerTask<> Load(size_t zoneid, lotus::Scene* scene);
     lotus::time_point create_time{lotus::sim_clock::now()};
     float current_time{750};
     std::string current_weather = "suny";

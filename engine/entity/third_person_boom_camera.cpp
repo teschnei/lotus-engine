@@ -71,7 +71,7 @@ namespace lotus
         if (update)
         {
             glm::vec3 boom_source = focus.lock()->getPos() + glm::vec3{0.f, -0.5f, 0.f};
-            auto new_distance = co_await engine->renderer->raytracer->query(Raytracer::ObjectFlags::LevelCollision, boom_source, glm::vec3{ 1.f, 0.f, 0.f } *rot, 0.f, distance);
+            auto new_distance = co_await engine->renderer->raytrace_queryer->query(RaytraceQueryer::ObjectFlags::LevelCollision, boom_source, glm::vec3{ 1.f, 0.f, 0.f } *rot, 0.f, distance);
             glm::vec3 boom{ new_distance - 0.05f, 0.f, 0.f };
             glm::vec3 new_pos = boom * rot;
             if (new_pos + boom_source != getPos())

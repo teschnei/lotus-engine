@@ -13,14 +13,14 @@
 #include "entity/component/generator_component.h"
 #include <glm/gtx/rotate_vector.hpp>
 
-lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotus::Engine* engine, size_t zoneid)
+lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotus::Engine* engine, size_t zoneid, lotus::Scene* scene)
 {
     auto entity = std::make_shared<FFXILandscapeEntity>(engine);
-    co_await entity->Load(zoneid);
+    co_await entity->Load(zoneid, scene);
     co_return std::move(entity);
 }
 
-lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid)
+lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid, lotus::Scene* scene)
 {
     size_t index = zoneid < 256 ? zoneid + 100 : zoneid + 83635;
     const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(index);
@@ -165,11 +165,8 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid)
 
     if (mzb)
     {
-        instance_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(lotus::LandscapeEntity::InstanceInfo) * mzb->vecMZB.size(),
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        std::map<std::string, std::vector<lotus::LandscapeEntity::InstanceInfo>> temp_map;
-        std::vector<lotus::LandscapeEntity::InstanceInfo> instance_info;
+        std::map<std::string, std::vector<lotus::Test::InstancedModelsComponent::InstanceInfo>> temp_map;
+        std::vector<lotus::Test::InstancedModelsComponent::InstanceInfo> instance_info;
 
         for (const auto& mzb_piece : mzb->vecMZB)
         {
@@ -182,7 +179,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid)
             glm::mat4 model = pos_mat * rot_mat * scale_mat;
             glm::mat4 model_t = glm::transpose(model);
             glm::mat3 model_it = glm::transpose(glm::inverse(glm::mat3(model)));
-            lotus::LandscapeEntity::InstanceInfo info{ model, model_t, model_it };
+            lotus::Test::InstancedModelsComponent::InstanceInfo info{ model, model_t, model_it };
             temp_map[name].push_back(info);
             model_vec.push_back(std::make_pair(model_map[name], info));
         }
@@ -244,7 +241,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid)
         auto [collision_model, collision_model_task] = lotus::Model::LoadModel("", FFXI::CollisionLoader::LoadModel, engine, mzb->meshes, mzb->mesh_entries);
         collision_models.push_back(collision_model);
 
-        auto init_task = InitWork(std::move(instance_info));
+        auto init_task = InitWork(std::move(instance_info), scene);
 
         for (const auto& task : texture_tasks)
         {
@@ -272,19 +269,19 @@ void FFXILandscapeEntity::populate_AS(lotus::TopLevelAccelerationStructure* as, 
         {
             //glm is column-major so we have to transpose the model matrix for Raytrace
             auto matrix = glm::mat3x4{ instance_info.model_t };
-            engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelGeometry), 2);
+            engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(lotus::RaytraceQueryer::ObjectFlags::LevelGeometry), 2);
         }
     }
     for (const auto& collision_model : collision_models)
     {
         //glm is column-major so we have to transpose the model matrix for Raytrace
         auto matrix = glm::mat3x4{1.f};
-        engine->renderer->populateAccelerationStructure(as, collision_model->bottom_level_as.get(), matrix, 0, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::LevelCollision), 0);
+        engine->renderer->populateAccelerationStructure(as, collision_model->bottom_level_as.get(), matrix, 0, static_cast<uint32_t>(lotus::RaytraceQueryer::ObjectFlags::LevelCollision), 0);
     }
     for (const auto& model : water_models)
     {
         auto matrix = glm::mat3x4{1.f};
-        engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(lotus::Raytracer::ObjectFlags::Water), 8);
+        engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(lotus::RaytraceQueryer::ObjectFlags::Water), 8);
     }
 }
 

@@ -36,17 +36,8 @@ namespace lotus
 
         virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) override;
 
-        struct
-        {
-            std::unique_ptr<Buffer> view_proj_ubo;
-            uint8_t* view_proj_mapped{ nullptr };
-        } camera_buffers;
-
         /* Ray tracing */
-        vk::UniqueDescriptorSetLayout rtx_descriptor_layout_dynamic;
         vk::UniqueDescriptorSetLayout rtx_descriptor_layout_deferred;
-        vk::UniquePipelineLayout rtx_pipeline_layout;
-        vk::UniquePipeline rtx_pipeline;
         vk::UniqueRenderPass rtx_render_pass;
         vk::UniquePipelineLayout rtx_deferred_pipeline_layout;
         vk::UniquePipeline rtx_deferred_pipeline;
@@ -63,9 +54,9 @@ namespace lotus
         } rtx_gbuffer;
 
     private:
-        void createRayTracingResources();
         void createRenderpasses();
         void createDescriptorSetLayout();
+        void createRaytracingPipeline();
         void createGraphicsPipeline();
         void createDepthImage();
         void createFramebuffers();
@@ -77,7 +68,7 @@ namespace lotus
         void initializeCameraBuffers();
         void generateCommandBuffers();
 
-        virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
+        vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index);
         vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
     };
 }

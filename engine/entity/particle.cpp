@@ -119,8 +119,8 @@ namespace lotus
                 {
                     //glm is column-major so we have to transpose the model matrix for Raytrace
                     auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                    //engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), billboard ? 6 : 4);
-                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::Particle), 4 );
+                    //engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::Particle), billboard ? 6 : 4);
+                    engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, resource_index, static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::Particle), 4 );
                 }
             }
         }

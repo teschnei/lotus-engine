@@ -7,10 +7,10 @@ namespace lotus
 {
     class Renderer;
 
-    class Rasterizer
+    class RasterPipeline
     {
     public:
-        Rasterizer(Renderer* renderer);
+        RasterPipeline(Renderer* renderer);
 
         auto getPipelineLayout() { return *pipeline_layout; }
         auto getDescriptorSetLayout() { return *descriptor_set_layout; }

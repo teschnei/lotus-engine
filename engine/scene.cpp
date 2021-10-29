@@ -12,7 +12,7 @@ namespace lotus
 {
     Scene::Scene(Engine* _engine) : engine(_engine)
     {
-        top_level_as.resize(engine->renderer->getImageCount());
+        component_runners = std::make_unique<Test::ComponentRunners>(engine);
     }
 
     Task<> Scene::render()
@@ -20,45 +20,13 @@ namespace lotus
         engine->renderer->resources->Reset();
         uint32_t image_index = engine->renderer->getCurrentImage();
         std::vector<Task<>> tasks;
-        if (engine->config->renderer.RaytraceEnabled())
-        {
-            top_level_as[image_index] = std::make_shared<TopLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), true);
-
-            for (const auto& entity : entities)
-            {
-                if (auto deformable_entity = dynamic_cast<DeformableEntity*>(entity.get()))
-                {
-                    engine->renderer->resources->AddResources(deformable_entity);
-                }
-                else if (auto particle = dynamic_cast<Particle*>(entity.get()))
-                {
-                    engine->renderer->resources->AddResources(particle);
-                }
-                else if (auto renderable = dynamic_cast<RenderableEntity*>(entity.get()))
-                {
-                    engine->renderer->resources->AddResources(renderable);
-                }
-            }
-        }
         for (auto& entity : entities)
         {
             tasks.push_back(entity->render_all(engine, entity));
-            if (auto renderable_entity = dynamic_cast<RenderableEntity*>(entity.get()))
-            {
-                if (engine->config->renderer.RaytraceEnabled())
-                {
-                    renderable_entity->populate_AS(top_level_as[image_index].get(), image_index);
-                }
-            }
         }
-        engine->renderer->resources->BindResources(image_index);
         for (auto& task : tasks)
         {
             co_await task;
-        }
-        if (engine->config->renderer.RaytraceEnabled())
-        {
-           co_await top_level_as[image_index]->Build(engine);
         }
     }
 
@@ -89,6 +57,10 @@ namespace lotus
             entities.erase(std::ranges::begin(removed), std::ranges::end(removed));
             engine->worker_pool->gpuResource(std::move(removed_entities));
         }
+
+        //TODO: move this back before queries
+        auto component_task = component_runners->run(time, delta);
+        co_await component_task;
     }
 }
 

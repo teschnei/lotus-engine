@@ -43,15 +43,32 @@ namespace lotus
         static constexpr uint16_t max_resource_index{ 4096 };
         std::mutex resource_descriptor_mutex;
 
-        std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
-        std::vector<vk::DescriptorBufferInfo> descriptor_vertex_prev_info;
-        std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
-        std::vector<vk::DescriptorBufferInfo> descriptor_material_info;
-        std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
+        uint16_t pushVertexInfo(std::span<vk::DescriptorBufferInfo>);
+        uint16_t pushVertexPrevInfo(std::span<vk::DescriptorBufferInfo>);
+        uint16_t pushIndexInfo(std::span<vk::DescriptorBufferInfo>);
+        uint16_t pushMaterialTextureInfo(std::span<vk::DescriptorBufferInfo>, std::span<vk::DescriptorImageInfo>);
+        uint16_t pushMeshInfo(std::span<MeshInfo>);
+
+        std::span<vk::DescriptorBufferInfo> getMaterialInfo()
+        {
+            return std::span{ descriptor_material_info.begin(), descriptor_material_texture_count };
+        }
 
     private:
         Engine* engine;
-        uint16_t mesh_info_offset{ 0 };
+
+        std::array<vk::DescriptorBufferInfo, max_resource_index> descriptor_vertex_info;
+        std::array<vk::DescriptorBufferInfo, max_resource_index> descriptor_vertex_prev_info;
+        std::array<vk::DescriptorBufferInfo, max_resource_index> descriptor_index_info;
+        std::array<vk::DescriptorBufferInfo, max_resource_index> descriptor_material_info;
+        std::array<vk::DescriptorImageInfo, max_resource_index> descriptor_texture_info;
+
+        std::atomic<uint16_t> descriptor_vertex_count{ 0 };
+        std::atomic<uint16_t> descriptor_vertex_prev_count{ 0 };
+        std::atomic<uint16_t> descriptor_index_count{ 0 };
+        std::atomic<uint16_t> descriptor_material_texture_count{ 0 };
+        std::atomic<uint16_t> mesh_info_offset{ 0 };
+
         uint32_t static_binding_offset_data{ 0 };
 
     public:

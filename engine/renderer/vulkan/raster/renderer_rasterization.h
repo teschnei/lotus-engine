@@ -46,7 +46,6 @@ namespace lotus
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
         std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
-        static constexpr uint32_t shadowmap_cascades {4};
 
         struct ShadowmapCascade
         {
@@ -61,21 +60,6 @@ namespace lotus
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
 
         vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> gbuffer_sem;
-
-        struct
-        {
-            std::unique_ptr<Buffer> view_proj_ubo;
-            uint8_t* view_proj_mapped{ nullptr };
-            std::unique_ptr<Buffer> cascade_data_ubo;
-            uint8_t* cascade_data_mapped{ nullptr };
-        } camera_buffers;
-
-        struct UBOFS
-        {
-            glm::vec4 cascade_splits;
-            glm::mat4 cascade_view_proj[RendererRasterization::shadowmap_cascades];
-            glm::mat4 inverse_view;
-        } cascade_data {};
 
     private:
 
@@ -94,7 +78,7 @@ namespace lotus
 
         void updateCameraBuffers();
 
-        virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) override;
+        vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index);
         vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
     };
 }

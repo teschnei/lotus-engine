@@ -7,10 +7,10 @@ namespace lotus
 {
     class Renderer;
 
-    class PostProcess
+    class PostProcessPipeline
     {
     public:
-        PostProcess(Renderer* renderer);
+        PostProcessPipeline(Renderer* renderer);
 
         void Init();
         void InitWork(vk::CommandBuffer buffer);

@@ -165,10 +165,10 @@ namespace lotus
                     std::vector<vk::WriteDescriptorSet> writes;
                     for (size_t i = 0; i < engine->renderer->getImageCount(); ++i)
                     {
-                        write_info_vertex.dstSet = *renderer->rtx_descriptor_sets_const[i];
-                        write_info_index.dstSet = *renderer->rtx_descriptor_sets_const[i];
-                        write_info_texture.dstSet = *renderer->rtx_descriptor_sets_const[i];
-                        write_info_material.dstSet = *renderer->rtx_descriptor_sets_const[i];
+                        write_info_vertex.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
+                        write_info_index.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
+                        write_info_texture.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
+                        write_info_material.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
                         if (write_info_vertex.descriptorCount > 0)
                             writes.push_back(write_info_vertex);
                         if (write_info_index.descriptorCount > 0)

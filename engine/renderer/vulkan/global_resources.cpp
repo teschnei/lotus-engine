@@ -22,146 +22,181 @@ namespace lotus
 
     void GlobalResources::BindResources(uint32_t image)
     {
-        auto offset = static_binding_offset.load(std::memory_order::relaxed);
-        vk::WriteDescriptorSet write_info_vertex;
-        write_info_vertex.descriptorType = vk::DescriptorType::eStorageBuffer;
-        write_info_vertex.dstArrayElement = offset;
-        write_info_vertex.dstBinding = 1;
-        write_info_vertex.descriptorCount = static_cast<uint32_t>(descriptor_vertex_info.size());
-        write_info_vertex.pBufferInfo = descriptor_vertex_info.data();
-
-        vk::WriteDescriptorSet write_info_vertex_prev;
-        write_info_vertex_prev.descriptorType = vk::DescriptorType::eStorageBuffer;
-        write_info_vertex_prev.dstArrayElement = 0;
-        write_info_vertex_prev.dstBinding = 2;
-        write_info_vertex_prev.descriptorCount = static_cast<uint32_t>(descriptor_vertex_prev_info.size());
-        write_info_vertex_prev.pBufferInfo = descriptor_vertex_prev_info.data();
-
-        vk::WriteDescriptorSet write_info_index;
-        write_info_index.descriptorType = vk::DescriptorType::eStorageBuffer;
-        write_info_index.dstArrayElement = offset;
-        write_info_index.dstBinding = 3;
-        write_info_index.descriptorCount = static_cast<uint32_t>(descriptor_index_info.size());
-        write_info_index.pBufferInfo = descriptor_index_info.data();
-
-        vk::WriteDescriptorSet write_info_texture;
-        write_info_texture.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        write_info_texture.dstArrayElement = offset;
-        write_info_texture.dstBinding = 4;
-        write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
-        write_info_texture.pImageInfo = descriptor_texture_info.data();
-
-        vk::WriteDescriptorSet write_info_material;
-        write_info_material.descriptorType = vk::DescriptorType::eUniformBuffer;
-        write_info_material.dstArrayElement = offset;
-        write_info_material.dstBinding = 5;
-        write_info_material.descriptorCount = static_cast<uint32_t>(descriptor_material_info.size());
-        write_info_material.pBufferInfo = descriptor_material_info.data();
+        auto descriptor_vertex_info_count = descriptor_vertex_count.load();
+        auto descriptor_vertex_prev_info_count = descriptor_vertex_prev_count.load();
+        auto descriptor_index_info_count = descriptor_index_count.load();
+        auto descriptor_material_texture_info_count = descriptor_material_texture_count.load();
+        auto offset = static_binding_offset.load();
 
         vk::DescriptorBufferInfo mesh_info;
         mesh_info.buffer = mesh_info_buffer->buffer;
         mesh_info.offset = sizeof(MeshInfo) * max_resource_index * image;
         mesh_info.range = sizeof(MeshInfo) * max_resource_index;
 
-        vk::WriteDescriptorSet write_info_mesh_info;
-        write_info_mesh_info.descriptorType = vk::DescriptorType::eStorageBuffer;
-        write_info_mesh_info.dstArrayElement = 0;
-        write_info_mesh_info.dstBinding = 6;
-        write_info_mesh_info.descriptorCount = 1;
-        write_info_mesh_info.pBufferInfo = &mesh_info;
+        std::array writes
+        {
+            vk::WriteDescriptorSet { //vertex
+                .dstBinding = 1,
+                .dstArrayElement = offset,
+                .descriptorCount = descriptor_vertex_info_count,
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .pBufferInfo = descriptor_vertex_info.data()
+            },
+            vk::WriteDescriptorSet { //vertex prev
+                .dstBinding = 2,
+                .dstArrayElement = 0,
+                .descriptorCount = descriptor_vertex_prev_info_count,
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .pBufferInfo = descriptor_vertex_prev_info.data(),
+            },
+            vk::WriteDescriptorSet { //index
+                .dstBinding = 3,
+                .dstArrayElement = offset,
+                .descriptorCount = descriptor_index_info_count,
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .pBufferInfo = descriptor_index_info.data(),
+            },
+            vk::WriteDescriptorSet { //texture
+                .dstBinding = 4,
+                .dstArrayElement = offset,
+                .descriptorCount = descriptor_material_texture_info_count,
+                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+                .pImageInfo = descriptor_texture_info.data(),
+            },
+            vk::WriteDescriptorSet { //material
+                .dstBinding = 5,
+                .dstArrayElement = offset,
+                .descriptorCount = descriptor_material_texture_info_count,
+                .descriptorType = vk::DescriptorType::eUniformBuffer,
+                .pBufferInfo = descriptor_material_info.data(),
+            },
+            vk::WriteDescriptorSet { //mesh info
+                .dstBinding = 6,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = vk::DescriptorType::eStorageBuffer,
+                .pBufferInfo = &mesh_info
+            },
+        };
 
-        std::array a{ write_info_vertex, write_info_vertex_prev, write_info_index, write_info_material, write_info_texture, write_info_mesh_info };
-        engine->renderer->bindResources(image, a);
+        engine->renderer->bindResources(image, writes);
         mesh_info_buffer->flush(max_resource_index * sizeof(MeshInfo) * image, max_resource_index * sizeof(MeshInfo));
     }
 
     void GlobalResources::Reset()
     {
-        descriptor_vertex_info.clear();
-        descriptor_vertex_prev_info.clear();
-        descriptor_index_info.clear();
-        descriptor_material_info.clear();
-        descriptor_texture_info.clear();
+        descriptor_vertex_count = 0;
+        descriptor_vertex_prev_count = 0;
+        descriptor_index_count = 0;
+        descriptor_material_texture_count = 0;
         mesh_info_offset = 0;
     }
 
     void GlobalResources::AddResources(RenderableEntity* entity)
     {
+        /*
         uint32_t image = engine->renderer->getCurrentImage();
         for (auto& model : entity->models)
         {
             if (!model->is_static)
             {
-                uint16_t vertex_index = static_cast<uint16_t>(descriptor_vertex_info.size()) + static_binding_offset_data;
-                uint16_t index_index = static_cast<uint16_t>(descriptor_index_info.size()) + static_binding_offset_data;
-                uint16_t material_index = static_cast<uint16_t>(descriptor_texture_info.size()) + static_binding_offset_data;
-                uint16_t mesh_info_index = mesh_info_offset + static_binding_offset_data;
+                uint16_t mesh_info_index = mesh_info_offset.fetch_add(model->meshes.size()) + static_binding_offset_data;
                 for (size_t i = 0; i < model->meshes.size(); ++i)
                 {
                     const auto& mesh = model->meshes[i];
-                    descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
-                    descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-                    descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                    uint16_t vertex_index = descriptor_vertex_info.push_back({ mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
+                    uint16_t index_index = descriptor_index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
+                    descriptor_texture_info.push_back({*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal });
                     auto [buffer, offset] = mesh->material->getBuffer();
-                    descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
-                    mesh->material->index = material_index + i;
-                    mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index + (uint32_t)i, index_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, glm::vec3 { 1.0 }, 0, glm::vec4{ 1.f }, glm::vec2{ 0.f }, model->animation_frame, 0, entity->getPrevModelMatrix() };
+                    uint16_t material_index = descriptor_material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) }) + static_binding_offset_data;
+                    mesh->material->index = material_index;
+                    mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, glm::vec3 { 1.0 }, 0, glm::vec4{ 1.f }, glm::vec2{ 0.f }, model->animation_frame, 0, entity->getPrevModelMatrix() };
                 }
                 model->resource_index = mesh_info_index;
                 mesh_info_offset += model->meshes.size();
             }
-        }
+        }*/
     }
 
     void GlobalResources::AddResources(DeformableEntity* entity)
     {
+        /*
         uint32_t image = engine->renderer->getCurrentImage();
         uint32_t prev_image = engine->renderer->getPreviousImage();
         for (size_t i = 0; i < entity->models.size(); ++i)
         {
-            uint16_t vertex_index = static_cast<uint16_t>(descriptor_vertex_info.size()) + static_binding_offset_data;
-            uint16_t vertex_prev_index = static_cast<uint16_t>(descriptor_vertex_prev_info.size());
-            uint16_t index_index = static_cast<uint16_t>(descriptor_index_info.size()) + static_binding_offset_data;
-            uint16_t material_index = static_cast<uint16_t>(descriptor_texture_info.size()) + static_binding_offset_data;
-            uint16_t mesh_info_index = mesh_info_offset + static_binding_offset_data;
+            uint16_t mesh_info_index = mesh_info_offset.fetch_add(entity->models[i]->meshes.size()) + static_binding_offset_data;
             for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
             {
                 const auto& mesh = entity->models[i]->meshes[j];
-                descriptor_vertex_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE);
-                descriptor_vertex_prev_info.emplace_back(entity->animation_component->transformed_geometries[i].vertex_buffers[j][prev_image]->buffer, 0, VK_WHOLE_SIZE);
-                descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-                descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+                uint16_t vertex_index = descriptor_vertex_info.push_back({ entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
+                uint16_t vertex_prev_index = descriptor_vertex_prev_info.push_back({ entity->animation_component->transformed_geometries[i].vertex_buffers[j][prev_image]->buffer, 0, VK_WHOLE_SIZE });
+                uint16_t index_index = descriptor_index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
+                descriptor_texture_info.push_back({ *mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal }) + static_binding_offset_data;
                 auto [buffer, offset] = mesh->material->getBuffer();
-                descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
-                mesh->material->index = material_index + j;
-                mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + j] = { vertex_index + (uint32_t)j, index_index + (uint32_t)j, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), 0, glm::vec4{1.f}, glm::vec2{0.f}, entity->models[i]->animation_frame, vertex_prev_index + (uint32_t)j, entity->getPrevModelMatrix()};
+                uint16_t material_index = descriptor_material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) });
+                mesh->material->index = material_index;
+                mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + j] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), 0, glm::vec4{1.f}, glm::vec2{0.f}, entity->models[i]->animation_frame, vertex_prev_index, entity->getPrevModelMatrix()};
             }
             entity->animation_component->transformed_geometries[i].resource_index = mesh_info_index;
-            mesh_info_offset += entity->models[i]->meshes.size();
         }
+        */
     }
 
     void GlobalResources::AddResources(Particle* entity)
     {
+        /*
         uint32_t image = engine->renderer->getCurrentImage();
-        uint16_t vertex_index = static_cast<uint16_t>(descriptor_vertex_info.size()) + static_binding_offset_data;
-        uint16_t index_index = static_cast<uint16_t>(descriptor_index_info.size()) + static_binding_offset_data;
-        uint16_t material_index = static_cast<uint16_t>(descriptor_texture_info.size()) + static_binding_offset_data;
-        uint16_t mesh_info_index = mesh_info_offset + static_binding_offset_data;
+        uint16_t mesh_info_index = mesh_info_offset.fetch_add(entity->models[0]->meshes.size()) + static_binding_offset_data;
         auto& model = entity->models[0];
         for (size_t i = 0; i < model->meshes.size(); ++i)
         {
             auto& mesh = model->meshes[i];
-            descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
-            descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-            descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+            uint16_t vertex_index = descriptor_vertex_info.push_back({ mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
+            uint16_t index_index = descriptor_index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
+            descriptor_texture_info.push_back({ *mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal }) + static_binding_offset_data;
             auto [buffer, offset] = mesh->material->getBuffer();
-            descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
-            mesh->material->index = material_index + i;
-            mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index + (uint32_t)i, index_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), entity->billboard, entity->color, entity->uv_offset, model->animation_frame, 0, entity->getPrevModelMatrix() };
+            uint16_t material_index = descriptor_material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) });
+            mesh->material->index = material_index;
+            mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), entity->billboard, entity->color, entity->uv_offset, model->animation_frame, 0, entity->getPrevModelMatrix() };
         }
-        uint32_t index = mesh_info_index;
-        mesh_info_offset += model->meshes.size();
-        entity->resource_index = index;
+        entity->resource_index = mesh_info_index;
+        */
+    }
+
+    uint16_t GlobalResources::pushVertexInfo(std::span<vk::DescriptorBufferInfo> info)
+    {
+        auto index = descriptor_vertex_count.fetch_add(info.size());
+        std::ranges::copy(info, descriptor_vertex_info.begin() + index);
+        return index + static_binding_offset_data;
+    }
+
+    uint16_t GlobalResources::pushVertexPrevInfo(std::span<vk::DescriptorBufferInfo> info)
+    {
+        auto index = descriptor_vertex_prev_count.fetch_add(info.size());
+        std::ranges::copy(info, descriptor_vertex_prev_info.begin() + index);
+        return index;
+    }
+    
+    uint16_t GlobalResources::pushIndexInfo(std::span<vk::DescriptorBufferInfo> info)
+    {
+        auto index = descriptor_index_count.fetch_add(info.size());
+        std::ranges::copy(info, descriptor_index_info.begin() + index);
+        return index + static_binding_offset_data;
+    }
+
+    uint16_t GlobalResources::pushMaterialTextureInfo(std::span<vk::DescriptorBufferInfo> info_material, std::span<vk::DescriptorImageInfo> info_texture)
+    {
+        auto index = descriptor_material_texture_count.fetch_add(std::max(info_material.size(), info_texture.size()));
+        std::ranges::copy(info_material, descriptor_material_info.begin() + index);
+        std::ranges::copy(info_texture, descriptor_texture_info.begin() + index);
+        return index + static_binding_offset_data;
+    }
+
+    uint16_t GlobalResources::pushMeshInfo(std::span<MeshInfo> info)
+    {
+        auto index = mesh_info_offset.fetch_add(info.size());
+        std::ranges::copy(info, mesh_info_buffer_mapped + (engine->renderer->getCurrentImage() * max_resource_index) + index + static_binding_offset_data);
+        return index + static_binding_offset_data;
     }
 }

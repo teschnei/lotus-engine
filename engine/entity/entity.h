@@ -81,7 +81,7 @@ namespace lotus
 
     protected:
         virtual Task<> tick(time_point time, duration delta) { co_return; }
-        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp){ co_return; }
+        virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) { co_return; }
 
         Engine* engine;
         glm::vec3 pos{0.f};

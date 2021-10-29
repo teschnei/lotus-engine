@@ -1,0 +1,21 @@
+target_sources(engine
+    PRIVATE
+    animation_component.cpp
+    animation_component.h
+    component.cpp
+    component.h
+    deformed_mesh_component.cpp
+    deformed_mesh_component.h
+    deformable_raster_component.cpp
+    deformable_raster_component.h
+    deformable_raytrace_component.cpp
+    deformable_raytrace_component.h
+    instanced_models_component.cpp
+    instanced_models_component.h
+    instanced_raster_component.cpp
+    instanced_raster_component.h
+    instanced_raytrace_component.cpp
+    instanced_raytrace_component.h
+    physics_component.cpp
+    physics_component.h
+)

@@ -7,8 +7,9 @@
 #include "swapchain.h"
 #include "global_resources.h"
 #include "ui_renderer.h"
-#include "common/rasterizer.h"
-#include "common/post_process.h"
+#include "common/raster_pipeline.h"
+#include "common/raytrace_pipeline.h"
+#include "common/post_process_pipeline.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
 #include "engine/renderer/model.h"
@@ -112,6 +113,24 @@ namespace lotus
 
         inline static thread_local vk::UniqueDescriptorPool desc_pool;
 
+        struct
+        {
+            std::unique_ptr<Buffer> view_proj_ubo;
+            uint8_t* view_proj_mapped{ nullptr };
+            std::unique_ptr<Buffer> cascade_data_ubo;
+            uint8_t* cascade_data_mapped{ nullptr };
+        } camera_buffers;
+
+        //TODO: cascade stuff goes into shadowmap pipeline class
+        static constexpr uint32_t shadowmap_cascades {4};
+
+        struct UBOFS
+        {
+            glm::vec4 cascade_splits;
+            glm::mat4 cascade_view_proj[shadowmap_cascades];
+            glm::mat4 inverse_view;
+        } cascade_data {};
+
     protected:
         //when threads terminate, they move their thread_locals here so they can be destructed in the right order
         void deleteThreadLocals();
@@ -138,10 +157,15 @@ namespace lotus
         vk::UniquePipeline animation_pipeline;
         /* Animation pipeline */
 
-        std::unique_ptr<Raytracer> raytracer;
-        std::unique_ptr<Rasterizer> rasterizer;
-        friend class PostProcess;
-        std::unique_ptr<PostProcess> post_process;
+        std::unique_ptr<RaytraceQueryer> raytrace_queryer;
+
+        friend class RaytracePipeline;
+        std::unique_ptr <RaytracePipeline> raytracer;
+        std::unique_ptr<RasterPipeline> rasterizer;
+        //TODO
+        std::unique_ptr<RasterPipeline> shadowmap_rasterizer;
+        friend class PostProcessPipeline;
+        std::unique_ptr<PostProcessPipeline> post_process;
         std::unique_ptr<UiRenderer> ui;
 
         void runRaytracerQueries();
@@ -158,8 +182,6 @@ namespace lotus
 
         bool checkValidationLayerSupport() const;
         std::vector<const char*> getRequiredExtensions() const;
-
-        virtual vk::CommandBuffer getRenderCommandbuffer(uint32_t image_index) = 0;
 
         Engine* engine;
         vk::UniqueDebugUtilsMessengerEXT debug_messenger;

@@ -29,7 +29,7 @@ namespace lotus
     {
         createRenderpasses();
         createDescriptorSetLayout();
-        rasterizer = std::make_unique<Rasterizer>(this);
+        rasterizer = std::make_unique<RasterPipeline>(this);
         createGraphicsPipeline();
         createDepthImage();
         createFramebuffers();
@@ -836,6 +836,7 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
+        resources->BindResources(current_image);
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
 
@@ -845,7 +846,7 @@ namespace lotus
             swapchain->checkOldSwapchain(current_image);
 
             auto render_task = engine->game->scene->render();
-            raytracer->runQueries(current_image);
+            raytrace_queryer->runQueries(current_image);
             co_await render_task;
 
             engine->worker_pool->beginProcessing(current_image);

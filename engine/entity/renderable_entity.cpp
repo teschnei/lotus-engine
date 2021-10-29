@@ -78,19 +78,7 @@ namespace lotus
             {
                 //glm is column-major so we have to transpose the model matrix for Raytrace
                 auto matrix = glm::mat3x4{ glm::transpose(getModelMatrix()) };
-                engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(Raytracer::ObjectFlags::DynamicEntities), 0);
-            }
-        }
-    }
-
-    void RenderableEntity::update_AS(TopLevelAccelerationStructure* as, uint32_t image_index)
-    {
-        for (size_t i = 0; i < models.size(); ++i)
-        {
-            const auto& model = models[i];
-            if (model->bottom_level_as)
-            {
-                as->UpdateInstance(model->bottom_level_as->instanceid, glm::mat3x4{ getModelMatrix() });
+                engine->renderer->populateAccelerationStructure(as, model->bottom_level_as.get(), matrix, model->resource_index, static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::DynamicEntities), 0);
             }
         }
     }

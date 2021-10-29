@@ -7,7 +7,7 @@
 
 namespace lotus
 {
-    Raytracer::Raytracer(Engine* _engine) : engine(_engine)
+    RaytraceQueryer::RaytraceQueryer(Engine* _engine) : engine(_engine)
     {
         if (engine->config->renderer.RaytraceEnabled())
         {
@@ -33,7 +33,7 @@ namespace lotus
             constexpr uint32_t shader_raygencount = 1;
             constexpr uint32_t shader_misscount = 1;
             constexpr uint32_t shader_nonhitcount = shader_raygencount + shader_misscount;
-            constexpr uint32_t shader_hitcount = RendererRaytraceBase::shaders_per_group * 6;
+            constexpr uint32_t shader_hitcount = RaytracePipeline::shaders_per_group * 6;
             std::vector<vk::PipelineShaderStageCreateInfo> shaders_ci = { rayquery_stage_ci, ray_miss_stage_ci, ray_closest_hit_stage_ci };
 
             std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {
@@ -174,16 +174,17 @@ namespace lotus
         command_pool = engine->renderer->gpu->device->createCommandPoolUnique(pool_info, nullptr);
     }
 
-    Task<float> Raytracer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max)
+    Task<float> RaytraceQueryer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max)
     {
         co_return (co_await async_query_queue.wait(RaytraceQuery{object_flags, origin, direction, min, max})).result;
     }
 
-    void Raytracer::runQueries(uint32_t image)
+    void RaytraceQueryer::runQueries(uint32_t image)
     {
         if (engine->config->renderer.RaytraceEnabled())
         {
-            if (engine->game->scene && engine->game->scene->top_level_as[image])
+            auto tlas = engine->renderer->raytracer->getTLAS(engine->renderer->getPreviousImage());
+            if (engine->game->scene && tlas && tlas->handle != 0)
             {
                 auto processing_queries = async_query_queue.getAll();
 
@@ -227,7 +228,7 @@ namespace lotus
 
                     vk::WriteDescriptorSetAccelerationStructureKHR write_as;
                     write_as.accelerationStructureCount = 1;
-                    write_as.pAccelerationStructures = &*engine->game->scene->top_level_as[image]->acceleration_structure;
+                    write_as.pAccelerationStructures = &*tlas->acceleration_structure;
                     write_info_as.pNext = &write_as;
 
                     vk::DescriptorBufferInfo input_buffer_info;
