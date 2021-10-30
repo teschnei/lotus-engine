@@ -7,7 +7,6 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
-#include "engine/renderer/vulkan/entity_initializers/renderable_entity.h"
 
 namespace lotus
 {
@@ -1101,21 +1100,6 @@ namespace lotus
         };
         memcpy(&instance.transform, &mat, sizeof(mat));
         blas->instanceid = tlas->AddInstance(instance);
-    }
-
-    void RendererHybrid::initEntity(EntityInitializer* initializer)
-    {
-        initializer->initEntity(this, engine);
-    }
-
-    void RendererHybrid::drawEntity(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
-    {
-        initializer->drawEntity(this, engine, buffer, image);
-    }
-    
-    void RendererHybrid::initModel(RenderableEntityInitializer* initializer, Model& model, ModelTransformedGeometry& model_transform)
-    {
-        initializer->initModel(this, engine, model, model_transform);
     }
 
     vk::Pipeline RendererHybrid::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)

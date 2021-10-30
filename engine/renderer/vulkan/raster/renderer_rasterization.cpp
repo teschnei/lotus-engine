@@ -8,7 +8,6 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
-#include "engine/renderer/vulkan/entity_initializers/renderable_entity.h"
 
 namespace lotus
 {
@@ -934,26 +933,6 @@ namespace lotus
             resize = false;
             co_await resizeRenderer();
         }
-    }
-
-    void RendererRasterization::initEntity(EntityInitializer* initializer)
-    {
-        initializer->initEntity(this, engine);
-    }
-
-    void RendererRasterization::drawEntity(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
-    {
-        initializer->drawEntity(this, engine, buffer, image);
-    }
-
-    void RendererRasterization::drawEntityShadowmap(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
-    {
-        initializer->drawEntityShadowmap(this, engine, buffer, image);
-    }
-
-    void RendererRasterization::initModel(RenderableEntityInitializer* initializer, Model& model, ModelTransformedGeometry& model_transform)
-    {
-        initializer->initModel(this, engine, model, model_transform);
     }
 
     vk::Pipeline lotus::RendererRasterization::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)

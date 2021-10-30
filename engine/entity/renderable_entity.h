@@ -51,7 +51,5 @@ namespace lotus
         glm::mat4 scale_mat{ 1.f };
 
         glm::mat4 model_prev{};
-
-        std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> getRenderCommand();
     };
 }

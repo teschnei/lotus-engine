@@ -7,7 +7,6 @@
 #include "engine/config.h"
 #include "engine/entity/camera.h"
 #include "engine/entity/renderable_entity.h"
-#include "engine/renderer/vulkan/entity_initializers/renderable_entity.h"
 #include "engine/renderer/acceleration_structure.h"
 
 namespace lotus
@@ -1067,21 +1066,6 @@ namespace lotus
         };
         memcpy(&instance.transform, &mat, sizeof(mat));
         blas->instanceid = tlas->AddInstance(instance);
-    }
-
-    void RendererRaytrace::initEntity(EntityInitializer* initializer)
-    {
-        initializer->initEntity(this, engine);
-    }
-
-    void RendererRaytrace::drawEntity(EntityInitializer* initializer, vk::CommandBuffer buffer, uint32_t image)
-    {
-        initializer->drawEntity(this, engine, buffer, image);
-    }
-
-    void RendererRaytrace::initModel(RenderableEntityInitializer* initializer, Model& model, ModelTransformedGeometry& model_transform)
-    {
-        initializer->initModel(this, engine, model, model_transform);
     }
 
     void RendererRaytrace::bindResources(uint32_t image, std::span<vk::WriteDescriptorSet> descriptors)

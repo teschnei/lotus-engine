@@ -18,6 +18,5 @@ namespace lotus
     protected:
         virtual Task<> render(Engine* engine, std::shared_ptr<Entity> sp) override;
         WorkerTask<> renderWork();
-        void updateAnimationVertices(int image_index);
     };
 }

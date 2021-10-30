@@ -18,11 +18,6 @@ namespace lotus
         virtual Task<> drawFrame() override;
         virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) override;
 
-        virtual void initEntity(EntityInitializer*) override;
-        virtual void drawEntity(EntityInitializer*, vk::CommandBuffer, uint32_t) override;
-        virtual void drawEntityShadowmap(EntityInitializer*, vk::CommandBuffer, uint32_t) {}
-        virtual void initModel(RenderableEntityInitializer*, Model& model, ModelTransformedGeometry& model_transform) override;
-
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);

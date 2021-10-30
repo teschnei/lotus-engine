@@ -1,7 +1,7 @@
 #include "particle.h"
 #include "engine/core.h"
 
-#include "engine/renderer/vulkan/entity_initializers/particle_entity.h"
+//#include "engine/renderer/vulkan/entity_initializers/particle_entity.h"
 
 #include <glm/gtx/euler_angles.hpp>
 
@@ -26,6 +26,7 @@ namespace lotus
 
     WorkerTask<> Particle::InitWork()
     {
+        /*
         auto initializer = std::make_unique<ParticleEntityInitializer>(this);
         engine->renderer->initEntity(initializer.get());
 
@@ -41,11 +42,13 @@ namespace lotus
             engine->renderer->drawEntity(initializer.get(), *command_buffers[i], i);
         }
         engine->worker_pool->gpuResource(std::move(initializer));
+        */
         co_return;
     }
 
     WorkerTask<> Particle::ReInitWork()
     {
+        /*
         auto initializer = std::make_unique<ParticleEntityInitializer>(this);
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::eSecondary;
@@ -59,6 +62,7 @@ namespace lotus
             engine->renderer->drawEntity(initializer.get(), *command_buffers[i], i);
         }
         engine->worker_pool->gpuResource(std::move(initializer));
+        */
         co_return;
     }
 
