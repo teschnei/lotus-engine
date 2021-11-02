@@ -40,13 +40,16 @@ float rnd(inout uint prev)
 //-------------------------------------------------------------------------------------------------
 
 // Randomly sampling around +Z
-vec3 samplingHemisphere(inout uint seed, in vec3 x, in vec3 y, in vec3 z)
+vec3 samplingHemisphere(inout uint seed, inout float pdf, in vec3 x, in vec3 y, in vec3 z)
 {
   float r1 = rnd(seed);
   float r2 = rnd(seed);
   float sq = sqrt(1.0 - r2);
 
-  vec3 direction = vec3(cos(2 * M_PI * r1) * sq, sin(2 * M_PI * r1) * sq, sqrt(r2));
+  float theta = 2 * M_PI * r1;
+
+  vec3 direction = vec3(cos(theta) * sq, sin(theta) * sq, sqrt(r2));
+  pdf = direction.z / M_PI;
   direction      = direction.x * x + direction.y * y + direction.z * z;
 
   return normalize(direction);

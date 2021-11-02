@@ -26,8 +26,8 @@ layout(std430, binding = 6, set = 1) buffer readonly Light
 
 void main()
 {
-    hitValue.BRDF = vec3(1.0);
-    hitValue.diffuse = light.light.landscape.ambient_color.rgb * light.light.landscape.brightness * 5;
+    hitValue.BRDF = vec3(1.0) / M_PI;
+    hitValue.diffuse = light.light.landscape.ambient_color.rgb * light.light.landscape.brightness;
     hitValue.depth = 10;
     return;
 }

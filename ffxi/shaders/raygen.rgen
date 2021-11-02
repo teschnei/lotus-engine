@@ -63,7 +63,7 @@ void main()
     vec3 pos = hitValue.origin;
     vec3 pos_prev = hitValue.prev_pos;
     vec3 gi_dir = hitValue.direction;
-    vec3 gi_weight = hitValue.BRDF * hitValue.weight;
+    vec3 gi_weight = vec3(hitValue.weight);
     vec3 particle_colour = hitValue.particle;
     float dist = hitValue.distance;
     const int max_samples = 1;
@@ -74,15 +74,16 @@ void main()
         hitValue.origin = gi_origin;
         hitValue.direction = gi_dir;
         hitValue.distance = 0.0;
-        for(; hitValue.depth < 0; hitValue.depth++)
+        for(; hitValue.depth < 3; hitValue.depth++)
         {
             traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x20, 0, 0, 1, hitValue.origin, 0.001, hitValue.direction, 1000.0, 0);
-            accumulation += hitValue.BRDF * hitValue.diffuse * weight;
-            weight *= hitValue.weight * hitValue.BRDF;
+            vec3 factor = hitValue.BRDF * weight;
+            accumulation += hitValue.diffuse * factor;
+            weight *= factor;
         }
     }
 
-    vec3 light_total = (accumulation / float(max_samples)) + diffuse;
+    vec3 light_total = (accumulation * M_PI / float(max_samples)) + diffuse;
 
     vec4 pos_proj = camera.proj * camera.view * vec4(pos, 1.0);
     vec4 prev_pos_proj = camera.proj_prev * camera.view_prev * vec4(pos_prev, 1.0);
