@@ -146,7 +146,7 @@ void main()
         cross_vec = -cross_vec;
 
     vec3 trace_origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT + cross_vec * 0.001;
-    vec3 diffuse = light.light.landscape.ambient_color.rgb * light.light.landscape.brightness;
+    vec3 diffuse = vec3(0);//light.light.landscape.ambient_color.rgb * light.light.landscape.brightness;
 
     for (int i = 0; i < light.light.light_count; i++)
     {
@@ -165,44 +165,45 @@ void main()
             }
             else
             {
+                //for sun/moon, just skip pdf because I don't want to figure out the omegahuge intensity value for it to work
                 intensity = 1;
                 use_pdf = 0;
             }
             shadow.shadow = vec4(0.0);
 
-            att *= dot(dir, normalized_normal);
+            shadow.light = vec4(light.light_info[i].colour * intensity, 1.0);
+            vec3 trace_dir = dir;
+            float pdf = 1;
+
+            if (radius > 0)
+            {
+                vec3 tangent, bitangent;
+                createCoordinateSystem(dir, tangent, bitangent);
+
+                float temp_pdf;
+                trace_dir = samplingCone(hitValue.seed, temp_pdf, tangent, bitangent, dir, radius, dot(diff, diff));
+                if (use_pdf > 0)
+                    pdf = temp_pdf;
+            }
+
+            att *= dot(trace_dir, normalized_normal);
             if (att > 0.001)
             {
-                shadow.light = vec4(light.light_info[i].colour * intensity * att, 1.0);
-                vec3 trace_dir = dir;
-                float pdf = 1;
-
-                if (radius > 0)
-                {
-                    vec3 tangent, bitangent;
-                    createCoordinateSystem(dir, tangent, bitangent);
-
-                    float temp_pdf;
-                    trace_dir = samplingCone(hitValue.seed, temp_pdf, tangent, bitangent, dir, radius, dot(diff, diff));
-                    if (use_pdf > 0)
-                        pdf = temp_pdf;
-                }
-
                 traceRayEXT(topLevelAS, gl_RayFlagsSkipClosestHitShaderEXT, 0x01 | 0x02 | 0x10, 1, 0, 2, trace_origin, 0.000, trace_dir, length, 1);
-                diffuse += shadow.shadow.rgb / pdf;
+                diffuse += att * shadow.shadow.rgb / pdf;
             }
         }
     }
 
     vec3 tangent, bitangent;
+    float pdf;
     createCoordinateSystem(normalized_normal, tangent, bitangent);
-    hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normalized_normal);
+    hitValue.direction = samplingHemisphere(hitValue.seed, pdf, tangent, bitangent, normalized_normal);
     hitValue.origin = trace_origin.xyz;
     hitValue.prev_pos = trace_origin.xyz;
 
     //const float p = cos_theta / M_PI;
 
-    float cos_theta = dot(hitValue.direction, normalized_normal);
     vec3 albedo = texture_color.rgb * primitive_color;
 
     if (distance > light.light.landscape.min_fog && distance < light.light.landscape.max_fog)
