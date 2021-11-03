@@ -2,6 +2,10 @@ target_sources(engine
     PRIVATE
     animation_component.cpp
     animation_component.h
+    camera_component.cpp
+    camera_component.h
+    camera_third_person_component.cpp
+    camera_third_person_component.h
     component.cpp
     component.h
     deformed_mesh_component.cpp
@@ -18,4 +22,6 @@ target_sources(engine
     instanced_raytrace_component.h
     physics_component.cpp
     physics_component.h
+    static_collision_component.cpp
+    static_collision_component.h
 )

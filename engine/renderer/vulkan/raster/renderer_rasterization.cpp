@@ -51,7 +51,7 @@ namespace lotus
 
     void RendererRasterization::updateCameraBuffers()
     {
-        engine->camera->updateBuffers(camera_buffers.view_proj_mapped);
+        engine->camera->writeToBuffer(camera_buffers.view_proj_mapped[current_image]);
         memcpy(camera_buffers.cascade_data_mapped + (getCurrentImage() * uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
     }
 
@@ -638,8 +638,8 @@ namespace lotus
 
         vk::DescriptorBufferInfo camera_buffer_info;
         camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
-        camera_buffer_info.offset = image_index * uniform_buffer_align_up(sizeof(Camera::CameraData));
-        camera_buffer_info.range = sizeof(Camera::CameraData);
+        camera_buffer_info.offset = image_index * uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData));
+        camera_buffer_info.range = sizeof(Test::CameraComponent::CameraData);
 
         std::vector<vk::WriteDescriptorSet> descriptorWrites{ 10 };
 
@@ -760,8 +760,8 @@ namespace lotus
 
     void RendererRasterization::initializeCameraBuffers()
     {
-        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData)) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        camera_buffers.view_proj_mapped = static_cast<uint8_t*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData)) * getImageCount(), {}));
+        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        camera_buffers.view_proj_mapped = static_cast<Test::CameraComponent::CameraData*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getImageCount(), {}));
 
         camera_buffers.cascade_data_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         camera_buffers.cascade_data_mapped = static_cast<uint8_t*>(camera_buffers.cascade_data_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer->getImageCount(), {}));

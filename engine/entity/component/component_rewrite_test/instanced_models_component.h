@@ -2,7 +2,6 @@
 #include "component.h"
 #include <memory>
 #include <vector>
-#include "animation_component.h"
 #include "engine/worker_task.h"
 #include "engine/renderer/model.h"
 

@@ -5,7 +5,7 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/config.h"
-#include "engine/entity/camera.h"
+#include "engine/entity/component/component_rewrite_test/camera_component.h"
 #include "engine/entity/renderable_entity.h"
 #include "engine/renderer/acceleration_structure.h"
 
@@ -185,7 +185,7 @@ namespace lotus
     {
         vk::DescriptorSetLayoutBinding camera_layout_binding;
         camera_layout_binding.binding = 0;
-        camera_layout_binding.descriptorCount = 1;
+        camera_layout_binding.descriptorCount = 2;
         camera_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         camera_layout_binding.pImmutableSamplers = nullptr;
         camera_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
@@ -272,7 +272,7 @@ namespace lotus
 
         vk::DescriptorSetLayoutBinding camera_deferred_layout_binding;
         camera_deferred_layout_binding.binding = 6;
-        camera_deferred_layout_binding.descriptorCount = 1;
+        camera_deferred_layout_binding.descriptorCount = 2;
         camera_deferred_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         camera_deferred_layout_binding.pImmutableSamplers = nullptr;
         camera_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
@@ -330,7 +330,7 @@ namespace lotus
 
         vk::DescriptorSetLayoutBinding camera_buffer_binding;
         camera_buffer_binding.binding = 9;
-        camera_buffer_binding.descriptorCount = 1;
+        camera_buffer_binding.descriptorCount = 2;
         camera_buffer_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
         camera_buffer_binding.pImmutableSamplers = nullptr;
         camera_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
@@ -382,7 +382,7 @@ namespace lotus
             vk::DescriptorSetLayoutBinding { //camera ubo input
                 .binding = 5,
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .descriptorCount = 1,
+                .descriptorCount = 2,
                 .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR
             },
             vk::DescriptorSetLayoutBinding { //light
@@ -701,10 +701,19 @@ namespace lotus
         light_buffer_info_global.offset = getCurrentImage() * engine->lights->GetBufferSize();
         light_buffer_info_global.range = engine->lights->GetBufferSize();
 
-        vk::DescriptorBufferInfo camera_buffer_info;
-        camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
-        camera_buffer_info.offset = image_index * uniform_buffer_align_up(sizeof(Camera::CameraData));
-        camera_buffer_info.range = sizeof(Camera::CameraData);
+        std::array camera_buffer_info
+        {
+            vk::DescriptorBufferInfo {
+                .buffer = camera_buffers.view_proj_ubo->buffer,
+                .offset = image_index * uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)),
+                .range = sizeof(Test::CameraComponent::CameraData)
+            },
+            vk::DescriptorBufferInfo {
+                .buffer = camera_buffers.view_proj_ubo->buffer,
+                .offset = getPreviousImage() * uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)),
+                .range = sizeof(Test::CameraComponent::CameraData)
+            }
+        };
 
         std::vector<vk::WriteDescriptorSet> descriptorWrites {5};
 
@@ -740,8 +749,8 @@ namespace lotus
         descriptorWrites[4].descriptorType = vk::DescriptorType::eUniformBuffer;
         descriptorWrites[4].dstBinding = 9;
         descriptorWrites[4].dstArrayElement = 0;
-        descriptorWrites[4].descriptorCount = 1;
-        descriptorWrites[4].pBufferInfo = &camera_buffer_info;
+        descriptorWrites[4].descriptorCount = camera_buffer_info.size();
+        descriptorWrites[4].pBufferInfo = camera_buffer_info.data();
 
         buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites);
 
@@ -775,8 +784,8 @@ namespace lotus
 
     void RendererRaytrace::initializeCameraBuffers()
     {
-        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData)) * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        camera_buffers.view_proj_mapped = static_cast<uint8_t*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData)) * engine->renderer->getImageCount(), {}));
+        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        camera_buffers.view_proj_mapped = static_cast<Test::CameraComponent::CameraData*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * engine->renderer->getImageCount(), {}));
     }
 
     vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer(uint32_t image_index)
@@ -845,10 +854,18 @@ namespace lotus
             .imageLayout = vk::ImageLayout::eGeneral
         };
 
-        vk::DescriptorBufferInfo cam_buffer_info {
-            .buffer = camera_buffers.view_proj_ubo->buffer,
-            .offset = uniform_buffer_align_up(sizeof(Camera::CameraData)) * getCurrentImage(),
-            .range = sizeof(Camera::CameraData)
+        std::array cam_buffer_info
+        {
+            vk::DescriptorBufferInfo  {
+                .buffer = camera_buffers.view_proj_ubo->buffer,
+                .offset = uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getCurrentImage(),
+                .range = sizeof(Test::CameraComponent::CameraData)
+            },
+            vk::DescriptorBufferInfo  {
+                .buffer = camera_buffers.view_proj_ubo->buffer,
+                .offset = uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getPreviousImage(),
+                .range = sizeof(Test::CameraComponent::CameraData)
+            }
         };
 
         vk::DescriptorBufferInfo light_buffer_info_global {
@@ -897,9 +914,9 @@ namespace lotus
             vk::WriteDescriptorSet { //camera input
                 .dstBinding = 5,
                 .dstArrayElement = 0,
-                .descriptorCount = 1,
+                .descriptorCount = cam_buffer_info.size(),
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .pBufferInfo = &cam_buffer_info,
+                .pBufferInfo = cam_buffer_info.data(),
             },
             vk::WriteDescriptorSet { //light input
                 .dstBinding = 6,
@@ -936,7 +953,7 @@ namespace lotus
 
             engine->worker_pool->beginProcessing(current_image);
 
-            engine->camera->updateBuffers(camera_buffers.view_proj_mapped);
+            engine->camera->writeToBuffer(*(Test::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * current_image));
             engine->lights->UpdateLightBuffer();
 
             std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame] };

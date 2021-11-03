@@ -60,6 +60,7 @@ namespace lotus
 
         //TODO: move this back before queries
         auto component_task = component_runners->run(time, delta);
+        engine->renderer->runRaytracerQueries();
         co_await component_task;
     }
 }

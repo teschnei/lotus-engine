@@ -662,8 +662,8 @@ namespace lotus
 
         vk::DescriptorBufferInfo camera_buffer_info;
         camera_buffer_info.buffer = camera_buffers.view_proj_ubo->buffer;
-        camera_buffer_info.offset = image_index * uniform_buffer_align_up(sizeof(Camera::CameraData));
-        camera_buffer_info.range = sizeof(Camera::CameraData);
+        camera_buffer_info.offset = image_index * uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData));
+        camera_buffer_info.range = sizeof(Test::CameraComponent::CameraData);
 
         std::vector<vk::WriteDescriptorSet> descriptorWrites {9};
 
@@ -757,8 +757,8 @@ namespace lotus
 
     void RendererHybrid::initializeCameraBuffers()
     {
-        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData)) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        camera_buffers.view_proj_mapped = static_cast<uint8_t*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Camera::CameraData)) * getImageCount(), {}));
+        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        camera_buffers.view_proj_mapped = static_cast<Test::CameraComponent::CameraData*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getImageCount(), {}));
     }
 
     std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> RendererHybrid::getRenderCommandbuffers(uint32_t image_index)
@@ -953,7 +953,7 @@ namespace lotus
 
             engine->worker_pool->beginProcessing(current_image);
 
-            engine->camera->updateBuffers(camera_buffers.view_proj_mapped);
+            engine->camera->writeToBuffer(camera_buffers.view_proj_mapped[current_image]);
             engine->lights->UpdateLightBuffer();
 
             std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame] };

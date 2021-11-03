@@ -13,6 +13,7 @@
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
 #include "engine/renderer/model.h"
+#include "engine/entity/component/component_rewrite_test/camera_component.h"
 
 namespace lotus
 {
@@ -90,7 +91,7 @@ namespace lotus
         struct
         {
             std::unique_ptr<Buffer> view_proj_ubo;
-            uint8_t* view_proj_mapped{ nullptr };
+            Test::CameraComponent::CameraData* view_proj_mapped{ nullptr };
             std::unique_ptr<Buffer> cascade_data_ubo;
             uint8_t* cascade_data_mapped{ nullptr };
         } camera_buffers;

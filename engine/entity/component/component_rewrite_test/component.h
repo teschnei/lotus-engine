@@ -9,11 +9,13 @@
 #include "engine/shared_linked_list.h"
 #include "engine/types.h"
 #include "engine/task.h"
+#include "engine/renderer/sdl_inc.h"
 
 namespace lotus
 {
     class Engine;
     class Entity;
+    class Input;
 }
 
 namespace lotus::Test
@@ -43,6 +45,9 @@ namespace lotus::Test
     template<typename T>
     concept ComponentInitConcept = ComponentConcept<T> && requires(T t) { t.init(); };
 
+    template<typename T>
+    concept ComponentInputConcept = ComponentConcept<T> && requires(T t, Input * i, const SDL_Event & e) { { t.handleInput(i, e) } -> std::convertible_to<bool>; };
+
     class ComponentRunners
     {
     public:
@@ -66,6 +71,8 @@ namespace lotus::Test
             throw std::invalid_argument(std::format("Component (ID: {}) was added but not registered", T::TypeID()));
         }
 
+        void runQueries();
+
         Task<> run(time_point time, duration elapsed)
         {
             for (const auto& [priority, runners] : component_runners)
@@ -73,6 +80,7 @@ namespace lotus::Test
                 std::vector<Task<>> tasks;
                 tasks.reserve(runners.size());
                 std::ranges::for_each(runners, [&tasks, time, elapsed](auto& c) { tasks.push_back(c.second->run(time, elapsed)); });
+                runQueries();
                 for(auto& task : tasks)
                 {
                     co_await task;
@@ -80,10 +88,22 @@ namespace lotus::Test
             }
         }
 
+        void handleInput(Input* input, const SDL_Event& event)
+        {
+            for (auto& c : component_input_runners)
+            {
+                if (c->handleInput(input, event))
+                    return;
+            }
+        }
+
         template<ComponentConcept T>
         void registerComponent()
         {
-            component_runners[T::priority][T::TypeID()] = std::make_unique<ComponentRunner<T>>();
+            auto new_runner = std::make_unique<ComponentRunner<T>>();
+            if constexpr (ComponentInputConcept<T>)
+                component_input_runners.push_back(new_runner.get());
+            component_runners[T::priority][T::TypeID()] = std::move(new_runner);
         }
 
     private:
@@ -91,6 +111,7 @@ namespace lotus::Test
         {
         public:
             virtual Task<> run(time_point time, duration elapsed) = 0;
+            virtual bool handleInput(Input* input, const SDL_Event& event) = 0;
         };
 
         template<ComponentConcept T>
@@ -126,12 +147,25 @@ namespace lotus::Test
                     co_await task;
                 };
             }
+            virtual bool handleInput(Input* input, const SDL_Event& event) override
+            {
+                if constexpr (ComponentInputConcept<T>)
+                {
+                    for (auto& c : components)
+                    {
+                        if (c->handleInput(input, event))
+                            return true;
+                    }
+                }
+                return false;
+            }
         private:
             SharedLinkedList<std::unique_ptr<T>> new_components;
             std::vector<std::unique_ptr<T>> components;
         };
 
         std::map<int, std::unordered_map<uint32_t, std::unique_ptr<ComponentRunnerInterface>>> component_runners;
+        std::vector<ComponentRunnerInterface*> component_input_runners;
         Engine* engine;
     };
 }

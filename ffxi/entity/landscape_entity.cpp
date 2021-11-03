@@ -11,6 +11,7 @@
 #include "ffxi/dat/generator.h"
 #include "ffxi/vana_time.h"
 #include "entity/component/generator_component.h"
+#include "engine/entity/component/component_rewrite_test/static_collision_component.h"
 #include <glm/gtx/rotate_vector.hpp>
 
 lotus::Task<std::shared_ptr<FFXILandscapeEntity>> FFXILandscapeEntity::Init(lotus::Engine* engine, size_t zoneid, lotus::Scene* scene)
@@ -242,6 +243,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(size_t zoneid, lotus::Scene* scene
         collision_models.push_back(collision_model);
 
         auto init_task = InitWork(std::move(instance_info), scene);
+        scene->component_runners->addComponent<lotus::Test::StaticCollisionComponent>(this, collision_models);
 
         for (const auto& task : texture_tasks)
         {

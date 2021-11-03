@@ -14,6 +14,7 @@ lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, 
 {
     if (moving.x != 0 || moving.z != 0)
     {
+        /*
         auto norm = glm::normalize(moving);
         auto camera_rot = engine->camera->getRotX();
 
@@ -48,6 +49,7 @@ lotus::Task<> ThirdPersonEntityFFXIInputComponent::tick(lotus::time_point time, 
         auto new_rot = entity_quat * diff_quat;
 
         entity->setRot(new_rot);
+        */
     }
 
     //play animation

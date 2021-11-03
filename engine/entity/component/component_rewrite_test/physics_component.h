@@ -23,6 +23,8 @@ namespace lotus::Test
         glm::mat4 getModelMatrixIT() const { return modelIT; }
         glm::mat4 getPrevModelMatrix() const { return model_prev; }
 
+        glm::vec3 getPos() const { return pos; }
+        glm::quat getRot() const { return rot; }
         glm::vec3 getScale() const { return scale; }
 
     protected:

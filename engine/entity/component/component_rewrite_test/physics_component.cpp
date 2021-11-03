@@ -6,7 +6,8 @@ namespace lotus::Test
     PhysicsComponent::PhysicsComponent(Entity* _entity, Engine* _engine) :
          Component(_entity, _engine)
     {
-        pos = (glm::vec3(259.f, -87.f, 99.f));
+        //pos = (glm::vec3(259.f, -87.f, 99.f));
+        pos = (glm::vec3(-681.f, -12.f, 161.f));
     }
 
     Task<> PhysicsComponent::init()

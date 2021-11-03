@@ -1,6 +1,7 @@
 #include "input.h"
 
 #include "core.h"
+#include "game.h"
 #include "entity/component/input_component.h"
 
 namespace lotus
@@ -32,6 +33,10 @@ namespace lotus
 
     bool Input::HandleInputEvent(const SDL_Event& event)
     {
+        if (engine->game->scene)
+        {
+            engine->game->scene->component_runners->handleInput(this, event);
+        }
         for (auto& component : components)
         {
             if (component->handleInput(event))
