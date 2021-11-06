@@ -69,6 +69,7 @@ void main()
     for (int samples = 0; samples < max_samples; ++samples)
     {
         vec3 weight = gi_weight;
+        hitValue.depth = 1;
         hitValue.origin = gi_origin;
         hitValue.direction = gi_dir;
         hitValue.distance = 0.0;

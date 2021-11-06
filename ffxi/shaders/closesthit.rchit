@@ -115,8 +115,8 @@ void main()
     hitValue.distance = distance;
     if (distance > light.light.entity.max_fog)
     {
-        hitValue.BRDF = vec3(1.0);
-        hitValue.diffuse = light.light.entity.fog_color.rgb;
+        hitValue.diffuse = vec3(M_PI);
+        hitValue.BRDF = light.light.entity.fog_color.rgb / M_PI;
         hitValue.depth = 10;
         return;
     }
