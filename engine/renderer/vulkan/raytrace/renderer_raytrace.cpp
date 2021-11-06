@@ -10,7 +10,7 @@
 
 namespace lotus
 {
-    RendererRaytrace::RendererRaytrace(Engine* _engine) : RendererRaytraceBase(_engine)
+    RendererRaytrace::RendererRaytrace(Engine* _engine) : Renderer(_engine)
     {
     }
 

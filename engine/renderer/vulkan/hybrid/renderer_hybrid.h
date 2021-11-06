@@ -1,12 +1,12 @@
 #pragma once
 
-#include "engine/renderer/vulkan/renderer_raytrace_base.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {
     class Engine;
 
-    class RendererHybrid : public RendererRaytraceBase
+    class RendererHybrid : public Renderer
     {
     public:
         RendererHybrid(Engine* engine);

@@ -3,7 +3,6 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/renderer/acceleration_structure.h"
-#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 
 namespace lotus
 {

@@ -1,7 +1,6 @@
 #include "model.h"
 
 #include "engine/core.h"
-#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 
 namespace lotus
 {
@@ -88,7 +87,7 @@ namespace lotus
 
             if (engine->config->renderer.RaytraceEnabled() && !weighted)
             {
-                RendererRaytraceBase* renderer = static_cast<RendererRaytraceBase*>(engine->renderer.get());
+                Renderer* renderer = engine->renderer.get();
                 //TODO: test if just buffermemorybarrier is faster
                 vk::MemoryBarrier2KHR barrier
                 {
@@ -272,7 +271,7 @@ namespace lotus
                     .memoryBarrierCount = 1,
                     .pMemoryBarriers = &barrier
                 });
-                bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(static_cast<RendererRaytraceBase*>(engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+                bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(engine->renderer.get(), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(max_primitives), false, false, BottomLevelAccelerationStructure::Performance::FastTrace);
             }
             command_buffer->end();

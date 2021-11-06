@@ -8,7 +8,7 @@
 
 namespace lotus
 {
-    RendererHybrid::RendererHybrid(Engine* _engine) : RendererRaytraceBase(_engine)
+    RendererHybrid::RendererHybrid(Engine* _engine) : Renderer(_engine)
     {
     }
 
