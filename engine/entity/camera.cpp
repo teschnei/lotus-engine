@@ -82,7 +82,7 @@ namespace lotus
 
     void Camera::updateBuffers(uint8_t* view_proj_mapped)
     {
-        memcpy(view_proj_mapped + (engine->renderer->getCurrentImage() * engine->renderer->uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
+ //       memcpy(view_proj_mapped + (engine->renderer->getCurrentImage() * engine->renderer->uniform_buffer_align_up(sizeof(CameraData))), &camera_data, sizeof(camera_data));
     }
 
     Task<> Camera::tick(time_point time, duration delta)

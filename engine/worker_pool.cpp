@@ -8,7 +8,7 @@ namespace lotus
     {
         temp_pool = this;
         worker_flag.test_and_set();
-        finished_tasks.resize(engine->renderer->getImageCount());
+        finished_tasks.resize(engine->renderer->getFrameCount());
         for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
         {
             threads.emplace_back([this](std::stop_token stop)

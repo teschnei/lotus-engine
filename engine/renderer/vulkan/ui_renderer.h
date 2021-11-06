@@ -16,7 +16,7 @@ namespace lotus
         Task<> Init();
         Task<> ReInit();
 
-        vk::CommandBuffer Render(int image_index);
+        vk::CommandBuffer Render();
         void GenerateRenderBuffers(ui::Element*);
 
     private:

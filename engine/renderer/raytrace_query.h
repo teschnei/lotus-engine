@@ -25,7 +25,6 @@ namespace lotus
         };
         RaytraceQueryer(Engine* engine);
         Task<float> query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max);
-        void runQueries(uint32_t image);
 
     private:
         class RaytraceQuery
@@ -60,6 +59,10 @@ namespace lotus
         static constexpr size_t max_queries{ 1024 };
         vk::Queue raytrace_query_queue;
 
+        Task<float> query_queue(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max);
+
+        std::atomic_flag query_running{};
+        void runQueries();
         AsyncQueue<RaytraceQuery> async_query_queue;
 
         //RTX

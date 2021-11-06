@@ -10,8 +10,8 @@ namespace lotus
     LightManager::LightManager(Engine* _engine) : engine(_engine)
     {
         lights_buffer_count = 100;
-        light_buffer = engine->renderer->gpu->memory_manager->GetBuffer(GetBufferSize() * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        light_buffer_map = static_cast<uint8_t*>(light_buffer->map(0, GetBufferSize() * engine->renderer->getImageCount(), {}));
+        light_buffer = engine->renderer->gpu->memory_manager->GetBuffer(GetBufferSize() * engine->renderer->getFrameCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        light_buffer_map = static_cast<uint8_t*>(light_buffer->map(0, GetBufferSize() * engine->renderer->getFrameCount(), {}));
     }
 
     LightManager::~LightManager()
@@ -22,8 +22,8 @@ namespace lotus
     void LightManager::UpdateLightBuffer()
     {
         light.light_count = lights.size();
-        memcpy(light_buffer_map + (engine->renderer->getCurrentImage() * GetBufferSize()), &light, sizeof(light));
-        memcpy(light_buffer_map + (engine->renderer->getCurrentImage() * GetBufferSize()) + sizeof(LightBuffer), lights.data(), lights.size() * sizeof(Light));
+        memcpy(light_buffer_map + (engine->renderer->getCurrentFrame() * GetBufferSize()), &light, sizeof(light));
+        memcpy(light_buffer_map + (engine->renderer->getCurrentFrame() * GetBufferSize()) + sizeof(LightBuffer), lights.data(), lights.size() * sizeof(Light));
     }
 
     size_t LightManager::GetBufferSize()
@@ -37,8 +37,8 @@ namespace lotus
         if (lights.size() == lights_buffer_count)
         {
             lights_buffer_count = lights_buffer_count * 2;
-            light_buffer = engine->renderer->gpu->memory_manager->GetBuffer(GetBufferSize() * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            light_buffer_map = static_cast<uint8_t*>(light_buffer->map(0, GetBufferSize() * engine->renderer->getImageCount(), {}));
+            light_buffer = engine->renderer->gpu->memory_manager->GetBuffer(GetBufferSize() * engine->renderer->getFrameCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            light_buffer_map = static_cast<uint8_t*>(light_buffer->map(0, GetBufferSize() * engine->renderer->getFrameCount(), {}));
         }
         light.id = cur_light_id++;
         lights.push_back(light);

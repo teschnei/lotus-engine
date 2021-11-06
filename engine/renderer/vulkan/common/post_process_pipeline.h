@@ -14,7 +14,7 @@ namespace lotus
 
         void Init();
         void InitWork(vk::CommandBuffer buffer);
-        vk::UniqueCommandBuffer getCommandBuffer(uint32_t image_index, vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors);
+        vk::UniqueCommandBuffer getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors);
         vk::ImageView getOutputImageView();
 
     private:

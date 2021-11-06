@@ -1,17 +1,13 @@
 target_sources(ffxi
     PRIVATE
-    equipment_test_component.cpp
-    equipment_test_component.h
-    generator_component.cpp
-    generator_component.h
-    scheduler_component.cpp
-    scheduler_component.h
-    third_person_ffxi_camera_component.cpp
-    third_person_ffxi_camera_component.h
-    third_person_ffxi_entity_input.cpp
-    third_person_ffxi_entity_input.h
-    third_person_ffxiv_camera_component.cpp
-    third_person_ffxiv_camera_component.h
-    third_person_ffxiv_entity_input.cpp
-    third_person_ffxiv_entity_input.h
-    )
+    actor_component.cpp
+    actor_component.h
+    actor_pc_models_component.cpp
+    actor_pc_models_component.h
+    camera_third_person_component.cpp
+    camera_third_person_component.h
+    landscape_component.cpp
+    landscape_component.h
+    modern_third_person_input_component.cpp
+    modern_third_person_input_component.h
+)

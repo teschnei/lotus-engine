@@ -1,11 +1,15 @@
 #pragma once
 
 #include "engine/renderer/vulkan/renderer.h"
-#include "engine/entity/third_person_boom_camera.h"
+#include "engine/entity/entity.h"
 
-class ThirdPersonFFXIVCamera : public lotus::ThirdPersonBoomCamera
+namespace lotus
+{
+    class Scene;
+}
+
+class ThirdPersonFFXIVCamera
 {
 public:
-    explicit ThirdPersonFFXIVCamera(lotus::Engine*, std::weak_ptr<Entity>&);
-    static lotus::Task<std::shared_ptr<ThirdPersonFFXIVCamera>> Init(lotus::Engine* engine, std::weak_ptr<Entity>& focus);
+    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, std::tuple<>>> Init(lotus::Engine* engine, lotus::Scene* scene, std::weak_ptr<lotus::Entity>& focus);
 };

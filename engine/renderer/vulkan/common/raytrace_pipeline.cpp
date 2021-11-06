@@ -2,6 +2,7 @@
 
 #include <ranges>
 
+#include "engine/core.h"
 #include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
@@ -18,7 +19,7 @@ namespace lotus
         pipeline = initializePipeline(renderer, *pipeline_layout, raygen);
         shader_binding_table = initializeSBT(renderer, *pipeline);
 
-        tlas.resize(renderer->getImageCount());
+        tlas.resize(renderer->getFrameCount());
     }
 
     vk::UniqueDescriptorSetLayout RaytracePipeline::initializeResourceDescriptorSetLayout(Renderer* renderer)
@@ -428,12 +429,13 @@ namespace lotus
 
     void RaytracePipeline::prepareNextFrame()
     {
-        tlas[renderer->getCurrentImage()] = std::make_unique<TopLevelAccelerationStructure>(renderer, tlas_instances, false);
+        renderer->engine->worker_pool->gpuResource(std::move(tlas[renderer->getCurrentFrame()]));
+        tlas[renderer->getCurrentFrame()] = std::make_unique<TopLevelAccelerationStructure>(renderer, tlas_instances, false);
     }
 
     Task<> RaytracePipeline::prepareFrame(Engine* engine)
     {
-        co_await tlas[renderer->getCurrentImage()]->Build(engine);
+        co_await tlas[renderer->getCurrentFrame()]->Build(engine);
     }
 
     vk::DescriptorSet RaytracePipeline::getResourceDescriptorSet(uint32_t image) const

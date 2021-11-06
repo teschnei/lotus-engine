@@ -155,8 +155,9 @@ void main()
     {
         //BRDF * M_PI
         vec3 weight = albedo.rgb;
+        float pdf;
         hitValue.origin = position.xyz;
-        hitValue.direction = samplingHemisphere(hitValue.seed, tangent, bitangent, normal);
+        hitValue.direction = samplingHemisphere(hitValue.seed, pdf, tangent, bitangent, normal);
         for(; hitValue.depth < 1; hitValue.depth++)
         {
             traceRayEXT(topLevelAS, 0, 0x01 | 0x02, 0, 0, 1, hitValue.origin, 0.001, hitValue.direction, 1000.0, 0);

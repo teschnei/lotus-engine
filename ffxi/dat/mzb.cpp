@@ -1,11 +1,11 @@
 #include "mzb.h"
 
+#include <filesystem>
 #include "key_tables.h"
 #include "stb.h"
-#include "engine/entity/camera.h"
+#include "engine/entity/component/camera_component.h"
+#include "engine/entity/component/static_collision_component.h"
 #include "engine/core.h"
-#include "entity/landscape_entity.h"
-#include "engine/renderer/vulkan/renderer_raytrace_base.h"
 
 namespace FFXI
 {
@@ -51,7 +51,7 @@ namespace FFXI
         Intersect
     };
 
-    FrustumResult isInFrustum(lotus::Camera::Frustum& frustum, glm::vec3 pos_min, glm::vec3 pos_max)
+    FrustumResult isInFrustum(lotus::Component::CameraComponent::Frustum& frustum, glm::vec3 pos_min, glm::vec3 pos_max)
     {
         FrustumResult result = FrustumResult::Inside;
         for (const auto& plane : {frustum.left, frustum.right, frustum.top, frustum.bottom, frustum.near, frustum.far})
@@ -88,7 +88,7 @@ namespace FFXI
         return result;
     }
 
-    void QuadTree::find_internal(lotus::Camera::Frustum& frustum, std::vector<uint32_t>& results) const
+    void QuadTree::find_internal(lotus::Component::CameraComponent::Frustum& frustum, std::vector<uint32_t>& results) const
     {
         auto result = isInFrustum(frustum, pos1, pos2);
         if (result == FrustumResult::Outside)
@@ -107,7 +107,7 @@ namespace FFXI
         }
     }
 
-    std::vector<uint32_t> QuadTree::find(lotus::Camera::Frustum& frustum) const
+    std::vector<uint32_t> QuadTree::find(lotus::Component::CameraComponent::Frustum& frustum) const
     {
         std::vector<uint32_t> ret;
         find_internal(frustum, ret);
@@ -448,7 +448,7 @@ namespace FFXI
         std::vector<vk::DeviceSize> vertex_offsets;
         std::vector<vk::DeviceSize> index_offsets;
 
-        CollisionMesh* mesh = static_cast<CollisionMesh*>(model->meshes[0].get());
+        lotus::CollisionMesh* mesh = static_cast<lotus::CollisionMesh*>(model->meshes[0].get());
 
         auto staging_buffer = engine->renderer->gpu->memory_manager->GetBuffer(mesh->vertex_buffer->getSize() + mesh->index_buffer->getSize() + mesh->transform_buffer->getSize(),
             vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -554,7 +554,7 @@ namespace FFXI
                 .pMemoryBarriers = &barrier
             });
 
-            model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(static_cast<lotus::RendererRaytraceBase*>(engine->renderer.get()), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
+            model->bottom_level_as = std::make_unique<lotus::BottomLevelAccelerationStructure>(engine->renderer.get(), *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                 std::move(max_primitives), false, true, lotus::BottomLevelAccelerationStructure::Performance::FastTrace);
         }
 
@@ -568,7 +568,7 @@ namespace FFXI
     lotus::Task<> CollisionLoader::LoadModel(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, std::vector<CollisionMeshData>& meshes, std::vector<CollisionEntry>& entries)
     {
         model->rendered = false;
-        auto mesh = std::make_unique<CollisionMesh>();
+        auto mesh = std::make_unique<lotus::CollisionMesh>();
 
         auto vertex_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
         auto index_usage_flags = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;

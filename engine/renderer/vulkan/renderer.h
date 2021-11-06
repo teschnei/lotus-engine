@@ -13,7 +13,7 @@
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
 #include "engine/renderer/model.h"
-#include "engine/entity/component/component_rewrite_test/camera_component.h"
+#include "engine/entity/component/camera_component.h"
 
 namespace lotus
 {
@@ -58,8 +58,12 @@ namespace lotus
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
-        uint32_t getPreviousImage() const { return previous_image; }
-        void setCurrentImage(int _current_image) { previous_image = current_image; current_image = _current_image; }
+
+        static constexpr uint32_t getFrameCount() { return max_pending_frames; }
+        uint32_t getCurrentFrame() const { return current_frame; }
+        uint32_t getPreviousFrame() const { return previous_frame; }
+        void setCurrentFrame(int _current_frame) { previous_frame = current_frame; current_frame = _current_frame; }
+
         size_t uniform_buffer_align_up(size_t in_size) const;
         size_t storage_buffer_align_up(size_t in_size) const;
         size_t align_up(size_t in_size, size_t alignment) const;
@@ -91,7 +95,7 @@ namespace lotus
         struct
         {
             std::unique_ptr<Buffer> view_proj_ubo;
-            Test::CameraComponent::CameraData* view_proj_mapped{ nullptr };
+            Component::CameraComponent::CameraData* view_proj_mapped{ nullptr };
             std::unique_ptr<Buffer> cascade_data_ubo;
             uint8_t* cascade_data_mapped{ nullptr };
         } camera_buffers;
@@ -143,8 +147,6 @@ namespace lotus
         std::unique_ptr<PostProcessPipeline> post_process;
         std::unique_ptr<UiRenderer> ui;
 
-        void runRaytracerQueries();
-
     protected:
         void createInstance(const std::string& app_name, uint32_t app_version);
         void createSwapchain();
@@ -165,9 +167,9 @@ namespace lotus
         std::vector<vk::UniqueSemaphore> frame_finish_sem;
         vk::UniqueSemaphore compute_sem;
         uint32_t current_image{ 0 };
-        uint32_t previous_image{ 0 };
         static constexpr uint32_t max_pending_frames{ 2 };
         uint32_t current_frame{ 0 };
+        uint32_t previous_frame{ 0 };
 
         bool resize{ false };
     };

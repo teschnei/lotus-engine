@@ -60,7 +60,7 @@ namespace lotus
         void initializeCameraBuffers();
         void generateCommandBuffers();
 
-        std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> getRenderCommandbuffers(uint32_t image_index);
-        vk::UniqueCommandBuffer getDeferredCommandBuffer(uint32_t image_index);
+        std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> getRenderCommandbuffers();
+        vk::UniqueCommandBuffer getDeferredCommandBuffer();
     };
 }

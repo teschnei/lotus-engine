@@ -34,9 +34,9 @@ void main() {
     */
     outColor.rgb += particle;
 
-    float exposure = 15.0;
+    float exposure = 1.0;
     outColor.rgb = vec3(1.0) - exp(-outColor.rgb * exposure);
 
-    outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));
+    //outColor.rgb = pow(outColor.rgb, vec3(1.0/2.2));
 }
 

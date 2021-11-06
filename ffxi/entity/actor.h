@@ -1,65 +1,39 @@
 #pragma once
-#include "engine/entity/deformable_entity.h"
+#include "engine/entity/entity.h"
 #include "engine/task.h"
 #include "dat/sk2.h"
 #include "dat/scheduler.h"
 #include "dat/generator.h"
+#include "engine/entity/component/animation_component.h"
+#include "engine/entity/component/physics_component.h"
+#include "engine/entity/component/deformable_raster_component.h"
+#include "engine/entity/component/deformable_raytrace_component.h"
+#include "component/actor_component.h"
+#include "component/actor_pc_models_component.h"
 
-namespace FFXI {
-    class OS2;
+namespace lotus
+{
+    class Scene;
+}
+
+namespace FFXI
+{
     class Dat;
 }
 
-union LookData
-{
-    struct 
-    {
-        uint8_t race = 1;
-        uint8_t face = 1;
-        uint16_t head = 0x1000;
-        uint16_t body = 0x2000;
-        uint16_t hands = 0x3000;
-        uint16_t legs = 0x4000;
-        uint16_t feet = 0x5000;
-        uint16_t weapon = 0x6000;
-        uint16_t weapon_sub = 0x7000;
-        uint16_t weapon_range = 0x8000;
-    } look;
-    uint16_t slots[9];
-};
-
 //main FFXI entity class
-class Actor : public lotus::DeformableEntity
+class Actor
 {
 public:
-    explicit Actor(lotus::Engine* engine);
-    static lotus::Task<std::shared_ptr<Actor>> Init(lotus::Engine* engine, size_t modelid);
-    static lotus::Task<std::shared_ptr<Actor>> Init(lotus::Engine* engine, LookData look);
-
-    void updateEquipLook(uint16_t modelid);
-
-    void setGameRot(glm::quat rot);
-    glm::quat getGameRot();
-
-    float speed{ 4.f };
-    std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> generator_points{};
-    std::map<std::string, FFXI::Scheduler*> scheduler_map;
-    std::map<std::string, FFXI::Generator*> generator_map;
+    using InitComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::PhysicsComponent*, lotus::Component::DeformedMeshComponent*,
+                                      lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*>;
+    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, size_t modelid);
+    using InitPCComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::PhysicsComponent*, lotus::Component::DeformedMeshComponent*,
+                                      lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*, FFXI::ActorPCModelsComponent*>;
+    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitPCComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorPCModelsComponent::LookData look);
+    static size_t GetPCModelDatID(uint16_t modelid, uint8_t race);
 protected:
     static std::vector<size_t> GetPCSkeletonDatIDs(uint8_t race);
-    size_t GetPCModelDatID(uint16_t modelid);
-    lotus::WorkerTask<> Load(std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
-    lotus::Task<> updateEquipLookTask(uint16_t modelid);
 
-    glm::quat game_rot{1.f, 0.f, 0.f, 0.f};
-
-    enum class ModelType
-    {
-        PC,
-        NPC,
-        NPCFixed,
-        Environment
-    } model_type{ ModelType::PC };
-
-    LookData look{};
+    static lotus::WorkerTask<InitComponents> Load(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
 };

@@ -12,7 +12,7 @@ namespace lotus
         createDepthImage();
         createFrameBuffers();
         createPipeline();
-        command_buffers.resize(renderer->getImageCount());
+        command_buffers.resize(renderer->getFrameCount());
     }
 
     Task<> UiRenderer::Init()
@@ -28,11 +28,11 @@ namespace lotus
         createFrameBuffers();
         createPipeline();
         command_buffers.clear();
-        command_buffers.resize(renderer->getImageCount());
+        command_buffers.resize(renderer->getFrameCount());
         co_await engine->ui->ReInit();
     }
 
-    vk::CommandBuffer UiRenderer::Render(int image_index)
+    vk::CommandBuffer UiRenderer::Render()
     {
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
@@ -52,16 +52,17 @@ namespace lotus
             vk::ClearValue{ .depthStencil = 1.f }
         };
 
+        auto image = renderer->getCurrentImage();
         vk::RenderPassBeginInfo renderpass_begin;
         renderpass_begin.renderPass = *renderpass;
         renderpass_begin.renderArea.extent = renderer->swapchain->extent;
         renderpass_begin.clearValueCount = static_cast<uint32_t>(clear_values.size());
         renderpass_begin.pClearValues = clear_values.data();
-        renderpass_begin.framebuffer = *framebuffers[image_index];
+        renderpass_begin.framebuffer = *framebuffers[image];
 
         buffers[0]->beginRenderPass(renderpass_begin, vk::SubpassContents::eSecondaryCommandBuffers);
 
-        auto ui_buffers = engine->ui->getRenderCommandBuffers(image_index);
+        auto ui_buffers = engine->ui->getRenderCommandBuffers(image);
         if (!ui_buffers.empty())
         {
             buffers[0]->executeCommands(ui_buffers);
@@ -70,8 +71,9 @@ namespace lotus
         buffers[0]->endRenderPass();
         buffers[0]->end();
 
-        command_buffers[image_index] = std::move(buffers[0]);
-        return *command_buffers[image_index];
+        auto frame = renderer->getCurrentFrame();
+        command_buffers[frame] = std::move(buffers[0]);
+        return *command_buffers[frame];
     }
 
     void UiRenderer::GenerateRenderBuffers(ui::Element* element)

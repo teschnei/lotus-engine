@@ -6,8 +6,6 @@ add_executable( ffxi
     config.h
     ffxi.h
     ffxi.cpp
-    particle_tester.cpp
-    particle_tester.h
     scheduler_resources.cpp
     scheduler_resources.h
     stb.cpp

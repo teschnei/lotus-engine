@@ -4,8 +4,8 @@
 #include <glm/glm.hpp>
 #include <optional>
 #include "dat_chunk.h"
-#include "engine/entity/camera.h"
 #include "engine/renderer/model.h"
+#include "engine/entity/component/camera_component.h"
 
 namespace FFXI
 {
@@ -41,14 +41,14 @@ namespace FFXI
     public:
         QuadTree(glm::vec3 pos1, glm::vec3 pos2) : pos1(pos1), pos2(pos2) {}
 
-        std::vector<uint32_t> find(lotus::Camera::Frustum&) const;
+        std::vector<uint32_t> find(lotus::Component::CameraComponent::Frustum&) const;
 
         glm::vec3 pos1;
         glm::vec3 pos2;
         std::vector<uint32_t> nodes;
         std::vector<QuadTree> children;
     private:
-        void find_internal(lotus::Camera::Frustum&, std::vector<uint32_t>&) const;
+        void find_internal(lotus::Component::CameraComponent::Frustum&, std::vector<uint32_t>&) const;
         void get_nodes(std::vector<uint32_t>&) const;
 
     };

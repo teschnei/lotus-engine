@@ -2,7 +2,6 @@
 
 #include "core.h"
 #include "game.h"
-#include "entity/component/input_component.h"
 
 namespace lotus
 {
@@ -37,24 +36,7 @@ namespace lotus
         {
             engine->game->scene->component_runners->handleInput(this, event);
         }
-        for (auto& component : components)
-        {
-            if (component->handleInput(event))
-            {
-                //return true;
-            }
-        }
         return false;
-    }
-
-    void Input::RegisterComponent(InputComponent* component)
-    {
-        components.insert(component);
-    }
-
-    void Input::DeregisterComponent(InputComponent* component)
-    {
-        components.erase(component);
     }
 
     SDL_Window* Input::GetWindow()

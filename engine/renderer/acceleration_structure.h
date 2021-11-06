@@ -10,9 +10,7 @@
 
 namespace lotus
 {
-    class DeformableEntity;
     class Model;
-    class Particle;
     class Renderer;
 
     class AccelerationStructure

@@ -1,10 +1,6 @@
 #include "acceleration_structure.h"
 #include "engine/core.h"
 #include "engine/renderer/model.h"
-#include "engine/renderer/vulkan/renderer_raytrace_base.h"
-#include "engine/entity/deformable_entity.h"
-#include "engine/entity/particle.h"
-#include "engine/entity/component/animation_component.h"
 
 namespace lotus
 {

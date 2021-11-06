@@ -6,9 +6,6 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/config.h"
-#include "engine/entity/camera.h"
-#include "engine/entity/renderable_entity.h"
-#include "engine/entity/landscape_entity.h"
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
@@ -72,11 +69,6 @@ namespace lotus
         raytrace_queryer = std::make_unique<RaytraceQueryer>(engine);
         ui = std::make_unique<UiRenderer>(engine, this);
         co_await ui->Init();
-    }
-
-    void Renderer::runRaytracerQueries()
-    {
-        raytrace_queryer->runQueries(current_image);
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -210,6 +202,7 @@ namespace lotus
 
     Task<> Renderer::recreateStaticCommandBuffers()
     {
+        /*
         //delete all the existing buffers first, single-threadedly (the destructor uses the pool it was created on)
         //TODO: generalize this? only baked commands need to be cleared here, and either no commands should be baked or just landscape should be
         engine->game->scene->forEachEntity([](std::shared_ptr<Entity>& entity)
@@ -229,6 +222,8 @@ namespace lotus
         {
             co_await task;
         }
+        */
+        co_return;
     }
 
     Renderer::ThreadLocals Renderer::createThreadLocals()
@@ -238,14 +233,14 @@ namespace lotus
 
         std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
         poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
-        poolSizes[0].descriptorCount = static_cast<uint32_t>(getImageCount());
+        poolSizes[0].descriptorCount = static_cast<uint32_t>(getFrameCount());
         poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(getImageCount());
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(getFrameCount());
 
         vk::DescriptorPoolCreateInfo poolInfo = {};
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes = poolSizes.data();
-        poolInfo.maxSets = static_cast<uint32_t>(getImageCount());
+        poolInfo.maxSets = static_cast<uint32_t>(getFrameCount());
         poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
         desc_pool = gpu->device->createDescriptorPoolUnique(poolInfo);

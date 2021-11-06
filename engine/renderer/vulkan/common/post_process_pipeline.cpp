@@ -247,7 +247,7 @@ namespace lotus
 
     }
 
-    vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(uint32_t image_index, vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)
+    vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)
     {
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.commandPool = *renderer->local_compute_pool;

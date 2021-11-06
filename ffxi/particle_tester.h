@@ -1,10 +1,9 @@
 #pragma once
 
 #include <memory>
-#include "engine/entity/renderable_entity.h"
 #include "engine/renderer/model.h"
 #include "dat/dat.h"
-#include "engine/entity/component/input_component.h"
+//#include "engine/entity/component/input_component.h"
 #include "scheduler_resources.h"
 
 namespace lotus
@@ -19,8 +18,7 @@ namespace FFXI
     class Scheduler;
 }
 
-class SchedulerComponent;
-
+/*
 class ParticleTester : public lotus::InputComponent
 {
 public:
@@ -38,3 +36,4 @@ private:
     SchedulerComponent* casting_scheduler{ nullptr };
     lotus::time_point start_time;
 };
+*/

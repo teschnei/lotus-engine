@@ -44,7 +44,7 @@ namespace FFXI
                 width = infoa1->imgx;
                 height = infoa1->imgy;
                 pixels.resize(infoa1->size);
-                format = vk::Format::eBc2UnormBlock;
+                format = vk::Format::eBc2SrgbBlock;
                 memcpy(pixels.data(), buffer + sizeof(IMGINFOA1), infoa1->size);
                 break;
             }
@@ -60,7 +60,7 @@ namespace FFXI
                 name = std::string(infob1->id, 16);
                 width = infob1->imgx;
                 height = infob1->imgy;
-                format = vk::Format::eR8G8B8A8Unorm;
+                format = vk::Format::eR8G8B8A8Srgb;
                 uint32_t size = width * height;
                 pixels.resize(static_cast<uint64_t>(size) * 4);
                 uint8_t* buf_p = buffer + sizeof(IMGINFOB1);
@@ -87,7 +87,7 @@ namespace FFXI
     lotus::Task<> DXT3Loader::LoadTexture(std::shared_ptr<lotus::Texture> texture, lotus::Engine* engine, DXT3* dxt3)
     {
         uint32_t stride = 4;
-        if (dxt3->format == vk::Format::eBc2UnormBlock)
+        if (dxt3->format == vk::Format::eBc2SrgbBlock)
             stride = 1;
         VkDeviceSize imageSize = static_cast<uint64_t>(dxt3->width) * static_cast<uint64_t>(dxt3->height) * stride;
 

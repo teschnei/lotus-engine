@@ -2,9 +2,6 @@
 
 #include "engine/core.h"
 #include "engine/renderer/model.h"
-#include "engine/entity/deformable_entity.h"
-#include "engine/entity/component/animation_component.h"
-#include "engine/entity/particle.h"
 
 namespace lotus
 {
@@ -92,60 +89,9 @@ namespace lotus
         mesh_info_offset = 0;
     }
 
-    void GlobalResources::AddResources(RenderableEntity* entity)
-    {
-        /*
-        uint32_t image = engine->renderer->getCurrentImage();
-        for (auto& model : entity->models)
-        {
-            if (!model->is_static)
-            {
-                uint16_t mesh_info_index = mesh_info_offset.fetch_add(model->meshes.size()) + static_binding_offset_data;
-                for (size_t i = 0; i < model->meshes.size(); ++i)
-                {
-                    const auto& mesh = model->meshes[i];
-                    uint16_t vertex_index = descriptor_vertex_info.push_back({ mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
-                    uint16_t index_index = descriptor_index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
-                    descriptor_texture_info.push_back({*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal });
-                    auto [buffer, offset] = mesh->material->getBuffer();
-                    uint16_t material_index = descriptor_material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) }) + static_binding_offset_data;
-                    mesh->material->index = material_index;
-                    mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, glm::vec3 { 1.0 }, 0, glm::vec4{ 1.f }, glm::vec2{ 0.f }, model->animation_frame, 0, entity->getPrevModelMatrix() };
-                }
-                model->resource_index = mesh_info_index;
-                mesh_info_offset += model->meshes.size();
-            }
-        }*/
-    }
-
-    void GlobalResources::AddResources(DeformableEntity* entity)
-    {
-        /*
-        uint32_t image = engine->renderer->getCurrentImage();
-        uint32_t prev_image = engine->renderer->getPreviousImage();
-        for (size_t i = 0; i < entity->models.size(); ++i)
-        {
-            uint16_t mesh_info_index = mesh_info_offset.fetch_add(entity->models[i]->meshes.size()) + static_binding_offset_data;
-            for (size_t j = 0; j < entity->models[i]->meshes.size(); ++j)
-            {
-                const auto& mesh = entity->models[i]->meshes[j];
-                uint16_t vertex_index = descriptor_vertex_info.push_back({ entity->animation_component->transformed_geometries[i].vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
-                uint16_t vertex_prev_index = descriptor_vertex_prev_info.push_back({ entity->animation_component->transformed_geometries[i].vertex_buffers[j][prev_image]->buffer, 0, VK_WHOLE_SIZE });
-                uint16_t index_index = descriptor_index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
-                descriptor_texture_info.push_back({ *mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal }) + static_binding_offset_data;
-                auto [buffer, offset] = mesh->material->getBuffer();
-                uint16_t material_index = descriptor_material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) });
-                mesh->material->index = material_index;
-                mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + j] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), 0, glm::vec4{1.f}, glm::vec2{0.f}, entity->models[i]->animation_frame, vertex_prev_index, entity->getPrevModelMatrix()};
-            }
-            entity->animation_component->transformed_geometries[i].resource_index = mesh_info_index;
-        }
-        */
-    }
-
+    /*
     void GlobalResources::AddResources(Particle* entity)
     {
-        /*
         uint32_t image = engine->renderer->getCurrentImage();
         uint16_t mesh_info_index = mesh_info_offset.fetch_add(entity->models[0]->meshes.size()) + static_binding_offset_data;
         auto& model = entity->models[0];
@@ -161,8 +107,8 @@ namespace lotus
             mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), entity->billboard, entity->color, entity->uv_offset, model->animation_frame, 0, entity->getPrevModelMatrix() };
         }
         entity->resource_index = mesh_info_index;
-        */
     }
+    */
 
     uint16_t GlobalResources::pushVertexInfo(std::span<vk::DescriptorBufferInfo> info)
     {

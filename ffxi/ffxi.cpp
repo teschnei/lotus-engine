@@ -5,27 +5,30 @@
 #include "audio/ffxi_audio.h"
 #include "entity/landscape_entity.h"
 #include "entity/actor.h"
-#include "entity/component/third_person_ffxi_entity_input.h"
-#include "entity/component/third_person_ffxiv_entity_input.h"
-#include "entity/component/equipment_test_component.h"
+//#include "entity/component/third_person_ffxi_entity_input.h"
+//#include "entity/component/third_person_ffxiv_entity_input.h"
+//#include "entity/component/equipment_test_component.h"
 #include "entity/third_person_ffxi_camera.h"
 #include "entity/third_person_ffxiv_camera.h"
 
 #include "engine/scene.h"
 #include "engine/ui/element.h"
-#include "engine/entity/free_flying_camera.h"
-#include "engine/entity/component/camera_cascades_component.h"
+//#include "engine/entity/component/camera_cascades_component.h"
 
-#include "engine/entity/component/animation_component.h"
-#include "engine/entity/component/component_rewrite_test/deformable_raster_component.h"
-#include "engine/entity/component/component_rewrite_test/deformable_raytrace_component.h"
+//#include "engine/entity/component/animation_component.h"
+#include "engine/entity/component/deformable_raster_component.h"
+#include "engine/entity/component/deformable_raytrace_component.h"
 
-#include "engine/entity/component/component_rewrite_test/instanced_raster_component.h"
-#include "engine/entity/component/component_rewrite_test/instanced_raytrace_component.h"
-#include "engine/entity/component/component_rewrite_test/static_collision_component.h"
+#include "engine/entity/component/instanced_raster_component.h"
+#include "engine/entity/component/instanced_raytrace_component.h"
+#include "engine/entity/component/static_collision_component.h"
 
-#include "engine/entity/component/component_rewrite_test/camera_component.h"
-#include "engine/entity/component/component_rewrite_test/camera_third_person_component.h"
+#include "engine/entity/component/camera_component.h"
+#include "entity/component/camera_third_person_component.h"
+
+#include "entity/component/actor_component.h"
+#include "entity/component/modern_third_person_input_component.h"
+#include "entity/component/landscape_component.h"
 
 #include <iostream>
 
@@ -71,17 +74,21 @@ lotus::Task<> FFXIGame::tick(lotus::time_point, lotus::duration)
 lotus::WorkerTask<> FFXIGame::load_scene()
 {
     loading_scene = std::make_unique<lotus::Scene>(engine.get());
-    loading_scene->component_runners->registerComponent<lotus::Test::AnimationComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::PhysicsComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::DeformedMeshComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::DeformableRasterComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::DeformableRaytraceComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::InstancedModelsComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::InstancedRasterComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::InstancedRaytraceComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::StaticCollisionComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::CameraComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Test::CameraThirdPersonComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::AnimationComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::PhysicsComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::DeformedMeshComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::DeformableRasterComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::DeformableRaytraceComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::InstancedModelsComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::InstancedRasterComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::InstancedRaytraceComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::StaticCollisionComponent>();
+    loading_scene->component_runners->registerComponent<lotus::Component::CameraComponent>();
+    loading_scene->component_runners->registerComponent<FFXI::CameraThirdPersonComponent>();
+    loading_scene->component_runners->registerComponent<FFXI::ActorComponent>();
+    loading_scene->component_runners->registerComponent<FFXI::ModernThirdPersonInputComponent>();
+    loading_scene->component_runners->registerComponent<FFXI::ActorPCModelsComponent>();
+    loading_scene->component_runners->registerComponent<FFXI::LandscapeComponent>();
 
     auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
     /* zone dats vtable:
@@ -91,12 +98,12 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(105, loading_scene.get());
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(105);
     //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291, loading_scene.get());
     audio->setMusic(79, 0);
     //iroha 3111 (arciela 3074)
     //auto player = co_await loading_scene->AddEntity<Actor>(3111);
-    auto player = co_await loading_scene->AddEntity<Actor>(LookData{ .look = {
+    auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(FFXI::ActorPCModelsComponent::LookData{ .look = {
         .race = 2,
         .face = 15,
         .head = 0x1000 + 64,
@@ -110,43 +117,24 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     });
     //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
     //player->setPos(glm::vec3(259.f, -87.f, 99.f));
-    player->setPos(glm::vec3(-681.f, -12.f, 161.f));
     auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(std::weak_ptr<lotus::Entity>(player));
     if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
     {
-        co_await camera->addComponent<lotus::CameraCascadesComponent>();
+        //co_await camera->addComponent<lotus::CameraCascadesComponent>();
     }
-    co_await player->addComponent<ThirdPersonEntityFFXIVInputComponent>(engine->input.get());
-    co_await player->addComponent<ParticleTester>(engine->input.get());
-    co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
+    //co_await player->addComponent<ThirdPersonEntityFFXIVInputComponent>(engine->input.get());
+    //co_await player->addComponent<ParticleTester>(engine->input.get());
+    //co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
+    auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
+    auto ac = std::get<FFXI::ActorComponent*>(player_components);
 
-    auto& old_skelly = *player->getComponent<lotus::AnimationComponent>()->skeleton;
-    auto new_skelly = std::make_unique<lotus::Skeleton>();
+    auto ac2 = loading_scene->component_runners->addComponent<FFXI::ModernThirdPersonInputComponent>(player.get(), *ac, *a);
 
-    for (auto& b : old_skelly.bones)
-    {
-        new_skelly->bones.emplace_back(b.parent_bone, b.rot, b.trans);
-    }
-
-    for (auto& [a, b] : old_skelly.animations)
-    {
-        new_skelly->animations.emplace(a, std::make_unique<lotus::Animation>(*b));
-    }
-
-    auto a = loading_scene->component_runners->addComponent<lotus::Test::AnimationComponent>(player.get(), std::move(new_skelly));
-    auto p = co_await loading_scene->component_runners->addComponent<lotus::Test::PhysicsComponent>(player.get());
-    auto d = co_await loading_scene->component_runners->addComponent<lotus::Test::DeformedMeshComponent>(player.get(), *a, player->models);
-    if (engine->config->renderer.RasterizationEnabled())
-        auto r = loading_scene->component_runners->addComponent<lotus::Test::DeformableRasterComponent>(player.get(), *d, *p);
-    if (engine->config->renderer.RaytraceEnabled())
-    auto rt = co_await loading_scene->component_runners->addComponent<lotus::Test::DeformableRaytraceComponent>(player.get(), *d, *p);
-
-    auto cam_c = co_await loading_scene->component_runners->addComponent<lotus::Test::CameraComponent>(camera.get());
-    auto dur = loading_scene->component_runners->addComponent<lotus::Test::CameraThirdPersonComponent>(camera.get(), *cam_c, *p);
+    auto cam_c = co_await loading_scene->component_runners->addComponent<lotus::Component::CameraComponent>(camera.first.get());
+    auto dur = loading_scene->component_runners->addComponent<FFXI::CameraThirdPersonComponent>(camera.first.get(), *cam_c, *ac);
 
     engine->set_camera(cam_c);
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
 
     co_await update_scene(std::move(loading_scene));
-
 }

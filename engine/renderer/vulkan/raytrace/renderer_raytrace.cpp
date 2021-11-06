@@ -5,8 +5,7 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/config.h"
-#include "engine/entity/component/component_rewrite_test/camera_component.h"
-#include "engine/entity/renderable_entity.h"
+#include "engine/entity/component/camera_component.h"
 #include "engine/renderer/acceleration_structure.h"
 
 namespace lotus
@@ -39,7 +38,7 @@ namespace lotus
         initializeCameraBuffers();
         generateCommandBuffers();
 
-        render_commandbuffers.resize(getImageCount());
+        render_commandbuffers.resize(getFrameCount());
 
         current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
         raytracer->prepareNextFrame();
@@ -604,7 +603,7 @@ namespace lotus
         rtx_gbuffer.sampler = gpu->device->createSamplerUnique(sampler_info, nullptr);
     }
 
-    vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer(uint32_t image_index)
+    vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
     {
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.commandPool = *command_pool;
@@ -676,7 +675,7 @@ namespace lotus
         renderpass_info.pClearValues = clear_values.data();
         renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
         renderpass_info.renderArea.extent = swapchain->extent;
-        renderpass_info.framebuffer = *frame_buffers[image_index];
+        renderpass_info.framebuffer = *frame_buffers[current_image];
         buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
 
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
@@ -698,20 +697,20 @@ namespace lotus
 
         vk::DescriptorBufferInfo light_buffer_info_global;
         light_buffer_info_global.buffer = engine->lights->light_buffer->buffer;
-        light_buffer_info_global.offset = getCurrentImage() * engine->lights->GetBufferSize();
+        light_buffer_info_global.offset = getCurrentFrame() * engine->lights->GetBufferSize();
         light_buffer_info_global.range = engine->lights->GetBufferSize();
 
         std::array camera_buffer_info
         {
             vk::DescriptorBufferInfo {
                 .buffer = camera_buffers.view_proj_ubo->buffer,
-                .offset = image_index * uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)),
-                .range = sizeof(Test::CameraComponent::CameraData)
+                .offset = current_frame * uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)),
+                .range = sizeof(Component::CameraComponent::CameraData)
             },
             vk::DescriptorBufferInfo {
                 .buffer = camera_buffers.view_proj_ubo->buffer,
-                .offset = getPreviousImage() * uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)),
-                .range = sizeof(Test::CameraComponent::CameraData)
+                .offset = previous_frame * uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)),
+                .range = sizeof(Component::CameraComponent::CameraData)
             }
         };
 
@@ -784,11 +783,11 @@ namespace lotus
 
     void RendererRaytrace::initializeCameraBuffers()
     {
-        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * engine->renderer->getImageCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        camera_buffers.view_proj_mapped = static_cast<Test::CameraComponent::CameraData*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * engine->renderer->getImageCount(), {}));
+        camera_buffers.view_proj_ubo = engine->renderer->gpu->memory_manager->GetBuffer(engine->renderer->uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * engine->renderer->getFrameCount(), vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        camera_buffers.view_proj_mapped = static_cast<Component::CameraComponent::CameraData*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * engine->renderer->getFrameCount(), {}));
     }
 
-    vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer(uint32_t image_index)
+    vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
     {
         std::array before_barriers = {
             vk::ImageMemoryBarrier2KHR {
@@ -858,19 +857,19 @@ namespace lotus
         {
             vk::DescriptorBufferInfo  {
                 .buffer = camera_buffers.view_proj_ubo->buffer,
-                .offset = uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getCurrentImage(),
-                .range = sizeof(Test::CameraComponent::CameraData)
+                .offset = uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * getCurrentFrame(),
+                .range = sizeof(Component::CameraComponent::CameraData)
             },
             vk::DescriptorBufferInfo  {
                 .buffer = camera_buffers.view_proj_ubo->buffer,
-                .offset = uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * getPreviousImage(),
-                .range = sizeof(Test::CameraComponent::CameraData)
+                .offset = uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * getPreviousFrame(),
+                .range = sizeof(Component::CameraComponent::CameraData)
             }
         };
 
         vk::DescriptorBufferInfo light_buffer_info_global {
             .buffer = engine->lights->light_buffer->buffer,
-            .offset = getCurrentImage() * engine->lights->GetBufferSize(),
+            .offset = getCurrentFrame() * engine->lights->GetBufferSize(),
             .range = engine->lights->GetBufferSize()
         };
 
@@ -927,8 +926,8 @@ namespace lotus
             }
         };
 
-        render_commandbuffers[image_index] = raytracer->getCommandBuffer(descriptors, before_barriers, {});
-        return *render_commandbuffers[image_index];
+        render_commandbuffers[current_frame] = raytracer->getCommandBuffer(descriptors, before_barriers, {});
+        return *render_commandbuffers[current_frame];
     }
 
     Task<> RendererRaytrace::drawFrame()
@@ -942,23 +941,19 @@ namespace lotus
 
         try
         {
-            engine->worker_pool->clearProcessed(current_image);
-            swapchain->checkOldSwapchain(current_image);
-
-            auto render_task = engine->game->scene->render();
-            raytrace_queryer->runQueries(current_image);
-            co_await render_task;
+            engine->worker_pool->clearProcessed(current_frame);
+            swapchain->checkOldSwapchain(current_frame);
 
             co_await raytracer->prepareFrame(engine);
 
-            engine->worker_pool->beginProcessing(current_image);
+            engine->worker_pool->beginProcessing(current_frame);
 
-            engine->camera->writeToBuffer(*(Test::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Test::CameraComponent::CameraData)) * current_image));
+            engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
             engine->lights->UpdateLightBuffer();
 
             std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame] };
             std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderKHR };
-            auto buffers = engine->worker_pool->getPrimaryComputeBuffers(current_image);
+            auto buffers = engine->worker_pool->getPrimaryComputeBuffers(current_frame);
             if (!buffers.empty())
             {
                 vk::SubmitInfo submitInfo = {};
@@ -979,8 +974,8 @@ namespace lotus
             submitInfo.pWaitSemaphores = waitSemaphores.data();
             submitInfo.pWaitDstStageMask = waitStages.data();
 
-            buffers = engine->worker_pool->getPrimaryGraphicsBuffers(current_image);
-            buffers.push_back(getRenderCommandbuffer(current_image));
+            buffers = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
+            buffers.push_back(getRenderCommandbuffer());
 
             submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
             submitInfo.pCommandBuffers = buffers.data();
@@ -992,7 +987,7 @@ namespace lotus
             gpu->graphics_queue.submit(submitInfo, nullptr);
 
             //post process
-            auto post_buffer = post_process->getCommandBuffer(current_image, *rtx_gbuffer.light.image_view, *rtx_gbuffer.normal.image_view, *rtx_gbuffer.motion_vector.image_view);
+            auto post_buffer = post_process->getCommandBuffer(*rtx_gbuffer.light.image_view, *rtx_gbuffer.normal.image_view, *rtx_gbuffer.motion_vector.image_view);
             std::vector<vk::PipelineStageFlags> post_process_stage_flags = { vk::PipelineStageFlagBits::eComputeShader };
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &*post_buffer;
@@ -1012,7 +1007,7 @@ namespace lotus
             submitInfo.waitSemaphoreCount = post_sems.size();
             submitInfo.pWaitSemaphores = post_sems.data();
             submitInfo.pWaitDstStageMask = deferred_render_stage_flags.data();
-            auto deferred_buffer = getDeferredCommandBuffer(current_image);
+            auto deferred_buffer = getDeferredCommandBuffer();
             std::vector<vk::CommandBuffer> deferred_commands{ *deferred_buffer };
 
             submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
@@ -1026,7 +1021,7 @@ namespace lotus
             engine->worker_pool->gpuResource(std::move(deferred_buffer));
 
             //ui
-            auto ui_buffer = ui->Render(current_image);
+            auto ui_buffer = ui->Render();
             std::vector<vk::PipelineStageFlags> ui_stage_flags = { vk::PipelineStageFlagBits::eFragmentShader };
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &ui_buffer;
@@ -1055,6 +1050,7 @@ namespace lotus
             co_await engine->worker_pool->mainThread();
             gpu->present_queue.presentKHR(presentInfo);
 
+            previous_frame = current_frame;
             current_frame = (current_frame + 1) % max_pending_frames;
             current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
             raytracer->prepareNextFrame();

@@ -3,8 +3,8 @@
 #include <list>
 #include <ranges>
 #include "engine/core.h"
-#include "engine/entity/landscape_entity.h"
 #include "engine/renderer/model.h"
+#include "engine/entity/component/instanced_models_component.h"
 
 namespace FFXI
 {
@@ -80,7 +80,7 @@ namespace FFXI
         binding_descriptions[0].inputRate = vk::VertexInputRate::eVertex;
 
         binding_descriptions[1].binding = 1;
-        binding_descriptions[1].stride = sizeof(lotus::Test::InstancedModelsComponent::InstanceInfo);
+        binding_descriptions[1].stride = sizeof(lotus::Component::InstancedModelsComponent::InstanceInfo);
         binding_descriptions[1].inputRate = vk::VertexInputRate::eInstance;
 
         return binding_descriptions;

@@ -35,13 +35,13 @@ namespace lotus
         vk::SurfaceFormatKHR surface_format;
         if (swap_chain_info.formats.size() == 1 && swap_chain_info.formats[0].format == vk::Format::eUndefined)
         {
-            surface_format = { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
+            surface_format = { vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear };
         }
         else
         {
             if (auto found_format = std::find_if(swap_chain_info.formats.begin(), swap_chain_info.formats.end(), [](const auto& format)
             {
-                    return format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+                    return format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
             }); found_format != swap_chain_info.formats.end())
             {
                 surface_format = *found_format;
@@ -92,11 +92,7 @@ namespace lotus
         swapchain_create_info.imageColorSpace = surface_format.colorSpace;
         swapchain_create_info.imageExtent = swap_extent;
         swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
-        if (config->renderer.RaytraceEnabled())
-        {
-            swapchain_create_info.imageUsage |= vk::ImageUsageFlagBits::eStorage;
-        }
+        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
         if (old_swapchain)
         {

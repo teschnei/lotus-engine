@@ -176,14 +176,24 @@ namespace lotus
 
     Task<float> RaytraceQueryer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max)
     {
+        auto q = query_queue(object_flags, origin, direction, min, max);
+        if (!query_running.test_and_set())
+        {
+            runQueries();
+        }
+        co_return co_await q;
+    }
+
+    Task<float> RaytraceQueryer::query_queue(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max)
+    {
         co_return (co_await async_query_queue.wait(RaytraceQuery{object_flags, origin, direction, min, max})).result;
     }
 
-    void RaytraceQueryer::runQueries(uint32_t image)
+    void RaytraceQueryer::runQueries()
     {
         if (engine->config->renderer.RaytraceEnabled())
         {
-            auto tlas = engine->renderer->raytracer->getTLAS(engine->renderer->getPreviousImage());
+            auto tlas = engine->renderer->raytracer->getTLAS(engine->renderer->getPreviousFrame());
             if (engine->game->scene && tlas && tlas->handle != 0)
             {
                 auto processing_queries = async_query_queue.getAll();
@@ -295,8 +305,10 @@ namespace lotus
                         query->awaiting.resume();
                     }
                     output_buffer->unmap();
+                    query_running.clear();
                     return;
                 }
+                return;
             }
         }
         for (auto& query : async_query_queue.getAll())
@@ -304,5 +316,6 @@ namespace lotus
             query->data.result = query->data.max;
             query->awaiting.resume();
         }
+        query_running.clear();
     }
 }

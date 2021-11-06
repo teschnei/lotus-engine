@@ -6,27 +6,30 @@
 #include "engine/core.h"
 #include "engine/worker_pool.h"
 #include "renderer/acceleration_structure.h"
-#include "entity/component/component_rewrite_test/component.h"
+#include "entity/component/component.h"
 
 namespace lotus
 {
     class Engine;
+    //class Scene;
+
+    //template<typename T, typename... Args>
+    //concept EntityInitializer = requires(T t, Engine* engine, Scene* scene, Args... args) { { T::Init(engine, scene, args...); } -> std::is_convertible_to<std::shared_ptr<Entity>> };
 
     class Scene
     {
     public:
         explicit Scene(Engine* _engine);
-        Task<> render();
         Task<> tick_all(time_point time, duration delta);
 
         template <typename T, typename... Args>
         [[nodiscard("Work must be awaited to be processed")]]
-        Task<std::shared_ptr<T>> AddEntity(Args... args) requires std::derived_from<T, Entity>
+        auto AddEntity(Args... args) -> decltype(T::Init(std::declval<Engine*>(), this, args...))
         {
-            auto sp = co_await T::Init(engine, args...);
+            auto [sp, components] = co_await T::Init(engine, this, args...);
             sp->setSharedPtr(sp);
             entities.emplace_back(sp);
-            co_return sp;
+            co_return std::make_pair(sp, components);
         }
         template<typename F>
         void forEachEntity(F func)
@@ -36,7 +39,7 @@ namespace lotus
                 func(entity);
             }
         }
-        std::unique_ptr<Test::ComponentRunners> component_runners;
+        std::unique_ptr<Component::ComponentRunners> component_runners;
     protected:
         virtual Task<> tick(time_point time, duration delta) { co_return; }
 

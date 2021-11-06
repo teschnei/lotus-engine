@@ -11,10 +11,11 @@
 #include "dat/scheduler.h"
 #include "entity/actor.h"
 
-#include "engine/entity/component/tick_component.h"
-#include "engine/entity/component/animation_component.h"
-#include "entity/component/scheduler_component.h"
+//#include "engine/entity/component/tick_component.h"
+//#include "engine/entity/component/animation_component.h"
+//#include "entity/component/scheduler_component.h"
 
+/*
 ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Input* _input) : InputComponent(_entity, _engine, _input)
 {
 }
@@ -77,3 +78,4 @@ bool ParticleTester::handleInput(const SDL_Event& event)
     return false;
 }
 
+*/

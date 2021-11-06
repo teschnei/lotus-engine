@@ -97,7 +97,7 @@ namespace lotus
 
     WorkerTask<> Particle::renderWork()
     {
-        auto image_index = engine->renderer->getCurrentImage();
+        auto image_index = engine->renderer->getCurrentFrame();
         updateUniformBuffer(image_index);
 
         if (engine->config->renderer.RasterizationEnabled())

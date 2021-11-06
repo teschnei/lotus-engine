@@ -1,15 +1,14 @@
 #include "animation_component.h"
 #include "engine/core.h"
-#include "engine/entity/deformable_entity.h"
-#include "engine/renderer/skeleton.h"
 
-namespace lotus
+namespace lotus::Component
 {
     AnimationComponent::AnimationComponent(Entity* _entity, Engine* _engine, std::unique_ptr<Skeleton>&& _skeleton) :
         Component(_entity, _engine), skeleton(std::move(_skeleton))
     {
-        skeleton_bone_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer->getImageCount(),
+        skeleton_bone_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(BufferBone) * skeleton->bones.size() * engine->renderer->getFrameCount(),
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        playAnimationLoop("idl");
     }
 
     Task<> AnimationComponent::tick(time_point time, duration delta)
@@ -46,17 +45,11 @@ namespace lotus
                 }
             }
         }
-        co_return;
-    }
-
-    Task<> AnimationComponent::render(Engine* engine, std::shared_ptr<Entity> sp)
-    {
         co_await renderWork();
     }
 
     WorkerTask<> AnimationComponent::renderWork()
     {
-        auto entity = static_cast<DeformableEntity*>(this->entity);
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandPool = *engine->renderer->compute_pool;
@@ -69,8 +62,7 @@ namespace lotus
 
         command_buffer->begin(begin_info);
 
-        auto anim_component = entity->animation_component;
-        auto skeleton = anim_component->skeleton.get();
+        auto skeleton = this->skeleton.get();
         auto staging_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(AnimationComponent::BufferBone) * skeleton->bones.size(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         AnimationComponent::BufferBone* buffer = static_cast<AnimationComponent::BufferBone*>(staging_buffer->map(0, VK_WHOLE_SIZE, {}));
         for (size_t i = 0; i < skeleton->bones.size(); ++i)
@@ -86,9 +78,9 @@ namespace lotus
 
         vk::BufferCopy copy_region;
         copy_region.srcOffset = 0;
-        copy_region.dstOffset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentImage();
+        copy_region.dstOffset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentFrame();
         copy_region.size = skeleton->bones.size() * sizeof(AnimationComponent::BufferBone);
-        command_buffer->copyBuffer(staging_buffer->buffer, anim_component->skeleton_bone_buffer->buffer, copy_region);
+        command_buffer->copyBuffer(staging_buffer->buffer, skeleton_bone_buffer->buffer, copy_region);
 
         vk::BufferMemoryBarrier2KHR barrier
         {
@@ -98,8 +90,8 @@ namespace lotus
             .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .buffer = anim_component->skeleton_bone_buffer->buffer,
-            .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentImage(),
+            .buffer = skeleton_bone_buffer->buffer,
+            .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentFrame(),
             .size = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size()
         };
 

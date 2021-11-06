@@ -2,21 +2,23 @@ target_sources(engine
     PRIVATE
     animation_component.cpp
     animation_component.h
-    camera_cascades_component.cpp
-    camera_cascades_component.h
-    component.cpp
+    camera_component.cpp
+    camera_component.h
     component.h
-    free_flying_camera_component.cpp
-    free_flying_camera_component.h
-    input_component.cpp
-    input_component.h
-    particle_parent_component.cpp
-    particle_parent_component.h
-    third_person_camera_component.cpp
-    third_person_camera_component.h
-    third_person_entity_input_component.cpp
-    third_person_entity_input_component.h
-    tick_component.h
-    )
-
-add_subdirectory(component_rewrite_test)
+    deformed_mesh_component.cpp
+    deformed_mesh_component.h
+    deformable_raster_component.cpp
+    deformable_raster_component.h
+    deformable_raytrace_component.cpp
+    deformable_raytrace_component.h
+    instanced_models_component.cpp
+    instanced_models_component.h
+    instanced_raster_component.cpp
+    instanced_raster_component.h
+    instanced_raytrace_component.cpp
+    instanced_raytrace_component.h
+    physics_component.cpp
+    physics_component.h
+    static_collision_component.cpp
+    static_collision_component.h
+)

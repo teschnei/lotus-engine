@@ -1,15 +1,11 @@
 #include "third_person_ffxiv_camera.h"
 
-#include "component/third_person_ffxiv_camera_component.h"
+//#include "component/third_person_ffxiv_camera_component.h"
 #include "engine/core.h"
 
-ThirdPersonFFXIVCamera::ThirdPersonFFXIVCamera(lotus::Engine* engine, std::weak_ptr<Entity>& focus) : lotus::ThirdPersonBoomCamera(engine, focus)
+lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, std::tuple<>>> ThirdPersonFFXIVCamera::Init(lotus::Engine* engine, lotus::Scene* scene, std::weak_ptr<lotus::Entity>& focus)
 {
-}
-
-lotus::Task<std::shared_ptr<ThirdPersonFFXIVCamera>> ThirdPersonFFXIVCamera::Init(lotus::Engine* engine, std::weak_ptr<Entity>& focus)
-{
-    auto sp = std::make_shared<ThirdPersonFFXIVCamera>(engine, focus);
-    co_await sp->addComponent<ThirdPersonFFXIVCameraComponent>(engine->input.get(), focus);
-    co_return sp;
+    auto sp = std::make_shared<lotus::Entity>();
+    //co_await sp->addComponent<ThirdPersonFFXIVCameraComponent>(engine->input.get(), focus);
+    co_return std::make_pair(sp, std::tuple<>());
 }

@@ -20,9 +20,6 @@ namespace lotus
         ~GlobalResources();
         void BindResources(uint32_t image);
         void Reset();
-        void AddResources(RenderableEntity* entity);
-        void AddResources(DeformableEntity* entity);
-        void AddResources(Particle* entity);
 
         struct MeshInfo
         {
