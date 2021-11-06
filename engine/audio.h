@@ -6,24 +6,25 @@
 
 namespace lotus
 {
+    class Engine;
     class AudioEngine
     {
     public:
-        AudioEngine();
+        AudioEngine(Engine* engine);
 
         class AudioInstance
         {
         public:
             AudioInstance(AudioEngine* _engine, SoLoud::handle _handle);
             AudioInstance(const AudioInstance&) = delete;
-            AudioInstance(AudioInstance&& o)
+            AudioInstance(AudioInstance&& o) noexcept
             {
                 engine = o.engine;
                 handle = o.handle;
                 o.handle = 0;
             }
             AudioInstance& operator=(const AudioInstance&) = delete;
-            AudioInstance& operator=(AudioInstance&& o)
+            AudioInstance& operator=(AudioInstance&& o) noexcept
             {
                 engine = o.engine;
                 handle = o.handle;
@@ -41,7 +42,8 @@ namespace lotus
         AudioInstance playSound(SoLoud::AudioSource&);
 
     private:
-        std::unique_ptr<SoLoud::Soloud> engine;
+        std::unique_ptr<SoLoud::Soloud> soloud;
+        Engine* engine;
     };
 
 }

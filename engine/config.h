@@ -25,6 +25,12 @@ namespace lotus
             bool RasterizationEnabled();
             bool RendererShadowmappingEnabled();
 
-        } renderer {};
+        } renderer{};
+        struct Audio
+        {
+            float master_volume{ 0.5f };
+            float bgm_volume{ 1.0f };
+            float se_volume{ 1.0f };
+        } audio{};
     };
 }

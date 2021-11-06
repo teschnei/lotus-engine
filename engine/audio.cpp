@@ -1,22 +1,24 @@
 #include "audio.h"
+#include "core.h"
+#include "config.h"
 
 namespace lotus
 {
-    AudioEngine::AudioEngine() : engine(std::make_unique<SoLoud::Soloud>())
+    AudioEngine::AudioEngine(Engine* _engine) : soloud(std::make_unique<SoLoud::Soloud>()), engine(_engine)
     {
-        engine->init();
+        soloud->init();
     }
 
     AudioEngine::AudioInstance AudioEngine::playBGM(SoLoud::AudioSource& src)
     {
-        auto bgm = engine->playBackground(src);
-        engine->setProtectVoice(bgm, true);
+        auto bgm = soloud->playBackground(src, engine->config->audio.master_volume * engine->config->audio.bgm_volume);
+        soloud->setProtectVoice(bgm, true);
         return AudioInstance{ this, bgm };
     }
 
     AudioEngine::AudioInstance AudioEngine::playSound(SoLoud::AudioSource& src)
     {
-        auto se = engine->play(src);
+        auto se = soloud->play(src, engine->config->audio.master_volume * engine->config->audio.se_volume);
         return AudioInstance{ this, se };
     }
 
@@ -24,6 +26,6 @@ namespace lotus
     AudioEngine::AudioInstance::~AudioInstance()
     {
         if (handle)
-            engine->engine->stop(handle);
+            engine->soloud->stop(handle);
     }
 }

@@ -22,7 +22,7 @@ namespace lotus
             renderer = std::make_unique<RendererHybrid>(this);
         }
 
-        audio = std::make_unique<AudioEngine>();
+        audio = std::make_unique<AudioEngine>(this);
         input = std::make_unique<Input>(this, renderer->window->window);
         worker_pool = std::make_unique<WorkerPool>(this);
         lights = std::make_unique<LightManager>(this);

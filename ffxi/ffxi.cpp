@@ -100,7 +100,8 @@ lotus::WorkerTask<> FFXIGame::load_scene()
 
     auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(105);
     //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291, loading_scene.get());
-    audio->setMusic(79, 0);
+    //audio->setMusic(79, 0);
+    audio->setMusic(114, 0);
     //iroha 3111 (arciela 3074)
     //auto player = co_await loading_scene->AddEntity<Actor>(3111);
     auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(FFXI::ActorPCModelsComponent::LookData{ .look = {
