@@ -16,14 +16,11 @@ namespace lotus
         WorkerTask<> InitWork();
 
         virtual Task<> drawFrame() override;
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) override;
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
-
-        virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) override;
 
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;

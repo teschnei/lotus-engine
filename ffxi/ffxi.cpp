@@ -118,11 +118,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     });
     //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
     //player->setPos(glm::vec3(259.f, -87.f, 99.f));
-    auto camera = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(std::weak_ptr<lotus::Entity>(player));
-    if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
-    {
-        //co_await camera->addComponent<lotus::CameraCascadesComponent>();
-    }
+    auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(std::get<FFXI::ActorComponent*>(player_components));
     //co_await player->addComponent<ThirdPersonEntityFFXIVInputComponent>(engine->input.get());
     //co_await player->addComponent<ParticleTester>(engine->input.get());
     //co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
@@ -131,10 +127,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
 
     auto ac2 = loading_scene->component_runners->addComponent<FFXI::ModernThirdPersonInputComponent>(player.get(), *ac, *a);
 
-    auto cam_c = co_await loading_scene->component_runners->addComponent<lotus::Component::CameraComponent>(camera.first.get());
-    auto dur = loading_scene->component_runners->addComponent<FFXI::CameraThirdPersonComponent>(camera.first.get(), *cam_c, *ac);
-
-    engine->set_camera(cam_c);
+    engine->set_camera(std::get<lotus::Component::CameraComponent*>(camera_components));
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
 
     co_await update_scene(std::move(loading_scene));

@@ -1066,34 +1066,4 @@ namespace lotus
             co_await resizeRenderer();
         }
     }
-
-    void RendererRaytrace::populateAccelerationStructure(TopLevelAccelerationStructure* tlas, BottomLevelAccelerationStructure* blas, const glm::mat3x4& mat, uint32_t resource_index, uint32_t mask, uint32_t shader_binding_offset)
-    {
-        vk::AccelerationStructureInstanceKHR instance
-        {
-            .instanceCustomIndex = resource_index,
-            .mask = mask,
-            .instanceShaderBindingTableRecordOffset = RaytracePipeline::shaders_per_group * shader_binding_offset,
-            .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,
-            .accelerationStructureReference = blas->handle
-        };
-        memcpy(&instance.transform, &mat, sizeof(mat));
-        blas->instanceid = tlas->AddInstance(instance);
-    }
-
-    void RendererRaytrace::bindResources(uint32_t image, std::span<vk::WriteDescriptorSet> descriptors)
-    {
-        std::vector<vk::WriteDescriptorSet> writes;
-
-        for (auto& descriptor : descriptors)
-        {
-            if (descriptor.descriptorCount > 0)
-            {
-                descriptor.dstSet = raytracer->getResourceDescriptorSet(image);
-                writes.push_back(descriptor);
-            }
-        }
-
-        gpu->device->updateDescriptorSets(writes, nullptr);
-    }
 }

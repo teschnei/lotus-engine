@@ -6,7 +6,6 @@
 namespace lotus
 {
     class Engine;
-    class InputComponent;
 
     class Input
     {

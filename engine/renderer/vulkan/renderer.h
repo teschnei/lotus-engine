@@ -27,7 +27,6 @@ namespace lotus
     class RendererRaytrace;
     class RendererRasterization;
     class RendererHybrid;
-    class RenderableEntityInitializer;
 
     class Renderer
     {
@@ -69,15 +68,12 @@ namespace lotus
         size_t align_up(size_t in_size, size_t alignment) const;
 
         virtual Task<> drawFrame() = 0;
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) = 0;
 
         void resized() { resize = true; }
 
         vk::UniqueShaderModule getShader(const std::string& file_name);
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
-
-        virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) = 0;
 
         vk::UniqueInstance instance;
 

@@ -13,7 +13,6 @@ namespace lotus
         virtual Task<> Init() override;
 
         virtual Task<> drawFrame() override;
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) override {}
 
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
@@ -34,8 +33,6 @@ namespace lotus
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info);
-
-        virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) override {}
 
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;
         std::unique_ptr<Image> depth_image;

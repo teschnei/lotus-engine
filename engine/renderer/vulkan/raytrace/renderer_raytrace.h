@@ -16,7 +16,6 @@ namespace lotus
         WorkerTask<> InitWork();
 
         virtual Task<> drawFrame() override;
-        virtual void populateAccelerationStructure(TopLevelAccelerationStructure*, BottomLevelAccelerationStructure*, const glm::mat3x4&, uint32_t, uint32_t, uint32_t) override;
 
         vk::UniqueDescriptorSetLayout static_descriptor_set_layout;
         vk::UniqueDescriptorSetLayout deferred_descriptor_set_layout;
@@ -28,8 +27,6 @@ namespace lotus
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
-
-        virtual void bindResources(uint32_t image, std::span<vk::WriteDescriptorSet>) override;
 
         /* Ray tracing */
         vk::UniqueDescriptorSetLayout rtx_descriptor_layout_deferred;

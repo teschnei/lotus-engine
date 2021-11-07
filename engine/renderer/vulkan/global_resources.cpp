@@ -19,64 +19,75 @@ namespace lotus
 
     void GlobalResources::BindResources(uint32_t image)
     {
-        auto descriptor_vertex_info_count = descriptor_vertex_count.load();
-        auto descriptor_vertex_prev_info_count = descriptor_vertex_prev_count.load();
-        auto descriptor_index_info_count = descriptor_index_count.load();
-        auto descriptor_material_texture_info_count = descriptor_material_texture_count.load();
-        auto offset = static_binding_offset.load();
-
-        vk::DescriptorBufferInfo mesh_info;
-        mesh_info.buffer = mesh_info_buffer->buffer;
-        mesh_info.offset = sizeof(MeshInfo) * max_resource_index * image;
-        mesh_info.range = sizeof(MeshInfo) * max_resource_index;
-
-        std::array writes
+        if (engine->renderer->raytracer)
         {
-            vk::WriteDescriptorSet { //vertex
-                .dstBinding = 1,
-                .dstArrayElement = offset,
-                .descriptorCount = descriptor_vertex_info_count,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .pBufferInfo = descriptor_vertex_info.data()
-            },
-            vk::WriteDescriptorSet { //vertex prev
-                .dstBinding = 2,
-                .dstArrayElement = 0,
-                .descriptorCount = descriptor_vertex_prev_info_count,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .pBufferInfo = descriptor_vertex_prev_info.data(),
-            },
-            vk::WriteDescriptorSet { //index
-                .dstBinding = 3,
-                .dstArrayElement = offset,
-                .descriptorCount = descriptor_index_info_count,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .pBufferInfo = descriptor_index_info.data(),
-            },
-            vk::WriteDescriptorSet { //texture
-                .dstBinding = 4,
-                .dstArrayElement = offset,
-                .descriptorCount = descriptor_material_texture_info_count,
-                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .pImageInfo = descriptor_texture_info.data(),
-            },
-            vk::WriteDescriptorSet { //material
-                .dstBinding = 5,
-                .dstArrayElement = offset,
-                .descriptorCount = descriptor_material_texture_info_count,
-                .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .pBufferInfo = descriptor_material_info.data(),
-            },
-            vk::WriteDescriptorSet { //mesh info
-                .dstBinding = 6,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .pBufferInfo = &mesh_info
-            },
-        };
+            auto descriptor_vertex_info_count = descriptor_vertex_count.load();
+            auto descriptor_vertex_prev_info_count = descriptor_vertex_prev_count.load();
+            auto descriptor_index_info_count = descriptor_index_count.load();
+            auto descriptor_material_texture_info_count = descriptor_material_texture_count.load();
+            auto offset = static_binding_offset.load();
 
-        engine->renderer->bindResources(image, writes);
+            vk::DescriptorBufferInfo mesh_info;
+            mesh_info.buffer = mesh_info_buffer->buffer;
+            mesh_info.offset = sizeof(MeshInfo) * max_resource_index * image;
+            mesh_info.range = sizeof(MeshInfo) * max_resource_index;
+
+            auto descriptor_set = engine->renderer->raytracer->getResourceDescriptorSet(image);
+
+            std::array writes
+            {
+                vk::WriteDescriptorSet { //vertex
+                    .dstSet = descriptor_set,
+                    .dstBinding = 1,
+                    .dstArrayElement = offset,
+                    .descriptorCount = descriptor_vertex_info_count,
+                    .descriptorType = vk::DescriptorType::eStorageBuffer,
+                    .pBufferInfo = descriptor_vertex_info.data()
+                },
+                vk::WriteDescriptorSet { //vertex prev
+                    .dstSet = descriptor_set,
+                    .dstBinding = 2,
+                    .dstArrayElement = 0,
+                    .descriptorCount = descriptor_vertex_prev_info_count,
+                    .descriptorType = vk::DescriptorType::eStorageBuffer,
+                    .pBufferInfo = descriptor_vertex_prev_info.data(),
+                },
+                vk::WriteDescriptorSet { //index
+                    .dstSet = descriptor_set,
+                    .dstBinding = 3,
+                    .dstArrayElement = offset,
+                    .descriptorCount = descriptor_index_info_count,
+                    .descriptorType = vk::DescriptorType::eStorageBuffer,
+                    .pBufferInfo = descriptor_index_info.data(),
+                },
+                vk::WriteDescriptorSet { //texture
+                    .dstSet = descriptor_set,
+                    .dstBinding = 4,
+                    .dstArrayElement = offset,
+                    .descriptorCount = descriptor_material_texture_info_count,
+                    .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+                    .pImageInfo = descriptor_texture_info.data(),
+                },
+                vk::WriteDescriptorSet { //material
+                    .dstSet = descriptor_set,
+                    .dstBinding = 5,
+                    .dstArrayElement = offset,
+                    .descriptorCount = descriptor_material_texture_info_count,
+                    .descriptorType = vk::DescriptorType::eUniformBuffer,
+                    .pBufferInfo = descriptor_material_info.data(),
+                },
+                vk::WriteDescriptorSet { //mesh info
+                    .dstSet = descriptor_set,
+                    .dstBinding = 6,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = vk::DescriptorType::eStorageBuffer,
+                    .pBufferInfo = &mesh_info
+                },
+            };
+
+            engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
+        }
         mesh_info_buffer->flush(max_resource_index * sizeof(MeshInfo) * image, max_resource_index * sizeof(MeshInfo));
     }
 
