@@ -5,17 +5,12 @@
 #include "audio/ffxi_audio.h"
 #include "entity/landscape_entity.h"
 #include "entity/actor.h"
-//#include "entity/component/third_person_ffxi_entity_input.h"
-//#include "entity/component/third_person_ffxiv_entity_input.h"
-//#include "entity/component/equipment_test_component.h"
 #include "entity/third_person_ffxi_camera.h"
 #include "entity/third_person_ffxiv_camera.h"
 
 #include "engine/scene.h"
 #include "engine/ui/element.h"
-//#include "engine/entity/component/camera_cascades_component.h"
 
-//#include "engine/entity/component/animation_component.h"
 #include "engine/entity/component/deformable_raster_component.h"
 #include "engine/entity/component/deformable_raytrace_component.h"
 
@@ -27,6 +22,7 @@
 #include "entity/component/camera_third_person_component.h"
 
 #include "entity/component/actor_component.h"
+#include "entity/component/equipment_test_component.h"
 #include "entity/component/modern_third_person_input_component.h"
 #include "entity/component/landscape_component.h"
 
@@ -89,6 +85,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     loading_scene->component_runners->registerComponent<FFXI::ModernThirdPersonInputComponent>();
     loading_scene->component_runners->registerComponent<FFXI::ActorPCModelsComponent>();
     loading_scene->component_runners->registerComponent<FFXI::LandscapeComponent>();
+    loading_scene->component_runners->registerComponent<FFXI::EquipmentTestComponent>();
 
     auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
     /* zone dats vtable:
@@ -124,8 +121,10 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     //co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
     auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
     auto ac = std::get<FFXI::ActorComponent*>(player_components);
+    auto ac_models = std::get<FFXI::ActorPCModelsComponent*>(player_components);
 
     auto ac2 = loading_scene->component_runners->addComponent<FFXI::ModernThirdPersonInputComponent>(player.get(), *ac, *a);
+    auto equip = loading_scene->component_runners->addComponent<FFXI::EquipmentTestComponent>(player.get(), *ac_models);
 
     engine->set_camera(std::get<lotus::Component::CameraComponent*>(camera_components));
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);

@@ -27,11 +27,13 @@ namespace lotus::Component
         const ModelTransformedGeometry& getModelTransformGeometry(size_t index) const;
         void updateModelTransformGeometryResourceIndex(size_t transform_index, uint32_t resource_index);
         std::vector<std::shared_ptr<Model>> getModels() const;
+        WorkerTask<ModelTransformedGeometry> initModel(std::shared_ptr<Model> model) const;
+        void replaceModelIndex(std::shared_ptr<Model>, ModelTransformedGeometry&& transform, uint32_t index);
 
     protected:
         std::vector<ModelTransformedGeometry> model_transforms;
         std::vector<std::shared_ptr<Model>> models;
 
-        ModelTransformedGeometry initModelWork(vk::CommandBuffer command_buffer, const Model& model);
+        ModelTransformedGeometry initModelWork(vk::CommandBuffer command_buffer, const Model& model) const;
     };
 }

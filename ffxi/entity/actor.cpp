@@ -51,7 +51,7 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> 
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_sub, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_range, look.look.race))
         });
-    auto pc_c = scene->component_runners->addComponent<FFXI::ActorPCModelsComponent>(actor.get(), *std::get<lotus::Component::DeformedMeshComponent*>(components), look);
+    auto pc_c = scene->component_runners->addComponent<FFXI::ActorPCModelsComponent>(actor.get(), *std::get<lotus::Component::DeformedMeshComponent*>(components), std::get<lotus::Component::DeformableRaytraceComponent*>(components), look);
     co_return std::make_pair(actor, std::tuple_cat(components, std::tie(pc_c)));
 }
 

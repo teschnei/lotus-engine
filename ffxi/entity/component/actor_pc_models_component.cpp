@@ -8,8 +8,9 @@
 
 namespace FFXI
 {
-    ActorPCModelsComponent::ActorPCModelsComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::DeformedMeshComponent& _deformed, LookData _look) :
-        Component(_entity, _engine), deformed(_deformed), look(_look)
+    ActorPCModelsComponent::ActorPCModelsComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::DeformedMeshComponent& _deformed,
+        lotus::Component::DeformableRaytraceComponent* _raytrace, LookData _look) :
+        Component(_entity, _engine), deformed(_deformed), raytrace(_raytrace), look(_look)
     {
         
     }
@@ -53,8 +54,7 @@ namespace FFXI
 
         auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + std::string(os2s.front()->name, 4) + std::to_string(modelid), FFXIActorLoader::LoadModel, engine, os2s);
 
-        lotus::ModelTransformedGeometry new_model_transform{};
-        //auto init_task = InitModel(model, new_model_transform);
+        auto init_task = deformed.initModel(model);
 
         for (const auto& task : texture_tasks)
         {
@@ -63,16 +63,21 @@ namespace FFXI
         if (model_task)
             co_await *model_task;
 
-        //co_await init_task;
+        auto new_model_transform = co_await std::move(init_task);
+        lotus::Component::DeformableRaytraceComponent::ModelAccelerationStructures acceleration;
+        if (raytrace)
+        {
+            acceleration = co_await raytrace->initModel(model, new_model_transform);
+        }
 
         co_await engine->worker_pool->waitForFrame();
 
         uint8_t slot = modelid >> 12;
-       // std::swap(models[slot], model);
-       // std::swap(animation_component->transformed_geometries[slot], new_model_transform);
-
-        engine->worker_pool->gpuResource(std::move(model));
-        engine->worker_pool->gpuResource(std::move(new_model_transform));
+        deformed.replaceModelIndex(model, std::move(new_model_transform), slot);
+        if (raytrace)
+        {
+            raytrace->replaceModelIndex(std::move(acceleration), slot);
+        }
 
         co_return;
     }

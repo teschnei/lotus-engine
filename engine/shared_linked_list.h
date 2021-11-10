@@ -17,10 +17,12 @@ namespace lotus
         SharedLinkedList(SharedLinkedList<T>&& o) noexcept
         {
             head = o.head.exchange({}, std::memory_order::relaxed);
+            tail = o.tail.exchange({}, std::memory_order::relaxed);
         }
         SharedLinkedList& operator=(SharedLinkedList<T>&& o) noexcept
         {
             head = o.head.exchange({}, std::memory_order::seq_cst);
+            tail = o.tail.exchange({}, std::memory_order::seq_cst);
             return *this;
         }
 
@@ -59,6 +61,7 @@ namespace lotus
         std::vector<T> getAll()
         {
             auto head_reserve = head.exchange({}, std::memory_order::seq_cst);
+            auto tail_reserve = tail.exchange({}, std::memory_order::seq_cst);
             std::vector<T> values;
             auto node = head_reserve;
             while(node)
@@ -72,11 +75,22 @@ namespace lotus
         void queue(T val)
         {
             auto node = std::make_shared<Node>(std::move(val));
-            node->next = head.load(std::memory_order::relaxed);
-            while (!head.compare_exchange_weak(node->next, node, std::memory_order::seq_cst, std::memory_order::relaxed));
+            do
+            {
+                auto tail_tmp = tail.load(std::memory_order::relaxed);
+                if (tail.compare_exchange_weak(tail_tmp, node, std::memory_order::seq_cst, std::memory_order::relaxed))
+                {
+                    if (tail_tmp)
+                        tail_tmp->next = node;
+                    else
+                        head.exchange(node, std::memory_order::relaxed);
+                    break;
+                }
+            } while (true);
         }
     private:
         std::atomic<std::shared_ptr<Node>> head;
+        std::atomic<std::shared_ptr<Node>> tail;
     };
 }
 

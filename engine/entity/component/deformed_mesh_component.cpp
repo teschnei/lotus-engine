@@ -13,7 +13,7 @@ namespace lotus::Component
         vk::CommandBufferAllocateInfo alloc_info;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
-            .commandPool = *engine->renderer->graphics_pool,
+            .commandPool = *engine->renderer->compute_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         });
@@ -31,13 +31,13 @@ namespace lotus::Component
             }
         }
         command_buffer->end();
-        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
 
         co_return;
     }
 
-    DeformedMeshComponent::ModelTransformedGeometry DeformedMeshComponent::initModelWork(vk::CommandBuffer command_buffer, const Model& model)
+    DeformedMeshComponent::ModelTransformedGeometry DeformedMeshComponent::initModelWork(vk::CommandBuffer command_buffer, const Model& model) const
     {
         ModelTransformedGeometry model_transform;
         model_transform.vertex_buffers.resize(model.meshes.size());
@@ -53,7 +53,7 @@ namespace lotus::Component
             }
         }
 
-        //transform skeleton with default animation before building AS to improve the bounding box accuracy
+        //TODO: transform with a default t-pose instead of current animation to improve acceleration structure build
         //make sure all vertex and index buffers are finished transferring
         vk::MemoryBarrier2KHR barrier
         {
@@ -265,5 +265,40 @@ namespace lotus::Component
     std::vector<std::shared_ptr<Model>> DeformedMeshComponent::getModels() const
     {
         return models;
+    }
+
+    WorkerTask<DeformedMeshComponent::ModelTransformedGeometry> DeformedMeshComponent::initModel(std::shared_ptr<Model> model) const
+    {
+        ModelTransformedGeometry transform;
+        vk::CommandBufferAllocateInfo alloc_info;
+
+        auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
+            .commandPool = *engine->renderer->compute_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 1,
+        });
+        auto command_buffer = std::move(command_buffers[0]);
+
+        command_buffer->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+
+        if (model->weighted)
+        {
+            transform = initModelWork(*command_buffer, *model);
+        }
+        command_buffer->end();
+        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->gpuResource(std::move(command_buffer));
+        co_return std::move(transform);
+    }
+
+    void DeformedMeshComponent::replaceModelIndex(std::shared_ptr<Model> model, ModelTransformedGeometry&& transform, uint32_t index)
+    {
+        std::swap(models[index], model);
+        std::swap(model_transforms[index], transform);
+
+        engine->worker_pool->gpuResource(std::move(model));
+        engine->worker_pool->gpuResource(std::move(transform));
     }
 }

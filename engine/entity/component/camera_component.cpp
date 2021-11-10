@@ -15,19 +15,27 @@ namespace lotus::Component
 
     Task<> CameraComponent::tick(time_point time, duration delta)
     {
+        updated_tick = false;
         if (update_view)
         {
             view = glm::lookAt(pos, target, glm::vec3(0.f, 1.f, 0.f));
             view_inverse = glm::inverse(view);
             update_view = false;
+            updated_tick = true;
         }
         if (update_projection)
         {
             projection = glm::perspective(fov, aspect_ratio, near_clip, far_clip);
             projection_inverse = glm::inverse(projection);
             update_projection = false;
+            updated_tick = true;
         }
         co_return;
+    }
+
+    bool CameraComponent::updated()
+    {
+        return updated_tick;
     }
 
     void CameraComponent::setPos(glm::vec3 _pos)
@@ -60,6 +68,21 @@ namespace lotus::Component
     glm::mat4 CameraComponent::getViewMatrix()
     {
         return view;
+    }
+
+    glm::mat4 CameraComponent::getProjMatrix()
+    {
+        return projection;
+    }
+
+    float CameraComponent::getNearClip()
+    {
+        return near_clip;
+    }
+
+    float CameraComponent::getFarClip()
+    {
+        return far_clip;
     }
 
     void CameraComponent::writeToBuffer(CameraData& buffer)

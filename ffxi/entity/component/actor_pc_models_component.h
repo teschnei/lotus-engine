@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/entity/component/component.h"
 #include "engine/entity/component/deformed_mesh_component.h"
+#include "engine/entity/component/deformable_raytrace_component.h"
 #include <memory>
 
 namespace FFXI
@@ -26,7 +27,7 @@ namespace FFXI
             uint16_t slots[9];
         };
 
-        explicit ActorPCModelsComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::DeformedMeshComponent& deformed, LookData look);
+        explicit ActorPCModelsComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::DeformedMeshComponent& deformed, lotus::Component::DeformableRaytraceComponent* raytrace, LookData look);
 
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
         void updateEquipLook(uint16_t modelid);
@@ -35,5 +36,6 @@ namespace FFXI
         LookData look;
         lotus::Task<> updateEquipLookTask(uint16_t modelid);
         lotus::Component::DeformedMeshComponent& deformed;
+        lotus::Component::DeformableRaytraceComponent* raytrace;
     };
 }

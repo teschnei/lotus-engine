@@ -16,10 +16,16 @@ namespace lotus::Component
         Task<> tick(time_point time, duration delta);
         Task<> init();
 
+        //the camera updated something on this tick (for dependant components)
+        bool updated();
+
         void setPos(glm::vec3 pos);
         void setTarget(glm::vec3 target);
         void setPerspective(float fov, float aspect_ratio, float near_clip, float far_clip);
         glm::mat4 getViewMatrix();
+        glm::mat4 getProjMatrix();
+        float getNearClip();
+        float getFarClip();
 
         struct CameraData
         {
@@ -56,5 +62,7 @@ namespace lotus::Component
         float far_clip{ 0.f };
         glm::mat4 projection{};
         glm::mat4 projection_inverse{};
+
+        bool updated_tick{ false };
     };
 }

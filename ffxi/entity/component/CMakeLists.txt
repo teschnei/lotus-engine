@@ -6,6 +6,8 @@ target_sources(ffxi
     actor_pc_models_component.h
     camera_third_person_component.cpp
     camera_third_person_component.h
+    equipment_test_component.cpp
+    equipment_test_component.h
     landscape_component.cpp
     landscape_component.h
     modern_third_person_input_component.cpp

@@ -63,8 +63,7 @@ namespace lotus
                 //make sure we're on the main thread for any SDL events
                 co_await worker_pool->mainThread();
                 input->GetInput();
-                auto tick_task = game->tick_all(simulation_time, sim_delta);
-                co_await tick_task;
+                co_await game->tick_all(simulation_time, sim_delta);
                 co_await renderer->drawFrame();
             }
         }

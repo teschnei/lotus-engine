@@ -44,7 +44,37 @@ namespace lotus::Component
         co_return;
     }
 
-    DeformableRaytraceComponent::ModelAccelerationStructures DeformableRaytraceComponent::initModelWork(vk::CommandBuffer command_buffer, const Model& model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform)
+    WorkerTask<DeformableRaytraceComponent::ModelAccelerationStructures> DeformableRaytraceComponent::initModel(std::shared_ptr<Model> model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform) const
+    {
+        ModelAccelerationStructures acceleration;
+        auto& [deformed_component, physics_component] = dependencies;
+        vk::CommandBufferAllocateInfo alloc_info;
+
+        auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
+            .commandPool = *engine->renderer->compute_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 1,
+        });
+        auto command_buffer = std::move(command_buffers[0]);
+
+        command_buffer->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+
+        auto models = deformed_component.getModels();
+
+        if (model->weighted)
+        {
+            acceleration = initModelWork(*command_buffer, *model, model_transform);
+        }
+        command_buffer->end();
+        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->gpuResource(std::move(command_buffer));
+
+        co_return std::move(acceleration);
+    }
+
+    DeformableRaytraceComponent::ModelAccelerationStructures DeformableRaytraceComponent::initModelWork(vk::CommandBuffer command_buffer, const Model& model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform) const
     {
         ModelAccelerationStructures acceleration_structure;
 
@@ -187,7 +217,7 @@ namespace lotus::Component
                         .accelerationStructureReference = as->handle
                     };
                     memcpy(&instance.transform, &matrix, sizeof(matrix));
-                    acceleration_structures[i].blas[engine->renderer->getCurrentFrame()]->instanceid = tlas->AddInstance(instance);
+                    as->instanceid = tlas->AddInstance(instance);
                 }
             }
         }
@@ -196,5 +226,12 @@ namespace lotus::Component
         engine->worker_pool->command_buffers.compute.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
         co_return;
+    }
+
+    void DeformableRaytraceComponent::replaceModelIndex(ModelAccelerationStructures&& acceleration, uint32_t index)
+    {
+        std::swap(acceleration_structures[index], acceleration);
+
+        engine->worker_pool->gpuResource(std::move(acceleration));
     }
 }
