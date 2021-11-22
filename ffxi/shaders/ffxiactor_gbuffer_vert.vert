@@ -6,8 +6,6 @@ layout(binding = 0) uniform CameraUBO {
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    mat4 proj_prev;
-    mat4 view_prev;
     vec4 eye_pos;
 } camera;
 
@@ -33,7 +31,7 @@ layout(location = 5) out vec4 prevPos;
 
 void main() {
     pos = camera.proj * camera.view * model.model * vec4(inPosition, 1.0);
-    prevPos = camera.proj_prev * camera.view_prev * model.model_prev * vec4(inPrevPosition, 1.0);
+    prevPos = camera.proj * camera.view * model.model_prev * vec4(inPrevPosition, 1.0);
     gl_Position = pos;
     fragColor = vec4(1.0);
     fragTexCoord = inTexCoord;

@@ -88,7 +88,7 @@ namespace FFXI
 
     inline std::vector<vk::VertexInputAttributeDescription> getMMBAttributeDescriptions()
     {
-        std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(11);
+        std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(15);
 
         attribute_descriptions[0].binding = 0;
         attribute_descriptions[0].location = 0;
@@ -113,37 +113,57 @@ namespace FFXI
         attribute_descriptions[4].binding = 1;
         attribute_descriptions[4].location = 4;
         attribute_descriptions[4].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[4].offset = 0;
+        attribute_descriptions[4].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model);
 
         attribute_descriptions[5].binding = 1;
         attribute_descriptions[5].location = 5;
         attribute_descriptions[5].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[5].offset = sizeof(float)*4;
+        attribute_descriptions[5].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model) + sizeof(float) * 4;
 
         attribute_descriptions[6].binding = 1;
         attribute_descriptions[6].location = 6;
         attribute_descriptions[6].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[6].offset = sizeof(float)*8;
+        attribute_descriptions[6].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model) + sizeof(float) * 8;
 
         attribute_descriptions[7].binding = 1;
         attribute_descriptions[7].location = 7;
         attribute_descriptions[7].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[7].offset = sizeof(float)*12;
+        attribute_descriptions[7].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model) + sizeof(float) * 12;
 
         attribute_descriptions[8].binding = 1;
         attribute_descriptions[8].location = 8;
         attribute_descriptions[8].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[8].offset = sizeof(float)*16;
+        attribute_descriptions[8].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_t);
 
         attribute_descriptions[9].binding = 1;
         attribute_descriptions[9].location = 9;
         attribute_descriptions[9].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[9].offset = sizeof(float)*20;
+        attribute_descriptions[9].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_t) + sizeof(float) * 4;
 
         attribute_descriptions[10].binding = 1;
         attribute_descriptions[10].location = 10;
         attribute_descriptions[10].format = vk::Format::eR32G32B32A32Sfloat;
-        attribute_descriptions[10].offset = sizeof(float)*24;
+        attribute_descriptions[10].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_t) + sizeof(float) * 8;
+
+        attribute_descriptions[11].binding = 1;
+        attribute_descriptions[11].location = 11;
+        attribute_descriptions[11].format = vk::Format::eR32G32B32A32Sfloat;
+        attribute_descriptions[11].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_t) + sizeof(float) * 12;
+
+        attribute_descriptions[12].binding = 1;
+        attribute_descriptions[12].location = 12;
+        attribute_descriptions[12].format = vk::Format::eR32G32B32Sfloat;
+        attribute_descriptions[12].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_it);
+
+        attribute_descriptions[13].binding = 1;
+        attribute_descriptions[13].location = 13;
+        attribute_descriptions[13].format = vk::Format::eR32G32B32Sfloat;
+        attribute_descriptions[13].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_it) + sizeof(float) * 3;
+
+        attribute_descriptions[14].binding = 1;
+        attribute_descriptions[14].location = 14;
+        attribute_descriptions[14].format = vk::Format::eR32G32B32Sfloat;
+        attribute_descriptions[14].offset = offsetof(lotus::Component::InstancedModelsComponent::InstanceInfo, model_it) + sizeof(float) * 6;
 
         return attribute_descriptions;
     }
