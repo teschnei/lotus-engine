@@ -22,6 +22,7 @@ namespace lotus::Component
         void setPos(glm::vec3 pos);
         void setTarget(glm::vec3 target);
         void setPerspective(float fov, float aspect_ratio, float near_clip, float far_clip);
+        glm::vec3 getPos() const { return pos; }
         glm::mat4 getViewMatrix();
         glm::mat4 getProjMatrix();
         float getNearClip();

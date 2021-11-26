@@ -1,17 +1,17 @@
 #include "camera_third_person_component.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 #include "engine/input.h"
 
 namespace FFXI
 {
-    CameraThirdPersonComponent::CameraThirdPersonComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::CameraComponent& camera, ActorComponent& target) :
-        Component(_entity, _engine, camera, target)
+    CameraThirdPersonComponent::CameraThirdPersonComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::CameraComponent& _camera, ActorComponent& _target) :
+        Component(_entity, _engine), camera(_camera), target(_target)
     {
     }
 
     lotus::Task<> CameraThirdPersonComponent::tick(lotus::time_point time, lotus::duration delta)
     {
-        auto [camera, target] = dependencies;
         auto target_pos = target.getPos();
         //TODO: base this distance off a skeleton bind point
         glm::vec3 boom_source = target_pos + glm::vec3{0.f, -0.5f, 0.f};
@@ -35,7 +35,6 @@ namespace FFXI
             }
             else if (look == Look::LookBoth)
             {
-                auto [camera, target] = dependencies;
                 static float speed = 0.005f;
                 swivel(-event.motion.xrel * speed, event.motion.yrel * speed);
                 target.setRot(glm::angleAxis(rot_x + glm::pi<float>(), glm::vec3(0.f, 1.f, 0.f)), false);

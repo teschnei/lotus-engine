@@ -5,8 +5,6 @@ layout(binding = 9) uniform Camera {
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    mat4 proj_prev;
-    mat4 view_prev;
     vec4 eye_pos;
 } camera;
 

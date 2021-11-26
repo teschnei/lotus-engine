@@ -10,13 +10,14 @@
 #include "ffxi/dat/mzb.h"
 #include "ffxi/dat/generator.h"
 #include "ffxi/vana_time.h"
-//#include "entity/component/generator_component.h"
+#include "entity/component/generator_component.h"
 #include "engine/entity/component/static_collision_component.h"
 #include "engine/entity/component/instanced_models_component.h"
 #include "engine/entity/component/instanced_raster_component.h"
 #include "engine/entity/component/instanced_raytrace_component.h"
 #include "component/landscape_component.h"
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/color_space.hpp>
 
 lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, std::tuple<>>> FFXILandscapeEntity::Init(lotus::Engine* engine, lotus::Scene* scene, size_t zoneid)
 {
@@ -55,7 +56,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(std::shared_ptr<lotus::Entity> ent
                 float r = (color & 0xFF) / 255.f;
                 float g = ((color & 0xFF00) >> 8) / 255.f;
                 float b = ((color & 0xFF0000) >> 16) / 255.f;
-                float a = ((color & 0xFF000000) >> 24) / 255.f;
+                float a = ((color & 0xFF000000) >> 24) / 128.f;
                 return glm::vec4(r, g, b, a);
             };
             for (const auto& chunk2 : chunk->children)
@@ -69,29 +70,30 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(std::shared_ptr<lotus::Entity> ent
                         if (auto [p, e] = std::from_chars(casted->name, casted->name + 4, time); e == std::errc())
                         {
                             time = ((time / 100) * 60) + (time - ((time / 100) * 100));
+                            //it seems ffxi never did lighting in linear colour space, as these fog colours seem to be the final output values
                             FFXI::LandscapeComponent::LightTOD light =
                             {
-                                uint_to_color_vec(casted->data->sunlight_diffuse1),
+                                uint_to_color_vec(casted->data->sunlight_diffuse1) + uint_to_color_vec(casted->data->ambient1),
                                 uint_to_color_vec(casted->data->moonlight_diffuse1),
                                 uint_to_color_vec(casted->data->ambient1),
-                                uint_to_color_vec(casted->data->fog1),
-                                casted->data->max_fog_dist1,
-                                casted->data->min_fog_dist1,
-                                casted->data->brightness1 ,
-                                uint_to_color_vec(casted->data->sunlight_diffuse2),
+                                glm::convertSRGBToLinear(uint_to_color_vec(casted->data->fog1)),
+                                casted->data->max_fog_dist1 + casted->data->fog_offset,
+                                casted->data->min_fog_dist1 + casted->data->fog_offset,
+                                casted->data->brightness1,
+                                uint_to_color_vec(casted->data->sunlight_diffuse2) + uint_to_color_vec(casted->data->ambient2),
                                 uint_to_color_vec(casted->data->moonlight_diffuse2),
                                 uint_to_color_vec(casted->data->ambient2),
-                                uint_to_color_vec(casted->data->fog2),
-                                casted->data->max_fog_dist2,
-                                casted->data->min_fog_dist2,
-                                casted->data->brightness2 ,
+                                glm::convertSRGBToLinear(uint_to_color_vec(casted->data->fog2)),
+                                casted->data->max_fog_dist2 + casted->data->fog_offset,
+                                casted->data->min_fog_dist2 + casted->data->fog_offset,
+                                casted->data->brightness2,
                                 {},
                                 {}
                             };
                             memcpy(light.skybox_altitudes, casted->data->skybox_values, sizeof(float) * 8);
                             for (int i = 0; i < 8; ++i)
                             {
-                                light.skybox_colors[i] = uint_to_color_vec(casted->data->skybox_colors[i]);
+                                light.skybox_colors[i] = glm::convertSRGBToLinear(uint_to_color_vec(casted->data->skybox_colors[i]));
                             }
                             weather_light_map[weather][time] = std::move(light);
                         }
@@ -143,7 +145,7 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(std::shared_ptr<lotus::Entity> ent
                     {
                         if (auto generator = dynamic_cast<FFXI::Generator*>(chunk3.get()))
                         {
-                            //addComponent<GeneratorComponent>(generator, 0ms);
+                            scene->AddComponents(co_await FFXI::GeneratorComponent::make_component(entity.get(), engine, generator, 0ms, nullptr));
                         }
                     }
                 }
@@ -256,11 +258,12 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(std::shared_ptr<lotus::Entity> ent
         auto [collision_model, collision_model_task] = lotus::Model::LoadModel("", FFXI::CollisionLoader::LoadModel, engine, mzb->meshes, mzb->mesh_entries);
         std::vector<std::shared_ptr<lotus::Model>> collision_models{ collision_model };
 
-        auto models_c = co_await scene->component_runners->addComponent<lotus::Component::InstancedModelsComponent>(entity.get(), models, instance_info, instance_offsets);
-        auto models_raster = co_await scene->component_runners->addComponent<lotus::Component::InstancedRasterComponent>(entity.get(), *models_c);
-        auto models_raytrace = scene->component_runners->addComponent<lotus::Component::InstancedRaytraceComponent>(entity.get(), *models_c);
-        scene->component_runners->addComponent<lotus::Component::StaticCollisionComponent>(entity.get(), collision_models);
-        scene->component_runners->addComponent<FFXI::LandscapeComponent>(entity.get(), std::move(weather_light_map));
+        auto models_c = co_await lotus::Component::InstancedModelsComponent::make_component(entity.get(), engine, models, instance_info, instance_offsets);
+        auto models_raster = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::InstancedRasterComponent::make_component(entity.get(), engine, *models_c) : nullptr;
+        auto models_raytrace = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::InstancedRaytraceComponent::make_component(entity.get(), engine, *models_c) : nullptr;
+        auto coll = co_await lotus::Component::StaticCollisionComponent::make_component(entity.get(), engine, collision_models);
+        auto land_comp = co_await FFXI::LandscapeComponent::make_component(entity.get(), engine, std::move(weather_light_map));
+        scene->AddComponents(std::move(models_c), std::move(models_raster), std::move(models_raytrace), std::move(coll), std::move(land_comp));
 
         for (const auto& task : texture_tasks)
         {

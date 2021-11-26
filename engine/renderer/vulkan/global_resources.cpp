@@ -2,13 +2,14 @@
 
 #include "engine/core.h"
 #include "engine/renderer/model.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {
     GlobalResources::GlobalResources(Engine* _engine, Renderer* renderer) : engine(_engine)
     {
-        mesh_info_buffer = renderer->gpu->memory_manager->GetBuffer(max_resource_index * sizeof(MeshInfo) * renderer->getImageCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
-        mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_resource_index * sizeof(MeshInfo) * renderer->getImageCount(), {});
+        mesh_info_buffer = renderer->gpu->memory_manager->GetBuffer(max_resource_index * sizeof(MeshInfo) * renderer->getFrameCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
+        mesh_info_buffer_mapped = (MeshInfo*)mesh_info_buffer->map(0, max_resource_index * sizeof(MeshInfo) * renderer->getFrameCount(), {});
     }
 
     GlobalResources::~GlobalResources()
@@ -100,27 +101,6 @@ namespace lotus
         mesh_info_offset = 0;
     }
 
-    /*
-    void GlobalResources::AddResources(Particle* entity)
-    {
-        uint32_t image = engine->renderer->getCurrentImage();
-        uint16_t mesh_info_index = mesh_info_offset.fetch_add(entity->models[0]->meshes.size()) + static_binding_offset_data;
-        auto& model = entity->models[0];
-        for (size_t i = 0; i < model->meshes.size(); ++i)
-        {
-            auto& mesh = model->meshes[i];
-            uint16_t vertex_index = descriptor_vertex_info.push_back({ mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
-            uint16_t index_index = descriptor_index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE }) + static_binding_offset_data;
-            descriptor_texture_info.push_back({ *mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal }) + static_binding_offset_data;
-            auto [buffer, offset] = mesh->material->getBuffer();
-            uint16_t material_index = descriptor_material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) });
-            mesh->material->index = material_index;
-            mesh_info_buffer_mapped[image * max_resource_index + mesh_info_index + i] = { vertex_index, index_index, (uint32_t)mesh->getIndexCount(), (uint32_t)mesh->material->index, entity->getScale(), entity->billboard, entity->color, entity->uv_offset, model->animation_frame, 0, entity->getPrevModelMatrix() };
-        }
-        entity->resource_index = mesh_info_index;
-    }
-    */
-
     uint16_t GlobalResources::pushVertexInfo(std::span<vk::DescriptorBufferInfo> info)
     {
         auto index = descriptor_vertex_count.fetch_add(info.size());
@@ -153,7 +133,12 @@ namespace lotus
     uint16_t GlobalResources::pushMeshInfo(std::span<MeshInfo> info)
     {
         auto index = mesh_info_offset.fetch_add(info.size());
-        std::ranges::copy(info, mesh_info_buffer_mapped + (engine->renderer->getCurrentImage() * max_resource_index) + index + static_binding_offset_data);
+        std::ranges::copy(info, mesh_info_buffer_mapped + (engine->renderer->getCurrentFrame() * max_resource_index) + index + static_binding_offset_data);
         return index + static_binding_offset_data;
+    }
+
+    GlobalResources::MeshInfo& GlobalResources::getMeshInfo(uint16_t index)
+    {
+        return mesh_info_buffer_mapped[index + max_resource_index * engine->renderer->getCurrentFrame()];
     }
 }

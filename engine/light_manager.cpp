@@ -37,6 +37,7 @@ namespace lotus
         if (lights.size() == lights_buffer_count)
         {
             lights_buffer_count = lights_buffer_count * 2;
+            light_buffer->unmap();
             light_buffer = engine->renderer->gpu->memory_manager->GetBuffer(GetBufferSize() * engine->renderer->getFrameCount(), vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
             light_buffer_map = static_cast<uint8_t*>(light_buffer->map(0, GetBufferSize() * engine->renderer->getFrameCount(), {}));
         }

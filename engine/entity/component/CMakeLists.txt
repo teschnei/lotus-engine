@@ -19,8 +19,14 @@ target_sources(engine
     instanced_raster_component.h
     instanced_raytrace_component.cpp
     instanced_raytrace_component.h
-    physics_component.cpp
-    physics_component.h
+    particle_component.cpp
+    particle_component.h
+    particle_raster_component.cpp
+    particle_raster_component.h
+    particle_raytrace_component.cpp
+    particle_raytrace_component.h
+    render_base_component.cpp
+    render_base_component.h
     static_collision_component.cpp
     static_collision_component.h
 )

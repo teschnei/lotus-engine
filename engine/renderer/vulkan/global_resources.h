@@ -46,10 +46,8 @@ namespace lotus
         uint16_t pushMaterialTextureInfo(std::span<vk::DescriptorBufferInfo>, std::span<vk::DescriptorImageInfo>);
         uint16_t pushMeshInfo(std::span<MeshInfo>);
 
-        std::span<vk::DescriptorBufferInfo> getMaterialInfo()
-        {
-            return std::span{ descriptor_material_info.begin(), descriptor_material_texture_count };
-        }
+        MeshInfo& getMeshInfo(uint16_t index);
+
 
     private:
         Engine* engine;

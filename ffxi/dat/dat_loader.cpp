@@ -61,8 +61,9 @@ namespace FFXI
         }
     }
 
-    const Dat& DatLoader::GetDat(const std::filesystem::path& path)
+    const Dat& DatLoader::GetDat(const std::filesystem::path& dat_path)
     {
+        auto path = install_path / dat_path;
         if (auto found = dat_map.find(path); found != dat_map.end())
         {
             return found->second;

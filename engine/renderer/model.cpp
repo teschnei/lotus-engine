@@ -1,6 +1,7 @@
 #include "model.h"
 
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {
@@ -126,7 +127,7 @@ namespace lotus
                             mesh->material->index = resource_index + i;
                             mesh_index = (uint32_t)mesh->material->index;
                         }
-                        for (size_t image = 0; image < engine->renderer->getImageCount(); ++image)
+                        for (size_t image = 0; image < engine->renderer->getFrameCount(); ++image)
                         {
                             renderer->resources->mesh_info_buffer_mapped[image * GlobalResources::max_resource_index + resource_index + i] =
                             { resource_index + (uint32_t)i, resource_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), mesh_index, glm::vec3{1.0}, 0, glm::vec4{1.f} };
@@ -162,7 +163,7 @@ namespace lotus
                     write_info_material.pBufferInfo = descriptor_material_info.data();
 
                     std::vector<vk::WriteDescriptorSet> writes;
-                    for (size_t i = 0; i < engine->renderer->getImageCount(); ++i)
+                    for (size_t i = 0; i < engine->renderer->getFrameCount(); ++i)
                     {
                         write_info_vertex.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
                         write_info_index.dstSet = renderer->raytracer->getResourceDescriptorSet(i);

@@ -6,6 +6,7 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/config.h"
+#include "engine/light_manager.h"
 
 namespace lotus
 {
@@ -49,7 +50,7 @@ namespace lotus
 
     void RendererRasterization::updateCameraBuffers()
     {
-        engine->camera->writeToBuffer(camera_buffers.view_proj_mapped[current_frame]);
+        engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
         memcpy(camera_buffers.cascade_data_mapped + (getCurrentFrame() * uniform_buffer_align_up(sizeof(cascade_data))), &cascade_data, sizeof(cascade_data));
     }
 
@@ -833,9 +834,9 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
-        resources->BindResources(current_image);
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
+        resources->BindResources(current_frame);
 
         try
         {

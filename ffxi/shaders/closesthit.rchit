@@ -221,8 +221,8 @@ void main()
 
     if (distance > light.light.entity.min_fog && distance < light.light.entity.max_fog)
     {
-        albedo = mix(albedo, light.light.entity.fog_color.rgb, (distance - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));   
-        diffuse = mix(diffuse, vec3(M_PI), (distance - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));   
+        //albedo = mix(albedo, light.light.entity.fog_color.rgb, (distance - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));   
+        //diffuse = mix(diffuse, vec3(M_PI), (distance - light.light.entity.min_fog) / (light.light.entity.max_fog - light.light.entity.min_fog));   
     }
 
     vec3 BRDF = albedo / M_PI;

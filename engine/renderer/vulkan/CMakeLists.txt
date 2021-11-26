@@ -6,6 +6,7 @@ target_sources(engine
     global_resources.h
     renderer.cpp
     renderer.h
+    renderer_settings.h
     swapchain.cpp
     swapchain.h
     ui_renderer.cpp

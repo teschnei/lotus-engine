@@ -3,7 +3,7 @@ find_program(GLSL_VALIDATOR_EXE glslangValidator)
 function(compile_spirv INPUT OUTPUT)
     add_custom_command(
         OUTPUT ${OUTPUT}
-        COMMAND "${GLSL_VALIDATOR_EXE}" --target-env vulkan1.2 -V "${INPUT}" -o "${OUTPUT}"
+        COMMAND "${GLSL_VALIDATOR_EXE}" ${GLSLANG_FLAGS} --target-env vulkan1.2 -V "${INPUT}" -o "${OUTPUT}"
         MAIN_DEPENDENCY ${INPUT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -28,6 +28,7 @@ set(SHADERS
     mmb_color_hit.rahit
     mmb_gbuffer_vert.vert
     mmb_shadow_vert.vert
+    particle_add.frag
     particle_blend.frag
     particle_closest_hit.rchit
     particle_closest_hit_aabb.rchit

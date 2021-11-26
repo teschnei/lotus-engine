@@ -3,6 +3,7 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/renderer/acceleration_structure.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {

@@ -33,8 +33,8 @@ void main()
     hitValue.depth = 10;
     hitValue.normal = vec3(1.0);
     hitValue.distance = hitValue.distance + gl_RayTmaxEXT;
-    hitValue.origin = vec3(0);
-    hitValue.prev_pos = vec3(0);
+    hitValue.prev_pos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_RayTmaxEXT;
+    hitValue.origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_RayTmaxEXT;
     float dot_up = dot(gl_WorldRayDirectionEXT, vec3(0.f, -1.f, 0.f));
 
     if (dot_up < light.light.skybox_altitudes2)

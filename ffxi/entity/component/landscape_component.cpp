@@ -15,7 +15,7 @@ namespace FFXI
     lotus::Task<> LandscapeComponent::tick(lotus::time_point time, lotus::duration delta)
     {
         current_time = std::chrono::duration_cast<FFXITime::milliseconds>((FFXITime::vana_time() % FFXITime::days(1))).count() / 60000.f;
-        current_time = 720;
+        //current_time = 570;
 
         auto& weather_data = weather_light_map[current_weather];
         auto time1 = weather_data.end();

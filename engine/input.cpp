@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "game.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {

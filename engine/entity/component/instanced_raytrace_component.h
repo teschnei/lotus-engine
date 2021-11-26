@@ -8,11 +8,13 @@
 
 namespace lotus::Component
 {
-    class InstancedRaytraceComponent : public Component<InstancedRaytraceComponent, InstancedModelsComponent>
+    class InstancedRaytraceComponent : public Component<InstancedRaytraceComponent, After<InstancedModelsComponent>>
     {
     public:
-        explicit InstancedRaytraceComponent(Entity*, Engine* engine, InstancedModelsComponent& models);
+        explicit InstancedRaytraceComponent(Entity*, Engine* engine, const InstancedModelsComponent& models);
 
         Task<> tick(time_point time, duration delta);
+    protected:
+        const InstancedModelsComponent& models_component;
     };
 }

@@ -8,7 +8,7 @@
 
 namespace FFXI
 {
-    class CameraThirdPersonComponent : public lotus::Component::Component<CameraThirdPersonComponent, lotus::Component::CameraComponent, ActorComponent>
+    class CameraThirdPersonComponent : public lotus::Component::Component<CameraThirdPersonComponent, lotus::Component::Before<lotus::Component::CameraComponent, ActorComponent>>
     {
     public:
         explicit CameraThirdPersonComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::CameraComponent& camera, ActorComponent& target);
@@ -21,6 +21,8 @@ namespace FFXI
         void swivel(float x_offset, float y_offset);
 
     protected:
+        lotus::Component::CameraComponent& camera;
+        ActorComponent& target;
         //camera
         float rot_x{};
         float rot_y{};

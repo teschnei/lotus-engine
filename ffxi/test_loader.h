@@ -3,6 +3,7 @@
 #include "engine/renderer/mesh.h"
 #include "engine/renderer/texture.h"
 #include "stb.h"
+#include "engine/renderer/vulkan/renderer.h"
 #include <glm/glm.hpp>
 
 class TestTextureLoader

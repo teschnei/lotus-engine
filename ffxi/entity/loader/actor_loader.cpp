@@ -3,6 +3,7 @@
 #include <ranges>
 #include "dat/os2.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 std::vector<vk::VertexInputBindingDescription> getBindingDescriptions()
 {
@@ -145,10 +146,10 @@ lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lo
                 mesh->setIndexCount(mesh_indices.size());
                 mesh->setVertexCount(os2_vertices.size());
                 mesh->setMaxIndex(*std::ranges::max_element(mesh_indices));
-                mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
+                mesh->setVertexInputAttributeDescription(getAttributeDescriptions(), sizeof(FFXI::OS2::WeightingVertex));
                 mesh->setVertexInputBindingDescription(getBindingDescriptions());
-                mesh->pipeline = pipeline;
-                mesh->pipeline_shadow = pipeline_shadowmap;
+                mesh->pipelines.push_back(pipeline);
+                mesh->pipelines.push_back(pipeline_shadowmap);
 
                 vertices.push_back(std::move(vertices_uint8));
                 indices.push_back(std::move(indices_uint8));

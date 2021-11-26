@@ -92,7 +92,7 @@ namespace lotus
 
         return renderer->gpu->device->createDescriptorPoolUnique({
             .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-            .maxSets = 3,
+            .maxSets = renderer->getFrameCount(),
             .poolSizeCount = pool_sizes.size(),
             .pPoolSizes = pool_sizes.data(),
         });
@@ -100,11 +100,11 @@ namespace lotus
 
     std::vector<vk::UniqueDescriptorSet> RaytracePipeline::initializeResourceDescriptorSets(Renderer* renderer, vk::DescriptorSetLayout layout, vk::DescriptorPool pool)
     {
-        std::array layouts = { layout, layout, layout };
+        std::vector<vk::DescriptorSetLayout> layouts(renderer->getFrameCount(), layout);
 
         return renderer->gpu->device->allocateDescriptorSetsUnique({
             .descriptorPool = pool,
-            .descriptorSetCount = layouts.size(),
+            .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
             .pSetLayouts = layouts.data(),
         });
     }
@@ -445,7 +445,9 @@ namespace lotus
 
     TopLevelAccelerationStructure* RaytracePipeline::getTLAS(uint32_t image) const
     {
-        return tlas[image].get();
+        if (image < tlas.size())
+            return tlas[image].get();
+        return nullptr;
     }
 
     vk::UniqueCommandBuffer RaytracePipeline::getCommandBuffer(std::span<vk::WriteDescriptorSet> input_output_descriptors,
@@ -463,7 +465,7 @@ namespace lotus
 
         buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *pipeline);
 
-        buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 0, *resources_descriptor_sets[renderer->getCurrentImage()], {});
+        buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 0, *resources_descriptor_sets[renderer->getCurrentFrame()], {});
 
         if (!before_barriers.empty())
         {

@@ -6,6 +6,7 @@
 
 #include "common.glsl"
 
+
 struct Vertex
 {
     vec3 pos;
@@ -109,11 +110,12 @@ void main()
     if (gl_HitTEXT > light.light.entity.max_fog)
     {
         hitValue.depth = 10;
-        hitValue.BRDF = vec3(1.0);
-        hitValue.diffuse = light.light.entity.fog_color.rgb;
+        hitValue.diffuse = vec3(M_PI);
+        hitValue.BRDF = light.light.entity.fog_color.rgb / M_PI;
         hitValue.distance = gl_HitTEXT;
         return;
     }
+    hitValue.depth++;
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
     Vertex v0 = unpackVertex(primitive_indices.x);
     Vertex v1 = unpackVertex(primitive_indices.y);
@@ -148,6 +150,9 @@ void main()
         cross_vec = -cross_vec;
 
     vec3 origin = gl_WorldRayOriginEXT + (gl_WorldRayDirectionEXT * gl_RayTmaxEXT) + cross_vec * 0.001;
-    traceRayEXT(topLevelAS, 0, 0x01 | 0x02 | 0x10 | 0x20, 0, 0, 0, origin.xyz, 0.0, gl_WorldRayDirectionEXT, 1000.0 - gl_RayTmaxEXT, 0);
+    uint flags = 0x01 | 0x02 | 0x20;
+    if (hitValue.depth < 3)
+        flags |= 0x10;
+    traceRayEXT(topLevelAS, 0, flags, 0, 0, 0, origin.xyz, 0.0, gl_WorldRayDirectionEXT, 1000.0 - gl_RayTmaxEXT, 0);
     hitValue.particle += colour;
 }

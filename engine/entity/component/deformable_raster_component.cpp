@@ -1,15 +1,16 @@
 #include "deformable_raster_component.h"
 #include "engine/core.h"
 #include "engine/renderer/skeleton.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {
-    DeformableRasterComponent::DeformableRasterComponent(Entity* _entity, Engine* _engine, DeformedMeshComponent& animation, PhysicsComponent& physics) :
-         Component(_entity, _engine, animation, physics)
+    DeformableRasterComponent::DeformableRasterComponent(Entity* _entity, Engine* _engine, const DeformedMeshComponent& _mesh_component, const RenderBaseComponent& _base_component) :
+         Component(_entity, _engine), mesh_component(_mesh_component), base_component(_base_component)
     {
     }
 
-    WorkerTask<> DeformableRasterComponent::tick(time_point time, duration delta)
+    WorkerTask<> DeformableRasterComponent::tick(time_point time, duration elapsed)
     {
         uint32_t command_buffer_count = 0;
         if (engine->renderer->rasterizer) command_buffer_count++;
@@ -55,14 +56,21 @@ namespace lotus::Component
             .pInheritanceInfo = &inheritInfo
         });
 
-        vk::DescriptorBufferInfo camera_buffer_info {
-            .buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
-            .offset = image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
-            .range = sizeof(CameraComponent::CameraData)
+        std::array camera_buffer_info
+        {
+            vk::DescriptorBufferInfo  {
+                .buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
+                .offset = image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
+                .range = sizeof(CameraComponent::CameraData)
+            },
+            vk::DescriptorBufferInfo  {
+                .buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
+                .offset = engine->renderer->getPreviousFrame() * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
+                .range = sizeof(CameraComponent::CameraData)
+            }
         };
 
-        const auto& physics_component = std::get<1>(dependencies);
-        auto [model_buffer, model_buffer_offset, model_buffer_range] = physics_component.getUniformBuffer(image);
+        auto [model_buffer, model_buffer_offset, model_buffer_range] = base_component.getUniformBuffer(image);
 
         vk::DescriptorBufferInfo model_buffer_info {
             .buffer = model_buffer,
@@ -81,9 +89,9 @@ namespace lotus::Component
                 .dstSet = nullptr,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
-                .descriptorCount = 1,
+                .descriptorCount = camera_buffer_info.size(),
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .pBufferInfo = &camera_buffer_info
+                .pBufferInfo = camera_buffer_info.data()
             },
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
@@ -124,8 +132,7 @@ namespace lotus::Component
             .pInheritanceInfo = &inheritInfo
         });
 
-        const auto& physics_component = std::get<1>(dependencies);
-        auto [model_buffer, model_buffer_offset, model_buffer_range] = physics_component.getUniformBuffer(image);
+        auto [model_buffer, model_buffer_offset, model_buffer_range] = base_component.getUniformBuffer(image);
 
         vk::DescriptorBufferInfo model_buffer_info {
             .buffer = model_buffer,
@@ -171,8 +178,7 @@ namespace lotus::Component
 
     void DeformableRasterComponent::drawModels(vk::CommandBuffer command_buffer, bool transparency, bool shadowmap)
     {
-        auto& [deformed_mesh_component, physics_component] = dependencies;
-        auto models = deformed_mesh_component.getModels();
+        auto models = mesh_component.getModels();
         for (size_t model_i = 0; model_i < models.size(); ++model_i)
         {
             Model* model = models[model_i].get();
@@ -184,7 +190,7 @@ namespace lotus::Component
                     Mesh* mesh = model->meshes[mesh_i].get();
                     if (mesh->has_transparency == transparency)
                     {
-                        const DeformedMeshComponent::ModelTransformedGeometry& transformed_geometry = deformed_mesh_component.getModelTransformGeometry(model_i);
+                        const DeformedMeshComponent::ModelTransformedGeometry& transformed_geometry = mesh_component.getModelTransformGeometry(model_i);
                         command_buffer.bindVertexBuffers(0, transformed_geometry.vertex_buffers[mesh_i][engine->renderer->getCurrentFrame()]->buffer, {0});
                         command_buffer.bindVertexBuffers(1, transformed_geometry.vertex_buffers[mesh_i][engine->renderer->getPreviousFrame()]->buffer, {0});
                         material_index = transformed_geometry.resource_index + mesh_i;
@@ -221,7 +227,7 @@ namespace lotus::Component
         if (!shadowmap)
         {
             pipeline_layout = engine->renderer->rasterizer->getPipelineLayout();
-            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipeline);
+            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[0]);
 
             std::array descriptorWrites {
                 vk::WriteDescriptorSet {
@@ -246,7 +252,7 @@ namespace lotus::Component
         else
         {
             pipeline_layout = engine->renderer->shadowmap_rasterizer->getPipelineLayout();
-            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipeline_shadow);
+            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[1]);
 
             std::array descriptorWrites {
                 vk::WriteDescriptorSet {

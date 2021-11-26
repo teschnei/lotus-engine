@@ -10,6 +10,7 @@
 
 #include "engine/scene.h"
 #include "engine/ui/element.h"
+#include "engine/ui/ui.h"
 
 #include "engine/entity/component/deformable_raster_component.h"
 #include "engine/entity/component/deformable_raytrace_component.h"
@@ -18,13 +19,23 @@
 #include "engine/entity/component/instanced_raytrace_component.h"
 #include "engine/entity/component/static_collision_component.h"
 
+#include "engine/entity/component/particle_component.h"
+#include "engine/entity/component/particle_raster_component.h"
+#include "engine/entity/component/particle_raytrace_component.h"
+
 #include "engine/entity/component/camera_component.h"
+#include "engine/entity/component/camera_cascades_component.h"
 #include "entity/component/camera_third_person_component.h"
 
 #include "entity/component/actor_component.h"
 #include "entity/component/equipment_test_component.h"
 #include "entity/component/modern_third_person_input_component.h"
 #include "entity/component/landscape_component.h"
+
+#include "entity/component/particle_component.h"
+#include "entity/component/scheduler_component.h"
+#include "entity/component/generator_component.h"
+#include "entity/component/generator_light_component.h"
 
 #include <iostream>
 
@@ -70,22 +81,6 @@ lotus::Task<> FFXIGame::tick(lotus::time_point, lotus::duration)
 lotus::WorkerTask<> FFXIGame::load_scene()
 {
     loading_scene = std::make_unique<lotus::Scene>(engine.get());
-    loading_scene->component_runners->registerComponent<lotus::Component::AnimationComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::PhysicsComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::DeformedMeshComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::DeformableRasterComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::DeformableRaytraceComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::InstancedModelsComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::InstancedRasterComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::InstancedRaytraceComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::StaticCollisionComponent>();
-    loading_scene->component_runners->registerComponent<lotus::Component::CameraComponent>();
-    loading_scene->component_runners->registerComponent<FFXI::CameraThirdPersonComponent>();
-    loading_scene->component_runners->registerComponent<FFXI::ActorComponent>();
-    loading_scene->component_runners->registerComponent<FFXI::ModernThirdPersonInputComponent>();
-    loading_scene->component_runners->registerComponent<FFXI::ActorPCModelsComponent>();
-    loading_scene->component_runners->registerComponent<FFXI::LandscapeComponent>();
-    loading_scene->component_runners->registerComponent<FFXI::EquipmentTestComponent>();
 
     auto path = static_cast<FFXIConfig*>(engine->config.get())->ffxi.ffxi_install_path;
     /* zone dats vtable:
@@ -95,13 +90,13 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(105);
-    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291, loading_scene.get());
-    //audio->setMusic(79, 0);
-    audio->setMusic(114, 0);
+    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(175);
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
+    audio->setMusic(79, 0);
+    //audio->setMusic(114, 0);
     //iroha 3111 (arciela 3074)
-    //auto player = co_await loading_scene->AddEntity<Actor>(3111);
-    auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(FFXI::ActorPCModelsComponent::LookData{ .look = {
+    //auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(3111);
+    auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(FFXI::ActorPCModelsComponent::LookData{.look = {
         .race = 2,
         .face = 15,
         .head = 0x1000 + 64,
@@ -109,22 +104,23 @@ lotus::WorkerTask<> FFXIGame::load_scene()
         .hands = 0x3000 + 64,
         .legs = 0x4000 + 64,
         .feet = 0x5000 + 64,
-        .weapon = 0x6000 + 140,
+        .weapon = 0x6000 + 240,
         .weapon_sub = 0x7000 + 140
         }
     });
-    //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
-    //player->setPos(glm::vec3(259.f, -87.f, 99.f));
-    auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(std::get<FFXI::ActorComponent*>(player_components));
-    //co_await player->addComponent<ThirdPersonEntityFFXIVInputComponent>(engine->input.get());
-    //co_await player->addComponent<ParticleTester>(engine->input.get());
-    //co_await player->addComponent<EquipmentTestComponent>(engine->input.get());
-    auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
     auto ac = std::get<FFXI::ActorComponent*>(player_components);
+    //ac->setPos((glm::vec3(-681.f, -12.f, 161.f)), false);
+    //ac->setPos((glm::vec3(419, -53.f, -103.f)), false);
+    //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
+    ac->setPos(glm::vec3(259.f, -87.f, 99.f), false);
+    auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(ac);
+    auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
     auto ac_models = std::get<FFXI::ActorPCModelsComponent*>(player_components);
 
-    auto ac2 = loading_scene->component_runners->addComponent<FFXI::ModernThirdPersonInputComponent>(player.get(), *ac, *a);
-    auto equip = loading_scene->component_runners->addComponent<FFXI::EquipmentTestComponent>(player.get(), *ac_models);
+    auto ac2 = co_await FFXI::ModernThirdPersonInputComponent::make_component(player.get(), engine.get(), *ac, *a);
+    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac_models);
+    auto particle_tester = co_await ParticleTester::make_component(player.get(), engine.get(), *ac);
+    loading_scene->AddComponents(std::move(ac2), std::move(equip), std::move(particle_tester));
 
     engine->set_camera(std::get<lotus::Component::CameraComponent*>(camera_components));
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);

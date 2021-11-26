@@ -31,7 +31,7 @@ namespace FFXI
         D3A(char* name, uint8_t* buffer, size_t len);
 
         std::string texture_name;
-        uint16_t num_triangles{ 0 };
+        uint16_t num_quads{ 0 };
         std::vector<D3M::Vertex> vertex_buffer;
     };
 
@@ -44,16 +44,17 @@ namespace FFXI
             std::vector<uint16_t>&& indices);
     private:
         static lotus::Task<> InitPipeline(lotus::Engine*);
-        static inline vk::Pipeline pipeline;
+        static inline vk::Pipeline pipeline_add;
         static inline vk::Pipeline pipeline_blend;
+        static inline vk::Pipeline pipeline_sub;
         static inline std::latch pipeline_latch{ 1 };
         static inline std::atomic_flag pipeline_flag;
         static inline std::shared_ptr<lotus::Texture> blank_texture;
 
         static lotus::Task<> LoadModelAABB(std::shared_ptr<lotus::Model>, lotus::Engine*, std::vector<D3M::Vertex>& vertices,
-            std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture>);
+            std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture>, uint16_t sprite_count);
         static lotus::Task<> LoadModelTriangle(std::shared_ptr<lotus::Model>, lotus::Engine*, std::vector<D3M::Vertex>& vertices,
-            std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture>);
+            std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture>, uint16_t sprite_count);
 
         class BlankTextureLoader
         {

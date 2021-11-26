@@ -1,5 +1,6 @@
 #include "static_collision_component.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {
@@ -12,28 +13,31 @@ namespace lotus::Component
     {
         uint32_t image = engine->renderer->getCurrentFrame();
 
-        if (auto tlas = engine->renderer->raytracer->getTLAS(image))
+        if (engine->renderer->raytracer)
         {
-            for (size_t i = 0; i < models.size(); ++i)
+            if (auto tlas = engine->renderer->raytracer->getTLAS(image))
             {
-                const auto& model = models[i];
-                auto& as = model->bottom_level_as;
-
-                if (!model->meshes.empty() && as)
+                for (size_t i = 0; i < models.size(); ++i)
                 {
-                    //transpose because VK_raytracing_KHR expects row-major
-                    auto matrix = glm::mat3x4{ 1.f };
-                    vk::AccelerationStructureInstanceKHR instance
+                    const auto& model = models[i];
+                    auto& as = model->bottom_level_as;
+
+                    if (!model->meshes.empty() && as)
                     {
-                        .instanceCustomIndex = 0,
-                        .mask = static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::LevelCollision),
-                        .instanceShaderBindingTableRecordOffset = RaytracePipeline::shaders_per_group * 0,
-                        .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,
-                        .accelerationStructureReference = as->handle
-                    };
-                    memcpy(&instance.transform, &matrix, sizeof(matrix));
-                    // ???
-                    as->instanceid = tlas->AddInstance(instance);
+                        //transpose because VK_raytracing_KHR expects row-major
+                        auto matrix = glm::mat3x4{ 1.f };
+                        vk::AccelerationStructureInstanceKHR instance
+                        {
+                            .instanceCustomIndex = 0,
+                            .mask = static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::LevelCollision),
+                            .instanceShaderBindingTableRecordOffset = RaytracePipeline::shaders_per_group * 0,
+                            .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,
+                            .accelerationStructureReference = as->handle
+                        };
+                        memcpy(&instance.transform, &matrix, sizeof(matrix));
+                        // ???
+                        as->instanceid = tlas->AddInstance(instance);
+                    }
                 }
             }
         }

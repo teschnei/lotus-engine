@@ -2,13 +2,11 @@
 #include "audio.h"
 #include "config.h"
 #include "input.h"
-#include "light_manager.h"
 #include "random.h"
 #include "types.h"
-#include "worker_pool.h"
-#include "renderer/vulkan/renderer.h"
-#include "ui/events.h"
-#include "ui/ui.h"
+#include "task.h"
+#include "worker_task.h"
+#include "engine/renderer/vulkan/renderer_settings.h"
 
 namespace lotus
 {
@@ -16,10 +14,22 @@ namespace lotus
     {
         std::string app_name;
         uint32_t app_version;
-        Renderer::Settings renderer_settings;
+        RendererSettings renderer_settings;
     };
 
     class Game;
+    class LightManager;
+    class WorkerPool;
+    class Renderer;
+    namespace ui
+    {
+        class Events;
+        class Manager;
+    }
+    namespace Component
+    {
+        class CameraComponent;
+    }
 
     class Engine
     {

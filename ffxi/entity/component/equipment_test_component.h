@@ -11,7 +11,7 @@ namespace lotus
 
 namespace FFXI
 {
-    class EquipmentTestComponent : public lotus::Component::Component<EquipmentTestComponent, ActorPCModelsComponent>
+    class EquipmentTestComponent : public lotus::Component::Component<EquipmentTestComponent, lotus::Component::Before<ActorPCModelsComponent>>
     {
     public:
         explicit EquipmentTestComponent(lotus::Entity*, lotus::Engine* engine, ActorPCModelsComponent& actor);
@@ -19,6 +19,7 @@ namespace FFXI
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
         bool handleInput(lotus::Input*, const SDL_Event&);
     protected:
+        ActorPCModelsComponent& actor;
         std::optional<uint16_t> new_modelid;
     };
 }

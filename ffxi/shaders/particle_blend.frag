@@ -8,7 +8,7 @@ layout(binding = 1) uniform sampler2D texSampler;
 
 layout(binding = 3, set = 0) buffer readonly MeshBlock
 {
-    Mesh mesh;
+    Mesh m[1024];
 } mesh;
 
 layout(location = 0) in vec4 fragColor;
@@ -26,7 +26,7 @@ layout(push_constant) uniform PushConstant
 
 void main() {
     vec4 texture_colour = texture(texSampler, fragTexCoord);
-    vec4 mesh_colour = mesh.mesh.colour;
+    vec4 mesh_colour = mesh.m[push.mesh_index].colour;
     vec3 colour = fragColor.rgb *  mesh_colour.rgb * texture_colour.rgb * 4;
     float alpha = fragColor.a * mesh_colour.a * texture_colour.a * 2;
 

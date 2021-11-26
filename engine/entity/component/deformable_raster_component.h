@@ -4,17 +4,19 @@
 #include "engine/worker_task.h"
 #include "engine/renderer/memory.h"
 #include "deformed_mesh_component.h"
-#include "physics_component.h"
+#include "render_base_component.h"
 
 namespace lotus::Component
 {
-    class DeformableRasterComponent : public Component<DeformableRasterComponent, DeformedMeshComponent, PhysicsComponent>
+    class DeformableRasterComponent : public Component<DeformableRasterComponent, After<DeformedMeshComponent, RenderBaseComponent>>
     {
     public:
-        explicit DeformableRasterComponent(Entity*, Engine* engine, DeformedMeshComponent& animation, PhysicsComponent& physics);
+        explicit DeformableRasterComponent(Entity*, Engine* engine, const DeformedMeshComponent& animation, const RenderBaseComponent& physics);
 
-        WorkerTask<> tick(time_point time, duration delta);
+        WorkerTask<> tick(time_point time, duration elapsed);
     protected:
+        const DeformedMeshComponent& mesh_component;
+        const RenderBaseComponent& base_component;
         void drawModelsToBuffer(vk::CommandBuffer command_buffer);
         void drawShadowmapsToBuffer(vk::CommandBuffer command_buffer);
         void drawModels(vk::CommandBuffer command_buffer, bool transparency, bool shadowmap);

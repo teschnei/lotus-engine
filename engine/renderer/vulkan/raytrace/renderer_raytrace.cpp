@@ -5,6 +5,7 @@
 #include "engine/core.h"
 #include "engine/game.h"
 #include "engine/config.h"
+#include "engine/light_manager.h"
 #include "engine/entity/component/camera_component.h"
 #include "engine/renderer/acceleration_structure.h"
 
@@ -857,12 +858,12 @@ namespace lotus
         {
             vk::DescriptorBufferInfo  {
                 .buffer = camera_buffers.view_proj_ubo->buffer,
-                .offset = uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * getCurrentFrame(),
+                .offset = uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame,
                 .range = sizeof(Component::CameraComponent::CameraData)
             },
             vk::DescriptorBufferInfo  {
                 .buffer = camera_buffers.view_proj_ubo->buffer,
-                .offset = uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * getPreviousFrame(),
+                .offset = uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * previous_frame,
                 .range = sizeof(Component::CameraComponent::CameraData)
             }
         };
@@ -935,9 +936,9 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
-        resources->BindResources(current_image);
         engine->worker_pool->deleteFinished();
         gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
+        resources->BindResources(current_frame);
 
         try
         {
@@ -1052,6 +1053,7 @@ namespace lotus
 
             previous_frame = current_frame;
             current_frame = (current_frame + 1) % max_pending_frames;
+            previous_image = current_image;
             current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
             raytracer->prepareNextFrame();
         }

@@ -1,6 +1,7 @@
 #include "material.h"
 #include "engine/core.h"
 #include "engine/renderer/memory.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {

@@ -6,15 +6,12 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    mat4 proj_prev;
-    mat4 view_prev;
     vec4 eye_pos;
 } ubo;
 
 layout(binding = 2) uniform ModelUBO {
     mat4 model;
-    mat3 model_IT;
-    vec4 _pad;
+    mat4 model_IT;
     mat4 model_prev;
 } model;
 
@@ -34,5 +31,5 @@ void main() {
     fragTexCoord = inTexCoord;
 
     fragPos = (model.model * vec4(inPosition, 1.0)).xyz;
-    normal = normalize(model.model_IT * inNormal);
+    normal = normalize(mat3(model.model_IT) * inNormal);
 }

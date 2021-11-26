@@ -1,10 +1,11 @@
 #include "instanced_raster_component.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {
     InstancedRasterComponent::InstancedRasterComponent(Entity* _entity, Engine* _engine, InstancedModelsComponent& models) :
-         Component(_entity, _engine, models)
+         Component(_entity, _engine), models_component(models)
     {
     }
 
@@ -18,7 +19,7 @@ namespace lotus::Component
             vk::CommandBufferAllocateInfo alloc_info {
                 .commandPool = *engine->renderer->graphics_pool,
                 .level = vk::CommandBufferLevel::eSecondary,
-                .commandBufferCount = command_buffer_count * engine->renderer->getImageCount()
+                .commandBufferCount = command_buffer_count * engine->renderer->getFrameCount()
             };
 
             auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -26,17 +27,19 @@ namespace lotus::Component
 
             if (engine->renderer->rasterizer)
             {
-                for (size_t i = 0; i < engine->renderer->getImageCount(); i++)
+                auto prev_image = engine->renderer->getFrameCount() - 1;
+                for (size_t i = 0; i < engine->renderer->getFrameCount(); i++)
                 {
-                    drawModelsToBuffer(*command_buffers[buffer_index], i);
+                    drawModelsToBuffer(*command_buffers[buffer_index], i, prev_image);
                     render_buffers.push_back(std::move(command_buffers[buffer_index]));
                     ++buffer_index;
+                    prev_image = i;
                 }
             }
 
             if (engine->renderer->shadowmap_rasterizer)
             {
-                for (size_t i = 0; i < engine->renderer->getImageCount(); i++)
+                for (size_t i = 0; i < engine->renderer->getFrameCount(); i++)
                 {
                     drawShadowmapsToBuffer(*command_buffers[buffer_index], i);
                     shadowmap_buffers.push_back(std::move(command_buffers[buffer_index]));
@@ -48,7 +51,7 @@ namespace lotus::Component
         co_return;
     }
 
-    WorkerTask<> InstancedRasterComponent::tick(time_point time, duration delta)
+    WorkerTask<> InstancedRasterComponent::tick(time_point time, duration elapsed)
     {
         auto image = engine->renderer->getCurrentFrame();
         if (engine->renderer->rasterizer)
@@ -63,7 +66,7 @@ namespace lotus::Component
         co_return;
     }
 
-    void InstancedRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buffer, uint32_t image)
+    void InstancedRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buffer, uint32_t image, uint32_t prev_image)
     {
         vk::CommandBufferInheritanceInfo inheritInfo {
             .renderPass = engine->renderer->rasterizer->getRenderPass(),
@@ -75,10 +78,18 @@ namespace lotus::Component
             .pInheritanceInfo = &inheritInfo
         });
 
-        vk::DescriptorBufferInfo camera_buffer_info {
-            .buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
-            .offset = image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
-            .range = sizeof(CameraComponent::CameraData)
+        std::array camera_buffer_info
+        {
+            vk::DescriptorBufferInfo  {
+                .buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
+                .offset = image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
+                .range = sizeof(CameraComponent::CameraData)
+            },
+            vk::DescriptorBufferInfo  {
+                .buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
+                .offset = prev_image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
+                .range = sizeof(CameraComponent::CameraData)
+            }
         };
 
         vk::DescriptorBufferInfo mesh_info {
@@ -92,9 +103,9 @@ namespace lotus::Component
                 .dstSet = nullptr,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
-                .descriptorCount = 1,
+                .descriptorCount = camera_buffer_info.size(),
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .pBufferInfo = &camera_buffer_info
+                .pBufferInfo = camera_buffer_info.data()
             },
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
@@ -155,15 +166,14 @@ namespace lotus::Component
 
     void InstancedRasterComponent::drawModels(vk::CommandBuffer command_buffer, bool transparency, bool shadowmap)
     {
-        auto& [instanced_models] = dependencies;
-        auto models = instanced_models.getModels();
+        auto models = models_component.getModels();
         for (size_t model_i = 0; model_i < models.size(); ++model_i)
         {
             Model* model = models[model_i].get();
-            auto [offset, count] = instanced_models.getInstanceOffset(model->name);
+            auto [offset, count] = models_component.getInstanceOffset(model->name);
             if (count > 0 && !model->meshes.empty())
             {
-                command_buffer.bindVertexBuffers(1, instanced_models.getInstanceBuffer(), offset * sizeof(InstancedModelsComponent::InstanceInfo));
+                command_buffer.bindVertexBuffers(1, models_component.getInstanceBuffer(), offset * sizeof(InstancedModelsComponent::InstanceInfo));
                 uint32_t material_index = 1;
                 for (size_t i = 0; i < model->meshes.size(); ++i)
                 {
@@ -203,7 +213,7 @@ namespace lotus::Component
         if (!shadowmap)
         {
             pipeline_layout = engine->renderer->rasterizer->getPipelineLayout();
-            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipeline);
+            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[0]);
 
             std::array descriptorWrites {
                 vk::WriteDescriptorSet {
@@ -228,7 +238,7 @@ namespace lotus::Component
         else
         {
             pipeline_layout = engine->renderer->shadowmap_rasterizer->getPipelineLayout();
-            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipeline_shadow);
+            command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[1]);
 
             std::array descriptorWrites {
                 vk::WriteDescriptorSet {

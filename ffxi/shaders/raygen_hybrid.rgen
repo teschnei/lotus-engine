@@ -37,8 +37,6 @@ layout(binding = 7, set = 1) uniform Camera {
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    mat4 proj_prev;
-    mat4 view_prev;
     vec4 eye_pos;
 } camera;
 
@@ -161,8 +159,9 @@ void main()
         for(; hitValue.depth < 1; hitValue.depth++)
         {
             traceRayEXT(topLevelAS, 0, 0x01 | 0x02, 0, 0, 1, hitValue.origin, 0.001, hitValue.direction, 1000.0, 0);
-            accumulation += hitValue.BRDF * hitValue.diffuse * weight;
-            weight *= hitValue.weight * hitValue.BRDF;
+            vec3 factor = hitValue.BRDF * weight;
+            accumulation += hitValue.diffuse * factor;
+            weight *= factor;
         }
     }
 

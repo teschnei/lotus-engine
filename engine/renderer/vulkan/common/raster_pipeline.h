@@ -42,6 +42,7 @@ namespace lotus
             FramebufferAttachment motion_vector;
             FramebufferAttachment accumulation;
             FramebufferAttachment revealage;
+            FramebufferAttachment particle;
             FramebufferAttachment depth;
 
             vk::UniqueHandle<vk::Framebuffer, vk::DispatchLoaderDynamic> frame_buffer;

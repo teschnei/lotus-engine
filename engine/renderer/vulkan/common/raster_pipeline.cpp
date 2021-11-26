@@ -21,7 +21,7 @@ namespace lotus
             vk::DescriptorSetLayoutBinding { //camera
                 .binding = 0,
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .descriptorCount = 1,
+                .descriptorCount = 2,
                 .stageFlags = vk::ShaderStageFlagBits::eVertex
             },
             vk::DescriptorSetLayoutBinding { //texture
@@ -170,6 +170,16 @@ namespace lotus
                 .initialLayout = vk::ImageLayout::eUndefined,
                 .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
             },
+            vk::AttachmentDescription { //particle
+                .format = vk::Format::eR32G32B32A32Sfloat,
+                .samples = vk::SampleCountFlagBits::e1,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+                .initialLayout = vk::ImageLayout::eUndefined,
+                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            },
             vk::AttachmentDescription { //depth
                 .format = renderer->gpu->getDepthFormat(),
                 .samples = vk::SampleCountFlagBits::e1,
@@ -214,7 +224,7 @@ namespace lotus
         };
 
         vk::AttachmentReference depth_attachment_ref {
-            .attachment = 9,
+            .attachment = 10,
             .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
         };
 
@@ -225,6 +235,10 @@ namespace lotus
             },
             vk::AttachmentReference { //revealage
                 .attachment = 8,
+                .layout = vk::ImageLayout::eColorAttachmentOptimal
+            },
+            vk::AttachmentReference { //particle
+                .attachment = 9,
                 .layout = vk::ImageLayout::eColorAttachmentOptimal
             }
         };
@@ -322,6 +336,7 @@ namespace lotus
             .motion_vector = initializeFramebufferAttachment(renderer, extent, vk::Format::eR32G32B32A32Sfloat, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst),
             .accumulation = initializeFramebufferAttachment(renderer, extent, vk::Format::eR16G16B16A16Sfloat, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled),
             .revealage = initializeFramebufferAttachment(renderer, extent, vk::Format::eR16Sfloat, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled),
+            .particle = initializeFramebufferAttachment(renderer, extent, vk::Format::eR32G32B32A32Sfloat, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled),
             .depth = initializeFramebufferAttachment(renderer, extent, renderer->gpu->getDepthFormat(), vk::ImageUsageFlagBits::eDepthStencilAttachment)
         };
 
@@ -335,6 +350,7 @@ namespace lotus
             *gbuffer.motion_vector.image_view,
             *gbuffer.accumulation.image_view,
             *gbuffer.revealage.image_view,
+            *gbuffer.particle.image_view,
             *gbuffer.depth.image_view
         };
 
@@ -377,6 +393,7 @@ namespace lotus
             { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
             { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
             { .color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f }},
+            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
             { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
         };
     }

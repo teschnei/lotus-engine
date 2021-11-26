@@ -8,12 +8,13 @@
 
 namespace lotus::Component
 {
-    class PhysicsComponent : public Component<PhysicsComponent>
+    class RenderBaseComponent : public Component<RenderBaseComponent>
     {
     public:
-        explicit PhysicsComponent(Entity*, Engine* engine);
+        explicit RenderBaseComponent(Entity*, Engine* engine);
+        ~RenderBaseComponent();
 
-        Task<> tick(time_point time, duration delta);
+        Task<> tick(time_point time, duration elapsed);
         Task<> init();
 
         std::tuple<vk::Buffer, size_t, size_t> getUniformBuffer(uint32_t image) const;
@@ -31,6 +32,19 @@ namespace lotus::Component
         void setRot(glm::quat rot);
         void setScale(glm::vec3 scale);
 
+        class Billboard
+        {
+        public:
+            static constexpr uint8_t None = 0;
+            static constexpr uint8_t X = 1;
+            static constexpr uint8_t Y = 2;
+            static constexpr uint8_t Z = 4;
+            static constexpr uint8_t All = 7;
+        };
+
+        void setBillboard(uint8_t b) { billboard = b; }
+        uint8_t getBillboard() const { return billboard; }
+
     protected:
         struct UniformBufferObject {
             glm::mat4 model;
@@ -39,13 +53,15 @@ namespace lotus::Component
         };
 
         std::unique_ptr<Buffer> uniform_buffer;
-        UniformBufferObject* uniform_buffer_mapped{ nullptr };
+        uint8_t* uniform_buffer_mapped{ nullptr };
 
         bool should_update_matrix{ true };
 
         glm::vec3 pos{ 0.f };
         glm::quat rot{1.f, 0.f, 0.f, 0.f};
         glm::vec3 scale{ 1.f, 1.f, 1.f };
+
+        uint8_t billboard{ 0 };
 
         glm::mat4 model{};
         glm::mat4 modelT{};

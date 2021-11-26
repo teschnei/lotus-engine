@@ -35,10 +35,10 @@ namespace FFXI
             uint8_t flags5;
             uint16_t unknown5;
             uint32_t flags6;
-            uint32_t offset1;
-            uint32_t offset2;
-            uint32_t offset3;
-            uint32_t offset4;
+            uint32_t unknown_command_offset;
+            uint32_t creation_command_offset;
+            uint32_t tick_command_offset;
+            uint32_t expiry_command_offset;
         };
 #pragma pack(pop)
 

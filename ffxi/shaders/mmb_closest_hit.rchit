@@ -114,6 +114,8 @@ void main()
         hitValue.diffuse = vec3(M_PI);
         hitValue.BRDF = light.light.landscape.fog_color.rgb / M_PI;
         hitValue.depth = 10;
+        hitValue.prev_pos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_RayTmaxEXT;
+        hitValue.origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_RayTmaxEXT;
         return;
     }
     ivec3 primitive_indices = getIndex(gl_PrimitiveID);
@@ -193,6 +195,10 @@ void main()
                 diffuse += att * shadow.shadow.rgb / pdf;
             }
         }
+        else
+        {
+            diffuse += shadow.shadow.rgb;
+        }
     }
 
     vec3 tangent, bitangent;
@@ -208,8 +214,8 @@ void main()
 
     if (distance > light.light.landscape.min_fog && distance < light.light.landscape.max_fog)
     {
-        albedo = mix(albedo, light.light.landscape.fog_color.rgb, (distance - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));   
-        diffuse = mix(diffuse, vec3(M_PI), (distance - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));   
+        //albedo = mix(albedo, light.light.landscape.fog_color.rgb, (distance - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));
+        //diffuse = mix(diffuse, vec3(M_PI), (distance - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));
     }
 
     vec3 BRDF = albedo / M_PI;

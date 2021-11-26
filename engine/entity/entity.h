@@ -6,6 +6,7 @@
 
 namespace lotus
 {
+    class Scene;
     class Entity final
     {
     public:
@@ -18,14 +19,15 @@ namespace lotus
 
         static uint32_t ID() { return IDGenerator<Entity, uint32_t>::template GetNewID<Entity>(); }
 
-        bool should_remove() { return remove; };
+        bool should_remove() { return removed; };
+        void remove() { removed = true; }
 
         void setSharedPtr(std::shared_ptr<Entity>);
         std::shared_ptr<Entity> getSharedPtr();
 
     private:
         //toggle when the entity is to be removed from the scene
-        bool remove{ false };
+        bool removed{ false };
         std::weak_ptr<Entity> self_shared;
     };
 }

@@ -33,23 +33,29 @@ namespace lotus
             return vertex_attributes;
         }
 
-        void setVertexInputAttributeDescription(std::vector<vk::VertexInputAttributeDescription>&& attrs)
+        void setVertexInputAttributeDescription(std::vector<vk::VertexInputAttributeDescription>&& attrs, size_t stride)
         {
             vertex_attributes = std::move(attrs);
+            vertex_stride = stride;
         }
+
+        size_t getVertexStride() { return vertex_stride; }
 
         int getIndexCount() const { return indices; }
         int getVertexCount() const { return vertices; }
         uint32_t getMaxIndex() const { return max_index; }
+        uint16_t getSpriteCount() const { return sprite_count; }
         void setIndexCount(int _indices) { indices = _indices; }
         void setVertexCount(int _vertices) { vertices = _vertices; }
         void setMaxIndex(uint32_t _max_index) { max_index = _max_index; }
+        void setSpriteCount(uint16_t _sprite_count) { sprite_count = _sprite_count; }
 
         void setVertexBuffer(uint8_t* buffer, size_t len);
 
         std::unique_ptr<Buffer> vertex_buffer;
         std::unique_ptr<Buffer> index_buffer;
         std::unique_ptr<Buffer> aabbs_buffer;
+
 
         std::shared_ptr<Material> material;
 
@@ -58,15 +64,16 @@ namespace lotus
 
         Mesh() = default;
 
-        vk::Pipeline pipeline;
-        vk::Pipeline pipeline_shadow;
+        std::vector<vk::Pipeline> pipelines;
     protected:
 
         std::vector<vk::VertexInputBindingDescription> vertex_bindings;
         std::vector<vk::VertexInputAttributeDescription> vertex_attributes;
+        size_t vertex_stride{ 0 };
         int indices{ 0 };
         int vertices{ 0 };
         uint32_t max_index{ 0 };
+        uint16_t sprite_count{ 1 };
     };
 
 }

@@ -2,6 +2,7 @@
 
 #include <numeric>
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace FFXI
 {
@@ -18,6 +19,13 @@ namespace FFXI
         glm::vec3 pos;
         uint32_t color;
         glm::vec2 uv;
+    };
+
+    struct DatRectD3A
+    {
+        uint16_t unk1;
+        uint16_t unk2;
+        DatVertexD3A vertices[6];
     };
 
     inline std::vector<vk::VertexInputBindingDescription> getBindingDescriptions()
@@ -71,28 +79,31 @@ namespace FFXI
         auto vertices = (DatVertexD3M*)(buffer + 0x1E);
         for (size_t i = 0; i < num_triangles * 3; ++i)
         {
-            glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF)) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 128.0 };
+            glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 128.f, ((vertices[i].color & 0xFF00) >> 8) / 128.f, ((vertices[i].color & 0xFF)) / 128.f, ((vertices[i].color & 0xFF000000) >> 24) / 128.f };
             vertex_buffer.push_back({ vertices[i].pos, vertices[i].normal, color, vertices[i].uv });
         }
     }
 
     D3A::D3A(char* _name, uint8_t* _buffer, size_t _len) : DatChunk(_name, _buffer, _len)
     {
-        //num quads?
-        num_triangles = *(uint16_t*)(buffer + 0x02) * 2;
-        DEBUG_BREAK_IF(num_triangles * sizeof(DatVertexD3A) + 0x1C > (len));
-        //not sure what the other values are? num_triangles seems to be repeated at 0x05 and 0x06, and 0x07 is 1?
+        num_quads = *(uint16_t*)(buffer + 0x02);
+        DEBUG_BREAK_IF(num_quads * sizeof(DatRectD3A) + 0x18 > (len));
+        //not sure what the other values are? num_quads seems to be repeated at 0x05 and 0x06 (but doesn't do anything), and 0x07 is 1?
         texture_name = std::string((char*)buffer + 0x08, 16);
-        auto vertices = (DatVertexD3A*)(buffer + 0x1C);
-        for (size_t i = 0; i < num_triangles * 3; ++i)
+        //i think a d3a is always a square and the number of quads is "frames" of an animation?
+        auto rects = (DatRectD3A*)(buffer + 0x18);
+        for (size_t i = 0; i < num_quads; ++i)
         {
-            glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 255.0, ((vertices[i].color & 0xFF00) >> 8) / 255.0, ((vertices[i].color & 0xFF)) / 255.0, ((vertices[i].color & 0xFF000000) >> 24) / 128.0 };
-            vertex_buffer.push_back({ vertices[i].pos, glm::vec3(0.f,0.f,1.f), color, vertices[i].uv });
+            for (size_t j = 0; j < 6; ++j)
+            {
+                glm::vec4 color{ ((rects[i].vertices[j].color & 0xFF0000) >> 16) / 128.f, ((rects[i].vertices[j].color & 0xFF00) >> 8) / 128.f, ((rects[i].vertices[j].color & 0xFF)) / 128.f, ((rects[i].vertices[j].color & 0xFF000000) >> 24) / 128.f };
+                vertex_buffer.push_back({ rects[i].vertices[j].pos, glm::vec3(0.f,0.f,1.f), color, rects[i].vertices[j].uv });
+            }
         }
     }
 
     lotus::Task<> D3MLoader::LoadModelAABB(std::shared_ptr<lotus::Model> model, lotus::Engine* engine,
-        std::vector<D3M::Vertex>& vertices, std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture> texture)
+        std::vector<D3M::Vertex>& vertices, std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture> texture, uint16_t sprite_count)
     {
         if (!pipeline_flag.test_and_set())
         {
@@ -130,9 +141,13 @@ namespace FFXI
         mesh->setIndexCount(indices.size());
         mesh->setVertexCount(vertices.size());
         mesh->setMaxIndex(vertices.size() - 1);
-        mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
+        mesh->setVertexInputAttributeDescription(getAttributeDescriptions(), sizeof(D3M::Vertex));
         mesh->setVertexInputBindingDescription(getBindingDescriptions());
-        mesh->pipeline = pipeline;
+        mesh->setSpriteCount(sprite_count);
+        mesh->pipelines.push_back(pipeline_add);
+        mesh->pipelines.push_back(nullptr);
+        mesh->pipelines.push_back(pipeline_blend);
+        mesh->pipelines.push_back(pipeline_sub);
 
         model->meshes.push_back(std::move(mesh));
 
@@ -149,7 +164,7 @@ namespace FFXI
     }
 
     lotus::Task<> D3MLoader::LoadModelTriangle(std::shared_ptr<lotus::Model> model, lotus::Engine* engine,
-        std::vector<D3M::Vertex>& vertices, std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture> texture)
+        std::vector<D3M::Vertex>& vertices, std::vector<uint16_t>& indices, std::shared_ptr<lotus::Texture> texture, uint16_t sprite_count)
     {
         if (!pipeline_flag.test_and_set())
         {
@@ -186,9 +201,13 @@ namespace FFXI
         mesh->setIndexCount(indices.size());
         mesh->setVertexCount(vertices.size());
         mesh->setMaxIndex(vertices.size() - 1);
-        mesh->setVertexInputAttributeDescription(getAttributeDescriptions());
+        mesh->setVertexInputAttributeDescription(getAttributeDescriptions(), sizeof(D3M::Vertex));
         mesh->setVertexInputBindingDescription(getBindingDescriptions());
-        mesh->pipeline = pipeline;
+        mesh->setSpriteCount(sprite_count);
+        mesh->pipelines.push_back(pipeline_add);
+        mesh->pipelines.push_back(nullptr);
+        mesh->pipelines.push_back(pipeline_blend);
+        mesh->pipelines.push_back(pipeline_sub);
 
         model->meshes.push_back(std::move(mesh));
 
@@ -201,7 +220,7 @@ namespace FFXI
     lotus::Task<> D3MLoader::LoadModelRing(std::shared_ptr<lotus::Model> model, lotus::Engine* engine,
         std::vector<D3M::Vertex>&& vertices, std::vector<uint16_t>&& indices)
     {
-        co_await LoadModelTriangle(model, engine, vertices, indices, blank_texture);
+        co_await LoadModelTriangle(model, engine, vertices, indices, blank_texture, 1);
     }
 
     lotus::Task<> D3MLoader::LoadD3M(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3M* d3m)
@@ -210,16 +229,17 @@ namespace FFXI
         std::iota(index_buffer.begin(), index_buffer.end(), 0);
 
         //co_await LoadModelAABB(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name));
-        co_await LoadModelTriangle(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name));
+        co_await LoadModelTriangle(model, engine, d3m->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3m->texture_name), 1);
     }
 
     lotus::Task<> D3MLoader::LoadD3A(std::shared_ptr<lotus::Model> model, lotus::Engine* engine, D3A* d3a)
     {
-        std::vector<uint16_t> index_buffer(d3a->vertex_buffer.size());
+        //TODO: this size may be from D3A somewhere (maybe that 0x01 that doesn't seem to do anything?)
+        std::vector<uint16_t> index_buffer(6);
         std::iota(index_buffer.begin(), index_buffer.end(), 0);
 
         //co_await LoadModelAABB(model, engine, d3a->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3a->texture_name));
-        co_await LoadModelTriangle(model, engine, d3a->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3a->texture_name));
+        co_await LoadModelTriangle(model, engine, d3a->vertex_buffer, index_buffer, lotus::Texture::getTexture(d3a->texture_name), d3a->num_quads);
     }
 
     lotus::Task<> D3MLoader::InitPipeline(lotus::Engine* engine)
@@ -313,9 +333,15 @@ namespace FFXI
         color_blend_attachment_revealage.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
         color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
         color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
+        vk::PipelineColorBlendAttachmentState color_blend_attachment_particle = color_blend_attachment;
+        color_blend_attachment_particle.blendEnable = false;
+        color_blend_attachment_particle.srcColorBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment_particle.dstColorBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment_particle.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+        color_blend_attachment_particle.dstAlphaBlendFactor = vk::BlendFactor::eOne;
 
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
-        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
+        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage, color_blend_attachment_particle };
 
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;
@@ -344,7 +370,19 @@ namespace FFXI
         pipeline_info.pColorBlendState = &color_blending_subpass1;
         pipeline_info.subpass = 1;
 
-        pipeline = engine->renderer->createGraphicsPipeline(pipeline_info);
+        pipeline_blend = engine->renderer->createGraphicsPipeline(pipeline_info);
+
+        auto fragment_module_add = engine->renderer->getShader("shaders/particle_add.spv");
+        frag_shader_stage_info.module = *fragment_module_add;
+        shaderStages[1] = frag_shader_stage_info;
+
+        color_blend_attachment_states_subpass1[0].blendEnable = false;
+        color_blend_attachment_states_subpass1[1].blendEnable = false;
+        color_blend_attachment_states_subpass1[2].blendEnable = true;
+        pipeline_add = engine->renderer->createGraphicsPipeline(pipeline_info);
+
+        color_blend_attachment_states_subpass1[2].colorBlendOp = vk::BlendOp::eSubtract;
+        pipeline_sub = engine->renderer->createGraphicsPipeline(pipeline_info);
 
         blank_texture = co_await lotus::Texture::LoadTexture("d3m_blank", BlankTextureLoader::LoadTexture, engine);
     }

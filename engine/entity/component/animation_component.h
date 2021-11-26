@@ -35,10 +35,9 @@ namespace lotus
             std::unique_ptr<Buffer> skeleton_bone_buffer;
 
         protected:
+            WorkerTask<> renderWork();
             void changeAnimation(std::string name, float speed);
             static constexpr duration interpolation_time{ 100ms };
-
-            WorkerTask<> renderWork();
 
             Animation* current_animation{ nullptr };
             time_point animation_start;

@@ -11,6 +11,8 @@ layout(binding = 2) uniform sampler2D lightSampler;
 layout(binding = 3) uniform usampler2D materialIndexSampler;
 layout(binding = 4) uniform sampler2D accumulationSampler;
 layout(binding = 5) uniform sampler2D revealageSampler;
+layout(binding = 8) uniform usampler2D lightTypeSampler;
+layout(binding = 10) uniform sampler2D particleSampler;
 
 layout(binding = 6, set = 0) buffer readonly MeshInfo
 {
@@ -24,18 +26,11 @@ layout(std430, binding = 7) buffer readonly Light
     LightInfo light_info[];
 } light;
 
-layout(binding = 8) uniform MaterialInfo
-{
-    Material m;
-} materials[1024];
-
 layout(binding = 9) uniform Camera {
     mat4 proj;
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    mat4 proj_prev;
-    mat4 view_prev;
     vec4 eye_pos;
 } camera;
 
@@ -48,6 +43,7 @@ void main() {
     vec3 fragPos = texture(positionSampler, fragTexCoord).xyz;
     vec4 accumulation = texture(accumulationSampler, fragTexCoord);
     float revealage = texture(revealageSampler, fragTexCoord).x;
+    vec3 particle = texture(particleSampler, fragTexCoord).xyz;
 
     if (fragPos == vec3(0))
     {
@@ -92,14 +88,14 @@ void main() {
     else
     {
         vec4 colour = texture(albedoSampler, fragTexCoord) * texture(lightSampler, fragTexCoord);
-        uint mesh_index = texture(materialIndexSampler, fragTexCoord).r;
+        uint light_type = texture(lightTypeSampler, fragTexCoord).r;
         float dist = length(fragPos - camera.eye_pos.xyz);
 
         vec3 fog = vec3(0.0);
         float max_fog_dist = 0;
         float min_fog_dist = 0;
 
-        if (materials[meshInfo.m[mesh_index].material_index].m.light_type == 0)
+        if (light_type == 0)
         {
             fog = light.light.entity.fog_color.rgb;
             max_fog_dist = light.light.entity.max_fog;
@@ -126,8 +122,9 @@ void main() {
         }
     }
 
-    outColor.rgb = mix(accumulation.rgb / max(accumulation.a, 0.00001), outColor.rgb, revealage);
+    if (accumulation.a > 0)
+        outColor.rgb = mix(accumulation.rgb / max(accumulation.a, 0.00001), outColor.rgb, revealage);
 
-    outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));
+    outColor.rgb += particle;
 }
 

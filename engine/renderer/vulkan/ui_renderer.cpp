@@ -2,6 +2,7 @@
 
 #include "renderer.h"
 #include "engine/core.h"
+#include "engine/ui/ui.h"
 
 namespace lotus
 {

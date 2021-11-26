@@ -1,6 +1,7 @@
 #include "acceleration_structure.h"
 #include "engine/core.h"
 #include "engine/renderer/model.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus
 {
@@ -172,7 +173,7 @@ namespace lotus
             write_as.pAccelerationStructures = &*acceleration_structure;
             write_info_as.pNext = &write_as;
 
-            write_info_as.dstSet = renderer->raytracer->getResourceDescriptorSet(renderer->getCurrentImage());
+            write_info_as.dstSet = renderer->raytracer->getResourceDescriptorSet(renderer->getCurrentFrame());
             renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
         }
         auto data = instance_memory->map(0, instance_count * sizeof(vk::AccelerationStructureInstanceKHR), {});

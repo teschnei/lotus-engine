@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "engine/core.h"
 #include "element.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::ui
 {

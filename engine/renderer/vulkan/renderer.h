@@ -31,10 +31,6 @@ namespace lotus
     class Renderer
     {
     public:
-        struct Settings
-        {
-            uint32_t shadowmap_dimension{ 2048 };
-        };
         Renderer(Engine* engine);
         virtual ~Renderer();
 
@@ -163,6 +159,7 @@ namespace lotus
         std::vector<vk::UniqueSemaphore> frame_finish_sem;
         vk::UniqueSemaphore compute_sem;
         uint32_t current_image{ 0 };
+        uint32_t previous_image{ 0 };
         static constexpr uint32_t max_pending_frames{ 2 };
         uint32_t current_frame{ 0 };
         uint32_t previous_frame{ 0 };

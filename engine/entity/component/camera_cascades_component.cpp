@@ -2,21 +2,21 @@
 
 #include "engine/entity/entity.h"
 #include "engine/core.h"
+#include "engine/light_manager.h"
 #include "engine/renderer/vulkan/raster/renderer_rasterization.h"
 #include <glm/glm.hpp>
 
 namespace lotus::Component
 {
-    CameraCascadesComponent::CameraCascadesComponent(Entity* _entity, Engine* _engine, CameraComponent& camera) : Component(_entity, _engine, camera)
+    CameraCascadesComponent::CameraCascadesComponent(Entity* _entity, Engine* _engine, CameraComponent& _camera) : Component(_entity, _engine), camera(_camera)
     {
     }
 
     Task<> CameraCascadesComponent::tick(time_point time, duration delta)
     {
-        auto [camera] = dependencies;
         if (camera.updated())
         {
-            co_await [&camera, this]() -> WorkerTask<>
+            co_await [this]() -> WorkerTask<>
             {
                 auto renderer = static_cast<RendererRasterization*>(engine->renderer.get());
                 glm::vec3 lightDir = engine->lights->light.diffuse_dir;

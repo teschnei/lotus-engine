@@ -1,5 +1,6 @@
 #include "animation_component.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {

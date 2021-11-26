@@ -32,8 +32,6 @@ namespace lotus
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> rtx_render_pass;
         vk::UniqueHandle<vk::PipelineLayout, vk::DispatchLoaderDynamic> rtx_deferred_pipeline_layout;
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> rtx_deferred_pipeline;
-        vk::UniqueDescriptorPool descriptor_pool_deferred;
-        std::vector<vk::UniqueDescriptorSet> descriptor_set_deferred;
 
         struct RaytraceGBuffer
         {

@@ -18,8 +18,6 @@ layout(binding = 6) uniform CameraUBO
     mat4 view;
     mat4 proj_inverse;
     mat4 view_inverse;
-    mat4 proj_prev;
-    mat4 view_prev;
     vec4 eye_pos;
 } camera_ubo;
 
@@ -185,7 +183,5 @@ void main() {
     }
 
     outColor.rgb = mix(accumulation.rgb / max(accumulation.a, 0.00001), outColor.rgb, revealage);
-
-    outColor.rgb = pow(outColor.rgb, vec3(2.2/1.5));
 }
 

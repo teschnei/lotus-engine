@@ -1,10 +1,11 @@
 #include "deformed_mesh_component.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {
-    DeformedMeshComponent::DeformedMeshComponent(Entity* _entity, Engine* _engine, AnimationComponent& animation_component, std::vector<std::shared_ptr<Model>> _models) :
-        Component(_entity, _engine, animation_component), models(_models)
+    DeformedMeshComponent::DeformedMeshComponent(Entity* _entity, Engine* _engine, const AnimationComponent& _animation_component, std::vector<std::shared_ptr<Model>> _models) :
+        Component(_entity, _engine), animation_component(_animation_component), models(_models)
     {
     }
 
@@ -68,7 +69,6 @@ namespace lotus::Component
             .pMemoryBarriers = &barrier
         });
 
-        auto& [animation_component] = dependencies;
         auto& skeleton = animation_component.skeleton;
         command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline);
 
@@ -151,9 +151,8 @@ namespace lotus::Component
         return model_transform;
     }
 
-    WorkerTask<> DeformedMeshComponent::tick(time_point time, duration delta)
+    WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
     {
-        auto& [animation_component] = dependencies;
         auto& skeleton = animation_component.skeleton;
         auto image_index = engine->renderer->getCurrentFrame();
 
@@ -188,6 +187,7 @@ namespace lotus::Component
         //transform skeleton with current animation
         for (size_t i = 0; i < models.size(); ++i)
         {
+            std::vector<GlobalResources::MeshInfo> mesh_info;
             for (size_t j = 0; j < models[i]->meshes.size(); ++j)
             {
                 auto& mesh = models[i]->meshes[j];
@@ -243,7 +243,22 @@ namespace lotus::Component
                     .bufferMemoryBarrierCount = 1,
                     .pBufferMemoryBarriers = &barrier
                 });
+
+                mesh_info.push_back({
+                    .vertex_offset = 0,
+                    .index_offset = 0,
+                    .indices = (uint32_t)mesh->getIndexCount(),
+                    .material_index = 0,
+                    .scale = glm::vec3(1.f),//base_component.getScale(),
+                    .billboard = 0,//base_component.getBillboard(),
+                    .colour = {},
+                    .uv_offset = {},
+                    .animation_frame = models[0]->animation_frame,
+                    .vertex_prev_offset = 0,
+                    .model_prev = glm::mat4(1.f),//base_component.getPrevModelMatrix()
+                });
             }
+            model_transforms[i].resource_index = engine->renderer->resources->pushMeshInfo(mesh_info);
         }
         command_buffer->end();
 
@@ -255,11 +270,6 @@ namespace lotus::Component
     const DeformedMeshComponent::ModelTransformedGeometry& DeformedMeshComponent::getModelTransformGeometry(size_t index) const
     {
         return model_transforms[index];
-    }
-
-    void DeformedMeshComponent::updateModelTransformGeometryResourceIndex(size_t index, uint32_t resource_index)
-    {
-        model_transforms[index].resource_index = resource_index;
     }
 
     std::vector<std::shared_ptr<Model>> DeformedMeshComponent::getModels() const

@@ -1,17 +1,17 @@
 #include "instanced_raytrace_component.h"
 #include "engine/core.h"
 #include "engine/game.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {
-    InstancedRaytraceComponent::InstancedRaytraceComponent(Entity* _entity, Engine* _engine, InstancedModelsComponent& models) :
-         Component(_entity, _engine, models)
+    InstancedRaytraceComponent::InstancedRaytraceComponent(Entity* _entity, Engine* _engine, const InstancedModelsComponent& _models_component) :
+         Component(_entity, _engine), models_component(_models_component)
     {
     }
 
     Task<> InstancedRaytraceComponent::tick(time_point time, duration delta)
     {
-        auto& [models_component] = dependencies;
         auto models = models_component.getModels();
 
         uint32_t image = engine->renderer->getCurrentFrame();

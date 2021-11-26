@@ -4,6 +4,7 @@
 #include <ranges>
 #include "engine/core.h"
 #include "engine/renderer/model.h"
+#include "engine/renderer/vulkan/renderer.h"
 #include "engine/entity/component/instanced_models_component.h"
 
 namespace FFXI
@@ -275,7 +276,7 @@ namespace FFXI
                         SMMBBlockVertex2* vertex_head = (SMMBBlockVertex2*)(buffer + offset);
                         vertex.pos = { vertex_head->x, vertex_head->y, vertex_head->z };
                         vertex.normal = { vertex_head->hx, vertex_head->hy, vertex_head->hz };
-                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f, ((vertex_head->color & 0xFF000000) >> 24) / 128.0};
+                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/128.f, ((vertex_head->color & 0xFF00) >> 8)/128.f, (vertex_head->color & 0xFF)/128.f, ((vertex_head->color & 0xFF000000) >> 24) / 128.f};
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex2);
                     }
@@ -284,7 +285,7 @@ namespace FFXI
                         SMMBBlockVertex* vertex_head = (SMMBBlockVertex*)(buffer + offset);
                         vertex.pos = { vertex_head->x, vertex_head->y, vertex_head->z };
                         vertex.normal = { vertex_head->hx, vertex_head->hy, vertex_head->hz };
-                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/256.f, ((vertex_head->color & 0xFF00) >> 8)/256.f, (vertex_head->color & 0xFF)/256.f, ((vertex_head->color & 0xFF000000) >> 24) / 128.0};
+                        vertex.color = { ((vertex_head->color & 0xFF0000) >> 16)/128.f, ((vertex_head->color & 0xFF00) >> 8)/128.f, (vertex_head->color & 0xFF)/128.f, ((vertex_head->color & 0xFF000000) >> 24) / 128.f};
                         vertex.tex_coord = { vertex_head->u, vertex_head->v };
                         offset += sizeof(SMMBBlockVertex);
                     }
@@ -425,12 +426,12 @@ namespace FFXI
             material_map.insert(std::make_pair(mesh.get(), lotus::Material::make_material(engine, material_buffer, material_buffer_offset, texture, 1)));
             material_buffer_offset += lotus::Material::getMaterialBufferSize(engine);
 
-            mesh->setVertexInputAttributeDescription(getMMBAttributeDescriptions());
+            mesh->setVertexInputAttributeDescription(getMMBAttributeDescriptions(), sizeof(FFXI::MMB::Vertex));
             mesh->setVertexInputBindingDescription(getMMBBindingDescriptions());
             mesh->setIndexCount(static_cast<int>(mmb_mesh.indices.size()));
             mesh->has_transparency = mmb_mesh.blending & 0x8000 || mmb->name[0] == '_';
-            mesh->pipeline = mesh->has_transparency ? pipeline_blend : pipeline;
-            mesh->pipeline_shadow = mesh->has_transparency ? pipeline_shadowmap_blend : pipeline_shadowmap;
+            mesh->pipelines.push_back(mesh->has_transparency ? pipeline_blend : pipeline);
+            mesh->pipelines.push_back(mesh->has_transparency ? pipeline_shadowmap_blend : pipeline_shadowmap);
             mesh->blending = mmb_mesh.blending;
 
             std::vector<uint8_t> vertices_uint8;
@@ -541,8 +542,8 @@ namespace FFXI
         color_blend_attachment.blendEnable = false;
         color_blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
         color_blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
-        color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcColor;
-        color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
+        color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+        color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
         color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
@@ -561,6 +562,8 @@ namespace FFXI
 
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(7, color_blend_attachment);
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
+
+        color_blend_attachment_states[3].blendEnable = true;
 
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;

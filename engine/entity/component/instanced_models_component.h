@@ -21,7 +21,6 @@ namespace lotus::Component
             const std::vector<InstanceInfo>& instances, const std::unordered_map<std::string, std::pair<vk::DeviceSize, uint32_t>> instance_offsets);
 
         WorkerTask<> init();
-        Task<> tick(time_point time, duration delta);
 
         std::vector<std::shared_ptr<Model>> getModels() const;
         vk::Buffer getInstanceBuffer() const;

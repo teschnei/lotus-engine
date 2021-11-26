@@ -22,7 +22,7 @@ namespace lotus
 
         template<typename T>
         static inline typename std::enable_if<std::is_floating_point<T>::value, T>::type
-            GetRandomNumber(T min, T max)
+            GetRandomNumber(T min, T max = 0)
         {
             if (min == max)
             {

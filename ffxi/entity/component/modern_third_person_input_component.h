@@ -6,7 +6,7 @@
 
 namespace FFXI
 {
-    class ModernThirdPersonInputComponent : public lotus::Component::Component<ModernThirdPersonInputComponent, ActorComponent, lotus::Component::AnimationComponent>
+    class ModernThirdPersonInputComponent : public lotus::Component::Component<ModernThirdPersonInputComponent, lotus::Component::Before<ActorComponent, lotus::Component::AnimationComponent>>
     {
     public:
         explicit ModernThirdPersonInputComponent(lotus::Entity*, lotus::Engine* engine, ActorComponent& actor, lotus::Component::AnimationComponent& animation);
@@ -14,6 +14,8 @@ namespace FFXI
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
         bool handleInput(lotus::Input*, const SDL_Event&);
     private:
+        ActorComponent& actor;
+        lotus::Component::AnimationComponent& animation_component;
         glm::vec3 moving{};
         glm::vec3 moving_prev{};
         glm::vec3 move_to_rot{};

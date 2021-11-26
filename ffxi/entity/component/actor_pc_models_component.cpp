@@ -15,11 +15,6 @@ namespace FFXI
         
     }
 
-    lotus::Task<> ActorPCModelsComponent::tick(lotus::time_point time, lotus::duration delta)
-    {
-        co_return;
-    }
-
     void ActorPCModelsComponent::updateEquipLook(uint16_t modelid)
     {
         uint8_t slot = modelid >> 12;

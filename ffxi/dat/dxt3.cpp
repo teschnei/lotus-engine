@@ -1,5 +1,6 @@
 #include "dxt3.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace FFXI
 {

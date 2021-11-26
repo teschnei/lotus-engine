@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include "engine/renderer/mesh.h"
 #include "acceleration_structure.h"
 #include "engine/types.h"

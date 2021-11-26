@@ -34,5 +34,8 @@ else()
     message( STATUS "Enabling Incremental Linking.." )
     set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /INCREMENTAL" )
     add_link_options(/DEBUG:FASTLINK)
+
+    # glslangValidator debug flag
+    set( GLSLANG_FLAGS -g)
   endif()
 endif()

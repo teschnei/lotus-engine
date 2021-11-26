@@ -2,18 +2,18 @@
 
 #include "engine/core.h"
 #include "engine/input.h"
+#include "engine/renderer/vulkan/renderer.h"
 #include <glm/gtx/vector_angle.hpp>
 
 namespace FFXI
 {
-    ModernThirdPersonInputComponent::ModernThirdPersonInputComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorComponent& actor, lotus::Component::AnimationComponent& animation) :
-        Component(_entity, _engine, actor, animation)
+    ModernThirdPersonInputComponent::ModernThirdPersonInputComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorComponent& _actor, lotus::Component::AnimationComponent& _animation_component) :
+        Component(_entity, _engine), actor(_actor), animation_component(_animation_component)
     {
     }
 
     lotus::Task<> ModernThirdPersonInputComponent::tick(lotus::time_point time, lotus::duration delta)
     {
-        auto [actor, animation] = dependencies;
         auto game_rot = actor.getRot();
 
         auto ms = std::min<long long>(1000000, std::chrono::duration_cast<std::chrono::microseconds>(delta).count());
@@ -46,23 +46,23 @@ namespace FFXI
             float speed = actor.getSpeed() / 6.f;
             if (moving.x > 0)
             {
-                animation.playAnimationLoop("run", speed);
+                animation_component.playAnimationLoop("run", speed);
             }
             else if (moving.x < 0)
             {
-                animation.playAnimationLoop("mvb", speed);
+                animation_component.playAnimationLoop("mvb", speed);
             }
             else if (moving.z > 0)
             {
-                animation.playAnimationLoop("mvl", speed);
+                animation_component.playAnimationLoop("mvl", speed);
             }
             else if (moving.z < 0)
             {
-                animation.playAnimationLoop("mvr", speed);
+                animation_component.playAnimationLoop("mvr", speed);
             }
             else
             {
-                animation.playAnimationLoop("idl");
+                animation_component.playAnimationLoop("idl");
             }
         }
         auto face_dir = glm::vec3{ 1.f, 0.f, 0.f };

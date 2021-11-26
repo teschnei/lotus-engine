@@ -8,11 +8,9 @@
 lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, std::tuple<lotus::Component::CameraComponent*>>> ThirdPersonFFXIVCamera::Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorComponent* actor_component)
 {
     auto sp = std::make_shared<lotus::Entity>();
-    auto cam_c = co_await scene->component_runners->addComponent<lotus::Component::CameraComponent>(sp.get());
-    auto dur = scene->component_runners->addComponent<FFXI::CameraThirdPersonComponent>(sp.get(), *cam_c, *actor_component);
-    if (engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization)
-    {
-        scene->component_runners->addComponent<lotus::Component::CameraCascadesComponent>(sp.get(), *cam_c);
-    }
-    co_return std::make_pair(sp, cam_c);
+    auto cam_c = co_await lotus::Component::CameraComponent::make_component(sp.get(), engine);
+    auto dur = co_await FFXI::CameraThirdPersonComponent::make_component(sp.get(), engine, *cam_c, *actor_component);
+    auto cc = engine->config->renderer.render_mode == lotus::Config::Renderer::RenderMode::Rasterization ? co_await lotus::Component::CameraCascadesComponent::make_component(sp.get(), engine, *cam_c) : nullptr;
+    auto p = scene->AddComponents(std::move(cam_c), std::move(dur), std::move(cc));
+    co_return std::make_pair(sp, std::get<lotus::Component::CameraComponent*>(p));
 }

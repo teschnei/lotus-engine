@@ -5,7 +5,7 @@
 #include "dat/scheduler.h"
 #include "dat/generator.h"
 #include "engine/entity/component/animation_component.h"
-#include "engine/entity/component/physics_component.h"
+#include "engine/entity/component/render_base_component.h"
 #include "engine/entity/component/deformable_raster_component.h"
 #include "engine/entity/component/deformable_raytrace_component.h"
 #include "component/actor_component.h"
@@ -25,10 +25,10 @@ namespace FFXI
 class Actor
 {
 public:
-    using InitComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::PhysicsComponent*, lotus::Component::DeformedMeshComponent*,
+    using InitComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::RenderBaseComponent*, lotus::Component::DeformedMeshComponent*,
                                       lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*>;
     static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, size_t modelid);
-    using InitPCComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::PhysicsComponent*, lotus::Component::DeformedMeshComponent*,
+    using InitPCComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::RenderBaseComponent*, lotus::Component::DeformedMeshComponent*,
                                       lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*, FFXI::ActorPCModelsComponent*>;
     static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitPCComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorPCModelsComponent::LookData look);
     static size_t GetPCModelDatID(uint16_t modelid, uint8_t race);

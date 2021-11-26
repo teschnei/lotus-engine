@@ -29,7 +29,6 @@ namespace FFXI
 
         explicit ActorPCModelsComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::DeformedMeshComponent& deformed, lotus::Component::DeformableRaytraceComponent* raytrace, LookData look);
 
-        lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
         void updateEquipLook(uint16_t modelid);
 
     protected:

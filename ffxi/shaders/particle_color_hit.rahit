@@ -35,12 +35,6 @@ layout(binding = 6, set = 0) buffer readonly MeshInfo
     Mesh m[1024];
 } meshInfo;
 
-layout(location = 0) rayPayloadInEXT HitValue
-{
-    vec3 albedo;
-    vec3 light;
-} hitValue;
-
 hitAttributeEXT vec2 attribs;
 
 ivec3 getIndex(uint primitive_id)
@@ -96,7 +90,7 @@ void main()
     uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
     vec4 model_colour = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].colour;
     vec4 texture_colour = texture(textures[material_index], uv);
-    vec3 colour = texture_colour.rgb * mesh_colour.rgb * model_colour.rgb * 4;
+    vec3 colour = texture_colour.rgb * mesh_colour.rgb * model_colour.rgb;
     float a = texture_colour.a * mesh_colour.a * model_colour.a * 2;
     colour *= a;
 

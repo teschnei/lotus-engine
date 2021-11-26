@@ -16,9 +16,9 @@ namespace FFXI
         header = (GeneratorHeader*)buffer;
 
         //data2: instructions to run at generation time
-        uint8_t* data2 = buffer + header->offset2 - 16;
+        uint8_t* data2 = buffer + header->creation_command_offset - 16;
 
-        while (data2 < buffer + header->offset3 - 16)
+        while (data2 < buffer + header->tick_command_offset - 16)
         {
             uint8_t data_type = *data2;
             uint8_t data_size = *(data2 + 1) & 0xF;
@@ -26,7 +26,7 @@ namespace FFXI
             switch (data_type)
             {
             case 0x00:
-                data2 = buffer + header->offset3 - 16;
+                data2 = buffer + header->tick_command_offset - 16;
                 break;
             case 0x01:
                 //maybe these are just combined into one big uint32_t of flags
@@ -284,9 +284,9 @@ namespace FFXI
         }
 
         //data3: instructions to run on frame update
-        uint8_t* data3 = buffer + header->offset3 - 16;
+        uint8_t* data3 = buffer + header->tick_command_offset - 16;
 
-        while (data3 < buffer + header->offset4 - 16)
+        while (data3 < buffer + header->expiry_command_offset - 16)
         {
             uint8_t data_type = *data3;
             uint8_t data_size = *(data3 + 1) & 0xF;
@@ -295,7 +295,7 @@ namespace FFXI
             switch (data_type)
             {
             case 0x00:
-                data3 = buffer + header->offset4 - 16;
+                data3 = buffer + header->expiry_command_offset - 16;
                 break;
 
             case 0x03:
@@ -319,7 +319,7 @@ namespace FFXI
         }
 
         //data4: instructions to run on particle end of life
-        uint8_t* data4 = buffer + header->offset4 - 16;
+        uint8_t* data4 = buffer + header->expiry_command_offset - 16;
 
         while (data4 < buffer + len)
         {

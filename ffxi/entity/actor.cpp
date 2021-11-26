@@ -51,8 +51,8 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> 
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_sub, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_range, look.look.race))
         });
-    auto pc_c = scene->component_runners->addComponent<FFXI::ActorPCModelsComponent>(actor.get(), *std::get<lotus::Component::DeformedMeshComponent*>(components), std::get<lotus::Component::DeformableRaytraceComponent*>(components), look);
-    co_return std::make_pair(actor, std::tuple_cat(components, std::tie(pc_c)));
+    auto pc_c = co_await FFXI::ActorPCModelsComponent::make_component(actor.get(), engine, *std::get<lotus::Component::DeformedMeshComponent*>(components), std::get<lotus::Component::DeformableRaytraceComponent*>(components), look);
+    co_return std::make_pair(actor, std::tuple_cat(components, scene->AddComponents(std::move(pc_c))));
 }
 
 lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Entity> actor, lotus::Engine* engine, lotus::Scene* scene, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats)
@@ -139,12 +139,12 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
             model_tasks.push_back(std::move(*model_task));
     }
 
-    auto a = scene->component_runners->addComponent<lotus::Component::AnimationComponent>(actor.get(), std::move(skel));
-    auto p = co_await scene->component_runners->addComponent<lotus::Component::PhysicsComponent>(actor.get());
-    auto d = co_await scene->component_runners->addComponent<lotus::Component::DeformedMeshComponent>(actor.get(), *a, models);
-    auto r = engine->config->renderer.RasterizationEnabled() ? scene->component_runners->addComponent<lotus::Component::DeformableRasterComponent>(actor.get(), *d, *p) : nullptr;
-    auto rt = engine->config->renderer.RaytraceEnabled() ? co_await scene->component_runners->addComponent<lotus::Component::DeformableRaytraceComponent>(actor.get(), *d, *p) : nullptr;
-    auto ac = scene->component_runners->addComponent<FFXI::ActorComponent>(actor.get(), *p);
+    auto a = co_await lotus::Component::AnimationComponent::make_component(actor.get(), engine, std::move(skel));
+    auto p = co_await lotus::Component::RenderBaseComponent::make_component(actor.get(), engine);
+    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *a, models);
+    auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::DeformableRasterComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
+    auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::DeformableRaytraceComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
+    auto ac = co_await FFXI::ActorComponent::make_component(actor.get(), engine, *p, *a, std::move(generator_points), std::move(scheduler_map), std::move(generator_map));
 
     //co_await all tasks
     for (const auto& task : texture_tasks)
@@ -156,7 +156,7 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
         co_await task;
     }
     a->playAnimation("idl");
-    co_return { a, p, d, r, rt, ac };
+    co_return scene->AddComponents(std::move(a), std::move(p), std::move(d), std::move(r), std::move(rt), std::move(ac));
 }
 
 std::vector<size_t> Actor::GetPCSkeletonDatIDs(uint8_t race)

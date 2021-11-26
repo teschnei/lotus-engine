@@ -1,5 +1,6 @@
 #include "instanced_models_component.h"
 #include "engine/core.h"
+#include "engine/renderer/vulkan/renderer.h"
 
 namespace lotus::Component
 {
@@ -44,11 +45,6 @@ namespace lotus::Component
         engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer), std::move(staging_buffer));
 
-        co_return;
-    }
-
-    Task<> InstancedModelsComponent::tick(time_point time, duration delta)
-    {
         co_return;
     }
 

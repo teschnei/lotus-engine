@@ -42,11 +42,11 @@ void main() {
 
     outFaceNormal = vec4(cross_vec, 1.0);
     outAlbedo = texture(texSampler, fragTexCoord);
-    outAlbedo *= fragColor;
-    if (outAlbedo.a > 1.f/32.f)
-        outAlbedo.a = 1;
-    else
+    uint bc2_alpha = uint((outAlbedo.a * 255.f)) >> 4;
+    if (bc2_alpha == 0)
         discard;
+    outAlbedo.a = float(bc2_alpha) / 8.0;
+    outAlbedo *= fragColor;
     outMaterialIndex = push.material_index;
     outLightType = material.material.light_type;
     vec2 curScreenPos = (pos.xy / pos.w) * 0.5 + 0.5;
