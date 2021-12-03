@@ -2,8 +2,8 @@ target_sources(ffxi
     PRIVATE
     actor_component.cpp
     actor_component.h
-    actor_pc_models_component.cpp
-    actor_pc_models_component.h
+    actor_skeleton_component.cpp
+    actor_skeleton_component.h
     camera_third_person_component.cpp
     camera_third_person_component.h
     equipment_test_component.cpp

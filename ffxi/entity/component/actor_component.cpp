@@ -9,11 +9,8 @@
 namespace FFXI
 {
     ActorComponent::ActorComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::RenderBaseComponent& _base_component,
-        lotus::Component::AnimationComponent& _animation,
-        std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax>&& _generator_points,
-        std::map<std::string, FFXI::Scheduler*>&& _scheduler_map,
-        std::map<std::string, FFXI::Generator*>&& _generator_map) :
-        Component(_entity, _engine), base_component(_base_component), animation(_animation), generator_points(std::move(_generator_points)), scheduler_map(std::move(_scheduler_map)), generator_map(std::move(_generator_map))
+        lotus::Component::AnimationComponent& _animation) :
+        Component(_entity, _engine), base_component(_base_component), animation(_animation)
     {
     }
 
@@ -59,24 +56,5 @@ namespace FFXI
     void ActorComponent::setModelOffsetRot(glm::quat _rot)
     {
         model_offset_rot = _rot;
-    }
-
-    std::span<const FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> ActorComponent::getGeneratorPoints() const
-    {
-        return generator_points;
-    }
-
-    FFXI::Scheduler* ActorComponent::getScheduler(std::string name) const
-    {
-        if (auto s = scheduler_map.find(name); s != scheduler_map.end())
-            return s->second;
-        return nullptr;
-    }
-
-    FFXI::Generator* ActorComponent::getGenerator(std::string name) const
-    {
-        if (auto g = generator_map.find(name); g != generator_map.end())
-            return g->second;
-        return nullptr;
     }
 }

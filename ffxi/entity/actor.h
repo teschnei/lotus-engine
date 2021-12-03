@@ -9,7 +9,7 @@
 #include "engine/entity/component/deformable_raster_component.h"
 #include "engine/entity/component/deformable_raytrace_component.h"
 #include "component/actor_component.h"
-#include "component/actor_pc_models_component.h"
+#include "component/actor_skeleton_component.h"
 
 namespace lotus
 {
@@ -19,6 +19,7 @@ namespace lotus
 namespace FFXI
 {
     class Dat;
+    class ActorSkeletonStatic;
 }
 
 //main FFXI entity class
@@ -26,14 +27,15 @@ class Actor
 {
 public:
     using InitComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::RenderBaseComponent*, lotus::Component::DeformedMeshComponent*,
-                                      lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*>;
-    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, size_t modelid);
+                                      lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*, FFXI::ActorSkeletonComponent*>;
+    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, uint16_t modelid);
     using InitPCComponents = std::tuple<lotus::Component::AnimationComponent*, lotus::Component::RenderBaseComponent*, lotus::Component::DeformedMeshComponent*,
-                                      lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*, FFXI::ActorPCModelsComponent*>;
-    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitPCComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorPCModelsComponent::LookData look);
+                                      lotus::Component::DeformableRasterComponent*, lotus::Component::DeformableRaytraceComponent*, FFXI::ActorComponent*, FFXI::ActorSkeletonComponent*>;
+    static lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, InitPCComponents>> Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorSkeletonComponent::LookData look);
     static size_t GetPCModelDatID(uint16_t modelid, uint8_t race);
 protected:
-    static std::vector<size_t> GetPCSkeletonDatIDs(uint8_t race);
-
-    static lotus::WorkerTask<InitComponents> Load(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
+    static lotus::WorkerTask<InitComponents> Load(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene,
+        std::shared_ptr<const FFXI::ActorSkeletonStatic>, std::variant<FFXI::ActorSkeletonComponent::LookData, uint16_t>, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
+    //static lotus::WorkerTask<std::tuple<>> LoadPC(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene,
+    //    InitComponents components, FFXI::ActorPCModelsComponent::LookData look, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
 };

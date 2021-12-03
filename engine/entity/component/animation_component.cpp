@@ -139,7 +139,7 @@ namespace lotus::Component
 
     void AnimationComponent::changeAnimation(std::string name, float speed)
     {
-        auto new_anim = skeleton->animations[name].get();
+        auto new_anim = skeleton->animations[name];
         if (speed != anim_speed)
             anim_speed = speed;
         if (new_anim != current_animation)

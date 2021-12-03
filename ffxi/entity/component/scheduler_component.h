@@ -1,16 +1,16 @@
 #pragma once
 #include "engine/entity/component/component.h"
-#include "actor_component.h"
+#include "actor_skeleton_component.h"
 
 class SchedulerResources;
 
 namespace FFXI
 {
     class Scheduler;
-    class SchedulerComponent : public lotus::Component::Component<SchedulerComponent, lotus::Component::Before<ActorComponent>>
+    class SchedulerComponent : public lotus::Component::Component<SchedulerComponent, lotus::Component::Before<lotus::Component::AnimationComponent>>
     {
     public:
-        explicit SchedulerComponent(lotus::Entity*, lotus::Engine* engine, ActorComponent& actor, FFXI::Scheduler* scheduler, SchedulerResources* resources, FFXI::SchedulerComponent* parent);
+        explicit SchedulerComponent(lotus::Entity*, lotus::Engine* engine, ActorSkeletonComponent& actor, FFXI::Scheduler* scheduler, SchedulerResources* resources, FFXI::SchedulerComponent* parent);
 
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
 
@@ -18,7 +18,7 @@ namespace FFXI
         void cancel();
 
     protected:
-        ActorComponent& actor;
+        ActorSkeletonComponent& actor;
         FFXI::Scheduler* scheduler{};
         SchedulerResources* resources{};
         FFXI::SchedulerComponent* parent{};

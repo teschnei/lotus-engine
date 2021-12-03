@@ -16,10 +16,7 @@ namespace FFXI
     {
     public:
         explicit ActorComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::RenderBaseComponent& physics,
-            lotus::Component::AnimationComponent& animation,
-            std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax>&& generator_points,
-            std::map<std::string, FFXI::Scheduler*>&& scheduler_map,
-            std::map<std::string, FFXI::Generator*>&& generator_map);
+            lotus::Component::AnimationComponent& animation);
 
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
 
@@ -33,9 +30,6 @@ namespace FFXI
         void setSpeed(float _speed) { speed = _speed; }
 
         lotus::Component::AnimationComponent& getAnimationComponent() const { return animation; }
-        std::span<const FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> getGeneratorPoints() const;
-        FFXI::Scheduler* getScheduler(std::string name) const;
-        FFXI::Generator* getGenerator(std::string name) const;
 
     protected:
         lotus::Component::RenderBaseComponent& base_component;
@@ -44,8 +38,5 @@ namespace FFXI
         glm::quat model_offset_rot{ 1.f, 0.f, 0.f, 0.f };
         float speed{ 4.f };
         lotus::Component::AnimationComponent& animation;
-        std::array<FFXI::SK2::GeneratorPoint, FFXI::SK2::GeneratorPointMax> generator_points{};
-        std::map<std::string, FFXI::Scheduler*> scheduler_map{};
-        std::map<std::string, FFXI::Generator*> generator_map{};
     };
 }

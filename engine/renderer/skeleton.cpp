@@ -1,22 +1,26 @@
 #include "skeleton.h"
+#include "animation.h"
 
 namespace lotus
 {
-    void Skeleton::addBone(uint8_t parent_bone, glm::quat rot, glm::vec3 trans)
+    Skeleton::Skeleton(const BoneData& bone_data)
     {
-        Bone bone{ parent_bone, rot, trans };
+        for (const auto& bone : bone_data.bones)
+        {
+            Bone new_bone = bone;
 
-        if (!bones.empty())
-        {
-            Bone& parent = bones[parent_bone];
-            bone.rot = parent.rot * rot;
-            bone.trans = parent.trans + (parent.rot * trans);
+            if (!bones.empty())
+            {
+                const Bone& parent = bone_data.bones[bone.parent_bone];
+                new_bone.rot = parent.rot * bone.rot;
+                new_bone.trans = parent.trans + (parent.rot * bone.trans);
+            }
+            bones.push_back(std::move(new_bone));
         }
-        else
-        {
-            bone.rot = bone.local_rot;
-            bone.trans = bone.local_trans;
-        }
-        bones.push_back(std::move(bone));
+    }
+
+    void Skeleton::BoneData::addBone(uint8_t parent_bone, glm::quat rot, glm::vec3 trans)
+    {
+        bones.emplace_back(parent_bone, rot, trans);
     }
 }

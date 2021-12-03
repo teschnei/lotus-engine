@@ -5,6 +5,7 @@
 #include "engine/scene.h"
 #include "engine/entity/component/particle_component.h"
 #include "entity/component/generator_component.h"
+#include "entity/component/actor_skeleton_component.h"
 #include "dat/generator.h"
 #include <glm/gtc/random.hpp>
 #include <glm/gtx/rotate_vector.hpp>
@@ -33,9 +34,9 @@ namespace FFXI
 
     lotus::Task<> ParticleComponent::init()
     {
-        auto actor_component = engine->game->scene->component_runners->getComponent<FFXI::ActorComponent>(actor.lock().get());
+        auto actor_component = engine->game->scene->component_runners->getComponent<FFXI::ActorSkeletonComponent>(actor.lock().get());
         auto animation_component = engine->game->scene->component_runners->getComponent<lotus::Component::AnimationComponent>(actor.lock().get());
-        auto generator_points = actor_component->getGeneratorPoints();
+        auto generator_points = actor_component->getSkeletonStatic()->getGeneratorPoints();
 
         //TODO: 90% sure this should be generator->header->flags1 & 0x02?
         if (generator->header->flags2 == 0x80 && generator->header->flags3 == 0x08)

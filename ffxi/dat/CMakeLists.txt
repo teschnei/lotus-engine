@@ -1,5 +1,7 @@
 target_sources(ffxi
     PRIVATE
+    cib.cpp
+    cib.h
     d3m.cpp
     d3m.h
     dat.cpp

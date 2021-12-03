@@ -3,6 +3,8 @@ target_sources(ffxi
     actor.cpp
     actor.h
     actor_data.h
+    actor_skeleton_static.cpp
+    actor_skeleton_static.h
     landscape_entity.cpp
     landscape_entity.h
     particle.cpp

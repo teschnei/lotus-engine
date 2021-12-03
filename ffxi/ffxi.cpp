@@ -96,7 +96,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     //audio->setMusic(114, 0);
     //iroha 3111 (arciela 3074)
     //auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(3111);
-    auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(FFXI::ActorPCModelsComponent::LookData{.look = {
+    auto [player, player_components] = co_await loading_scene->AddEntity<Actor>(FFXI::ActorSkeletonComponent::LookData{.look = {
         .race = 2,
         .face = 15,
         .head = 0x1000 + 64,
@@ -115,11 +115,12 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     ac->setPos(glm::vec3(259.f, -87.f, 99.f), false);
     auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(ac);
     auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
-    auto ac_models = std::get<FFXI::ActorPCModelsComponent*>(player_components);
+    //auto ac_models = std::get<FFXI::ActorPCModelsComponent*>(player_components);
+    auto ac_skeleton = std::get<FFXI::ActorSkeletonComponent*>(player_components);
 
     auto ac2 = co_await FFXI::ModernThirdPersonInputComponent::make_component(player.get(), engine.get(), *ac, *a);
-    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac_models);
-    auto particle_tester = co_await ParticleTester::make_component(player.get(), engine.get(), *ac);
+    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac_skeleton);
+    auto particle_tester = co_await ParticleTester::make_component(player.get(), engine.get(), *ac_skeleton);
     loading_scene->AddComponents(std::move(ac2), std::move(equip), std::move(particle_tester));
 
     engine->set_camera(std::get<lotus::Component::CameraComponent*>(camera_components));

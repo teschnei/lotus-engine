@@ -9,10 +9,10 @@
 #include "dat/dxt3.h"
 #include "dat/scheduler.h"
 #include "entity/actor.h"
-
+#include "entity/component/actor_skeleton_component.h"
 #include "entity/component/scheduler_component.h"
 
-ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, FFXI::ActorComponent& _actor) : Component(_entity, _engine), actor(_actor)
+ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, FFXI::ActorSkeletonComponent& _actor) : Component(_entity, _engine), actor(_actor)
 {
 }
 

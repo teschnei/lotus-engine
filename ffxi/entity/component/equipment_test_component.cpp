@@ -8,7 +8,7 @@
 
 namespace FFXI
 {
-    EquipmentTestComponent::EquipmentTestComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorPCModelsComponent& _actor) : Component(_entity, _engine), actor(_actor)
+    EquipmentTestComponent::EquipmentTestComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorSkeletonComponent& _actor) : Component(_entity, _engine), actor(_actor)
     {
     }
 

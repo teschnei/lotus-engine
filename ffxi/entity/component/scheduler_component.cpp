@@ -9,7 +9,7 @@
 
 namespace FFXI
 {
-    SchedulerComponent::SchedulerComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorComponent& _actor, FFXI::Scheduler* _scheduler, SchedulerResources* _resources, FFXI::SchedulerComponent* _parent) :
+    SchedulerComponent::SchedulerComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorSkeletonComponent& _actor, FFXI::Scheduler* _scheduler, SchedulerResources* _resources, FFXI::SchedulerComponent* _parent) :
         Component(_entity, _engine), actor(_actor), scheduler(_scheduler), resources(_resources), parent(_parent)
     {
         

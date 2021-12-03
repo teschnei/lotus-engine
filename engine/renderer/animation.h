@@ -9,7 +9,6 @@
 
 namespace lotus
 {
-    class Skeleton;
     class Animation
     {
     public:
@@ -21,12 +20,11 @@ namespace lotus
             glm::vec3 scale;
         };
 
-        Animation(Skeleton* skeleton);
+        Animation(std::string name, duration frame_duration);
         std::string name;
-        Skeleton* skeleton;
         duration frame_duration;
 
-        void addFrameData(uint32_t frame, uint32_t bone, BoneTransform transform);
+        void addFrameData(uint32_t frame, uint32_t bone_index, uint32_t parent_bone_index, glm::quat rot, glm::vec3 trans, BoneTransform transform);
 
         std::vector<std::map<uint32_t, BoneTransform>> transforms;
     };

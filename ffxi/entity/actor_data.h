@@ -4,21 +4,24 @@
 
 namespace ActorData
 {
-    //TODO: add emote location, battle animations locations, etc 
+    //TODO: add emote location, etc 
     struct PCDatIDs
     {
         size_t skel;
+        size_t motion;
+        size_t motion_dw_l;
+        size_t motion_dw_r;
     };
 
     static std::array PCSkeletonIDs {
-        PCDatIDs{ .skel = 7072 },
-        PCDatIDs{ .skel = 10248 },
-        PCDatIDs{ .skel = 13424 },
-        PCDatIDs{ .skel = 16600 },
-        PCDatIDs{ .skel = 19776 },
-        PCDatIDs{ .skel = 19776 },
-        PCDatIDs{ .skel = 23176 },
-        PCDatIDs{ .skel = 26352 }
+        PCDatIDs{ .skel = 7072, .motion = 9672, .motion_dw_l = 40431, .motion_dw_r = 40815 },
+        PCDatIDs{ .skel = 10248, .motion = 12848, .motion_dw_l = 41711, .motion_dw_r = 42095 },
+        PCDatIDs{ .skel = 13424, .motion = 16024, .motion_dw_l = 42991, .motion_dw_r = 43375 },
+        PCDatIDs{ .skel = 16600, .motion = 19200, .motion_dw_l = 44271, .motion_dw_r = 44655 },
+        PCDatIDs{ .skel = 19776, .motion = 22376, .motion_dw_l = 45551, .motion_dw_r = 45935 },
+        PCDatIDs{ .skel = 19776, .motion = 22376, .motion_dw_l = 45551, .motion_dw_r = 45935 },
+        PCDatIDs{ .skel = 23176, .motion = 25776, .motion_dw_l = 46831, .motion_dw_r = 47215 },
+        PCDatIDs{ .skel = 26352, .motion = 28952, .motion_dw_l = 48111, .motion_dw_r = 48495 }
     };
 
     static std::array PCModelIDs {
