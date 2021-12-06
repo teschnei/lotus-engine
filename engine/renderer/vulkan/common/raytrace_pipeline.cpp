@@ -69,12 +69,14 @@ namespace lotus
             }
         };
 
-        std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound,
-            vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, vk::DescriptorBindingFlagBits::ePartiallyBound, {} };
+        std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+            vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind, vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind,
+            vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind, vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind, {} };
         vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ .bindingCount =  static_cast<uint32_t>(binding_flags.size()), .pBindingFlags = binding_flags.data() };
 
         return renderer->gpu->device->createDescriptorSetLayoutUnique({
             .pNext = &layout_flags,
+            .flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool,
             .bindingCount = descriptors.size(),
             .pBindings = descriptors.data()
         });
@@ -91,7 +93,7 @@ namespace lotus
         };
 
         return renderer->gpu->device->createDescriptorPoolUnique({
-            .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+            .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
             .maxSets = renderer->getFrameCount(),
             .poolSizeCount = pool_sizes.size(),
             .pPoolSizes = pool_sizes.data(),

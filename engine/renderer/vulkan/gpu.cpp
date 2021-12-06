@@ -90,6 +90,9 @@ namespace lotus
         vk_12_features.bufferDeviceAddress = true;
         vk_12_features.descriptorBindingPartiallyBound = true;
         vk_12_features.descriptorIndexing = true;
+        vk_12_features.descriptorBindingStorageBufferUpdateAfterBind = true;
+        vk_12_features.descriptorBindingUniformBufferUpdateAfterBind = true;
+        vk_12_features.descriptorBindingSampledImageUpdateAfterBind = true;
 
         //this is part of the 1.2 spec but not in Vulkan12Features...?
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features;

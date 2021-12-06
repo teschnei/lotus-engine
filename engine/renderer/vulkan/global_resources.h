@@ -38,7 +38,6 @@ namespace lotus
         std::unique_ptr<Buffer> mesh_info_buffer;
         MeshInfo* mesh_info_buffer_mapped{ nullptr };
         static constexpr uint16_t max_resource_index{ 4096 };
-        std::mutex resource_descriptor_mutex;
 
         uint16_t pushVertexInfo(std::span<vk::DescriptorBufferInfo>);
         uint16_t pushVertexPrevInfo(std::span<vk::DescriptorBufferInfo>);

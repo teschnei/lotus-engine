@@ -178,10 +178,7 @@ namespace lotus
                         if (write_info_material.descriptorCount > 0)
                             writes.push_back(write_info_material);
                     }
-                    {
-                        std::lock_guard lk{ engine->renderer->resources->resource_descriptor_mutex };
-                        engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
-                    }
+                    engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
                 }
             }
             command_buffer->end();
