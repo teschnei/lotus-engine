@@ -9,8 +9,8 @@
 namespace FFXI
 {
     ActorComponent::ActorComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::RenderBaseComponent& _base_component,
-        lotus::Component::AnimationComponent& _animation) :
-        Component(_entity, _engine), base_component(_base_component), animation(_animation)
+        FFXI::ActorSkeletonComponent& _skeleton) :
+        Component(_entity, _engine), base_component(_base_component), skeleton(_skeleton)
     {
     }
 
@@ -56,5 +56,25 @@ namespace FFXI
     void ActorComponent::setModelOffsetRot(glm::quat _rot)
     {
         model_offset_rot = _rot;
+    }
+
+    void ActorComponent::enterCombat()
+    {
+        if (!combat)
+        {
+            combat = true;
+            skeleton.updateAnimationForCombat(combat);
+            skeleton.getAnimationComponent().playAnimation("inh", 1.f, "btl");
+        }
+    }
+
+    void ActorComponent::exitCombat()
+    {
+        if (combat)
+        {
+            combat = false;
+            skeleton.updateAnimationForCombat(combat);
+            skeleton.getAnimationComponent().playAnimation("oth", 1.f, "idl");
+        }
     }
 }

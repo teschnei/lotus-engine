@@ -20,7 +20,7 @@ namespace lotus
             glm::vec3 scale;
         };
 
-        Animation(std::string name, duration frame_duration);
+        Animation(std::string name, size_t frames, duration frame_duration);
         std::string name;
         duration frame_duration;
 

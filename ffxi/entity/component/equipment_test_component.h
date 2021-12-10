@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/entity/component/component.h"
+#include "actor_component.h"
 #include "actor_skeleton_component.h"
 #include <optional>
 
@@ -11,15 +12,17 @@ namespace lotus
 
 namespace FFXI
 {
-    class EquipmentTestComponent : public lotus::Component::Component<EquipmentTestComponent, lotus::Component::Before<ActorSkeletonComponent>>
+    class EquipmentTestComponent : public lotus::Component::Component<EquipmentTestComponent, lotus::Component::Before<ActorSkeletonComponent, ActorComponent>>
     {
     public:
-        explicit EquipmentTestComponent(lotus::Entity*, lotus::Engine* engine, ActorSkeletonComponent& actor);
+        explicit EquipmentTestComponent(lotus::Entity*, lotus::Engine* engine, ActorComponent& actor, ActorSkeletonComponent& skeleton);
 
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
         bool handleInput(lotus::Input*, const SDL_Event&);
     protected:
-        ActorSkeletonComponent& actor;
+        ActorComponent& actor;
+        ActorSkeletonComponent& skeleton;
         std::optional<uint16_t> new_modelid;
+        std::optional<bool> btl;
     };
 }

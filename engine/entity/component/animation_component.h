@@ -46,6 +46,9 @@ namespace lotus
             float anim_speed{ 1.f };
             bool loop{ true };
             uint8_t repetitions{ 0 };
+
+            lotus::Animation::BoneTransform applyTransform(size_t bone_index, lotus::Animation::BoneTransform&);
+            std::tuple<glm::quat, glm::vec3, glm::vec3> interpBone(lotus::Animation::BoneTransform t1, lotus::Animation::BoneTransform t2, float interp);
         };
     }
 }

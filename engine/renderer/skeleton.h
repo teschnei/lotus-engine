@@ -13,7 +13,7 @@ namespace lotus
         class Bone
         {
         public:
-            Bone(uint8_t _parent_bone, glm::quat _rot, glm::vec3 _trans) :
+            Bone(uint8_t _parent_bone, glm::quat _rot, glm::vec3 _trans, glm::vec3 scale = glm::vec3{1.f}) :
                 parent_bone(_parent_bone), rot(_rot), trans(_trans) {}
 
             const uint8_t parent_bone;
@@ -32,6 +32,7 @@ namespace lotus
 
         explicit Skeleton(const BoneData& bone_data);
 
+        const BoneData& bone_data;
         std::vector<Bone> bones;
         std::unordered_map<std::string, Animation*> animations;
     };

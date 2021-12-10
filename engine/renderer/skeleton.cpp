@@ -3,7 +3,7 @@
 
 namespace lotus
 {
-    Skeleton::Skeleton(const BoneData& bone_data)
+    Skeleton::Skeleton(const BoneData& _bone_data) : bone_data(_bone_data)
     {
         for (const auto& bone : bone_data.bones)
         {

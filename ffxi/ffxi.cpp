@@ -104,8 +104,8 @@ lotus::WorkerTask<> FFXIGame::load_scene()
         .hands = 0x3000 + 64,
         .legs = 0x4000 + 64,
         .feet = 0x5000 + 64,
-        .weapon = 0x6000 + 240,
-        .weapon_sub = 0x7000 + 140
+        .weapon = 0x6000 + 470,
+        .weapon_sub = 0x7000 + 0
         }
     });
     auto ac = std::get<FFXI::ActorComponent*>(player_components);
@@ -119,7 +119,7 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     auto ac_skeleton = std::get<FFXI::ActorSkeletonComponent*>(player_components);
 
     auto ac2 = co_await FFXI::ModernThirdPersonInputComponent::make_component(player.get(), engine.get(), *ac, *a);
-    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac_skeleton);
+    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac, *ac_skeleton);
     auto particle_tester = co_await ParticleTester::make_component(player.get(), engine.get(), *ac_skeleton);
     loading_scene->AddComponents(std::move(ac2), std::move(equip), std::move(particle_tester));
 

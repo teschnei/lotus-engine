@@ -51,6 +51,9 @@ namespace lotus
                 surface_format = swap_chain_info.formats[0];
             }
         }
+        //surface_format = swap_chain_info.formats[3];
+
+        //test
 
         vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
         for (const auto& available_present_mode : swap_chain_info.present_modes)

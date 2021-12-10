@@ -20,6 +20,22 @@ namespace lotus::Component
             if (animation_delta < 0ms) animation_delta = 0ms;
             //all this just to floor the duration's rep and cast it back to a uint64_t
             auto frame_duration = duration(std::chrono::nanoseconds(static_cast<uint64_t>((current_animation->frame_duration / anim_speed).count())));
+            if ((animation_delta / frame_duration) >= (current_animation->transforms.size() - 1) && next_anim)
+            {
+                /*
+                for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
+                {
+                    auto& bone = skeleton->bones[i];
+                    auto transform = applyTransform(i, current_animation->transforms[current_animation->transforms.size() - 1][i]);
+                    bone.rot = transform.rot;
+                    bone.trans = transform.trans;
+                    bone.scale = transform.scale;
+                }
+                */
+                changeAnimation(*next_anim, 1.f);
+                next_anim.reset();
+                co_return;
+            }
             if (animation_delta < interpolation_time)
             {
                 float frame_f = static_cast<float>(animation_delta.count()) / static_cast<float>(interpolation_time.count());
@@ -27,9 +43,9 @@ namespace lotus::Component
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
                     auto& bone = skeleton->bones[i];
-                    bone.rot = glm::slerp(bones_interpolate[i].rot, current_animation->transforms[frame][i].rot, frame_f);
-                    bone.trans = glm::mix(bones_interpolate[i].trans, current_animation->transforms[frame][i].trans, frame_f);
-                    bone.scale = glm::mix(bones_interpolate[i].scale, current_animation->transforms[frame][i].scale, frame_f);
+                    std::tie(bone.rot, bone.trans, bone.scale) = interpBone(
+                        lotus::Animation::BoneTransform{ .rot = bones_interpolate[i].rot, .trans = bones_interpolate[i].trans, .scale = bones_interpolate[i].scale },
+                        applyTransform(i, current_animation->transforms[frame][i]), frame_f);
                 }
             }
             else
@@ -40,9 +56,7 @@ namespace lotus::Component
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
                     auto& bone = skeleton->bones[i];
-                    bone.rot = glm::slerp(current_animation->transforms[frame][i].rot, current_animation->transforms[next_frame][i].rot, frame_f);
-                    bone.trans = glm::mix(current_animation->transforms[frame][i].trans, current_animation->transforms[next_frame][i].trans, frame_f);
-                    bone.scale = glm::mix(current_animation->transforms[frame][i].scale, current_animation->transforms[next_frame][i].scale, frame_f);
+                    std::tie(bone.rot, bone.trans, bone.scale) = interpBone(applyTransform(i, current_animation->transforms[frame][i]), applyTransform(i, current_animation->transforms[next_frame][i]), frame_f);
                 }
             }
         }
@@ -154,5 +168,26 @@ namespace lotus::Component
                 bones_interpolate.emplace_back(bone);
             }
         }
+    }
+
+    lotus::Animation::BoneTransform AnimationComponent::applyTransform(size_t bone_index, lotus::Animation::BoneTransform& transform)
+    {
+        auto& bone = skeleton->bone_data.bones[bone_index];
+        if (bone_index == 0)
+        {
+            return { transform.rot * bone.rot, bone.trans + transform.trans, transform.scale };
+        }
+        else
+        {
+            auto& parent_bone = skeleton->bones[bone.parent_bone];
+            lotus::Animation::BoneTransform local_transform = { transform.rot * bone.rot, bone.trans + transform.trans, transform.scale };
+
+            return { parent_bone.rot * local_transform.rot, parent_bone.trans + (parent_bone.rot * local_transform.trans), local_transform.scale * parent_bone.scale };
+        }
+    }
+
+    std::tuple<glm::quat, glm::vec3, glm::vec3> AnimationComponent::interpBone(lotus::Animation::BoneTransform b1, lotus::Animation::BoneTransform b2, float interp)
+    {
+        return { glm::slerp(b1.rot, b2.rot, interp), glm::mix(b1.trans, b2.trans, interp), glm::mix(b1.scale, b2.scale, interp) };
     }
 }

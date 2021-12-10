@@ -11,6 +11,7 @@ namespace FFXI
 {
     class Scheduler;
     class Generator;
+    class Cib;
 
     class ActorSkeletonComponent : public lotus::Component::Component<ActorSkeletonComponent, lotus::Component::Before<lotus::Component::DeformedMeshComponent, lotus::Component::DeformableRaytraceComponent>>
     {
@@ -33,6 +34,18 @@ namespace FFXI
             uint16_t slots[9];
         };
 
+        enum class Slot : uint8_t
+        {
+            Head = 1,
+            Body = 2,
+            Hands = 3,
+            Legs = 4,
+            Feet = 5,
+            Weapon = 6,
+            WeaponSub = 7,
+            WeaponRange = 8
+        };
+
         explicit ActorSkeletonComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::AnimationComponent& animation_component, lotus::Component::DeformedMeshComponent& deformed_mesh,
             lotus::Component::DeformableRaytraceComponent* raytrace, std::shared_ptr<const ActorSkeletonStatic> skeleton, std::variant<LookData, uint16_t> look,
             std::unordered_map<std::string, FFXI::Scheduler*>&& scheduler_map, std::unordered_map<std::string, FFXI::Generator*>&& generator_map);
@@ -44,6 +57,8 @@ namespace FFXI
         FFXI::Generator* getGenerator(std::string name) const;
 
         void updateEquipLook(uint16_t modelid);
+        void updateCib(FFXI::Cib* cib);
+        void updateAnimationForCombat(bool entering);
 
     protected:
         lotus::Component::AnimationComponent& animation_component;

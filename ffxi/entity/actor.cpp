@@ -118,8 +118,30 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
     auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *a, models);
     auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::DeformableRasterComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
     auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::DeformableRaytraceComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
-    auto ac = co_await FFXI::ActorComponent::make_component(actor.get(), engine, *p, *a);
     auto sc = co_await FFXI::ActorSkeletonComponent::make_component(actor.get(), engine, *a, *d, rt.get(), static_skeleton, look, std::move(scheduler_map), std::move(generator_map));
+    auto ac = co_await FFXI::ActorComponent::make_component(actor.get(), engine, *p, *sc);
+
+    std::function<void(FFXI::DatChunk*)> find_cib = [&sc, &find_cib](FFXI::DatChunk* dat) {
+        if (auto cib = dynamic_cast<FFXI::Cib*>(dat))
+        {
+            sc->updateCib(cib);
+        }
+        else
+        {
+            for (const auto& chunk : dat->children)
+            {
+                find_cib(chunk.get());
+            }
+        }
+    };
+
+    for (const auto& dat : dats)
+    {
+        for (const auto& chunk : dat.get().root->children)
+        {
+            find_cib(chunk.get());
+        }
+    }
 
     //co_await all tasks
     for (const auto& task : texture_tasks)

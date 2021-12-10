@@ -8,7 +8,7 @@
 
 namespace FFXI
 {
-    EquipmentTestComponent::EquipmentTestComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorSkeletonComponent& _actor) : Component(_entity, _engine), actor(_actor)
+    EquipmentTestComponent::EquipmentTestComponent(lotus::Entity* _entity, lotus::Engine* _engine, ActorComponent& _actor, ActorSkeletonComponent& _skeleton) : Component(_entity, _engine), actor(_actor), skeleton(_skeleton)
     {
     }
 
@@ -16,8 +16,21 @@ namespace FFXI
     {
         if (new_modelid)
         {
-            actor.updateEquipLook(*new_modelid);
+            skeleton.updateEquipLook(*new_modelid);
             new_modelid.reset();
+        }
+        if (btl)
+        {
+            if (*btl)
+            {
+                actor.enterCombat();
+                btl.reset();
+            }
+            else
+            {
+                actor.exitCombat();
+                btl.reset();
+            }
         }
         co_return;
     }
@@ -34,6 +47,16 @@ namespace FFXI
             if (event.key.keysym.scancode == SDL_SCANCODE_H)
             {
                 new_modelid = 0x2000;
+                return true;
+            }
+            if (event.key.keysym.scancode == SDL_SCANCODE_J)
+            {
+                btl = true;
+                return true;
+            }
+            if (event.key.keysym.scancode == SDL_SCANCODE_K)
+            {
+                btl = false;
                 return true;
             }
         }

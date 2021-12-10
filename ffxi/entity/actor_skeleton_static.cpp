@@ -73,7 +73,7 @@ namespace FFXI
                     auto anim = skeleton->animations.find(mo2->name);
                     if (anim == skeleton->animations.end())
                     {
-                        anim = skeleton->animations.emplace(mo2->name, std::make_unique<lotus::Animation>(mo2->name, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)))).first;
+                        anim = skeleton->animations.emplace(mo2->name, std::make_unique<lotus::Animation>(mo2->name, mo2->frames, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)))).first;
                     }
                     auto& animation = anim->second;
 
@@ -141,7 +141,7 @@ namespace FFXI
                 auto anim = animation_map.find(mo2->name);
                 if (anim == animation_map.end())
                 {
-                    anim = animation_map.emplace(mo2->name, std::make_unique<lotus::Animation>(mo2->name, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)))).first;
+                    anim = animation_map.emplace(mo2->name, std::make_unique<lotus::Animation>(mo2->name, mo2->frames, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)))).first;
                 }
                 auto& animation = anim->second;
 

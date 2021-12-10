@@ -1,7 +1,7 @@
 #pragma once
 #include "engine/entity/component/component.h"
 #include "engine/entity/component/render_base_component.h"
-#include "engine/entity/component/animation_component.h"
+#include "actor_skeleton_component.h"
 #include "dat/sk2.h"
 #include <memory>
 #include <span>
@@ -16,7 +16,7 @@ namespace FFXI
     {
     public:
         explicit ActorComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::RenderBaseComponent& physics,
-            lotus::Component::AnimationComponent& animation);
+            FFXI::ActorSkeletonComponent& skeleton);
 
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
 
@@ -29,14 +29,16 @@ namespace FFXI
         void setModelOffsetRot(glm::quat rot);
         void setSpeed(float _speed) { speed = _speed; }
 
-        lotus::Component::AnimationComponent& getAnimationComponent() const { return animation; }
+        void enterCombat();
+        void exitCombat();
 
     protected:
+        bool combat{ false };
         lotus::Component::RenderBaseComponent& base_component;
         glm::vec3 pos{};
         glm::quat rot{ 1.f, 0.f, 0.f, 0.f };
         glm::quat model_offset_rot{ 1.f, 0.f, 0.f, 0.f };
         float speed{ 4.f };
-        lotus::Component::AnimationComponent& animation;
+        FFXI::ActorSkeletonComponent& skeleton;
     };
 }

@@ -19,10 +19,10 @@ namespace FFXI
         uint8_t unknown2; //probably always empty, maps to XiActorSkeleton's weapon_unknown2 for offhand
         uint8_t weapon_unknown3; //never seen this populated, but decompiling says it's from a weapon
         uint8_t body_armour_unknown; //Waist?
-        uint8_t scale;
-        uint8_t unknown6; //float, default 1.000
-        uint8_t unknown7; //float, default 1.000
-        uint8_t unknown8; //float, default 1.000
+        uint8_t scale0;
+        uint8_t scale1;
+        uint8_t scale2;
+        uint8_t scale3;
         uint8_t motion_range_index;
     };
 }

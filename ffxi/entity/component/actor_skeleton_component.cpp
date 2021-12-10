@@ -88,7 +88,7 @@ namespace FFXI
             }
             else if (auto cib = dynamic_cast<FFXI::Cib*>(chunk.get()))
             {
-
+                updateCib(cib);
             }
         }
 
@@ -119,5 +119,51 @@ namespace FFXI
         }
 
         co_return;
+    }
+
+    void ActorSkeletonComponent::updateCib(FFXI::Cib* cib)
+    {
+        unknown1 = cib->unknown1 == 0xFF ? unknown1 : cib->unknown1;
+        footstep1 = cib->footstep1 == 0xFF ? footstep1 : cib->footstep1;
+        footstep2 = cib->footstep2 == 0xFF ? footstep2 : cib->footstep2;
+        motion_index = cib->motion_index == 0xFF ? motion_index : cib->motion_index;
+        motion_option = cib->motion_option == 0xFF ? motion_option : cib->motion_option;
+        weapon_unknown = cib->weapon_unknown == 0xFF ? weapon_unknown : cib->weapon_unknown;
+        weapon_unknown2 = cib->weapon_unknown2 == 0xFF ? weapon_unknown2 : cib->weapon_unknown2;
+        unknown2 = cib->unknown2 == 0xFF ? unknown2 : cib->unknown2;
+        weapon_unknown3 = cib->weapon_unknown3 == 0xFF ? weapon_unknown3 : cib->weapon_unknown3;
+        body_armour_unknown = cib->body_armour_unknown == 0xFF ? body_armour_unknown : cib->body_armour_unknown;
+        scale0 = cib->scale0 == 0xFF ? scale0 : cib->scale0;
+        scale1 = cib->scale1 == 0xFF ? scale1 : cib->scale1;
+        scale2 = cib->scale2 == 0xFF ? scale2 : cib->scale2;
+        scale3 = cib->scale3 == 0xFF ? scale3 : cib->scale3;
+        motion_range_index = cib->motion_range_index == 0xFF ? motion_range_index : cib->motion_range_index;
+    }
+
+    void ActorSkeletonComponent::updateAnimationForCombat(bool entering)
+    {
+        if (entering)
+        {
+            for (const auto& [name, anim] : skeleton->getBattleAnimations(motion_index))
+            {
+                auto& animation = animation_component.skeleton->animations.insert({ name, anim.get() }).first->second;
+                size_t frame = 0;
+                for (const auto& frame_map : anim->transforms)
+                {
+                    for (const auto& [bone, transform] : frame_map)
+                    {
+                        animation->transforms[frame][bone] = transform;
+                    }
+                    frame++;
+                }
+            }
+        }
+        else
+        {
+            for (const auto& [name, anim] : skeleton->getAnimations())
+            {
+                animation_component.skeleton->animations.insert_or_assign(name, anim.get());
+            }
+        }
     }
 }
