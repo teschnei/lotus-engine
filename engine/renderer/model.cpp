@@ -19,7 +19,7 @@ namespace lotus
             std::vector<uint32_t> max_primitive_count;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
-            alloc_info.commandPool = *engine->renderer->compute_pool;
+            alloc_info.commandPool = *engine->renderer->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
             auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -183,7 +183,7 @@ namespace lotus
             }
             command_buffer->end();
 
-            engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+            engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
             engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;
@@ -198,7 +198,7 @@ namespace lotus
             std::vector<uint32_t> max_primitives;
             vk::CommandBufferAllocateInfo alloc_info = {};
             alloc_info.level = vk::CommandBufferLevel::ePrimary;
-            alloc_info.commandPool = *engine->renderer->compute_pool;
+            alloc_info.commandPool = *engine->renderer->graphics_pool;
             alloc_info.commandBufferCount = 1;
 
             auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -274,7 +274,7 @@ namespace lotus
             }
             command_buffer->end();
 
-            engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+            engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
             engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;

@@ -518,18 +518,23 @@ namespace lotus
         }
     }
 
+    static constexpr uint64_t timeline_graphics = 1;
+    static constexpr uint64_t timeline_frame_ready = 2;
+
     void RendererHybrid::createSyncs()
     {
-        vk::FenceCreateInfo fenceInfo;
-        fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-        for (uint32_t i = 0; i < max_pending_frames; ++i)
+        vk::SemaphoreTypeCreateInfo semaphore_type
         {
-            frame_fences.push_back(gpu->device->createFenceUnique(fenceInfo, nullptr));
-            image_ready_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
-            frame_finish_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
+            .semaphoreType = vk::SemaphoreType::eTimeline,
+            .initialValue = timeline_frame_ready
+        };
+        for (auto i = 0; i < max_pending_frames; ++i)
+        {
+            frame_timeline_sem.push_back(gpu->device->createSemaphoreUnique({
+                .pNext = &semaphore_type
+            }));
+            timeline_sem_base.push_back(0);
         }
-        gbuffer_sem = gpu->device->createSemaphoreUnique({}, nullptr);
-        compute_sem = gpu->device->createSemaphoreUnique({}, nullptr);
     }
 
     void RendererHybrid::createGBufferResources()
@@ -921,7 +926,13 @@ namespace lotus
             co_return;
 
         engine->worker_pool->deleteFinished();
-        gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
+        uint64_t frame_ready_value = timeline_sem_base[current_frame] + timeline_frame_ready;
+        gpu->device->waitSemaphores({
+            .semaphoreCount = 1,
+            .pSemaphores = &*frame_timeline_sem[current_frame],
+            .pValues = &frame_ready_value
+        }, std::numeric_limits<uint64_t>::max());
+        timeline_sem_base[current_frame] = timeline_sem_base[current_frame] + timeline_frame_ready;
         resources->BindResources(current_frame);
 
         try
@@ -936,101 +947,81 @@ namespace lotus
             engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
             engine->lights->UpdateLightBuffer();
 
-            std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame] };
-            std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderKHR };
-            auto buffers = engine->worker_pool->getPrimaryComputeBuffers(current_frame);
-            if (!buffers.empty())
-            {
-                vk::SubmitInfo submitInfo = {};
-                submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
-                submitInfo.pCommandBuffers = buffers.data();
-                //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
-                vk::Semaphore compute_signal_sems[] = { *compute_sem };
-                submitInfo.signalSemaphoreCount = 1;
-                submitInfo.pSignalSemaphores = compute_signal_sems;
-
-                gpu->compute_queue.submit(submitInfo, nullptr);
-                waitSemaphores.push_back(*compute_sem);
-                waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eVertexInput);
-            }
-
-            vk::SubmitInfo submitInfo = {};
-            submitInfo.waitSemaphoreCount = waitSemaphores.size();
-            submitInfo.pWaitSemaphores = waitSemaphores.data();
-            submitInfo.pWaitDstStageMask = waitStages.data();
-
-            buffers = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
+            auto buffers_temp = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
+            std::vector<vk::CommandBufferSubmitInfoKHR> buffers;
+            buffers.resize(buffers_temp.size());
+            std::ranges::transform(buffers_temp, buffers.begin(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
             auto [raster_buffer, raytrace_buffer] = getRenderCommandbuffers();
-            buffers.push_back(*raster_buffer);
-            buffers.push_back(*raytrace_buffer);
-
-            submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
-            submitInfo.pCommandBuffers = buffers.data();
-
-            std::vector<vk::Semaphore> gbuffer_semaphores = { *gbuffer_sem };
-            submitInfo.pSignalSemaphores = gbuffer_semaphores.data();
-            submitInfo.signalSemaphoreCount = gbuffer_semaphores.size();
-
-            gpu->graphics_queue.submit(submitInfo, nullptr);
-
-            engine->worker_pool->gpuResource(std::move(raster_buffer), std::move(raytrace_buffer));
+            buffers.push_back({ .commandBuffer = *raster_buffer });
+            buffers.push_back({ .commandBuffer = *raytrace_buffer });
 
             //post process
             auto post_buffer = post_process->getCommandBuffer(*rtx_gbuffer.colour.image_view, *rasterizer->getGBuffer().normal.image_view, *rasterizer->getGBuffer().motion_vector.image_view);
-            std::vector<vk::PipelineStageFlags> post_process_stage_flags = { vk::PipelineStageFlagBits::eComputeShader };
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &*post_buffer;
-            submitInfo.pWaitDstStageMask = post_process_stage_flags.data();
+            buffers.push_back({ .commandBuffer = *post_buffer });
 
-            submitInfo.waitSemaphoreCount = gbuffer_semaphores.size();
-            submitInfo.pWaitSemaphores = gbuffer_semaphores.data();
-            std::vector<vk::Semaphore> post_sems = { *compute_sem };
-            submitInfo.signalSemaphoreCount = post_sems.size();
-            submitInfo.pSignalSemaphores = post_sems.data();
-            gpu->compute_queue.submit(submitInfo, nullptr);
-
-            engine->worker_pool->gpuResource(std::move(post_buffer));
+            vk::SemaphoreSubmitInfoKHR graphics_sem {
+                .semaphore = *frame_timeline_sem[current_frame],
+                .value = timeline_sem_base[current_frame] + timeline_graphics,
+                .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
+            };
 
             //deferred render
-            submitInfo.waitSemaphoreCount = post_sems.size();
-            submitInfo.pWaitSemaphores = post_sems.data();
             auto deferred_buffer = getDeferredCommandBuffer();
-            std::vector<vk::CommandBuffer> deferred_commands{ *deferred_buffer };
-            submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
-            submitInfo.pCommandBuffers = deferred_commands.data();
+            std::vector<vk::CommandBufferSubmitInfoKHR> deferred_commands{ {.commandBuffer = *deferred_buffer}, { .commandBuffer = ui->Render() }};
 
-            std::vector<vk::Semaphore> frame_sem = { *frame_finish_sem[current_frame] };
-            submitInfo.signalSemaphoreCount = frame_sem.size();
-            submitInfo.pSignalSemaphores = frame_sem.data();
-            gpu->graphics_queue.submit(submitInfo, nullptr);
+            std::array deferred_waits {
+                graphics_sem,
+                vk::SemaphoreSubmitInfoKHR {
+                    .semaphore = *image_ready_sem[current_frame],
+                    .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
+                }
+            };
 
+            std::array deferred_signals {
+                vk::SemaphoreSubmitInfoKHR {
+                    .semaphore = *frame_timeline_sem[current_frame],
+                    .value = timeline_sem_base[current_frame] + timeline_frame_ready,
+                    .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
+                },
+                vk::SemaphoreSubmitInfoKHR {
+                    .semaphore = *frame_finish_sem[current_frame],
+                    .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
+                }
+            };
+
+            gpu->graphics_queue.submit2KHR({
+                vk::SubmitInfo2KHR {
+                    .commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
+                    .pCommandBufferInfos = buffers.data(),
+                    .signalSemaphoreInfoCount = 1,
+                    .pSignalSemaphoreInfos = &graphics_sem
+                },
+                vk::SubmitInfo2KHR {
+                    .waitSemaphoreInfoCount = deferred_waits.size(),
+                    .pWaitSemaphoreInfos = deferred_waits.data(),
+                    .commandBufferInfoCount = static_cast<uint32_t>(deferred_commands.size()),
+                    .pCommandBufferInfos = deferred_commands.data(),
+                    .signalSemaphoreInfoCount = deferred_signals.size(),
+                    .pSignalSemaphoreInfos = deferred_signals.data()
+                }
+            });
+
+            engine->worker_pool->gpuResource(std::move(raster_buffer), std::move(raytrace_buffer));
+            engine->worker_pool->gpuResource(std::move(post_buffer));
             engine->worker_pool->gpuResource(std::move(deferred_buffer));
 
-            //ui
-            auto ui_buffer = ui->Render();
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &ui_buffer;
-
-            submitInfo.waitSemaphoreCount = frame_sem.size();
-            submitInfo.pWaitSemaphores = frame_sem.data();
-            submitInfo.signalSemaphoreCount = frame_sem.size();
-            submitInfo.pSignalSemaphores = frame_sem.data();
-            gpu->device->resetFences(*frame_fences[current_frame]);
-            gpu->graphics_queue.submit(submitInfo, *frame_fences[current_frame]);
-
-            vk::PresentInfoKHR presentInfo = {};
-
-            presentInfo.waitSemaphoreCount = frame_sem.size();
-            presentInfo.pWaitSemaphores = frame_sem.data();
-
+            std::vector<vk::Semaphore> present_waits{ *frame_finish_sem[current_frame] };
             std::vector<vk::SwapchainKHR> swap_chains = { *swapchain->swapchain };
-            presentInfo.swapchainCount = swap_chains.size();
-            presentInfo.pSwapchains = swap_chains.data();
-
-            presentInfo.pImageIndices = &current_image;
 
             co_await engine->worker_pool->mainThread();
-            gpu->present_queue.presentKHR(presentInfo);
+
+            gpu->present_queue.presentKHR({
+                .waitSemaphoreCount = static_cast<uint32_t>(present_waits.size()),
+                .pWaitSemaphores = present_waits.data(),
+                .swapchainCount = static_cast<uint32_t>(swap_chains.size()),
+                .pSwapchains = swap_chains.data(),
+                .pImageIndices = &current_image
+            });
 
             previous_frame = current_frame;
             current_frame = (current_frame + 1) % max_pending_frames;

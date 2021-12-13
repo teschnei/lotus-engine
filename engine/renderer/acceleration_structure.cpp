@@ -124,7 +124,7 @@ namespace lotus
         uint32_t instance_count = instance_index.load();
         //priority: 2
         vk::CommandBufferAllocateInfo alloc_info {
-            .commandPool = *renderer->compute_pool,
+            .commandPool = *renderer->graphics_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         };
@@ -197,7 +197,7 @@ namespace lotus
 
         command_buffer->end();
 
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
         co_return;
     }

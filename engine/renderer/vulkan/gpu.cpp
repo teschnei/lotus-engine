@@ -93,6 +93,7 @@ namespace lotus
         vk_12_features.descriptorBindingStorageBufferUpdateAfterBind = true;
         vk_12_features.descriptorBindingUniformBufferUpdateAfterBind = true;
         vk_12_features.descriptorBindingSampledImageUpdateAfterBind = true;
+        vk_12_features.timelineSemaphore = true;
 
         //this is part of the 1.2 spec but not in Vulkan12Features...?
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features;
@@ -152,7 +153,7 @@ namespace lotus
 
         graphics_queue = device->getQueue(graphics_queue_index, 0);
         present_queue = device->getQueue(present_queue_index, 0);
-        compute_queue = device->getQueue(compute_queue_index, 0);
+        async_compute_queue = device->getQueue(compute_queue_index, 0);
     }
 
     std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<std::uint32_t>> GPU::getQueueFamilies(vk::PhysicalDevice device) const

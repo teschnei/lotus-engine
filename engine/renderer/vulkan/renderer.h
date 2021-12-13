@@ -142,6 +142,7 @@ namespace lotus
     protected:
         void createInstance(const std::string& app_name, uint32_t app_version);
         void createSwapchain();
+        void createSemaphores();
         void createCommandPool();
         void createAnimationResources();
 
@@ -154,10 +155,10 @@ namespace lotus
 
         Engine* engine;
         vk::UniqueDebugUtilsMessengerEXT debug_messenger;
-        std::vector<vk::UniqueFence> frame_fences;
         std::vector<vk::UniqueSemaphore> image_ready_sem;
         std::vector<vk::UniqueSemaphore> frame_finish_sem;
-        vk::UniqueSemaphore compute_sem;
+        std::vector<vk::UniqueSemaphore> frame_timeline_sem;
+        std::vector<uint64_t> timeline_sem_base{};
         uint32_t current_image{ 0 };
         uint32_t previous_image{ 0 };
         static constexpr uint32_t max_pending_frames{ 2 };

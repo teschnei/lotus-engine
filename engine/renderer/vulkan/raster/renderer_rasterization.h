@@ -51,8 +51,6 @@ namespace lotus
         std::unique_ptr<Image> shadowmap_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
 
-        vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> gbuffer_sem;
-
     private:
 
         void createRenderpasses();

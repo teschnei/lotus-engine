@@ -17,7 +17,7 @@ namespace lotus::Component
         vk::CommandBufferAllocateInfo alloc_info;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
-            .commandPool = *engine->renderer->compute_pool,
+            .commandPool = *engine->renderer->graphics_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         });
@@ -38,7 +38,7 @@ namespace lotus::Component
             }
         }
         command_buffer->end();
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
 
         co_return;
@@ -50,7 +50,7 @@ namespace lotus::Component
         vk::CommandBufferAllocateInfo alloc_info;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
-            .commandPool = *engine->renderer->compute_pool,
+            .commandPool = *engine->renderer->graphics_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         });
@@ -67,7 +67,7 @@ namespace lotus::Component
             acceleration = initModelWork(*command_buffer, *model, model_transform);
         }
         command_buffer->end();
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
 
         co_return std::move(acceleration);
@@ -129,7 +129,7 @@ namespace lotus::Component
     Task<> DeformableRaytraceComponent::tick(time_point time, duration delta)
     {
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
-            .commandPool = *engine->renderer->compute_pool,
+            .commandPool = *engine->renderer->graphics_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         });
@@ -212,7 +212,7 @@ namespace lotus::Component
         }
 
         command_buffer->end();
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
         co_return;
     }

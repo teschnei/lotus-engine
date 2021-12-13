@@ -21,7 +21,7 @@ namespace lotus
         vk::UniqueHandle<vk::Device, vk::DispatchLoaderDynamic> device;
         vk::Queue graphics_queue;
         vk::Queue present_queue;
-        vk::Queue compute_queue;
+        vk::Queue async_compute_queue;
         uint32_t graphics_queue_index;
         uint32_t present_queue_index;
         uint32_t compute_queue_index;

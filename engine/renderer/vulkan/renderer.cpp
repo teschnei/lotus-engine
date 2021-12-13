@@ -59,6 +59,7 @@ namespace lotus
         }
 
         createSwapchain();
+        createSemaphores();
         resources = std::make_unique<GlobalResources>(engine, this);
         post_process = std::make_unique<PostProcessPipeline>(this);
     }
@@ -118,6 +119,15 @@ namespace lotus
     void Renderer::createSwapchain()
     {
         swapchain = std::make_unique<Swapchain>(engine->config.get(), gpu.get(), window.get(), *surface);
+    }
+
+    void Renderer::createSemaphores()
+    {
+        for (uint32_t i = 0; i < max_pending_frames; ++i)
+        {
+            image_ready_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
+            frame_finish_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
+        }
     }
 
     void Renderer::createCommandPool()
