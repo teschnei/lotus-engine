@@ -71,6 +71,7 @@ lotus::Task<> FFXIGame::entry()
     co_await engine->ui->addElement(ele2, ele);
 
     engine->worker_pool->background(load_scene());
+    co_return;
 }
 
 lotus::Task<> FFXIGame::tick(lotus::time_point, lotus::duration)

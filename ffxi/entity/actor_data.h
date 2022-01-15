@@ -13,6 +13,8 @@ namespace ActorData
         size_t motion_dw_r;
     };
 
+    //TODO: according to my own notes, there should be 64 slots for "motion", then another 64 and another 64 after that for more battle animations
+    // then there's 32 dats of various animations, repeated until it hits the next skeleton id
     static std::array PCSkeletonIDs {
         PCDatIDs{ .skel = 7072, .motion = 9672, .motion_dw_l = 40431, .motion_dw_r = 40815 },
         PCDatIDs{ .skel = 10248, .motion = 12848, .motion_dw_l = 41711, .motion_dw_r = 42095 },

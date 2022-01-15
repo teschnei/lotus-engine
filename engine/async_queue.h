@@ -11,7 +11,6 @@ namespace lotus
     public:
         auto wait(T&& data) { return AsyncQueueItem(this, std::forward<T&&>(data)); }
         auto getAll() { return waiting_tasks.getAll(); }
-    private:
         class AsyncQueueItem
         {
         public:
@@ -25,7 +24,7 @@ namespace lotus
             }
             auto await_resume() noexcept
             {
-                return data;
+                return std::move(data);
             }
 
             std::coroutine_handle<> awaiting;
@@ -33,6 +32,7 @@ namespace lotus
         private:
             AsyncQueue* queue;
         };
+    private:
         SharedLinkedList<AsyncQueueItem*> waiting_tasks{};
     };
 
@@ -42,7 +42,6 @@ namespace lotus
     public:
         auto wait() { return AsyncQueueItem(this); }
         auto getAll() { return waiting_tasks.getAll(); }
-    private:
         class AsyncQueueItem
         {
         public:
@@ -60,6 +59,7 @@ namespace lotus
         private:
             AsyncQueue* queue;
         };
+    private:
         SharedLinkedList<AsyncQueueItem*> waiting_tasks{};
     };
 };

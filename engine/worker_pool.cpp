@@ -106,10 +106,6 @@ namespace lotus
     {
         return command_buffers.particle.getAll();
     }
-    std::vector<vk::CommandBuffer> WorkerPool::getPrimaryComputeBuffers(int)
-    {
-        return command_buffers.compute.getAll();
-    }
 
     void WorkerPool::processFrameWaits()
     {

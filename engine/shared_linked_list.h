@@ -74,7 +74,19 @@ namespace lotus
 
         void queue(T val)
         {
-            auto node = std::make_shared<Node>(std::move(val));
+            queueNode(std::make_shared<Node>(std::move(val)));
+        }
+
+        void queue(SharedLinkedList<T>& o)
+        {
+            auto head_reserve = o.head.exchange({}, std::memory_order::seq_cst);
+            auto tail_reserve = o.tail.exchange({}, std::memory_order::seq_cst);
+
+            queueNode(std::move(head_reserve));
+        }
+    private:
+        void queueNode(std::shared_ptr<Node>&& node)
+        {
             do
             {
                 auto tail_tmp = tail.load(std::memory_order::relaxed);
@@ -88,7 +100,6 @@ namespace lotus
                 }
             } while (true);
         }
-    private:
         std::atomic<std::shared_ptr<Node>> head;
         std::atomic<std::shared_ptr<Node>> tail;
     };

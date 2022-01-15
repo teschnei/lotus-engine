@@ -14,7 +14,7 @@ namespace lotus::Component
         vk::CommandBufferAllocateInfo alloc_info;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
-            .commandPool = *engine->renderer->graphics_pool,
+            .commandPool = *engine->renderer->compute_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         });
@@ -32,8 +32,7 @@ namespace lotus::Component
             }
         }
         command_buffer->end();
-        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
-        engine->worker_pool->gpuResource(std::move(command_buffer));
+        co_await engine->renderer->async_compute->compute(std::move(command_buffer));
 
         co_return;
     }
@@ -283,7 +282,7 @@ namespace lotus::Component
         vk::CommandBufferAllocateInfo alloc_info;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
-            .commandPool = *engine->renderer->graphics_pool,
+            .commandPool = *engine->renderer->compute_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         });
@@ -298,8 +297,7 @@ namespace lotus::Component
             transform = initModelWork(*command_buffer, *model);
         }
         command_buffer->end();
-        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
-        engine->worker_pool->gpuResource(std::move(command_buffer));
+        co_await engine->renderer->async_compute->compute(std::move(command_buffer));
         co_return std::move(transform);
     }
 

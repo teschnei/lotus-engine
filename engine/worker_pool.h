@@ -31,7 +31,15 @@ namespace lotus
         class ScheduledTask
         {
         public:
+            //queue when suspended
             ScheduledTask(WorkerPool* _pool) : pool(_pool) {}
+            //queue an existing coroutine handle (must call queueTask after making sure the scheduledTask object is constructed
+            // or else it might run before finishing construction/assignment)
+            ScheduledTask(WorkerPool* _pool, std::coroutine_handle<> _awaiting) : pool(_pool), awaiting(_awaiting) {}
+            void queueTask()
+            {
+                pool->queueTask(this);
+            }
 
             bool await_ready() noexcept { return false; }
             void await_suspend(std::coroutine_handle<> awaiter) noexcept
@@ -54,14 +62,12 @@ namespace lotus
             SharedLinkedList<vk::CommandBuffer> graphics_secondary;
             SharedLinkedList<vk::CommandBuffer> shadowmap;
             SharedLinkedList<vk::CommandBuffer> particle;
-            SharedLinkedList<vk::CommandBuffer> compute;
         } command_buffers;
 
         std::vector<vk::CommandBuffer> getPrimaryGraphicsBuffers(int);
         std::vector<vk::CommandBuffer> getSecondaryGraphicsBuffers(int);
         std::vector<vk::CommandBuffer> getShadowmapGraphicsBuffers(int);
         std::vector<vk::CommandBuffer> getParticleGraphicsBuffers(int);
-        std::vector<vk::CommandBuffer> getPrimaryComputeBuffers(int);
 
         void Reset();
 
@@ -98,13 +104,13 @@ namespace lotus
         {
             return MainThreadTask{ this };
         }
+        void queueTask(ScheduledTask*);
 
     private:
-        friend class ScheduledTask;
+        //friend class ScheduledTask;
         friend class MainThreadTask;
         ScheduledTask* tryGetTask();
         void runTasks(std::stop_token);
-        void queueTask(ScheduledTask*);
 
         Engine* engine;
         std::vector<std::jthread> threads;

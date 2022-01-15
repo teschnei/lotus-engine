@@ -769,6 +769,7 @@ namespace lotus
 
     Task<> RendererRaytrace::recreateRenderer()
     {
+        //TODO: only recreate swapchain and framebuffers, don't waitIdle
         gpu->device->waitIdle();
         engine->worker_pool->Reset();
         swapchain->recreateSwapchain(current_image);

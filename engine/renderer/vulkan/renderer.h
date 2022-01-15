@@ -10,6 +10,7 @@
 #include "common/raster_pipeline.h"
 #include "common/raytrace_pipeline.h"
 #include "common/post_process_pipeline.h"
+#include "common/async_compute.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
 #include "engine/renderer/model.h"
@@ -78,6 +79,7 @@ namespace lotus
         std::unique_ptr<GPU> gpu;
         std::unique_ptr<Swapchain> swapchain;
         std::unique_ptr<GlobalResources> resources;
+        std::unique_ptr<AsyncCompute> async_compute;
 
         inline static thread_local vk::UniqueCommandPool graphics_pool;
         inline static thread_local vk::UniqueCommandPool compute_pool;
