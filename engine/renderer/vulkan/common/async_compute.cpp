@@ -34,7 +34,6 @@ namespace lotus
             std::vector<vk::CommandBufferSubmitInfoKHR> submits;
             submits.resize(pending_tasks.size());
             std::ranges::transform(pending_tasks, submits.begin(), [](auto& i) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = *i->data.buffer }; });
-            std::cout << "submitting async compute" << std::endl;
             renderer->gpu->async_compute_queue.submit2KHR({
                 vk::SubmitInfo2KHR {
                     .commandBufferInfoCount = static_cast<uint32_t>(submits.size()),
@@ -43,7 +42,6 @@ namespace lotus
             }, *fence);
             renderer->gpu->device->waitForFences(*fence, true, std::numeric_limits<uint64_t>::max());
             renderer->gpu->device->resetFences(*fence);
-            std::cout << "async compute complete" << std::endl;
 
             for (auto& t : pending_tasks | std::ranges::views::take(pending_tasks.size() - 1))
             {
