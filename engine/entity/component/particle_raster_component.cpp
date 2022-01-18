@@ -18,7 +18,7 @@ namespace lotus::Component
         {
             vk::CommandBufferAllocateInfo alloc_info {
                 .commandPool = *engine->renderer->graphics_pool,
-                .level = vk::CommandBufferLevel::eSecondary,
+                .level = vk::CommandBufferLevel::ePrimary,
                 .commandBufferCount = command_buffer_count
             };
 
@@ -39,16 +39,11 @@ namespace lotus::Component
     {
         uint32_t image = engine->renderer->getCurrentFrame();
 
-        vk::CommandBufferInheritanceInfo inheritInfo {
-            .renderPass = engine->renderer->rasterizer->getRenderPass(),
-            .subpass = 1,
-            .framebuffer = *engine->renderer->rasterizer->getGBuffer().frame_buffer
-        };
-
         command_buffer.begin({
-            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue,
-            .pInheritanceInfo = &inheritInfo
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
         });
+
+        engine->renderer->rasterizer->beginTransparencyCommandBufferRendering(command_buffer, vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending);
 
         std::array camera_buffer_info
         {
@@ -110,6 +105,7 @@ namespace lotus::Component
         drawModels(command_buffer, false);
         drawModels(command_buffer, true);
 
+        command_buffer.endRenderingKHR();
         command_buffer.end();
     }
 

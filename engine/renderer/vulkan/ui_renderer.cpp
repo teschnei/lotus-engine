@@ -9,11 +9,8 @@ namespace lotus
     UiRenderer::UiRenderer(Engine* _engine, Renderer* _renderer) : engine(_engine), renderer(_renderer)
     {
         createDescriptorSetLayout();
-        createRenderpass();
         createDepthImage();
-        createFrameBuffers();
         createPipeline();
-        command_buffers.resize(renderer->getFrameCount());
     }
 
     Task<> UiRenderer::Init()
@@ -24,57 +21,114 @@ namespace lotus
     Task<> UiRenderer::ReInit()
     {
         createDescriptorSetLayout();
-        createRenderpass();
         createDepthImage();
-        createFrameBuffers();
         createPipeline();
-        command_buffers.clear();
-        command_buffers.resize(renderer->getFrameCount());
         co_await engine->ui->ReInit();
     }
 
-    vk::CommandBuffer UiRenderer::Render()
+    std::vector<vk::CommandBuffer> UiRenderer::Render()
     {
-        vk::CommandBufferAllocateInfo alloc_info;
-        alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *renderer->graphics_pool;
-        alloc_info.commandBufferCount = 1;
+        std::vector<vk::CommandBuffer> render_buffers;
+        vk::CommandBufferAllocateInfo alloc_info {
+            .commandPool = *renderer->graphics_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 2
+        };
 
         auto buffers = renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
 
-        vk::CommandBufferBeginInfo begin_info;
-        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-
-        buffers[0]->begin(begin_info);
-
-        std::array clear_values
-        {
-            vk::ClearValue{ .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f } },
-            vk::ClearValue{ .depthStencil = 1.f }
-        };
+        buffers[0]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
 
         auto image = renderer->getCurrentImage();
-        vk::RenderPassBeginInfo renderpass_begin;
-        renderpass_begin.renderPass = *renderpass;
-        renderpass_begin.renderArea.extent = renderer->swapchain->extent;
-        renderpass_begin.clearValueCount = static_cast<uint32_t>(clear_values.size());
-        renderpass_begin.pClearValues = clear_values.data();
-        renderpass_begin.framebuffer = *framebuffers[image];
 
-        buffers[0]->beginRenderPass(renderpass_begin, vk::SubpassContents::eSecondaryCommandBuffers);
+        std::array colour_attachments{
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *renderer->swapchain->image_views[image],
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eLoad,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            }
+        };
 
-        auto ui_buffers = engine->ui->getRenderCommandBuffers(image);
-        if (!ui_buffers.empty())
-        {
-            buffers[0]->executeCommands(ui_buffers);
-        }
+        vk::RenderingAttachmentInfoKHR depth_info {
+            .imageView = *depth_image_view,
+            .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+        };
 
-        buffers[0]->endRenderPass();
+        buffers[0]->beginRenderingKHR({
+            .flags = vk::RenderingFlagBitsKHR::eSuspending,
+            .renderArea = {
+                .extent = renderer->swapchain->extent
+            },
+            .layerCount = 1,
+            .viewMask = 0,
+            .colorAttachmentCount = colour_attachments.size(),
+            .pColorAttachments = colour_attachments.data(),
+            .pDepthAttachment = &depth_info
+        });
+        buffers[0]->endRenderingKHR();
         buffers[0]->end();
 
-        auto frame = renderer->getCurrentFrame();
-        command_buffers[frame] = std::move(buffers[0]);
-        return *command_buffers[frame];
+
+        auto ui_buffers = engine->ui->getRenderCommandBuffers(image);
+        render_buffers.resize(2 + ui_buffers.size());
+        render_buffers[0] = *buffers[0];
+        std::ranges::copy(ui_buffers, render_buffers.begin() + 1);
+
+        buffers[1]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+
+        std::array post_render_transitions {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eBottomOfPipe,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eMemoryRead,
+                .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .newLayout = vk::ImageLayout::ePresentSrcKHR,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = renderer->swapchain->images[image],
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
+        };
+
+        buffers[1]->pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(post_render_transitions.size()),
+            .pImageMemoryBarriers = post_render_transitions.data()
+        });
+
+        buffers[1]->beginRenderingKHR({
+            .flags = vk::RenderingFlagBitsKHR::eResuming,
+            .renderArea = {
+                .extent = renderer->swapchain->extent
+            },
+            .layerCount = 1,
+            .viewMask = 0,
+            .colorAttachmentCount = colour_attachments.size(),
+            .pColorAttachments = colour_attachments.data(),
+            .pDepthAttachment = &depth_info
+        });
+        buffers[1]->endRenderingKHR();
+        buffers[1]->end();
+
+        render_buffers.back() = *buffers[1];
+
+        engine->worker_pool->gpuResource(std::move(buffers));
+        return render_buffers;
     }
 
     void UiRenderer::GenerateRenderBuffers(ui::Element* element)
@@ -83,15 +137,39 @@ namespace lotus
         {
             auto& command_buffer = element->command_buffers[i];
 
-            vk::CommandBufferInheritanceInfo inherit_info = {};
-            inherit_info.renderPass = *renderpass;
-            inherit_info.framebuffer = *framebuffers[i];
+            command_buffer->begin({
+                .flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse
+            });
 
-            vk::CommandBufferBeginInfo buffer_begin;
-            buffer_begin.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue;
-            buffer_begin.pInheritanceInfo = &inherit_info;
+            std::array colour_attachments{
+                vk::RenderingAttachmentInfoKHR {
+                    .imageView = *renderer->swapchain->image_views[i],
+                    .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                    .loadOp = vk::AttachmentLoadOp::eLoad,
+                    .storeOp = vk::AttachmentStoreOp::eStore,
+                    .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+                }
+            };
 
-            command_buffer->begin(buffer_begin);
+            vk::RenderingAttachmentInfoKHR depth_info {
+                .imageView = *depth_image_view,
+                .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eDontCare,
+                .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+            };
+
+            command_buffer->beginRenderingKHR({
+                .flags = vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending,
+                .renderArea = {
+                    .extent = renderer->swapchain->extent
+                },
+                .layerCount = 1,
+                .viewMask = 0,
+                .colorAttachmentCount = colour_attachments.size(),
+                .pColorAttachments = colour_attachments.data(),
+                .pDepthAttachment = &depth_info
+            });
 
             command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
 
@@ -137,6 +215,8 @@ namespace lotus
             command_buffer->bindVertexBuffers(0, {quad.vertex_buffer->buffer, quad.vertex_buffer->buffer}, {0, sizeof(glm::vec2)});
 
             command_buffer->draw(4, 1, 0, 0);
+
+            command_buffer->endRenderingKHR();
 
             command_buffer->end();
         }
@@ -273,86 +353,33 @@ namespace lotus
 
         pipeline_layout = renderer->gpu->device->createPipelineLayoutUnique(pipeline_layout_info);
 
-        vk::GraphicsPipelineCreateInfo pipeline_info;
-        pipeline_info.stageCount = static_cast<uint32_t>(shader_stages.size());
-        pipeline_info.pStages = shader_stages.data();
-        pipeline_info.pVertexInputState = &vertex_input_info;
-        pipeline_info.pInputAssemblyState = &input_assembly;
-        pipeline_info.pViewportState = &viewport_state;
-        pipeline_info.pRasterizationState = &rasterizer;
-        pipeline_info.pMultisampleState = &multisampling;
-        pipeline_info.pDepthStencilState = &depth_stencil;
-        pipeline_info.pColorBlendState = &color_blending;
-        pipeline_info.layout = *pipeline_layout;
-        pipeline_info.renderPass = *renderpass;
-        pipeline_info.subpass = 0;
-        pipeline_info.basePipelineHandle = nullptr;
+        std::array attachment_formats{ renderer->swapchain->image_format };
+
+        vk::PipelineRenderingCreateInfoKHR rendering_info {
+            .viewMask = 0,
+            .colorAttachmentCount = attachment_formats.size(),
+            .pColorAttachmentFormats = attachment_formats.data(),
+            .depthAttachmentFormat = renderer->gpu->getDepthFormat()
+        };
+
+        vk::GraphicsPipelineCreateInfo pipeline_info
+        {
+            .pNext = &rendering_info,
+            .stageCount = static_cast<uint32_t>(shader_stages.size()),
+            .pStages = shader_stages.data(),
+            .pVertexInputState = &vertex_input_info,
+            .pInputAssemblyState = &input_assembly,
+            .pViewportState = &viewport_state,
+            .pRasterizationState = &rasterizer,
+            .pMultisampleState = &multisampling,
+            .pDepthStencilState = &depth_stencil,
+            .pColorBlendState = &color_blending,
+            .layout = *pipeline_layout,
+            .subpass = 0,
+            .basePipelineHandle = nullptr
+        };
 
         pipeline = renderer->gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info);
-    }
-
-    void UiRenderer::createRenderpass()
-    {
-        vk::AttachmentDescription colour_attachment;
-        colour_attachment.format = renderer->swapchain->image_format;
-        colour_attachment.samples = vk::SampleCountFlagBits::e1;
-        colour_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
-        colour_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-        colour_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        colour_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        colour_attachment.initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
-        colour_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-
-        vk::AttachmentDescription depth_attachment;
-        depth_attachment.format = renderer->gpu->getDepthFormat();
-        depth_attachment.samples = vk::SampleCountFlagBits::e1;
-        depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-        depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-        depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-        depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-        std::vector<vk::AttachmentDescription> attachments {colour_attachment, depth_attachment};
-
-        vk::AttachmentReference colour_reference {0, vk::ImageLayout::eColorAttachmentOptimal};
-        vk::AttachmentReference depth_reference {1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
-
-        vk::SubpassDependency pre_subpass_dep;
-        pre_subpass_dep.srcSubpass = VK_SUBPASS_EXTERNAL;
-        pre_subpass_dep.dstSubpass = 0;
-        pre_subpass_dep.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-        pre_subpass_dep.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        pre_subpass_dep.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-        pre_subpass_dep.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
-        pre_subpass_dep.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-
-        vk::SubpassDependency post_subpass_dep;
-        post_subpass_dep.srcSubpass = 0;
-        post_subpass_dep.dstSubpass = VK_SUBPASS_EXTERNAL;
-        post_subpass_dep.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        post_subpass_dep.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-        post_subpass_dep.srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
-        post_subpass_dep.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
-        post_subpass_dep.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-
-        std::vector<vk::SubpassDependency> dependencies {pre_subpass_dep, post_subpass_dep};
-
-        vk::SubpassDescription subpass;
-        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colour_reference;
-        subpass.pDepthStencilAttachment = &depth_reference;
-
-        vk::RenderPassCreateInfo renderpass_ci;
-        renderpass_ci.attachmentCount = static_cast<uint32_t>(attachments.size());
-        renderpass_ci.pAttachments = attachments.data();
-        renderpass_ci.subpassCount = 1;
-        renderpass_ci.pSubpasses = &subpass;
-        renderpass_ci.dependencyCount = static_cast<uint32_t>(dependencies.size());
-        renderpass_ci.pDependencies = dependencies.data();
-
-        renderpass = renderer->gpu->device->createRenderPassUnique(renderpass_ci);
     }
 
     void UiRenderer::createDepthImage()
@@ -374,26 +401,6 @@ namespace lotus
         depth_image_view = renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
     }
 
-    void UiRenderer::createFrameBuffers()
-    {
-        framebuffers.clear();
-        for (auto& swapchain_image_view : renderer->swapchain->image_views) {
-            std::vector<vk::ImageView> attachments = {
-                *swapchain_image_view,
-                *depth_image_view
-            };
-
-            vk::FramebufferCreateInfo framebuffer_info = {};
-            framebuffer_info.renderPass = *renderpass;
-            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = renderer->swapchain->extent.width;
-            framebuffer_info.height = renderer->swapchain->extent.height;
-            framebuffer_info.layers = 1;
-
-            framebuffers.push_back(renderer->gpu->device->createFramebufferUnique(framebuffer_info, nullptr));
-        }
-    }
     Task<> UiRenderer::createBuffers()
     {
         std::vector<glm::vec4> vertex_buffer {

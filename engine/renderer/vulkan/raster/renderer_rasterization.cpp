@@ -30,7 +30,6 @@ namespace lotus
         rasterizer = std::make_unique<RasterPipeline>(this);
         createGraphicsPipeline();
         createDepthImage();
-        createFramebuffers();
         createSyncs();
         createCommandPool();
         createShadowmapResources();
@@ -39,7 +38,6 @@ namespace lotus
         initializeCameraBuffers();
         generateCommandBuffers();
 
-        render_commandbuffers.resize(getFrameCount());
         current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
         co_return;
     }
@@ -105,8 +103,6 @@ namespace lotus
         render_pass_info.pSubpasses = &subpass;
         render_pass_info.dependencyCount = 1;
         render_pass_info.pDependencies = &dependency;
-
-        render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
 
         depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
         depth_attachment_ref.attachment = 0;
@@ -422,20 +418,6 @@ namespace lotus
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
 
-        vk::GraphicsPipelineCreateInfo pipeline_info;
-        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipeline_info.pStages = shaderStages.data();
-        pipeline_info.pVertexInputState = &vertex_input_info;
-        pipeline_info.pInputAssemblyState = &input_assembly;
-        pipeline_info.pViewportState = &viewport_state;
-        pipeline_info.pRasterizationState = &rasterizer;
-        pipeline_info.pMultisampleState = &multisampling;
-        pipeline_info.pDepthStencilState = &depth_stencil;
-        pipeline_info.pColorBlendState = &color_blending;
-        pipeline_info.renderPass = *render_pass;
-        pipeline_info.subpass = 0;
-        pipeline_info.basePipelineHandle = nullptr;
-
         std::array<vk::DescriptorSetLayout, 1> deferred_descriptor_layouts = { *deferred_descriptor_set_layout };
 
         pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(deferred_descriptor_layouts.size());
@@ -443,7 +425,31 @@ namespace lotus
 
         deferred_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
-        pipeline_info.layout = *deferred_pipeline_layout;
+        std::array attachment_formats{ swapchain->image_format };
+
+        vk::PipelineRenderingCreateInfoKHR rendering_info {
+            .viewMask = 0,
+            .colorAttachmentCount = attachment_formats.size(),
+            .pColorAttachmentFormats = attachment_formats.data(),
+            .depthAttachmentFormat = gpu->getDepthFormat()
+        };
+
+        vk::GraphicsPipelineCreateInfo pipeline_info
+        {
+            .pNext = &rendering_info,
+            .stageCount = static_cast<uint32_t>(shaderStages.size()),
+            .pStages = shaderStages.data(),
+            .pVertexInputState = &vertex_input_info,
+            .pInputAssemblyState = &input_assembly,
+            .pViewportState = &viewport_state,
+            .pRasterizationState = &rasterizer,
+            .pMultisampleState = &multisampling,
+            .pDepthStencilState = &depth_stencil,
+            .pColorBlendState = &color_blending,
+            .layout = *deferred_pipeline_layout,
+            .subpass = 0,
+            .basePipelineHandle = nullptr
+        };
 
         deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr);
 
@@ -481,27 +487,6 @@ namespace lotus
         image_view_info.subresourceRange.layerCount = 1;
 
         depth_image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
-    }
-
-    void RendererRasterization::createFramebuffers()
-    {
-        frame_buffers.clear();
-        for (auto& swapchain_image_view : swapchain->image_views) {
-            std::array<vk::ImageView, 2> attachments = {
-                *swapchain_image_view,
-                *depth_image_view
-            };
-
-            vk::FramebufferCreateInfo framebuffer_info = {};
-            framebuffer_info.renderPass = *render_pass;
-            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = swapchain->extent.width;
-            framebuffer_info.height = swapchain->extent.height;
-            framebuffer_info.layers = 1;
-
-            frame_buffers.push_back(gpu->device->createFramebufferUnique(framebuffer_info, nullptr));
-        }
     }
 
     static constexpr uint64_t timeline_graphics = 1;
@@ -590,25 +575,65 @@ namespace lotus
         auto deferred_command_buffers = gpu->device->allocateCommandBuffersUnique(alloc_info);
 
         vk::CommandBuffer buffer = *deferred_command_buffers[0];
-        vk::CommandBufferBeginInfo begin_info = {};
-        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-        buffer.begin(begin_info);
+        buffer.begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
 
-        std::array clear_values
-        {
-            vk::ClearValue{ .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f } },
-            vk::ClearValue{ .depthStencil = 1.f }
+        std::array pre_render_transitions {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTopOfPipe,
+                .srcAccessMask = {},
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = swapchain->images[current_image],
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
         };
 
-        vk::RenderPassBeginInfo renderpass_info;
-        renderpass_info.renderPass = *render_pass;
-        renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-        renderpass_info.pClearValues = clear_values.data();
-        renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
-        renderpass_info.renderArea.extent = swapchain->extent;
-        renderpass_info.framebuffer = *frame_buffers[current_image];
-        buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
+        buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(pre_render_transitions.size()),
+            .pImageMemoryBarriers = pre_render_transitions.data()
+        });
+
+        std::array colour_attachments{
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *swapchain->image_views[current_image],
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            }
+        };
+
+        vk::RenderingAttachmentInfoKHR depth_info {
+            .imageView = *depth_image_view,
+            .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+        };
+
+        buffer.beginRenderingKHR({
+            .renderArea = {
+                .extent = swapchain->extent
+            },
+            .layerCount = 1,
+            .viewMask = 0,
+            .colorAttachmentCount = colour_attachments.size(),
+            .pColorAttachments = colour_attachments.data(),
+            .pDepthAttachment = &depth_info
+        });
 
         vk::DescriptorImageInfo pos_info;
         pos_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -739,7 +764,7 @@ namespace lotus
 
         buffer.draw(3, 1, 0, 0);
 
-        buffer.endRenderPass();
+        buffer.endRenderingKHR();
         buffer.end();
 
         return std::move(deferred_command_buffers[0]);
@@ -755,7 +780,6 @@ namespace lotus
         createDepthImage();
         //can skip this if scissor/viewport are dynamic
         createGraphicsPipeline();
-        createFramebuffers();
         createAnimationResources();
         //recreate command buffers
         co_await recreateStaticCommandBuffers();
@@ -771,20 +795,25 @@ namespace lotus
         camera_buffers.cascade_data_mapped = static_cast<uint8_t*>(camera_buffers.cascade_data_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(cascade_data)) * engine->renderer->getFrameCount(), {}));
     }
 
-    vk::CommandBuffer RendererRasterization::getRenderCommandbuffer()
+    std::vector<vk::CommandBuffer> RendererRasterization::getRenderCommandbuffers()
     {
-        vk::CommandBufferAllocateInfo alloc_info = {};
-        alloc_info.commandPool = *command_pool;
-        alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandBufferCount = 1;
+        auto secondary_buffers = engine->worker_pool->getSecondaryGraphicsBuffers(current_frame);
+        auto transparent_buffers = engine->worker_pool->getParticleGraphicsBuffers(current_frame);
+        std::vector<vk::CommandBuffer> render_buffers(secondary_buffers.size() + transparent_buffers.size() + 3);
 
-        auto buffer = gpu->device->allocateCommandBuffersUnique(alloc_info);
+        auto buffer = gpu->device->allocateCommandBuffersUnique({
+            .commandPool = *command_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = 3,
+        });
 
-        vk::CommandBufferBeginInfo begin_info = {};
-        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+        buffer[0]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
 
-        buffer[0]->begin(begin_info);
+        //TODO: shadowmap renderpass first
 
+        /*
         vk::RenderPassBeginInfo renderpass_info = {};
         renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
 
@@ -810,28 +839,42 @@ namespace lotus
             }
             buffer[0]->endRenderPass();
         }
+        */
 
-        renderpass_info.renderPass = rasterizer->getRenderPass();
-        renderpass_info.framebuffer = *rasterizer->getGBuffer().frame_buffer;
-        auto clear_values = rasterizer->getRenderPassClearValues();
-
-        renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-        renderpass_info.pClearValues = clear_values.data();
-        renderpass_info.renderArea.extent = swapchain->extent;
-
-        buffer[0]->beginRenderPass(renderpass_info, vk::SubpassContents::eSecondaryCommandBuffers);
-        auto secondary_buffers = engine->worker_pool->getSecondaryGraphicsBuffers(current_frame);
-        if (!secondary_buffers.empty())
-            buffer[0]->executeCommands(secondary_buffers);
-        buffer[0]->nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
-        auto particle_buffers = engine->worker_pool->getParticleGraphicsBuffers(current_frame);
-        if (!particle_buffers.empty())
-            buffer[0]->executeCommands(particle_buffers);
-        buffer[0]->endRenderPass();
-
+        rasterizer->beginRendering(*buffer[0]);
+        rasterizer->beginMainCommandBufferRendering(*buffer[0], vk::RenderingFlagBitsKHR::eSuspending);
+        buffer[0]->endRenderingKHR();
         buffer[0]->end();
-        render_commandbuffers[current_frame] = std::move(buffer[0]);
-        return *render_commandbuffers[current_frame];
+
+        render_buffers[0] = *buffer[0];
+        std::ranges::copy(secondary_buffers, render_buffers.begin() + 1);
+
+        buffer[1]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+
+        rasterizer->beginMainCommandBufferRendering(*buffer[1], vk::RenderingFlagBitsKHR::eResuming);
+        buffer[1]->endRenderingKHR();
+        rasterizer->beginTransparencyCommandBufferRendering(*buffer[1], vk::RenderingFlagBitsKHR::eSuspending);
+        buffer[1]->endRenderingKHR();
+        buffer[1]->end();
+
+        render_buffers[1 + secondary_buffers.size()] = *buffer[1];
+        std::ranges::copy(transparent_buffers, render_buffers.begin() + 2 + secondary_buffers.size());
+
+        buffer[2]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+        rasterizer->beginTransparencyCommandBufferRendering(*buffer[2], vk::RenderingFlagBitsKHR::eResuming);
+        buffer[2]->endRenderingKHR();
+        rasterizer->endRendering(*buffer[2]);
+        buffer[2]->end();
+
+        render_buffers.back() = *buffer[2];
+
+        engine->worker_pool->gpuResource(std::move(buffer));
+
+        return render_buffers;
     }
 
     Task<> RendererRasterization::drawFrame()
@@ -860,10 +903,11 @@ namespace lotus
             engine->lights->UpdateLightBuffer();
 
             auto buffers_temp = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
+            auto render_buffers = getRenderCommandbuffers();
             std::vector<vk::CommandBufferSubmitInfoKHR> buffers;
-            buffers.resize(buffers_temp.size());
+            buffers.resize(buffers_temp.size() + render_buffers.size());
             std::ranges::transform(buffers_temp, buffers.begin(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
-            buffers.push_back({ .commandBuffer = getRenderCommandbuffer() });
+            std::ranges::transform(render_buffers, buffers.begin() + buffers_temp.size(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = buffer}; });
 
             vk::SemaphoreSubmitInfoKHR graphics_sem {
                 .semaphore = *frame_timeline_sem[current_frame],
@@ -872,7 +916,10 @@ namespace lotus
             };
 
             auto deferred_buffer = getDeferredCommandBuffer();
-            std::vector<vk::CommandBufferSubmitInfoKHR> deferred_commands{ {.commandBuffer = *deferred_buffer}, { .commandBuffer = ui->Render() }};
+            auto ui_buffers = ui->Render();
+            std::vector<vk::CommandBufferSubmitInfoKHR> deferred_buffers{ {.commandBuffer = *deferred_buffer} };
+            deferred_buffers.resize(1 + ui_buffers.size());
+            std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
 
             std::array deferred_waits {
                 graphics_sem,
@@ -904,8 +951,8 @@ namespace lotus
                 vk::SubmitInfo2KHR {
                     .waitSemaphoreInfoCount = deferred_waits.size(),
                     .pWaitSemaphoreInfos = deferred_waits.data(),
-                    .commandBufferInfoCount = static_cast<uint32_t>(deferred_commands.size()),
-                    .pCommandBufferInfos = deferred_commands.data(),
+                    .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
+                    .pCommandBufferInfos = deferred_buffers.data(),
                     .signalSemaphoreInfoCount = deferred_signals.size(),
                     .pSignalSemaphoreInfos = deferred_signals.data()
                 }
@@ -946,7 +993,8 @@ namespace lotus
     vk::Pipeline lotus::RendererRasterization::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
         info.layout = rasterizer->getPipelineLayout();
-        info.renderPass = rasterizer->getRenderPass();
+        auto pipeline_rendering_info = rasterizer->getRenderPass();
+        info.pNext = &pipeline_rendering_info;
         std::lock_guard lk{ shutdown_mutex };
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
     }
@@ -954,7 +1002,8 @@ namespace lotus
     vk::Pipeline lotus::RendererRasterization::createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
         info.layout = *shadowmap_pipeline_layout;
-        info.renderPass = *shadowmap_render_pass;
+        //TODO
+        //info.renderPass = *shadowmap_render_pass;
         std::lock_guard lk{ shutdown_mutex };
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
     }

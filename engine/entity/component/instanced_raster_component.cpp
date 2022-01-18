@@ -18,7 +18,7 @@ namespace lotus::Component
         {
             vk::CommandBufferAllocateInfo alloc_info {
                 .commandPool = *engine->renderer->graphics_pool,
-                .level = vk::CommandBufferLevel::eSecondary,
+                .level = vk::CommandBufferLevel::ePrimary,
                 .commandBufferCount = command_buffer_count * engine->renderer->getFrameCount()
             };
 
@@ -68,15 +68,11 @@ namespace lotus::Component
 
     void InstancedRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buffer, uint32_t image, uint32_t prev_image)
     {
-        vk::CommandBufferInheritanceInfo inheritInfo {
-            .renderPass = engine->renderer->rasterizer->getRenderPass(),
-            .framebuffer = *engine->renderer->rasterizer->getGBuffer().frame_buffer
-        };
-
         command_buffer.begin({
-            .flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue,
-            .pInheritanceInfo = &inheritInfo
+            .flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse,
         });
+
+        engine->renderer->rasterizer->beginMainCommandBufferRendering(command_buffer, vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending);
 
         std::array camera_buffer_info
         {
@@ -122,13 +118,14 @@ namespace lotus::Component
         drawModels(command_buffer, false, false);
         drawModels(command_buffer, true, false);
 
+        command_buffer.endRenderingKHR();
         command_buffer.end();
     }
 
     void InstancedRasterComponent::drawShadowmapsToBuffer(vk::CommandBuffer command_buffer, uint32_t image)
     {
         vk::CommandBufferInheritanceInfo inheritInfo {
-            .renderPass = engine->renderer->shadowmap_rasterizer->getRenderPass()
+ //           .renderPass = engine->renderer->shadowmap_rasterizer->getRenderPass()
         };
 
         command_buffer.begin({

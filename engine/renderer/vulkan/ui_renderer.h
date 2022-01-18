@@ -16,15 +16,13 @@ namespace lotus
         Task<> Init();
         Task<> ReInit();
 
-        vk::CommandBuffer Render();
+        std::vector<vk::CommandBuffer> Render();
         void GenerateRenderBuffers(ui::Element*);
 
     private:
 
         void createDescriptorSetLayout();
-        void createRenderpass();
         void createDepthImage();
-        void createFrameBuffers();
         void createPipeline();
         Task<> createBuffers();
 
@@ -37,10 +35,7 @@ namespace lotus
         Renderer* renderer;
         vk::UniquePipelineLayout pipeline_layout;
         vk::UniquePipeline pipeline;
-        vk::UniqueRenderPass renderpass;
-        std::vector<vk::UniqueFramebuffer> framebuffers;
         vk::UniqueDescriptorSetLayout descriptor_set_layout;
-        std::vector<vk::UniqueCommandBuffer> command_buffers;
 
         std::unique_ptr<Image> depth_image;
         vk::UniqueImageView depth_image_view;
