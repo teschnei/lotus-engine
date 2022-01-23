@@ -338,7 +338,7 @@ namespace lotus
             .imageView = *gbuffer.depth.image_view,
             .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
             .loadOp = vk::AttachmentLoadOp::eClear,
-            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .storeOp = vk::AttachmentStoreOp::eStore,
             .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
         };
 
@@ -384,7 +384,7 @@ namespace lotus
         vk::RenderingAttachmentInfoKHR depth_info {
             .imageView = *gbuffer.depth.image_view,
             .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-            .loadOp = vk::AttachmentLoadOp::eClear,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
             .storeOp = vk::AttachmentStoreOp::eDontCare,
             .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
         };
