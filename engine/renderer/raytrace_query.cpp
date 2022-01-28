@@ -164,12 +164,12 @@ namespace lotus
             missSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_miss, shader_stride, shader_stride * shader_misscount };
             hitSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_hit, shader_stride, shader_stride * shader_hitcount };
         }
-        raytrace_query_queue = engine->renderer->gpu->device->getQueue(engine->renderer->gpu->compute_queue_index, 1);
+        raytrace_query_queue = engine->renderer->gpu->device->getQueue(engine->renderer->gpu->graphics_queue_index, 0);
         vk::FenceCreateInfo fence_info;
         fence = engine->renderer->gpu->device->createFenceUnique(fence_info, nullptr);
 
         vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = engine->renderer->gpu->compute_queue_index;
+        pool_info.queueFamilyIndex = engine->renderer->gpu->graphics_queue_index;
 
         command_pool = engine->renderer->gpu->device->createCommandPoolUnique(pool_info, nullptr);
     }

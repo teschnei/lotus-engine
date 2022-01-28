@@ -34,13 +34,13 @@ namespace FFXI
 
     lotus::Task<> ParticleComponent::init()
     {
-        auto actor_component = engine->game->scene->component_runners->getComponent<FFXI::ActorSkeletonComponent>(actor.lock().get());
-        auto animation_component = engine->game->scene->component_runners->getComponent<lotus::Component::AnimationComponent>(actor.lock().get());
-        auto generator_points = actor_component->getSkeletonStatic()->getGeneratorPoints();
 
         //TODO: 90% sure this should be generator->header->flags1 & 0x02?
         if (generator->header->flags2 == 0x80 && generator->header->flags3 == 0x08)
         {
+            auto actor_component = engine->game->scene->component_runners->getComponent<FFXI::ActorSkeletonComponent>(actor.lock().get());
+            auto animation_component = engine->game->scene->component_runners->getComponent<lotus::Component::AnimationComponent>(actor.lock().get());
+            auto generator_points = actor_component->getSkeletonStatic()->getGeneratorPoints();
             if (auto bone_id = generator->header->bone_point >> 2; bone_id < FFXI::SK2::GeneratorPointMax)
             {
                 auto& bone_point = generator_points[bone_id];
@@ -50,6 +50,9 @@ namespace FFXI
         }
         else if (generator->header->flags1 & 0x01)
         {
+            auto actor_component = engine->game->scene->component_runners->getComponent<FFXI::ActorSkeletonComponent>(actor.lock().get());
+            auto animation_component = engine->game->scene->component_runners->getComponent<lotus::Component::AnimationComponent>(actor.lock().get());
+            auto generator_points = actor_component->getSkeletonStatic()->getGeneratorPoints();
             if (auto bone_id = (generator->header->flags1 + ((generator->header->bone_point & 0x01) << 8)) >> 4; bone_id < FFXI::SK2::GeneratorPointMax)
             {
                 auto& bone_point = generator_points[bone_id];

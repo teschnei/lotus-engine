@@ -91,8 +91,8 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(175);
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
+    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(175); //eldieme
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291); //reisenjima
     audio->setMusic(79, 0);
     //audio->setMusic(114, 0);
     //iroha 3111 (arciela 3074)
@@ -111,9 +111,9 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     });
     auto ac = std::get<FFXI::ActorComponent*>(player_components);
     //ac->setPos((glm::vec3(-681.f, -12.f, 161.f)), false);
-    //ac->setPos((glm::vec3(419, -53.f, -103.f)), false);
+    //ac->setPos((glm::vec3(419, -53.f, -103.f)), false); //eldieme entrance
     //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
-    ac->setPos(glm::vec3(259.f, -87.f, 99.f), false);
+    ac->setPos(glm::vec3(259.f, -87.f, 99.f), false); //reisenjima torii
     auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(ac);
     auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
     //auto ac_models = std::get<FFXI::ActorPCModelsComponent*>(player_components);

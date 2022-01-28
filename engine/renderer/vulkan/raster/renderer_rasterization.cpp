@@ -358,23 +358,9 @@ namespace lotus
         input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
         input_assembly.primitiveRestartEnable = false;
 
-        vk::Viewport viewport;
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float)swapchain->extent.width;
-        viewport.height = (float)swapchain->extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-
-        vk::Rect2D scissor;
-        scissor.offset = vk::Offset2D{0, 0};
-        scissor.extent = swapchain->extent;
-
         vk::PipelineViewportStateCreateInfo viewport_state;
         viewport_state.viewportCount = 1;
-        viewport_state.pViewports = &viewport;
         viewport_state.scissorCount = 1;
-        viewport_state.pScissors = &scissor;
 
         vk::PipelineRasterizationStateCreateInfo rasterizer;
         rasterizer.depthClampEnable = false;
@@ -425,6 +411,14 @@ namespace lotus
 
         deferred_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
+        std::array dynamic_states{ vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+
+        vk::PipelineDynamicStateCreateInfo dynamic_state
+        {
+            .dynamicStateCount = dynamic_states.size(),
+            .pDynamicStates = dynamic_states.data()
+        };
+
         std::array attachment_formats{ swapchain->image_format };
 
         vk::PipelineRenderingCreateInfoKHR rendering_info {
@@ -446,6 +440,7 @@ namespace lotus
             .pMultisampleState = &multisampling,
             .pDepthStencilState = &depth_stencil,
             .pColorBlendState = &color_blending,
+            .pDynamicState = &dynamic_state,
             .layout = *deferred_pipeline_layout,
             .subpass = 0,
             .basePipelineHandle = nullptr
@@ -761,6 +756,23 @@ namespace lotus
         buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, *deferred_descriptor_set[current_frame], {});
 
         buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
+
+        vk::Viewport viewport {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = (float)engine->renderer->swapchain->extent.width,
+            .height = (float)engine->renderer->swapchain->extent.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+
+        vk::Rect2D scissor {
+            .offset = vk::Offset2D{0, 0},
+            .extent = engine->renderer->swapchain->extent
+        };
+
+        buffer.setScissor(0, scissor);
+        buffer.setViewport(0, viewport);
 
         buffer.draw(3, 1, 0, 0);
 

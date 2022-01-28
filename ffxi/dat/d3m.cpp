@@ -273,23 +273,9 @@ namespace FFXI
         input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
         input_assembly.primitiveRestartEnable = false;
 
-        vk::Viewport viewport;
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float)engine->renderer->swapchain->extent.width;
-        viewport.height = (float)engine->renderer->swapchain->extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-
-        vk::Rect2D scissor;
-        scissor.offset = vk::Offset2D{ 0, 0 };
-        scissor.extent = engine->renderer->swapchain->extent;
-
         vk::PipelineViewportStateCreateInfo viewport_state;
         viewport_state.viewportCount = 1;
-        viewport_state.pViewports = &viewport;
         viewport_state.scissorCount = 1;
-        viewport_state.pScissors = &scissor;
 
         vk::PipelineRasterizationStateCreateInfo rasterizer;
         rasterizer.depthClampEnable = false;
@@ -340,22 +326,24 @@ namespace FFXI
         color_blend_attachment_particle.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment_particle.dstAlphaBlendFactor = vk::BlendFactor::eOne;
 
-        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(5, color_blend_attachment);
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage, color_blend_attachment_particle };
 
         vk::PipelineColorBlendStateCreateInfo color_blending;
         color_blending.logicOpEnable = false;
         color_blending.logicOp = vk::LogicOp::eCopy;
-        color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states.size());
-        color_blending.pAttachments = color_blend_attachment_states.data();
+        color_blending.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
+        color_blending.pAttachments = color_blend_attachment_states_subpass1.data();
         color_blending.blendConstants[0] = 0.0f;
         color_blending.blendConstants[1] = 0.0f;
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
 
-        vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
-        color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
-        color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
+        std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eScissor, vk::DynamicState::eViewport };
+        vk::PipelineDynamicStateCreateInfo dynamic_state_ci
+        {
+            .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+            .pDynamicStates = dynamic_states.data()
+        };
 
         vk::GraphicsPipelineCreateInfo pipeline_info;
         pipeline_info.pInputAssemblyState = &input_assembly;
@@ -367,8 +355,8 @@ namespace FFXI
         pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
         pipeline_info.pStages = shaderStages.data();
         pipeline_info.pVertexInputState = &vertex_input_info;
-        pipeline_info.pColorBlendState = &color_blending_subpass1;
-        pipeline_info.subpass = 1;
+        pipeline_info.pColorBlendState = &color_blending;
+        pipeline_info.pDynamicState = &dynamic_state_ci;
 
         pipeline_blend = engine->renderer->createGraphicsPipeline(pipeline_info);
 

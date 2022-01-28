@@ -287,9 +287,7 @@ namespace lotus
 
             vk::PipelineViewportStateCreateInfo viewport_state;
             viewport_state.viewportCount = 1;
-            viewport_state.pViewports = &viewport;
             viewport_state.scissorCount = 1;
-            viewport_state.pScissors = &scissor;
 
             vk::PipelineRasterizationStateCreateInfo rasterizer;
             rasterizer.depthClampEnable = false;
@@ -344,6 +342,14 @@ namespace lotus
                 .depthAttachmentFormat = gpu->getDepthFormat()
             };
 
+            std::array dynamic_states{ vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+
+            vk::PipelineDynamicStateCreateInfo dynamic_state
+            {
+                .dynamicStateCount = dynamic_states.size(),
+                .pDynamicStates = dynamic_states.data()
+            };
+
             vk::GraphicsPipelineCreateInfo pipeline_info
             {
                 .pNext = &rendering_info,
@@ -356,6 +362,7 @@ namespace lotus
                 .pMultisampleState = &multisampling,
                 .pDepthStencilState = &depth_stencil,
                 .pColorBlendState = &color_blending,
+                .pDynamicState = &dynamic_state,
                 .layout = *deferred_pipeline_layout,
                 .subpass = 0,
                 .basePipelineHandle = nullptr
@@ -632,6 +639,23 @@ namespace lotus
 
         buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
 
+        vk::Viewport viewport {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = (float)engine->renderer->swapchain->extent.width,
+            .height = (float)engine->renderer->swapchain->extent.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+
+        vk::Rect2D scissor {
+            .offset = vk::Offset2D{0, 0},
+            .extent = engine->renderer->swapchain->extent
+        };
+
+        buffer.setScissor(0, scissor);
+        buffer.setViewport(0, viewport);
+
         buffer.draw(3, 1, 0, 0);
 
         buffer.endRenderingKHR();
@@ -854,105 +878,114 @@ namespace lotus
         timeline_sem_base[current_frame] = timeline_sem_base[current_frame] + timeline_frame_ready;
         resources->BindResources(current_frame);
 
+        engine->worker_pool->clearProcessed(current_frame);
+        swapchain->checkOldSwapchain(current_frame);
+
+        co_await raytracer->prepareFrame(engine);
+
+        engine->worker_pool->beginProcessing(current_frame);
+
+        engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
+        engine->lights->UpdateLightBuffer();
+
+        auto buffers_temp = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
+        auto render_buffers = getRenderCommandbuffers();
+        std::vector<vk::CommandBufferSubmitInfoKHR> buffers;
+        buffers.resize(buffers_temp.size() + render_buffers.size());
+        std::ranges::transform(buffers_temp, buffers.begin(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
+        std::ranges::transform(render_buffers, buffers.begin() + buffers_temp.size(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = buffer}; });
+
+        //post process
+        auto post_buffer = post_process->getCommandBuffer(*rtx_gbuffer.colour.image_view, *rasterizer->getGBuffer().normal.image_view, *rasterizer->getGBuffer().motion_vector.image_view);
+        buffers.push_back({ .commandBuffer = *post_buffer });
+
+        vk::SemaphoreSubmitInfoKHR graphics_sem {
+            .semaphore = *frame_timeline_sem[current_frame],
+            .value = timeline_sem_base[current_frame] + timeline_graphics,
+            .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
+        };
+
+        //deferred render
+        auto deferred_buffer = getDeferredCommandBuffer();
+        auto ui_buffers = ui->Render();
+        std::vector<vk::CommandBufferSubmitInfoKHR> deferred_buffers{ {.commandBuffer = *deferred_buffer} };
+        deferred_buffers.resize(1 + ui_buffers.size());
+        std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
+
+        std::array deferred_waits {
+            graphics_sem,
+            vk::SemaphoreSubmitInfoKHR {
+                .semaphore = *image_ready_sem[current_frame],
+                .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
+            }
+        };
+
+        std::array deferred_signals {
+            vk::SemaphoreSubmitInfoKHR {
+                .semaphore = *frame_timeline_sem[current_frame],
+                .value = timeline_sem_base[current_frame] + timeline_frame_ready,
+                .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
+            },
+            vk::SemaphoreSubmitInfoKHR {
+                .semaphore = *frame_finish_sem[current_frame],
+                .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
+            }
+        };
+
+        gpu->graphics_queue.submit2KHR({
+            vk::SubmitInfo2KHR {
+                .commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
+                .pCommandBufferInfos = buffers.data(),
+                .signalSemaphoreInfoCount = 1,
+                .pSignalSemaphoreInfos = &graphics_sem
+            },
+            vk::SubmitInfo2KHR {
+                .waitSemaphoreInfoCount = deferred_waits.size(),
+                .pWaitSemaphoreInfos = deferred_waits.data(),
+                .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
+                .pCommandBufferInfos = deferred_buffers.data(),
+                .signalSemaphoreInfoCount = deferred_signals.size(),
+                .pSignalSemaphoreInfos = deferred_signals.data()
+            }
+        });
+
+        engine->worker_pool->gpuResource(std::move(post_buffer));
+        engine->worker_pool->gpuResource(std::move(deferred_buffer));
+
+        std::vector<vk::Semaphore> present_waits{ *frame_finish_sem[current_frame] };
+        std::vector<vk::SwapchainKHR> swap_chains = { *swapchain->swapchain };
+
+        co_await engine->worker_pool->mainThread();
+
         try
         {
-            engine->worker_pool->clearProcessed(current_frame);
-            swapchain->checkOldSwapchain(current_frame);
-
-            co_await raytracer->prepareFrame(engine);
-
-            engine->worker_pool->beginProcessing(current_frame);
-
-            engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
-            engine->lights->UpdateLightBuffer();
-
-            auto buffers_temp = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
-            auto render_buffers = getRenderCommandbuffers();
-            std::vector<vk::CommandBufferSubmitInfoKHR> buffers;
-            buffers.resize(buffers_temp.size() + render_buffers.size());
-            std::ranges::transform(buffers_temp, buffers.begin(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
-            std::ranges::transform(render_buffers, buffers.begin() + buffers_temp.size(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = buffer}; });
-
-            //post process
-            auto post_buffer = post_process->getCommandBuffer(*rtx_gbuffer.colour.image_view, *rasterizer->getGBuffer().normal.image_view, *rasterizer->getGBuffer().motion_vector.image_view);
-            buffers.push_back({ .commandBuffer = *post_buffer });
-
-            vk::SemaphoreSubmitInfoKHR graphics_sem {
-                .semaphore = *frame_timeline_sem[current_frame],
-                .value = timeline_sem_base[current_frame] + timeline_graphics,
-                .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
-            };
-
-            //deferred render
-            auto deferred_buffer = getDeferredCommandBuffer();
-            auto ui_buffers = ui->Render();
-            std::vector<vk::CommandBufferSubmitInfoKHR> deferred_buffers{ {.commandBuffer = *deferred_buffer} };
-            deferred_buffers.resize(1 + ui_buffers.size());
-            std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
-
-            std::array deferred_waits {
-                graphics_sem,
-                vk::SemaphoreSubmitInfoKHR {
-                    .semaphore = *image_ready_sem[current_frame],
-                    .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
-                }
-            };
-
-            std::array deferred_signals {
-                vk::SemaphoreSubmitInfoKHR {
-                    .semaphore = *frame_timeline_sem[current_frame],
-                    .value = timeline_sem_base[current_frame] + timeline_frame_ready,
-                    .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
-                },
-                vk::SemaphoreSubmitInfoKHR {
-                    .semaphore = *frame_finish_sem[current_frame],
-                    .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
-                }
-            };
-
-            gpu->graphics_queue.submit2KHR({
-                vk::SubmitInfo2KHR {
-                    .commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
-                    .pCommandBufferInfos = buffers.data(),
-                    .signalSemaphoreInfoCount = 1,
-                    .pSignalSemaphoreInfos = &graphics_sem
-                },
-                vk::SubmitInfo2KHR {
-                    .waitSemaphoreInfoCount = deferred_waits.size(),
-                    .pWaitSemaphoreInfos = deferred_waits.data(),
-                    .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
-                    .pCommandBufferInfos = deferred_buffers.data(),
-                    .signalSemaphoreInfoCount = deferred_signals.size(),
-                    .pSignalSemaphoreInfos = deferred_signals.data()
-                }
-            });
-
-            engine->worker_pool->gpuResource(std::move(post_buffer));
-            engine->worker_pool->gpuResource(std::move(deferred_buffer));
-
-            std::vector<vk::Semaphore> present_waits{ *frame_finish_sem[current_frame] };
-            std::vector<vk::SwapchainKHR> swap_chains = { *swapchain->swapchain };
-
-            co_await engine->worker_pool->mainThread();
-
             gpu->present_queue.presentKHR({
                 .waitSemaphoreCount = static_cast<uint32_t>(present_waits.size()),
                 .pWaitSemaphores = present_waits.data(),
                 .swapchainCount = static_cast<uint32_t>(swap_chains.size()),
                 .pSwapchains = swap_chains.data(),
                 .pImageIndices = &current_image
-            });
-
-            previous_frame = current_frame;
-            current_frame = (current_frame + 1) % max_pending_frames;
-            previous_image = current_image;
-            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
-            raytracer->prepareNextFrame();
+                });
         }
         catch (vk::OutOfDateKHRError&)
         {
-            resize = true;
+            co_return;
         }
+
+        previous_frame = current_frame;
+        current_frame = (current_frame + 1) % max_pending_frames;
+        previous_image = current_image;
+        try
+        {
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+        }
+
+        catch (vk::OutOfDateKHRError&)
+        {
+            co_return;
+        }
+
+        raytracer->prepareNextFrame();
 
         if (resize)
         {

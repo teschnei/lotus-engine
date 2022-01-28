@@ -102,6 +102,23 @@ namespace lotus::Component
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
+        vk::Viewport viewport {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = (float)engine->renderer->swapchain->extent.width,
+            .height = (float)engine->renderer->swapchain->extent.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+
+        vk::Rect2D scissor {
+            .offset = vk::Offset2D{0, 0},
+            .extent = engine->renderer->swapchain->extent
+        };
+
+        command_buffer.setScissor(0, scissor);
+        command_buffer.setViewport(0, viewport);
+
         drawModels(command_buffer, false);
         drawModels(command_buffer, true);
 

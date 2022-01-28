@@ -199,23 +199,9 @@ void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
     input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
     input_assembly.primitiveRestartEnable = false;
 
-    vk::Viewport viewport;
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float)engine->renderer->swapchain->extent.width;
-    viewport.height = (float)engine->renderer->swapchain->extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    vk::Rect2D scissor;
-    scissor.offset = vk::Offset2D{0, 0};
-    scissor.extent = engine->renderer->swapchain->extent;
-
     vk::PipelineViewportStateCreateInfo viewport_state;
     viewport_state.viewportCount = 1;
-    viewport_state.pViewports = &viewport;
     viewport_state.scissorCount = 1;
-    viewport_state.pScissors = &scissor;
 
     vk::PipelineRasterizationStateCreateInfo rasterizer;
     rasterizer.depthClampEnable = false;
@@ -277,6 +263,13 @@ void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
     color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
     color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
 
+    std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eScissor, vk::DynamicState::eViewport };
+    vk::PipelineDynamicStateCreateInfo dynamic_state_ci
+    {
+        .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+        .pDynamicStates = dynamic_states.data()
+    };
+
     vk::GraphicsPipelineCreateInfo pipeline_info;
     pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
     pipeline_info.pStages = shaderStages.data();
@@ -287,7 +280,7 @@ void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
     pipeline_info.pMultisampleState = &multisampling;
     pipeline_info.pDepthStencilState = &depth_stencil;
     pipeline_info.pColorBlendState = &color_blending;
-    pipeline_info.subpass = 0;
+    pipeline_info.pDynamicState = &dynamic_state_ci;
     pipeline_info.basePipelineHandle = nullptr;
 
     pipeline = engine->renderer->createGraphicsPipeline(pipeline_info);
@@ -305,18 +298,11 @@ void FFXIActorLoader::InitPipeline(lotus::Engine* engine)
     pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
     pipeline_info.pStages = shaderStages.data();
 
-    viewport.width = engine->settings.renderer_settings.shadowmap_dimension;
-    viewport.height = engine->settings.renderer_settings.shadowmap_dimension;
-    scissor.extent.width = engine->settings.renderer_settings.shadowmap_dimension;
-    scissor.extent.height = engine->settings.renderer_settings.shadowmap_dimension;
-
     rasterizer.depthClampEnable = true;
     rasterizer.depthBiasEnable = true;
 
-    std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
-    vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
+    dynamic_states.push_back(vk::DynamicState::eDepthBias);
     dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
     dynamic_state_ci.pDynamicStates = dynamic_states.data();
-    pipeline_info.pDynamicState = &dynamic_state_ci;
     pipeline_shadowmap = engine->renderer->createShadowmapPipeline(pipeline_info);
 }

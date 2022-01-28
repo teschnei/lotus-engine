@@ -90,7 +90,7 @@ namespace lotus
                 .srcStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
                 .srcAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
                 .dstStageMask = vk::PipelineStageFlagBits2KHR::eBottomOfPipe,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eMemoryRead,
+                .dstAccessMask = {},
                 .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .newLayout = vk::ImageLayout::ePresentSrcKHR,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -212,6 +212,23 @@ namespace lotus
 
             command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *pipeline_layout, 0, {buffer_write, texture_write});
 
+            vk::Viewport viewport {
+                .x = 0.0f,
+                .y = 0.0f,
+                .width = (float)engine->renderer->swapchain->extent.width,
+                .height = (float)engine->renderer->swapchain->extent.height,
+                .minDepth = 0.0f,
+                .maxDepth = 1.0f
+            };
+
+            vk::Rect2D scissor {
+                .offset = vk::Offset2D{0, 0},
+                .extent = engine->renderer->swapchain->extent
+            };
+
+            command_buffer->setScissor(0, scissor);
+            command_buffer->setViewport(0, viewport);
+
             command_buffer->bindVertexBuffers(0, {quad.vertex_buffer->buffer, quad.vertex_buffer->buffer}, {0, sizeof(glm::vec2)});
 
             command_buffer->draw(4, 1, 0, 0);
@@ -279,23 +296,9 @@ namespace lotus
         input_assembly.topology = vk::PrimitiveTopology::eTriangleStrip;
         input_assembly.primitiveRestartEnable = false;
 
-        vk::Viewport viewport;
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float)renderer->swapchain->extent.width;
-        viewport.height = (float)renderer->swapchain->extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-
-        vk::Rect2D scissor;
-        scissor.offset = vk::Offset2D{0, 0};
-        scissor.extent = renderer->swapchain->extent;
-
         vk::PipelineViewportStateCreateInfo viewport_state;
         viewport_state.viewportCount = 1;
-        viewport_state.pViewports = &viewport;
         viewport_state.scissorCount = 1;
-        viewport_state.pScissors = &scissor;
 
         vk::PipelineRasterizationStateCreateInfo rasterizer;
         rasterizer.depthClampEnable = false;
@@ -353,6 +356,14 @@ namespace lotus
 
         pipeline_layout = renderer->gpu->device->createPipelineLayoutUnique(pipeline_layout_info);
 
+        std::array dynamic_states{ vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+
+        vk::PipelineDynamicStateCreateInfo dynamic_state
+        {
+            .dynamicStateCount = dynamic_states.size(),
+            .pDynamicStates = dynamic_states.data()
+        };
+
         std::array attachment_formats{ renderer->swapchain->image_format };
 
         vk::PipelineRenderingCreateInfoKHR rendering_info {
@@ -374,6 +385,7 @@ namespace lotus
             .pMultisampleState = &multisampling,
             .pDepthStencilState = &depth_stencil,
             .pColorBlendState = &color_blending,
+            .pDynamicState = &dynamic_state,
             .layout = *pipeline_layout,
             .subpass = 0,
             .basePipelineHandle = nullptr
