@@ -35,7 +35,7 @@ namespace lotus
             Present,
             Compute
         };
-        vk::UniqueCommandPool createCommandPool(QueueType type);
+        vk::UniqueCommandPool createCommandPool(QueueType type, vk::CommandPoolCreateFlags flags);
     private:
         vk::Instance instance{ nullptr };
         vk::SurfaceKHR surface{ nullptr };

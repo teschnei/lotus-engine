@@ -34,6 +34,7 @@ namespace lotus
         createCommandPool();
         createShadowmapResources();
         createAnimationResources();
+        createDeferredImage();
 
         initializeCameraBuffers();
         generateCommandBuffers();
@@ -419,7 +420,7 @@ namespace lotus
             .pDynamicStates = dynamic_states.data()
         };
 
-        std::array attachment_formats{ swapchain->image_format };
+        std::array attachment_formats{ vk::Format::eR32G32B32A32Sfloat };
 
         vk::PipelineRenderingCreateInfoKHR rendering_info {
             .viewMask = 0,
@@ -585,7 +586,7 @@ namespace lotus
                 .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = swapchain->images[current_image],
+                .image = deferred_image->image,
                 .subresourceRange = {
                     .aspectMask = vk::ImageAspectFlagBits::eColor,
                     .baseMipLevel = 0,
@@ -603,7 +604,7 @@ namespace lotus
 
         std::array colour_attachments{
             vk::RenderingAttachmentInfoKHR {
-                .imageView = *swapchain->image_views[current_image],
+                .imageView = *deferred_image_view,
                 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .loadOp = vk::AttachmentLoadOp::eClear,
                 .storeOp = vk::AttachmentStoreOp::eStore,
@@ -932,6 +933,7 @@ namespace lotus
             std::vector<vk::CommandBufferSubmitInfoKHR> deferred_buffers{ {.commandBuffer = *deferred_buffer} };
             deferred_buffers.resize(1 + ui_buffers.size());
             std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
+            deferred_buffers.push_back({ .commandBuffer = prepareDeferredImageForPresent()});
 
             std::array deferred_waits {
                 graphics_sem,

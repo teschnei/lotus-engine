@@ -45,7 +45,7 @@ namespace lotus
 
         std::array colour_attachments{
             vk::RenderingAttachmentInfoKHR {
-                .imageView = *renderer->swapchain->image_views[image],
+                .imageView = *renderer->deferred_image_view,
                 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .loadOp = vk::AttachmentLoadOp::eLoad,
                 .storeOp = vk::AttachmentStoreOp::eStore,
@@ -75,7 +75,6 @@ namespace lotus
         buffers[0]->endRenderingKHR();
         buffers[0]->end();
 
-
         auto ui_buffers = engine->ui->getRenderCommandBuffers(image);
         render_buffers.resize(2 + ui_buffers.size());
         render_buffers[0] = *buffers[0];
@@ -83,32 +82,6 @@ namespace lotus
 
         buffers[1]->begin({
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
-        });
-
-        std::array post_render_transitions {
-            vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eBottomOfPipe,
-                .dstAccessMask = {},
-                .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
-                .newLayout = vk::ImageLayout::ePresentSrcKHR,
-                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = renderer->swapchain->images[image],
-                .subresourceRange = {
-                    .aspectMask = vk::ImageAspectFlagBits::eColor,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1
-                }
-            }
-        };
-
-        buffers[1]->pipelineBarrier2KHR({
-            .imageMemoryBarrierCount = static_cast<uint32_t>(post_render_transitions.size()),
-            .pImageMemoryBarriers = post_render_transitions.data()
         });
 
         buffers[1]->beginRenderingKHR({
@@ -123,6 +96,7 @@ namespace lotus
             .pDepthAttachment = &depth_info
         });
         buffers[1]->endRenderingKHR();
+        
         buffers[1]->end();
 
         render_buffers.back() = *buffers[1];
@@ -143,7 +117,7 @@ namespace lotus
 
             std::array colour_attachments{
                 vk::RenderingAttachmentInfoKHR {
-                    .imageView = *renderer->swapchain->image_views[i],
+                    .imageView = *renderer->deferred_image_view,
                     .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                     .loadOp = vk::AttachmentLoadOp::eLoad,
                     .storeOp = vk::AttachmentStoreOp::eStore,
@@ -364,7 +338,7 @@ namespace lotus
             .pDynamicStates = dynamic_states.data()
         };
 
-        std::array attachment_formats{ renderer->swapchain->image_format };
+        std::array attachment_formats{ vk::Format::eR32G32B32A32Sfloat };
 
         vk::PipelineRenderingCreateInfoKHR rendering_info {
             .viewMask = 0,

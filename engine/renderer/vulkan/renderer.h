@@ -51,6 +51,9 @@ namespace lotus
         };
         [[nodiscard]]
         ThreadLocals createThreadLocals();
+        void createDeferredImage();
+
+        vk::CommandBuffer prepareDeferredImageForPresent();
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
@@ -86,6 +89,9 @@ namespace lotus
 
         inline static thread_local vk::UniqueDescriptorPool desc_pool;
 
+        std::unique_ptr<Image> deferred_image;
+        vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> deferred_image_view;
+
         struct
         {
             std::unique_ptr<Buffer> view_proj_ubo;
@@ -113,7 +119,7 @@ namespace lotus
         std::vector<vk::UniquePipeline> pipelines;
 
         vk::UniqueCommandPool command_pool;
-        vk::UniqueCommandPool local_compute_pool;
+        std::vector<vk::UniqueCommandBuffer> present_buffers;
     public:
 
         struct FramebufferAttachment

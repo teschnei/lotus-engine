@@ -75,6 +75,14 @@ namespace lotus
         raytrace_queryer = std::make_unique<RaytraceQueryer>(engine);
         ui = std::make_unique<UiRenderer>(engine, this);
         co_await ui->Init();
+
+        vk::CommandBufferAllocateInfo alloc_info;
+
+        present_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
+            .commandPool = *engine->renderer->command_pool,
+            .level = vk::CommandBufferLevel::ePrimary,
+            .commandBufferCount = static_cast<uint32_t>(swapchain->images.size()),
+        });
     }
 
     void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
@@ -133,8 +141,7 @@ namespace lotus
 
     void Renderer::createCommandPool()
     {
-        command_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
-        local_compute_pool = gpu->createCommandPool(GPU::QueueType::Compute);
+        command_pool = gpu->createCommandPool(GPU::QueueType::Graphics, vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
     }
 
     void Renderer::createAnimationResources()
@@ -243,8 +250,8 @@ namespace lotus
 
     Renderer::ThreadLocals Renderer::createThreadLocals()
     {
-        graphics_pool = gpu->createCommandPool(GPU::QueueType::Graphics);
-        compute_pool = gpu->createCommandPool(GPU::QueueType::Compute);
+        graphics_pool = gpu->createCommandPool(GPU::QueueType::Graphics, {});
+        compute_pool = gpu->createCommandPool(GPU::QueueType::Compute, {});
 
         std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
         poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
@@ -344,5 +351,124 @@ namespace lotus
             return in_size;
         else
             return ((in_size / alignment) + 1) * alignment;
+    }
+
+    void Renderer::createDeferredImage()
+    {
+        auto format = vk::Format::eR32G32B32A32Sfloat;
+
+        deferred_image = gpu->memory_manager->GetImage(swapchain->extent.width, swapchain->extent.height, format, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        vk::ImageViewCreateInfo image_view_info;
+        image_view_info.viewType = vk::ImageViewType::e2D;
+        image_view_info.format = format;
+        image_view_info.image = deferred_image->image;
+        image_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = 1;
+
+        deferred_image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
+    }
+
+    vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
+    {
+        auto buffer = *present_buffers[current_image];
+        buffer.begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+
+        std::array post_render_transitions {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eTransferRead,
+                .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .newLayout = vk::ImageLayout::eTransferSrcOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = deferred_image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            },
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTopOfPipe,
+                .srcAccessMask = {},
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+                .dstAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eTransferDstOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = swapchain->images[current_image],
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
+        };
+
+        buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(post_render_transitions.size()),
+            .pImageMemoryBarriers = post_render_transitions.data()
+        });
+
+        std::array image_regions
+        {
+            vk::Offset3D { 0, 0, 0 },
+            vk::Offset3D { static_cast<int>(swapchain->extent.width), static_cast<int>(swapchain->extent.height), 1 }
+        };
+        std::array image_blits
+        {
+            vk::ImageBlit
+            {
+                .srcSubresource = {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 },
+                .srcOffsets = image_regions,
+                .dstSubresource = {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 },
+                .dstOffsets = image_regions
+            }
+        };
+
+        buffer.blitImage(deferred_image->image, vk::ImageLayout::eTransferSrcOptimal, swapchain->images[current_image], vk::ImageLayout::eTransferDstOptimal, image_blits, vk::Filter::eNearest);
+
+        std::array post_copy_transitions {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
+                .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2KHR::eBottomOfPipe,
+                .dstAccessMask = {},
+                .oldLayout = vk::ImageLayout::eTransferDstOptimal,
+                .newLayout = vk::ImageLayout::ePresentSrcKHR,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = swapchain->images[current_image],
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
+        };
+
+        buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(post_copy_transitions.size()),
+            .pImageMemoryBarriers = post_copy_transitions.data()
+        });
+
+        buffer.end();
+
+        return buffer;
     }
 }

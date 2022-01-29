@@ -227,9 +227,11 @@ namespace lotus
         throw std::runtime_error("Unable to find supported depth format");
     }
 
-    vk::UniqueCommandPool GPU::createCommandPool(QueueType type)
+    vk::UniqueCommandPool GPU::createCommandPool(QueueType type, vk::CommandPoolCreateFlags flags)
     {
-        vk::CommandPoolCreateInfo pool_info = {};
+        vk::CommandPoolCreateInfo pool_info {
+            .flags = flags
+        };
         switch (type)
         {
         case QueueType::Graphics:
