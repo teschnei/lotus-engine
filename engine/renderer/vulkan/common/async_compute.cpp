@@ -28,7 +28,7 @@ namespace lotus
     void AsyncCompute::checkTasks()
     {
         auto local_task_count = 1;
-        while (local_task_count != 0)
+        while (local_task_count > 0)
         {
             auto pending_tasks = tasks.getAll();
             std::vector<vk::CommandBufferSubmitInfoKHR> submits;

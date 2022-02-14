@@ -61,9 +61,9 @@ namespace lotus
 
         Task<float> query_queue(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max);
 
-        std::atomic_flag query_running{};
         void runQueries();
         AsyncQueue<RaytraceQuery> async_query_queue;
+        std::atomic<uint64_t> task_count;
 
         //RTX
         std::unique_ptr<Buffer> shader_binding_table;
