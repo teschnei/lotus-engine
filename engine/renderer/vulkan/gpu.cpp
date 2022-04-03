@@ -78,57 +78,56 @@ namespace lotus
             queue_create_infos.push_back(create_info);
         }
 
-        vk::PhysicalDeviceFeatures physical_device_features;
-        physical_device_features.samplerAnisotropy = true;
-        physical_device_features.depthClamp = true;
-        physical_device_features.independentBlend = true;
-        physical_device_features.shaderInt64 = true;
-        physical_device_features.shaderStorageImageWriteWithoutFormat = true;
-
-        vk::PhysicalDeviceVulkan12Features vk_12_features;
-
-        vk_12_features.uniformBufferStandardLayout = true;
-        vk_12_features.bufferDeviceAddress = true;
-        vk_12_features.descriptorBindingPartiallyBound = true;
-        vk_12_features.descriptorIndexing = true;
-        vk_12_features.descriptorBindingStorageBufferUpdateAfterBind = true;
-        vk_12_features.descriptorBindingUniformBufferUpdateAfterBind = true;
-        vk_12_features.descriptorBindingSampledImageUpdateAfterBind = true;
-        vk_12_features.timelineSemaphore = true;
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rt_features
+        {
+            .rayTracingPipeline = config->renderer.RaytraceEnabled(),
+            .rayTracingPipelineTraceRaysIndirect = config->renderer.RaytraceEnabled()
+        };
 
         //this is part of the 1.2 spec but not in Vulkan12Features...?
-        vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features;
-        as_features.accelerationStructure = config->renderer.RaytraceEnabled();
-        as_features.descriptorBindingAccelerationStructureUpdateAfterBind = config->renderer.RaytraceEnabled();
-        //some day nvidia will support this
-        //as_features.accelerationStructureHostCommands = true;
-
-        vk_12_features.pNext = &as_features;
-
-        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rt_features;
-        rt_features.rayTracingPipeline = config->renderer.RaytraceEnabled();
-        rt_features.rayTracingPipelineTraceRaysIndirect = config->renderer.RaytraceEnabled();
-
-        as_features.pNext = &rt_features;
-
-        vk::PhysicalDeviceShaderClockFeaturesKHR clock_features;
-        clock_features.shaderSubgroupClock = true;
-
-        rt_features.pNext = &clock_features;
-
-        vk::PhysicalDeviceSynchronization2FeaturesKHR sync_features
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features
         {
-            .synchronization2 = true
+            .pNext = &rt_features,
+            .accelerationStructure = config->renderer.RaytraceEnabled(),
+            .descriptorBindingAccelerationStructureUpdateAfterBind = config->renderer.RaytraceEnabled()
+            //some day nvidia will support this
+            //.accelerationStructureHostCommands = true
         };
 
-        clock_features.pNext = &sync_features;
-
-        vk::PhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features
+        vk::PhysicalDeviceShaderClockFeaturesKHR clock_features
         {
-            .dynamicRendering = true
+            .pNext = &as_features,
+            .shaderSubgroupClock = true
         };
 
-        sync_features.pNext = &dynamic_rendering_features;
+        vk::PhysicalDeviceVulkan13Features vk_13_features
+        {
+            .pNext = &clock_features,
+            .synchronization2 = true,
+            .dynamicRendering = true,
+        };
+
+        vk::PhysicalDeviceVulkan12Features vk_12_features
+        {
+            .pNext = &vk_13_features,
+            .descriptorIndexing = true,
+            .descriptorBindingUniformBufferUpdateAfterBind = true,
+            .descriptorBindingSampledImageUpdateAfterBind = true,
+            .descriptorBindingStorageBufferUpdateAfterBind = true,
+            .descriptorBindingPartiallyBound = true,
+            .uniformBufferStandardLayout = true,
+            .timelineSemaphore = true,
+            .bufferDeviceAddress = true
+        };
+
+        vk::PhysicalDeviceFeatures physical_device_features
+        {
+            .independentBlend = true,
+            .depthClamp = true,
+            .samplerAnisotropy = true,
+            .shaderStorageImageWriteWithoutFormat = true,
+            .shaderInt64 = true
+        };
 
         std::vector<const char*> device_extensions2 = device_extensions;
         if (config->renderer.RaytraceEnabled())
@@ -141,13 +140,15 @@ namespace lotus
             device_extensions2.push_back(VK_KHR_SHADER_CLOCK_EXTENSION_NAME);
         }
 
-        vk::DeviceCreateInfo device_create_info;
-        device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
-        device_create_info.pQueueCreateInfos = queue_create_infos.data();
-        device_create_info.pEnabledFeatures = &physical_device_features;
-        device_create_info.pNext = &vk_12_features;
-        device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size());
-        device_create_info.ppEnabledExtensionNames = device_extensions2.data();
+        vk::DeviceCreateInfo device_create_info
+        {
+            .pNext = &vk_12_features,
+            .queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size()),
+            .pQueueCreateInfos = queue_create_infos.data(),
+            .enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size()),
+            .ppEnabledExtensionNames = device_extensions2.data(),
+            .pEnabledFeatures = &physical_device_features
+        };
 
         if (!layers.empty()) {
             device_create_info.enabledLayerCount = static_cast<uint32_t>(layers.size());

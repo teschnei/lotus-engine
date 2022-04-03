@@ -273,10 +273,10 @@ namespace lotus
 
                     vk::MemoryBarrier2KHR barrier
                     {
-                        .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                        .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
-                        .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                        .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead
+                        .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                        .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR,
+                        .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                        .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR
                     };
 
                     buffer[0]->pipelineBarrier2KHR({

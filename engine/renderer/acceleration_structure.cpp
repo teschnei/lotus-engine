@@ -41,10 +41,10 @@ namespace lotus
     {
         vk::BufferMemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
+            .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer = scratch_memory->buffer,
@@ -182,10 +182,10 @@ namespace lotus
 
         vk::MemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
+            .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
         };
 
         command_buffer->pipelineBarrier2KHR({

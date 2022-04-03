@@ -57,10 +57,10 @@ namespace lotus::Component
         //make sure all vertex and index buffers are finished transferring
         vk::MemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-            .dstStageMask =  vk::PipelineStageFlagBits2KHR::eComputeShader,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead
+            .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+            .dstStageMask =  vk::PipelineStageFlagBits2::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderRead
         };
 
         command_buffer.pipelineBarrier2KHR({
@@ -131,10 +131,10 @@ namespace lotus::Component
 
                 vk::BufferMemoryBarrier2KHR barrier
                 {
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                    .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                    .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .buffer = vertex_buffer->buffer,
@@ -228,10 +228,10 @@ namespace lotus::Component
 
                 vk::BufferMemoryBarrier2KHR barrier
                 {
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite| vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                    .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                    .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                    .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR| vk::AccessFlagBits2::eAccelerationStructureReadKHR,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .buffer = vertex_buffer->buffer,

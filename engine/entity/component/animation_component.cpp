@@ -85,10 +85,10 @@ namespace lotus::Component
 
         vk::BufferMemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+            .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer = skeleton_bone_buffer->buffer,

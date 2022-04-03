@@ -92,10 +92,10 @@ namespace lotus
                 //TODO: test if just buffermemorybarrier is faster
                 vk::MemoryBarrier2KHR barrier
                 {
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                    .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eTransferRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                    .dstStageMask =  vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                    .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR | vk::AccessFlagBits2::eTransferRead,
                 };
 
                 command_buffer->pipelineBarrier2KHR({
@@ -260,10 +260,10 @@ namespace lotus
             {
                 vk::MemoryBarrier2KHR barrier
                 {
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                    .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eTransferRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                    .dstStageMask =  vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                    .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR | vk::AccessFlagBits2::eTransferRead,
                 };
 
                 command_buffer->pipelineBarrier2KHR({

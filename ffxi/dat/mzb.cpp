@@ -544,10 +544,10 @@ namespace FFXI
         {
             vk::MemoryBarrier2KHR barrier
             {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eAccelerationStructureWrite
+                .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                .dstStageMask =  vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR | vk::AccessFlagBits2::eAccelerationStructureWriteKHR
             };
 
             command_buffer->pipelineBarrier2KHR({

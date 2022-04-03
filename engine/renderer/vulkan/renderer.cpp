@@ -96,7 +96,7 @@ namespace lotus
             .applicationVersion = app_version,
             .pEngineName = "lotus",
             .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-            .apiVersion = VK_API_VERSION_1_2
+            .apiVersion = VK_API_VERSION_1_3
         };
 
         vk::InstanceCreateInfo createInfo = {};
@@ -381,10 +381,10 @@ namespace lotus
 
         std::array post_render_transitions {
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eTransferRead,
+                .srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                .srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                .dstAccessMask = vk::AccessFlagBits2::eTransferRead,
                 .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .newLayout = vk::ImageLayout::eTransferSrcOptimal,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -399,10 +399,10 @@ namespace lotus
                 }
             },
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTopOfPipe,
+                .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
                 .srcAccessMask = {},
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
                 .oldLayout = vk::ImageLayout::eUndefined,
                 .newLayout = vk::ImageLayout::eTransferDstOptimal,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -443,9 +443,9 @@ namespace lotus
 
         std::array post_copy_transitions {
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eBottomOfPipe,
+                .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
                 .dstAccessMask = {},
                 .oldLayout = vk::ImageLayout::eTransferDstOptimal,
                 .newLayout = vk::ImageLayout::ePresentSrcKHR,

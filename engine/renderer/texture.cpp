@@ -38,10 +38,10 @@ namespace lotus
 
         vk::ImageMemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .srcStageMask = vk::PipelineStageFlagBits2::eNone,
+            .srcAccessMask = vk::AccessFlagBits2::eNone,
+            .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
             .oldLayout = vk::ImageLayout::eUndefined,
             .newLayout = vk::ImageLayout::eTransferDstOptimal,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -78,10 +78,10 @@ namespace lotus
         command_buffer->copyBufferToImage(staging_buffer->buffer, image->image, vk::ImageLayout::eTransferDstOptimal, region);
 
         barrier = {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-          //  .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
-           // .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+          //  .dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader,
+           // .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eTransferDstOptimal,
             .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

@@ -59,10 +59,10 @@ namespace lotus
 
         std::vector barriers = {
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .srcStageMask = vk::PipelineStageFlagBits2::eNone,
+                .srcAccessMask = vk::AccessFlagBits2::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderWrite,
                 .oldLayout = vk::ImageLayout::eUndefined,
                 .newLayout = vk::ImageLayout::eGeneral,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -460,10 +460,10 @@ namespace lotus
 
         std::array pre_render_transitions {
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTopOfPipe,
+                .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
                 .srcAccessMask = {},
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eColorAttachmentWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                .dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
                 .oldLayout = vk::ImageLayout::eUndefined,
                 .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -837,10 +837,10 @@ namespace lotus
         {
             vk::ImageMemoryBarrier2KHR
             {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                 .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                 .newLayout = vk::ImageLayout::eGeneral,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -903,7 +903,7 @@ namespace lotus
         vk::SemaphoreSubmitInfoKHR graphics_sem {
             .semaphore = *frame_timeline_sem[current_frame],
             .value = timeline_sem_base[current_frame] + timeline_graphics,
-            .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
+            .stageMask = vk::PipelineStageFlagBits2::eAllCommands
         };
 
         //deferred render
@@ -918,7 +918,7 @@ namespace lotus
             graphics_sem,
             vk::SemaphoreSubmitInfoKHR {
                 .semaphore = *image_ready_sem[current_frame],
-                .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
+                .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput
             }
         };
 
@@ -926,11 +926,11 @@ namespace lotus
             vk::SemaphoreSubmitInfoKHR {
                 .semaphore = *frame_timeline_sem[current_frame],
                 .value = timeline_sem_base[current_frame] + timeline_frame_ready,
-                .stageMask = vk::PipelineStageFlagBits2KHR::eAllCommands
+                .stageMask = vk::PipelineStageFlagBits2::eAllCommands
             },
             vk::SemaphoreSubmitInfoKHR {
                 .semaphore = *frame_finish_sem[current_frame],
-                .stageMask = vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput
+                .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput
             }
         };
 
