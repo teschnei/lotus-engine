@@ -51,9 +51,10 @@ namespace lotus
 
         std::optional<T> get()
         {
-            if (head)
+            if (auto tmp_head = head.load())
             {
-                return head.exchange(head->next, std::memory_order::seq_cst);
+                while (head.compare_exchange_weak(tmp_head, tmp_head->next, std::memory_order::seq_cst, std::memory_order::relaxed));
+                if (tmp_head) return tmp_head->val;
             }
             return {};
         }
