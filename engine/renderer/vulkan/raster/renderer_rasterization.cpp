@@ -39,7 +39,7 @@ namespace lotus
         initializeCameraBuffers();
         generateCommandBuffers();
 
-        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
         co_return;
     }
 
@@ -447,7 +447,7 @@ namespace lotus
             .basePipelineHandle = nullptr
         };
 
-        deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr);
+        deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr).value;
 
         std::array<vk::DescriptorSetLayout, 1> shadowmap_descriptor_layouts = { *shadowmap_descriptor_set_layout };
 
@@ -990,7 +990,7 @@ namespace lotus
             previous_frame = current_frame;
             current_frame = (current_frame + 1) % max_pending_frames;
             previous_image = current_image;
-            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
         }
         catch (vk::OutOfDateKHRError&)
         {
@@ -1010,7 +1010,7 @@ namespace lotus
         auto pipeline_rendering_info = rasterizer->getRenderPass();
         info.pNext = &pipeline_rendering_info;
         std::lock_guard lk{ shutdown_mutex };
-        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
     }
 
     vk::Pipeline lotus::RendererRasterization::createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info)
@@ -1019,6 +1019,6 @@ namespace lotus
         //TODO
         //info.renderPass = *shadowmap_render_pass;
         std::lock_guard lk{ shutdown_mutex };
-        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
     }
 }

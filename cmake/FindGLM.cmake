@@ -37,7 +37,7 @@ SET(_glm_HEADER_SEARCH_DIRS
 "/usr/local/include"
 "${CMAKE_SOURCE_DIR}/includes"
 "C:/Program Files (x86)/glm"
-"$ENV{VULKAN_SDK}/Third-Party/Include/"
+"$ENV{VULKAN_SDK}/Include/"
 )
 # check environment variable
 SET(_glm_ENV_ROOT_DIR "$ENV{GLM_ROOT_DIR}")

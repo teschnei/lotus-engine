@@ -206,7 +206,7 @@ namespace lotus
 
         pipeline_ci.stage = animation_shader_stage_info;
 
-        animation_pipeline = gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
+        animation_pipeline = gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr).value;
     }
 
     Task<> Renderer::resizeRenderer()
@@ -345,12 +345,9 @@ namespace lotus
         return align_up(in_size, gpu->properties.properties.limits.minStorageBufferOffsetAlignment);
     }
 
-    size_t lotus::Renderer::align_up(size_t in_size, size_t alignment) const
+    size_t lotus::Renderer::acceleration_scratch_align_up(size_t in_size) const
     {
-        if (in_size % alignment == 0)
-            return in_size;
-        else
-            return ((in_size / alignment) + 1) * alignment;
+        return align_up(in_size, gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment);
     }
 
     void Renderer::createDeferredImage()

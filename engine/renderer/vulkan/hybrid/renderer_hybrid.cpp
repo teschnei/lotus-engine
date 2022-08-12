@@ -36,7 +36,7 @@ namespace lotus
 
         initializeCameraBuffers();
 
-        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
         raytracer->prepareNextFrame();
 
         co_await InitWork();
@@ -369,7 +369,7 @@ namespace lotus
                 .basePipelineHandle = nullptr
             };
 
-            deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr);
+            deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr).value;
         }
     }
 
@@ -979,7 +979,7 @@ namespace lotus
         previous_image = current_image;
         try
         {
-            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
         }
 
         catch (vk::OutOfDateKHRError&)
@@ -1020,6 +1020,6 @@ namespace lotus
         auto pipeline_rendering_info = rasterizer->getRenderPass();
         info.pNext = &pipeline_rendering_info;
         std::lock_guard lk{ shutdown_mutex };
-        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
     }
 }

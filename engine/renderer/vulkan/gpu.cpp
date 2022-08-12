@@ -44,6 +44,7 @@ namespace lotus
         ray_tracing_properties.maxRayRecursionDepth = 0;
         ray_tracing_properties.shaderGroupHandleSize = 0;
         properties.pNext = &ray_tracing_properties;
+        ray_tracing_properties.pNext = &acceleration_structure_properties;
         physical_device.getProperties2(&properties);
     }
 

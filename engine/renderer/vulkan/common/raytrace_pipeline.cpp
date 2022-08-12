@@ -85,11 +85,13 @@ namespace lotus
     vk::UniqueDescriptorPool RaytracePipeline::initializeResourceDescriptorPool(Renderer* renderer, vk::DescriptorSetLayout layout)
     {
         std::array pool_sizes {
-            vk::DescriptorPoolSize{ vk::DescriptorType::eAccelerationStructureKHR, 1 },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eCombinedImageSampler, GlobalResources::max_resource_index },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBuffer, 1 }
+            vk::DescriptorPoolSize{ vk::DescriptorType::eAccelerationStructureKHR, renderer->getFrameCount()},
+            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index * renderer->getFrameCount()},
+            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index * renderer->getFrameCount() },
+            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index * renderer->getFrameCount() },
+            vk::DescriptorPoolSize{ vk::DescriptorType::eCombinedImageSampler, GlobalResources::max_resource_index * renderer->getFrameCount() },
+            vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBuffer, GlobalResources::max_resource_index * renderer->getFrameCount() },
+            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, renderer->getFrameCount() }
         };
 
         return renderer->gpu->device->createDescriptorPoolUnique({
@@ -369,7 +371,7 @@ namespace lotus
             .pGroups = shader_group_ci.data(),
             .maxPipelineRayRecursionDepth = 3,
             .layout = pipeline_layout
-        });
+        }).value;
     }
 
     RaytracePipeline::SBT RaytracePipeline::initializeSBT(Renderer* renderer, vk::Pipeline pipeline)

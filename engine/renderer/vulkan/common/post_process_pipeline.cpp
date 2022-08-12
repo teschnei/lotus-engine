@@ -108,7 +108,7 @@ namespace lotus
             .layout = *pipeline_layout
         };
 
-        pipeline = renderer->gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
+        pipeline = renderer->gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr).value;
 
         for (auto& buffer : image_buffers)
         {

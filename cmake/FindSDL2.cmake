@@ -80,7 +80,7 @@ find_path(SDL2_INCLUDE_DIR SDL.h
   HINTS
     ENV SDL2DIR
     ${SDL2_DIR}
-    "$ENV{VULKAN_SDK}/Third-Party/Include/SDL2"
+    "$ENV{VULKAN_SDK}/Include/SDL2"
   PATH_SUFFIXES SDL2
                 # path suffixes to search inside ENV{SDL2DIR}
                 include/SDL2 include
@@ -182,15 +182,17 @@ endif()
 if ( SDL2_INCLUDE_DIR AND NOT SDL2_LIBRARY )
   # Bin or Bin32
   if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-    set( VK_TP_LIB_DIR "Bin" )
+    set( VK_TP_LIB_DIR "Lib" )
+    set( VK_TP_BIN_DIR "Bin" )
   else()
-    set( VK_TP_LIB_DIR "Bin32" )
+    set( VK_TP_LIB_DIR "Lib32" )
+    set( VK_TP_BIN_DIR "Bin32" )
   endif()
 
   if( MSVC )
     set( SDL2_LIBRARY "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2.lib" )
     set( SDL2MAIN_LIBRARY "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2Main.lib" )
-    set( SDL2_DLL "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2.dll" )
+    set( SDL2_DLL "${SDL2_INCLUDE_DIR}/../../${VK_TP_BIN_DIR}/SDL2.dll" )
   else()
     set( SDL2_LIBRARY "${SDL2_INCLUDE_DIR/}/../../${VK_TP_LIB_DIR}/SDL2.a" )
     set( SDL2MAIN_LIBRARY "${SDL2_INCLUDE_DIR}/../../${VK_TP_LIB_DIR}/SDL2Main.a" )

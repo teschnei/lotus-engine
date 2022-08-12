@@ -365,7 +365,7 @@ namespace lotus
             .basePipelineHandle = nullptr
         };
 
-        pipeline = renderer->gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info);
+        pipeline = renderer->gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info).value;
     }
 
     void UiRenderer::createDepthImage()
