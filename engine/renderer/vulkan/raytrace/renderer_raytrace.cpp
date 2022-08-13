@@ -817,9 +817,7 @@ namespace lotus
         });
         //post process
         auto post_buffer = post_process->getCommandBuffer(*gbuffer.light.image_view, *gbuffer.normal.image_view, *gbuffer.motion_vector.image_view);
-        buffers.push_back({
-            .commandBuffer = *post_buffer
-        });
+        buffers.push_back({ .commandBuffer = *post_buffer });
 
         vk::SemaphoreSubmitInfoKHR graphics_sem {
             .semaphore = *frame_timeline_sem[current_frame],

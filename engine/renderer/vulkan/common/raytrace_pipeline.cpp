@@ -481,6 +481,18 @@ namespace lotus
 
         buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 1, input_output_descriptors);
 
+        vk::MemoryBarrier2 tlas_barrier {
+            .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR,
+            .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR
+        };
+
+        buffer[0]->pipelineBarrier2KHR({
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &tlas_barrier
+        });
+
         buffer[0]->traceRaysKHR(shader_binding_table.raygen, shader_binding_table.miss, shader_binding_table.hit, {}, renderer->swapchain->extent.width, renderer->swapchain->extent.height, 1);
 
         if (!after_barriers.empty())
