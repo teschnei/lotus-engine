@@ -113,14 +113,6 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
             model_tasks.push_back(std::move(*model_task));
     }
 
-    auto a = co_await lotus::Component::AnimationComponent::make_component(actor.get(), engine, std::move(skel));
-    auto p = co_await lotus::Component::RenderBaseComponent::make_component(actor.get(), engine);
-    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *p, *a, models);
-    auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::DeformableRasterComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
-    auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::DeformableRaytraceComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
-    auto ac = co_await FFXI::ActorComponent::make_component(actor.get(), engine, *p, *a);
-    auto sc = co_await FFXI::ActorSkeletonComponent::make_component(actor.get(), engine, *a, *d, rt.get(), static_skeleton, look, std::move(scheduler_map), std::move(generator_map));
-
     //co_await all tasks
     for (const auto& task : texture_tasks)
     {
@@ -130,6 +122,15 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
     {
         co_await task;
     }
+
+    auto a = co_await lotus::Component::AnimationComponent::make_component(actor.get(), engine, std::move(skel));
+    auto p = co_await lotus::Component::RenderBaseComponent::make_component(actor.get(), engine);
+    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *p, *a, models);
+    auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::DeformableRasterComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
+    auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::DeformableRaytraceComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
+    auto ac = co_await FFXI::ActorComponent::make_component(actor.get(), engine, *p, *a);
+    auto sc = co_await FFXI::ActorSkeletonComponent::make_component(actor.get(), engine, *a, *d, rt.get(), static_skeleton, look, std::move(scheduler_map), std::move(generator_map));
+
     a->playAnimation("idl");
     co_return scene->AddComponents(std::move(a), std::move(p), std::move(d), std::move(r), std::move(rt), std::move(ac), std::move(sc));
 }
