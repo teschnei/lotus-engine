@@ -14,26 +14,26 @@ struct Vertex
 };
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 1, set = 0) buffer readonly Vertices
+layout(binding = 0, set = 2) buffer readonly Vertices
 {
     vec4 v[];
-} vertices[1024];
+} vertices[];
 
-layout(binding = 3, set = 0) buffer readonly Indices
+layout(binding = 1, set = 2) buffer readonly Indices
 {
     int i[];
-} indices[1024];
+} indices[];
 
-layout(binding = 4, set = 0) uniform sampler2DArray textures[1024];
+layout(binding = 2, set = 2) uniform sampler2DArray textures[];
 
-layout(binding = 5, set = 0) uniform MaterialInfo
+layout(binding = 3, set = 2) uniform MaterialInfo
 {
     Material m;
-} materials[1024];
+} materials[];
 
-layout(binding = 6, set = 0) buffer readonly MeshInfo
+layout(binding = 4, set = 2) buffer readonly MeshInfo
 {
-    Mesh m[4096];
+    Mesh m[];
 } meshInfo;
 
 layout(std430, binding = 6, set = 1) buffer readonly Light
@@ -145,8 +145,10 @@ void main()
 
     float prev_frame = floor(mesh.animation_frame);
     float next_frame = mod(floor(mesh.animation_frame+1), 30.f);
-    vec3 prev_normal = texture(textures[resource_index], vec3(uv, prev_frame)).xyz;
-    vec3 next_normal = texture(textures[resource_index], vec3(uv, next_frame)).xyz;
+    uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
+    uint texture_index = materials[material_index].m.texture_index;
+    vec3 prev_normal = texture(textures[texture_index], vec3(uv, prev_frame)).xyz;
+    vec3 next_normal = texture(textures[texture_index], vec3(uv, next_frame)).xyz;
     vec3 normal_map = mix(prev_normal, next_normal, mesh.animation_frame - prev_frame) * 2.0 - 1.0;
 
     vec3 normal = v0.norm * barycentrics.x + v1.norm * barycentrics.y + v2.norm * barycentrics.z;

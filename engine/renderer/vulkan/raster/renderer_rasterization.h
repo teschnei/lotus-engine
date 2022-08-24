@@ -31,6 +31,7 @@ namespace lotus
         } landscape_pipeline_group, main_pipeline_group, particle_pipeline_group;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info);
 
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;

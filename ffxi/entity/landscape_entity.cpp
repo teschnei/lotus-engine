@@ -258,6 +258,10 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(std::shared_ptr<lotus::Entity> ent
         auto [collision_model, collision_model_task] = lotus::Model::LoadModel("", FFXI::CollisionLoader::LoadModel, engine, mzb->meshes, mzb->mesh_entries);
         std::vector<std::shared_ptr<lotus::Model>> collision_models{ collision_model };
 
+        for (const auto& task : model_tasks)
+        {
+            co_await task;
+        }
         auto models_c = co_await lotus::Component::InstancedModelsComponent::make_component(entity.get(), engine, models, instance_info, instance_offsets);
         auto models_raster = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::InstancedRasterComponent::make_component(entity.get(), engine, *models_c) : nullptr;
         auto models_raytrace = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::InstancedRaytraceComponent::make_component(entity.get(), engine, *models_c) : nullptr;
@@ -268,10 +272,6 @@ lotus::WorkerTask<> FFXILandscapeEntity::Load(std::shared_ptr<lotus::Entity> ent
         for (const auto& task : texture_tasks)
         {
             auto texture = co_await task;
-        }
-        for (const auto& task : model_tasks)
-        {
-            co_await task;
         }
         if (collision_model_task) co_await *collision_model_task;
     }

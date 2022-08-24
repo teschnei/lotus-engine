@@ -13,7 +13,6 @@ namespace lotus
 
     Task<> Scene::tick_all(time_point time, duration delta)
     {
-        engine->renderer->resources->Reset();
         auto entities_to_add = new_entities.getAll();
         entities.insert(entities.end(), entities_to_add.begin(), entities_to_add.end());
         co_await tick(time, delta);

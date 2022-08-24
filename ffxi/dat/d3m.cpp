@@ -137,6 +137,19 @@ namespace FFXI
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices.size() * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+        mesh->vertex_descriptor_index->write({
+            .buffer = mesh->vertex_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
+
+        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+        mesh->index_descriptor_index->write({
+            .buffer = mesh->index_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
         mesh->aabbs_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(indices.size());
         mesh->setVertexCount(vertices.size());
@@ -200,6 +213,19 @@ namespace FFXI
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices.size() * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(indices.size());
         mesh->setVertexCount(vertices.size());
+        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+        mesh->vertex_descriptor_index->write({
+            .buffer = mesh->vertex_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
+
+        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+        mesh->index_descriptor_index->write({
+            .buffer = mesh->index_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
         mesh->setMaxIndex(vertices.size() - 1);
         mesh->setVertexInputAttributeDescription(getAttributeDescriptions(), sizeof(D3M::Vertex));
         mesh->setVertexInputBindingDescription(getBindingDescriptions());
@@ -358,7 +384,7 @@ namespace FFXI
         pipeline_info.pColorBlendState = &color_blending;
         pipeline_info.pDynamicState = &dynamic_state_ci;
 
-        pipeline_blend = engine->renderer->createGraphicsPipeline(pipeline_info);
+        pipeline_blend = engine->renderer->createParticlePipeline(pipeline_info);
 
         auto fragment_module_add = engine->renderer->getShader("shaders/particle_add.spv");
         frag_shader_stage_info.module = *fragment_module_add;
@@ -367,10 +393,10 @@ namespace FFXI
         color_blend_attachment_states_subpass1[0].blendEnable = false;
         color_blend_attachment_states_subpass1[1].blendEnable = false;
         color_blend_attachment_states_subpass1[2].blendEnable = true;
-        pipeline_add = engine->renderer->createGraphicsPipeline(pipeline_info);
+        pipeline_add = engine->renderer->createParticlePipeline(pipeline_info);
 
         color_blend_attachment_states_subpass1[2].colorBlendOp = vk::BlendOp::eSubtract;
-        pipeline_sub = engine->renderer->createGraphicsPipeline(pipeline_info);
+        pipeline_sub = engine->renderer->createParticlePipeline(pipeline_info);
 
         blank_texture = co_await lotus::Texture::LoadTexture("d3m_blank", BlankTextureLoader::LoadTexture, engine);
     }

@@ -116,6 +116,7 @@ namespace lotus
             .descriptorBindingSampledImageUpdateAfterBind = true,
             .descriptorBindingStorageBufferUpdateAfterBind = true,
             .descriptorBindingPartiallyBound = true,
+            .runtimeDescriptorArray = true,
             .uniformBufferStandardLayout = true,
             .timelineSemaphore = true,
             .bufferDeviceAddress = true

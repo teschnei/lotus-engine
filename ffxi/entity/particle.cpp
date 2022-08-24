@@ -15,9 +15,8 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, std::tuple<>>> FFXIParticl
 
 lotus::WorkerTask<> FFXIParticle::Load(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene, std::weak_ptr<lotus::Entity> parent, FFXI::Generator* generator, std::shared_ptr<lotus::Model> model, size_t index)
 {
-    std::vector<std::shared_ptr<lotus::Model>> models{ model };
     auto p = co_await lotus::Component::RenderBaseComponent::make_component(entity.get(), engine);
-    auto pc = co_await lotus::Component::ParticleComponent::make_component(entity.get(), engine, models);
+    auto pc = co_await lotus::Component::ParticleComponent::make_component(entity.get(), engine, model);
     auto fpc = co_await FFXI::ParticleComponent::make_component(entity.get(), engine, *pc, *p, parent, generator, index);
     auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::ParticleRasterComponent::make_component(entity.get(), engine, *pc, *p) : nullptr;
     auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::ParticleRaytraceComponent::make_component(entity.get(), engine, *pc, *p) : nullptr;

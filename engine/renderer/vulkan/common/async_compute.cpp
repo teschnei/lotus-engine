@@ -27,6 +27,7 @@ namespace lotus
 
     void AsyncCompute::checkTasks()
     {
+        //TODO: just put a mutex in here, it's not going to work lockless
         auto local_task_count = 1;
         while (local_task_count > 0)
         {

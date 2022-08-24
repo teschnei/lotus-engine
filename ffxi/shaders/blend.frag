@@ -1,15 +1,21 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
 
 #include "common.glsl"
 
-layout(binding = 1) uniform sampler2D texSampler;
+layout(binding = 2, set = 1) uniform sampler2D textures[];
 
-layout(binding = 4, set = 0) uniform MaterialBlock
+layout(binding = 3, set = 1) uniform MaterialInfo
 {
-    Material material;
-} material;
+    Material m;
+} materials[];
+
+layout(binding = 4, set = 1) buffer readonly MeshInfo
+{
+    Mesh m[];
+} meshInfo;
 
 layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -28,7 +34,7 @@ layout(location = 6) out vec4 outMotionVector;
 
 layout(push_constant) uniform PushConstant
 {
-    uint material_index;
+    uint mesh_index;
 } push;
 
 void main() {
@@ -40,15 +46,18 @@ void main() {
     if ((dot(cross_vec, normal)) < 0)
         cross_vec = -cross_vec;
 
+    Mesh meshinfo = meshInfo.m[push.mesh_index];
+    Material mat = materials[meshinfo.material_index].m;
+
     outFaceNormal = vec4(cross_vec, 1.0);
-    outAlbedo = texture(texSampler, fragTexCoord);
+    outAlbedo = texture(textures[mat.texture_index], fragTexCoord);
     uint bc2_alpha = uint((outAlbedo.a * 255.f)) >> 4;
     if (bc2_alpha == 0)
         discard;
     outAlbedo.a = float(bc2_alpha) / 8.0;
     outAlbedo *= fragColor;
-    outMaterialIndex = push.material_index;
-    outLightType = material.material.light_type;
+    outMaterialIndex = push.mesh_index;
+    outLightType = mat.light_type;
     vec2 curScreenPos = (pos.xy / pos.w) * 0.5 + 0.5;
     vec2 prevScreenPos = (prevPos.xy / prevPos.w) * 0.5 + 0.5;
     outMotionVector.xy = vec2(curScreenPos - prevScreenPos);

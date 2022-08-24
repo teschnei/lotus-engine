@@ -5,7 +5,6 @@
 #include "window.h"
 #include "gpu.h"
 #include "swapchain.h"
-#include "global_resources.h"
 #include "ui_renderer.h"
 #include "common/raster_pipeline.h"
 #include "common/raytrace_pipeline.h"
@@ -15,6 +14,7 @@
 #include "engine/task.h"
 #include "engine/renderer/model.h"
 #include "engine/entity/component/camera_component.h"
+#include "common/global_descriptors.h"
 
 namespace lotus
 {
@@ -80,6 +80,7 @@ namespace lotus
 
         vk::UniqueShaderModule getShader(const std::string& file_name);
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
 
         vk::UniqueInstance instance;
@@ -88,8 +89,9 @@ namespace lotus
         vk::UniqueSurfaceKHR surface;
         std::unique_ptr<GPU> gpu;
         std::unique_ptr<Swapchain> swapchain;
-        std::unique_ptr<GlobalResources> resources;
         std::unique_ptr<AsyncCompute> async_compute;
+
+        std::unique_ptr<GlobalDescriptors> global_descriptors;
 
         inline static thread_local vk::UniqueCommandPool graphics_pool;
         inline static thread_local vk::UniqueCommandPool compute_pool;

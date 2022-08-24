@@ -4,9 +4,16 @@
 
 namespace lotus::Component
 {
-    DeformedMeshComponent::DeformedMeshComponent(Entity* _entity, Engine* _engine, const AnimationComponent& _animation_component, std::vector<std::shared_ptr<Model>> _models) :
-        Component(_entity, _engine), animation_component(_animation_component), models(_models)
+    DeformedMeshComponent::DeformedMeshComponent(Entity* _entity, Engine* _engine, const RenderBaseComponent& _base_component, 
+        const AnimationComponent& _animation_component, std::vector<std::shared_ptr<Model>> _models) :
+        Component(_entity, _engine), base_component(_base_component), animation_component(_animation_component)
     {
+        for (const auto& model : _models)
+        {
+            models.push_back({
+                .model = model
+            });
+        }
     }
 
     WorkerTask<> DeformedMeshComponent::init()
@@ -24,11 +31,11 @@ namespace lotus::Component
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
         });
 
-        for (const auto& model : models)
+        for (auto& model : models)
         {
-            if (model->weighted)
+            if (model.model->weighted)
             {
-                model_transforms.push_back(initModelWork(*command_buffer, *model));
+                model = initModelWork(*command_buffer, model.model);
             }
         }
         command_buffer->end();
@@ -37,19 +44,47 @@ namespace lotus::Component
         co_return;
     }
 
-    DeformedMeshComponent::ModelTransformedGeometry DeformedMeshComponent::initModelWork(vk::CommandBuffer command_buffer, const Model& model) const
+    DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::CommandBuffer command_buffer, std::shared_ptr<Model> model) const
     {
-        ModelTransformedGeometry model_transform;
-        model_transform.vertex_buffers.resize(model.meshes.size());
-        for (size_t i = 0; i < model.meshes.size(); ++i)
+        ModelInfo info
         {
-            const auto& mesh = model.meshes[i];
+            .model = model
+        };
+        info.vertex_buffers.resize(model->meshes.size());
+        info.vertex_buffer_indices.resize(model->meshes.size());
+        for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
+        {
+            info.mesh_infos.push_back(engine->renderer->global_descriptors->getMeshInfoBuffer(model->meshes.size()));
+        }
+        for (size_t i = 0; i < model->meshes.size(); ++i)
+        {
+            const auto& mesh = model->meshes[i];
 
             for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
             {
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                model_transform.vertex_buffers[i].push_back(engine->renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                info.vertex_buffers[i].push_back(engine->renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
                     vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR, vk::MemoryPropertyFlagBits::eDeviceLocal));
+                auto vertex_index = engine->renderer->global_descriptors->getVertexIndex();
+                vertex_index->write({
+                    .buffer = info.vertex_buffers[i][image]->buffer,
+                    .offset = 0,
+                    .range = VK_WHOLE_SIZE
+                });
+                info.mesh_infos[image]->buffer_view[i] = {
+                    .vertex_offset = vertex_index->index,
+                    .index_offset = mesh->index_descriptor_index->index,
+                    .indices = static_cast<uint32_t>(mesh->getIndexCount()),
+                    .material_index = mesh->material->getIndex(),
+                    .scale = glm::vec3{1.0},
+                    .billboard = 0,
+                    .colour = glm::vec4{1.0},
+                    .uv_offset = glm::vec2{0.0},
+                    .animation_frame = 0,
+                    .vertex_prev_offset = 0,
+                    .model_prev = glm::mat4{1.0}
+                };
+                info.vertex_buffer_indices[i].push_back(std::move(vertex_index));
             }
         }
 
@@ -71,11 +106,11 @@ namespace lotus::Component
         auto& skeleton = animation_component.skeleton;
         command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline);
 
-        for (uint32_t image_index = 0; image_index < engine->renderer->getFrameCount(); ++image_index)
+        for (uint32_t current_frame = 0; current_frame < engine->renderer->getFrameCount(); ++current_frame)
         {
             vk::DescriptorBufferInfo skeleton_buffer_info {
                 .buffer = animation_component.skeleton_bone_buffer->buffer,
-                .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * image_index,
+                .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * current_frame,
                 .range = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size()
             };
 
@@ -90,10 +125,10 @@ namespace lotus::Component
 
             command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
-            for (size_t j = 0; j < model.meshes.size(); ++j)
+            for (size_t j = 0; j < model->meshes.size(); ++j)
             {
-                auto& mesh = model.meshes[j];
-                auto& vertex_buffer = model_transform.vertex_buffers[j][image_index];
+                auto& mesh = model->meshes[j];
+                auto& vertex_buffer = info.vertex_buffers[j][current_frame];
 
                 vk::DescriptorBufferInfo vertex_weights_buffer_info {
                     .buffer = mesh->vertex_buffer->buffer,
@@ -147,13 +182,14 @@ namespace lotus::Component
                 });
             }
         }
-        return model_transform;
+        return info;
     }
 
     WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
     {
         auto& skeleton = animation_component.skeleton;
-        auto image_index = engine->renderer->getCurrentFrame();
+        auto current_frame = engine->renderer->getCurrentFrame();
+        auto previous_frame = engine->renderer->getPreviousFrame();
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
             .commandPool = *engine->renderer->graphics_pool,
@@ -168,7 +204,7 @@ namespace lotus::Component
 
         vk::DescriptorBufferInfo skeleton_buffer_info {
             .buffer = animation_component.skeleton_bone_buffer->buffer,
-            .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * image_index,
+            .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * current_frame,
             .range = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size()
         };
 
@@ -186,11 +222,10 @@ namespace lotus::Component
         //transform skeleton with current animation
         for (size_t i = 0; i < models.size(); ++i)
         {
-            std::vector<GlobalResources::MeshInfo> mesh_info;
-            for (size_t j = 0; j < models[i]->meshes.size(); ++j)
+            for (size_t j = 0; j < models[i].model->meshes.size(); ++j)
             {
-                auto& mesh = models[i]->meshes[j];
-                auto& vertex_buffer = model_transforms[i].vertex_buffers[j][image_index];
+                auto& mesh = models[i].model->meshes[j];
+                auto& vertex_buffer = models[i].vertex_buffers[j][current_frame];
 
                 vk::DescriptorBufferInfo vertex_weights_buffer_info {
                     .buffer = mesh->vertex_buffer->buffer,
@@ -243,21 +278,14 @@ namespace lotus::Component
                     .pBufferMemoryBarriers = &barrier
                 });
 
-                mesh_info.push_back({
-                    .vertex_offset = 0,
-                    .index_offset = 0,
-                    .indices = (uint32_t)mesh->getIndexCount(),
-                    .material_index = 0,
-                    .scale = glm::vec3(1.f),//base_component.getScale(),
-                    .billboard = 0,//base_component.getBillboard(),
-                    .colour = {},
-                    .uv_offset = {},
-                    .animation_frame = models[0]->animation_frame,
-                    .vertex_prev_offset = 0,
-                    .model_prev = glm::mat4(1.f),//base_component.getPrevModelMatrix()
-                });
+                auto vertex_index = models[i].vertex_buffer_indices[j][current_frame]->index;
+                auto prev_vertex_index = models[i].vertex_buffer_indices[j][previous_frame]->index;
+
+                models[i].mesh_infos[current_frame]->buffer_view[j].vertex_offset = vertex_index;
+                models[i].mesh_infos[current_frame]->buffer_view[j].vertex_prev_offset = prev_vertex_index;
+                models[i].mesh_infos[current_frame]->buffer_view[j].animation_frame = models[0].model->animation_frame;
+                models[i].mesh_infos[current_frame]->buffer_view[j].model_prev = base_component.getPrevModelMatrix();
             }
-            model_transforms[i].resource_index = engine->renderer->resources->pushMeshInfo(mesh_info);
         }
         command_buffer->end();
 
@@ -266,19 +294,14 @@ namespace lotus::Component
         co_return;
     }
 
-    const DeformedMeshComponent::ModelTransformedGeometry& DeformedMeshComponent::getModelTransformGeometry(size_t index) const
-    {
-        return model_transforms[index];
-    }
-
-    std::vector<std::shared_ptr<Model>> DeformedMeshComponent::getModels() const
+    std::span<const DeformedMeshComponent::ModelInfo> DeformedMeshComponent::getModels() const
     {
         return models;
     }
 
-    WorkerTask<DeformedMeshComponent::ModelTransformedGeometry> DeformedMeshComponent::initModel(std::shared_ptr<Model> model) const
+    WorkerTask<DeformedMeshComponent::ModelInfo> DeformedMeshComponent::initModel(std::shared_ptr<Model> model) const
     {
-        ModelTransformedGeometry transform;
+        ModelInfo info;
         vk::CommandBufferAllocateInfo alloc_info;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique({
@@ -294,19 +317,16 @@ namespace lotus::Component
 
         if (model->weighted)
         {
-            transform = initModelWork(*command_buffer, *model);
+            info = initModelWork(*command_buffer, model);
         }
         command_buffer->end();
         co_await engine->renderer->async_compute->compute(std::move(command_buffer));
-        co_return std::move(transform);
+        co_return std::move(info);
     }
 
-    void DeformedMeshComponent::replaceModelIndex(std::shared_ptr<Model> model, ModelTransformedGeometry&& transform, uint32_t index)
+    void DeformedMeshComponent::replaceModelIndex(ModelInfo&& info, uint32_t index)
     {
-        std::swap(models[index], model);
-        std::swap(model_transforms[index], transform);
-
-        engine->worker_pool->gpuResource(std::move(model));
-        engine->worker_pool->gpuResource(std::move(transform));
+        std::swap(models[index], info);
+        engine->worker_pool->gpuResource(std::move(info));
     }
 }

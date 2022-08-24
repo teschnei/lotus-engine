@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include "engine/renderer/mesh.h"
+#include "engine/renderer/vulkan/common/global_descriptors.h"
 #include "acceleration_structure.h"
 #include "engine/types.h"
 #include "engine/task.h"
@@ -75,7 +76,6 @@ namespace lotus
         //TODO: probably remove this
         uint32_t light_offset{ 0 };
         float animation_frame{ 0 };
-        uint16_t resource_index{ 0 };
 
         std::unique_ptr<BottomLevelAccelerationStructure> bottom_level_as;
 

@@ -20,7 +20,8 @@ namespace lotus::Component
         {
             for (size_t i = 0; i < models.size(); ++i)
             {
-                const auto& model = models[i];
+                const auto& model = models[i].model;
+                auto mesh_offset = models[i].mesh_infos->index;
                 auto& as = model->bottom_level_as;
                 auto [offset, count] = models_component.getInstanceOffset(model->name);
 
@@ -32,7 +33,7 @@ namespace lotus::Component
                         auto matrix = glm::mat3x4{ models_component.getInstanceInfo(offset + i).model_t };
                         vk::AccelerationStructureInstanceKHR instance
                         {
-                            .instanceCustomIndex = model->resource_index,
+                            .instanceCustomIndex = mesh_offset,
                             .mask = static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::LevelGeometry),
                             .instanceShaderBindingTableRecordOffset = RaytracePipeline::shaders_per_group * 2,
                             .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,

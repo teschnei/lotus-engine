@@ -22,6 +22,7 @@ namespace lotus
         std::vector<vk::UniqueCommandBuffer> render_commandbuffers;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
 
         /* Ray tracing */

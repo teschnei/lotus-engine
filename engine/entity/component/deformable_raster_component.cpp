@@ -74,12 +74,6 @@ namespace lotus::Component
             .range = model_buffer_range
         };
 
-        vk::DescriptorBufferInfo mesh_info {
-            .buffer = engine->renderer->resources->mesh_info_buffer->buffer,
-            .offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * image,
-            .range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index,
-        };
-
         std::array descriptorWrites {
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
@@ -91,23 +85,16 @@ namespace lotus::Component
             },
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
-                .dstBinding = 2,
+                .dstBinding = 1,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
                 .pBufferInfo = &model_buffer_info
-            },
-            vk::WriteDescriptorSet {
-                .dstSet = nullptr,
-                .dstBinding = 3,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .pBufferInfo = &mesh_info
             }
         };
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
+        command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 1, engine->renderer->global_descriptors->getDescriptorSet(), {});
 
         vk::Viewport viewport {
             .x = 0.0f,
@@ -206,7 +193,8 @@ namespace lotus::Component
         auto models = mesh_component.getModels();
         for (size_t model_i = 0; model_i < models.size(); ++model_i)
         {
-            Model* model = models[model_i].get();
+            const DeformedMeshComponent::ModelInfo& info = models[model_i];
+            Model* model = info.model.get();
             if (!model->meshes.empty() && model->rendered)
             {
                 uint32_t material_index = 0;
@@ -215,10 +203,9 @@ namespace lotus::Component
                     Mesh* mesh = model->meshes[mesh_i].get();
                     if (mesh->has_transparency == transparency)
                     {
-                        const DeformedMeshComponent::ModelTransformedGeometry& transformed_geometry = mesh_component.getModelTransformGeometry(model_i);
-                        command_buffer.bindVertexBuffers(0, transformed_geometry.vertex_buffers[mesh_i][engine->renderer->getCurrentFrame()]->buffer, {0});
-                        command_buffer.bindVertexBuffers(1, transformed_geometry.vertex_buffers[mesh_i][engine->renderer->getPreviousFrame()]->buffer, {0});
-                        material_index = transformed_geometry.resource_index + mesh_i;
+                        command_buffer.bindVertexBuffers(0, info.vertex_buffers[mesh_i][engine->renderer->getCurrentFrame()]->buffer, {0});
+                        command_buffer.bindVertexBuffers(1, info.vertex_buffers[mesh_i][engine->renderer->getPreviousFrame()]->buffer, {0});
+                        material_index = info.mesh_infos[engine->renderer->getCurrentFrame()]->index + mesh_i;
                         drawMesh(command_buffer, shadowmap, *mesh, material_index);
                     }
                 }
@@ -228,68 +215,17 @@ namespace lotus::Component
 
     void DeformableRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Mesh& mesh, uint32_t material_index)
     {
-        vk::DescriptorBufferInfo material_info;
-
-        vk::DescriptorImageInfo image_info;
-        image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-        //TODO: debug texture? probably AYAYA
-        if (mesh.material)
-        {
-            auto [buffer, offset] = mesh.material->getBuffer();
-            material_info.buffer = buffer;
-            material_info.offset = offset;
-            material_info.range = Material::getMaterialBufferSize(engine);
-            if (mesh.material->texture)
-            {
-                image_info.imageView = *mesh.material->texture->image_view;
-                image_info.sampler = *mesh.material->texture->sampler;
-            }
-        }
-
         vk::PipelineLayout pipeline_layout;
 
         if (!shadowmap)
         {
             pipeline_layout = engine->renderer->rasterizer->getPipelineLayout();
             command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[0]);
-
-            std::array descriptorWrites {
-                vk::WriteDescriptorSet {
-                    .dstSet = nullptr,
-                    .dstBinding = 1,
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                    .pImageInfo = &image_info
-                },
-                vk::WriteDescriptorSet {
-                    .dstSet = nullptr,
-                    .dstBinding = 4,
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = vk::DescriptorType::eUniformBuffer,
-                    .pBufferInfo = &material_info
-                }
-            };
-            command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, descriptorWrites);
         }
         else
         {
             pipeline_layout = engine->renderer->shadowmap_rasterizer->getPipelineLayout();
             command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[1]);
-
-            std::array descriptorWrites {
-                vk::WriteDescriptorSet {
-                    .dstSet = nullptr,
-                    .dstBinding = 1,
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                    .pImageInfo = &image_info
-                }
-            };
-            command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, descriptorWrites);
         }
 
         command_buffer.pushConstants<uint32_t>(pipeline_layout, vk::ShaderStageFlagBits::eFragment, 0, material_index);

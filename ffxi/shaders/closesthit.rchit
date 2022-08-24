@@ -15,31 +15,26 @@ struct Vertex
 };
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 1, set = 0) buffer readonly Vertices
+layout(binding = 0, set = 2) buffer readonly Vertices
 {
     Vertex v[];
-} vertices[1024];
+} vertices[];
 
-layout(binding = 2, set = 0) buffer readonly Vertices_Prev
-{
-    Vertex v[];
-} vertices_prev[1024];
-
-layout(binding = 3, set = 0) buffer readonly Indices
+layout(binding = 1, set = 2) buffer readonly Indices
 {
     int i[];
-} indices[1024];
+} indices[];
 
-layout(binding = 4, set = 0) uniform sampler2D textures[1024];
+layout(binding = 2, set = 2) uniform sampler2D textures[];
 
-layout(binding = 5, set = 0) uniform MaterialInfo
+layout(binding = 3, set = 2) uniform MaterialInfo
 {
     Material m;
-} materials[1024];
+} materials[];
 
-layout(binding = 6, set = 0) buffer readonly MeshInfo
+layout(binding = 4, set = 2) buffer readonly MeshInfo
 {
-    Mesh m[1024];
+    Mesh m[];
 } meshInfo;
 
 layout(std430, binding = 6, set = 1) buffer readonly Light
@@ -104,7 +99,7 @@ Vertex unpackVertex(uint index)
 Vertex unpackPrevVertex(uint index)
 {
     uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_prev_offset;
-    Vertex v = vertices_prev[resource_index].v[index];
+    Vertex v = vertices[resource_index].v[index];
 
     return v;
 }
@@ -135,7 +130,8 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
-    vec4 texture_color = texture(textures[mesh.material_index], uv);
+    uint texture_index = materials[mesh.material_index].m.texture_index;
+    vec3 texture_color = texture(textures[texture_index], uv).xyz;
 
     shadow.light = vec4(light.light.entity.diffuse_color.rgb * light.light.entity.brightness, 1.0);
     shadow.shadow = vec4(0.0);

@@ -115,7 +115,7 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
 
     auto a = co_await lotus::Component::AnimationComponent::make_component(actor.get(), engine, std::move(skel));
     auto p = co_await lotus::Component::RenderBaseComponent::make_component(actor.get(), engine);
-    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *a, models);
+    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *p, *a, models);
     auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::DeformableRasterComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
     auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::DeformableRaytraceComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
     auto ac = co_await FFXI::ActorComponent::make_component(actor.get(), engine, *p, *a);

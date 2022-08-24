@@ -163,20 +163,6 @@ namespace lotus
             //info.allowsTransforms = true;
             std::vector<uint32_t> max_primitives { { instance_count } };
             CreateAccelerationStructure(instance_data_vec, max_primitives);
-
-            vk::WriteDescriptorSet write_info_as;
-            write_info_as.descriptorCount = 1;
-            write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
-            write_info_as.dstBinding = 0;
-            write_info_as.dstArrayElement = 0;
-
-            vk::WriteDescriptorSetAccelerationStructureKHR write_as;
-            write_as.accelerationStructureCount = 1;
-            write_as.pAccelerationStructures = &*acceleration_structure;
-            write_info_as.pNext = &write_as;
-
-            write_info_as.dstSet = renderer->raytracer->getResourceDescriptorSet(renderer->getCurrentFrame());
-            renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
         }
         auto data = instance_memory->map(0, instance_count * sizeof(vk::AccelerationStructureInstanceKHR), {});
         memcpy(data, instances.GetData(), instance_count * sizeof(vk::AccelerationStructureInstanceKHR));

@@ -7,6 +7,13 @@ namespace lotus
 {
     WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& texture_datas)
     {
+        descriptor_index = engine->renderer->global_descriptors->getTextureIndex();
+        descriptor_index->write({
+            .sampler = *sampler,
+            .imageView = *image_view,
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+        });
+
         size_t total_size = 0;
         for (const auto& texture_data : texture_datas)
         {
@@ -80,8 +87,8 @@ namespace lotus
         barrier = {
             .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
             .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
-          //  .dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader,
-           // .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
+            //.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader | vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            //.dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eTransferDstOptimal,
             .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

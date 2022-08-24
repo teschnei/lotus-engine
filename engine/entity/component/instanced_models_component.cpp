@@ -6,8 +6,15 @@ namespace lotus::Component
 {
     InstancedModelsComponent::InstancedModelsComponent(Entity* _entity, Engine* _engine, std::vector<std::shared_ptr<Model>> _models,
         const std::vector<InstanceInfo>& _instances, std::unordered_map<std::string, std::pair<vk::DeviceSize, uint32_t>> _instance_offsets) :
-        Component(_entity, _engine), models(_models), instances(_instances), instance_offsets(_instance_offsets)
+        Component(_entity, _engine), instances(_instances), instance_offsets(_instance_offsets)
     {
+        for (const auto& model : _models)
+        {
+            models.push_back({
+                .model = model,
+                .mesh_infos = engine->renderer->global_descriptors->getMeshInfoBuffer(model->meshes.size())
+            });
+        }
     }
 
     WorkerTask<> InstancedModelsComponent::init()
@@ -42,12 +49,35 @@ namespace lotus::Component
         command_buffer->copyBuffer(staging_buffer->buffer, instance_buffer->buffer, copy_region);
 
         command_buffer->end();
-        co_await engine->renderer->async_compute->compute(std::move(command_buffer));
+        auto compute = engine->renderer->async_compute->compute(std::move(command_buffer));
+
+        for (const auto& model : models)
+        {
+            for (size_t i = 0; i < model.model->meshes.size(); ++i)
+            {
+                const auto& mesh = model.model->meshes[i];
+                model.mesh_infos->buffer_view[i] = {
+                    .vertex_offset = mesh->vertex_descriptor_index->index,
+                    .index_offset = mesh->index_descriptor_index->index,
+                    .indices = static_cast<uint32_t>(mesh->getIndexCount()),
+                    .material_index = mesh->material->getIndex(),
+                    .scale = glm::vec3{1.0},
+                    .billboard = 0,
+                    .colour = glm::vec4{1.0},
+                    .uv_offset = glm::vec2{0.0},
+                    .animation_frame = 0,
+                    .vertex_prev_offset = mesh->vertex_descriptor_index->index,
+                    .model_prev = glm::mat4{1.0}
+                };
+            }
+        }
+
+        co_await compute;
 
         co_return;
     }
 
-    std::vector<std::shared_ptr<Model>> InstancedModelsComponent::getModels() const
+    std::span<const InstancedModelsComponent::ModelInfo> InstancedModelsComponent::getModels() const
     {
         return models;
     }

@@ -17,6 +17,7 @@ struct Mesh
 
 struct Material
 {
+    int texture_index;
     float specular_exponent;
     float specular_intensity;
     uint light_type;

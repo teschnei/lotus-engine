@@ -14,7 +14,8 @@ namespace lotus
 
         auto getPipelineLayout() { return *pipeline_layout; }
         auto getDescriptorSetLayout() { return *descriptor_set_layout; }
-        vk::PipelineRenderingCreateInfoKHR getRenderPass();
+        vk::PipelineRenderingCreateInfoKHR getMainRenderPassInfo();
+        vk::PipelineRenderingCreateInfoKHR getTransparentRenderPassInfo();
         const auto& getGBuffer() { return gbuffer; }
         void beginRendering(vk::CommandBuffer buffer);
         void endRendering(vk::CommandBuffer buffer);
@@ -33,9 +34,6 @@ namespace lotus
         vk::UniqueDescriptorSetLayout descriptor_set_layout;
         vk::UniquePipelineLayout pipeline_layout;
 
-        vk::RenderingInfoKHR main_pass_rendering_info;
-        vk::RenderingInfoKHR transparent_pass_rendering_info;
-
         struct GBuffer
         {
             FramebufferAttachment position;
@@ -53,11 +51,13 @@ namespace lotus
             vk::UniqueHandle<vk::Sampler, vk::DispatchLoaderDynamic> sampler;
         } gbuffer;
 
-        std::vector<vk::Format> colour_attachment_formats;
+        std::vector<vk::Format> main_attachment_formats;
+        std::vector<vk::Format> transparency_attachment_formats;
 
         static vk::UniqueDescriptorSetLayout initializeDescriptorSetLayout(Renderer* renderer);
         static vk::UniquePipelineLayout initializePipelineLayout(Renderer* renderer, vk::DescriptorSetLayout descriptor_set_layout);
-        static std::vector<vk::Format> initializeRenderPass(Renderer* renderer);
+        static std::vector<vk::Format> initializeMainRenderPass(Renderer* renderer);
+        static std::vector<vk::Format> initializeTransparentRenderPass(Renderer* renderer);
         static FramebufferAttachment initializeFramebufferAttachment(Renderer* renderer, vk::Extent2D extent, vk::Format format, vk::ImageUsageFlags usage_flags);
         static GBuffer initializeGBuffer(Renderer* renderer);
     };

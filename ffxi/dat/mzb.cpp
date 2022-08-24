@@ -358,6 +358,19 @@ namespace FFXI
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertex_buffer_size, vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(index_buffer_size, index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+        mesh->vertex_descriptor_index->write({
+            .buffer = mesh->vertex_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
+
+        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+        mesh->index_descriptor_index->write({
+            .buffer = mesh->index_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
         mesh->setMaxIndex(3);
         mesh->setVertexCount(vertices.size());
         mesh->setIndexCount(indices.size());

@@ -7,10 +7,10 @@ namespace lotus
 {
     struct MaterialBufferBlock
     {
+        uint32_t texture_index;
         float specular_exponent;
         float specular_intensity;
         uint32_t light_type;
-        float _pad;
     };
 
     size_t Material::getMaterialBufferSize(Engine* engine)
@@ -41,6 +41,7 @@ namespace lotus
             vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
         MaterialBufferBlock* mapped = static_cast<MaterialBufferBlock*>(staging_buffer->map(0, buffer_size, {}));
+        mapped->texture_index = material->texture->getDescriptorIndex();
         mapped->specular_exponent = material->specular_exponent;
         mapped->specular_intensity = material->specular_intensity;
         mapped->light_type = material->light_type;
@@ -59,6 +60,14 @@ namespace lotus
         command_buffers[0]->end();
 
         co_await engine->renderer->async_compute->compute(std::move(command_buffers[0]));
+
+        material->descriptor_index = engine->renderer->global_descriptors->getMaterialIndex();
+
+        material->descriptor_index->write({
+            .buffer = material->buffer->buffer,
+            .offset = material->buffer_offset,
+            .range = buffer_size
+        });
 
         co_return material;
     }

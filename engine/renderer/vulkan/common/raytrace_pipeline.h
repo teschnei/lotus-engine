@@ -23,7 +23,6 @@ namespace lotus
         void prepareNextFrame();
         Task<> prepareFrame(Engine* engine);
 
-        vk::DescriptorSet getResourceDescriptorSet(uint32_t image) const;
         TopLevelAccelerationStructure* getTLAS(uint32_t image) const;
 
         vk::UniqueCommandBuffer getCommandBuffer(std::span<vk::WriteDescriptorSet> input_output_descriptors,

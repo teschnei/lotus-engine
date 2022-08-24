@@ -895,6 +895,8 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
+        global_descriptors->updateDescriptorSet();
+
         engine->worker_pool->deleteFinished();
         uint64_t frame_ready_value = timeline_sem_base[current_frame] + timeline_frame_ready;
         gpu->device->waitSemaphores({
@@ -903,7 +905,6 @@ namespace lotus
             .pValues = &frame_ready_value
         }, std::numeric_limits<uint64_t>::max());
         timeline_sem_base[current_frame] = timeline_sem_base[current_frame] + timeline_frame_ready;
-        resources->BindResources(current_frame);
 
         try
         {
@@ -1007,7 +1008,16 @@ namespace lotus
     vk::Pipeline lotus::RendererRasterization::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
         info.layout = rasterizer->getPipelineLayout();
-        auto pipeline_rendering_info = rasterizer->getRenderPass();
+        auto pipeline_rendering_info = rasterizer->getMainRenderPassInfo();
+        info.pNext = &pipeline_rendering_info;
+        std::lock_guard lk{ shutdown_mutex };
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
+    }
+
+    vk::Pipeline lotus::RendererRasterization::createParticlePipeline(vk::GraphicsPipelineCreateInfo& info)
+    {
+        info.layout = rasterizer->getPipelineLayout();
+        auto pipeline_rendering_info = rasterizer->getTransparentRenderPassInfo();
         info.pNext = &pipeline_rendering_info;
         std::lock_guard lk{ shutdown_mutex };
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
@@ -1016,6 +1026,7 @@ namespace lotus
     vk::Pipeline lotus::RendererRasterization::createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
         info.layout = *shadowmap_pipeline_layout;
+        info.pNext = nullptr;
         //TODO
         //info.renderPass = *shadowmap_render_pass;
         std::lock_guard lk{ shutdown_mutex };

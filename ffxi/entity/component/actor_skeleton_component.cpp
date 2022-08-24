@@ -107,12 +107,12 @@ namespace FFXI
         lotus::Component::DeformableRaytraceComponent::ModelAccelerationStructures acceleration;
         if (raytrace_component)
         {
-            acceleration = co_await raytrace_component->initModel(model, new_model_transform);
+            acceleration = co_await raytrace_component->initModel(new_model_transform);
         }
 
         co_await engine->worker_pool->waitForFrame();
 
-        deformed_component.replaceModelIndex(model, std::move(new_model_transform), slot);
+        deformed_component.replaceModelIndex(std::move(new_model_transform), slot);
         if (raytrace_component)
         {
             raytrace_component->replaceModelIndex(std::move(acceleration), slot);

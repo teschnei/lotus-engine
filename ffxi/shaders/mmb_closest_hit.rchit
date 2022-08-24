@@ -16,26 +16,26 @@ struct Vertex
 };
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 1, set = 0) buffer readonly Vertices
+layout(binding = 0, set = 2) buffer readonly Vertices
 {
     vec4 v[];
-} vertices[1024];
+} vertices[];
 
-layout(binding = 3, set = 0) buffer readonly Indices
+layout(binding = 1, set = 2) buffer readonly Indices
 {
     int i[];
-} indices[1024];
+} indices[];
 
-layout(binding = 4, set = 0) uniform sampler2D textures[1024];
+layout(binding = 2, set = 2) uniform sampler2D textures[];
 
-layout(binding = 5, set = 0) uniform MaterialInfo
+layout(binding = 3, set = 2) uniform MaterialInfo
 {
     Material m;
-} materials[1024];
+} materials[];
 
-layout(binding = 6, set = 0) buffer readonly MeshInfo
+layout(binding = 4, set = 2) buffer readonly MeshInfo
 {
-    Mesh m[1024];
+    Mesh m[];
 } meshInfo;
 
 layout(std430, binding = 6, set = 1) buffer readonly Light
@@ -133,8 +133,9 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uv += meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].uv_offset;
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
-    vec3 texture_color = texture(textures[resource_index], uv).xyz;
+    uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
+    uint texture_index = materials[material_index].m.texture_index;
+    vec3 texture_color = texture(textures[texture_index], uv).xyz;
 
     vec3 transformed_v0 = mat3(gl_ObjectToWorldEXT) * v0.pos;
     vec3 transformed_v1 = mat3(gl_ObjectToWorldEXT) * v1.pos;

@@ -29,12 +29,11 @@ namespace lotus::Component
 
         auto models = mesh_component.getModels();
 
-        for (size_t i = 0; i < models.size(); ++i)
+        for (const auto& info : models)
         {
-            const Model& model = *models[i];
-            if (model.weighted)
+            if (info.model->weighted)
             {
-                acceleration_structures.push_back(initModelWork(*command_buffer, model, mesh_component.getModelTransformGeometry(i)));
+                acceleration_structures.push_back(initModelWork(*command_buffer, info));
             }
         }
         command_buffer->end();
@@ -44,7 +43,7 @@ namespace lotus::Component
         co_return;
     }
 
-    WorkerTask<DeformableRaytraceComponent::ModelAccelerationStructures> DeformableRaytraceComponent::initModel(std::shared_ptr<Model> model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform) const
+    WorkerTask<DeformableRaytraceComponent::ModelAccelerationStructures> DeformableRaytraceComponent::initModel(const DeformedMeshComponent::ModelInfo& info) const
     {
         ModelAccelerationStructures acceleration;
         vk::CommandBufferAllocateInfo alloc_info;
@@ -62,9 +61,9 @@ namespace lotus::Component
 
         auto models = mesh_component.getModels();
 
-        if (model->weighted)
+        if (info.model->weighted)
         {
-            acceleration = initModelWork(*command_buffer, *model, model_transform);
+            acceleration = initModelWork(*command_buffer, info);
         }
         command_buffer->end();
         co_await engine->renderer->async_compute->compute(std::move(command_buffer));
@@ -72,7 +71,7 @@ namespace lotus::Component
         co_return std::move(acceleration);
     }
 
-    DeformableRaytraceComponent::ModelAccelerationStructures DeformableRaytraceComponent::initModelWork(vk::CommandBuffer command_buffer, const Model& model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform) const
+    DeformableRaytraceComponent::ModelAccelerationStructures DeformableRaytraceComponent::initModelWork(vk::CommandBuffer command_buffer, const DeformedMeshComponent::ModelInfo& info) const
     {
         ModelAccelerationStructures acceleration_structure;
 
@@ -83,9 +82,9 @@ namespace lotus::Component
         raytrace_geometry.resize(engine->renderer->getFrameCount());
         raytrace_offset_info.resize(engine->renderer->getFrameCount());
         max_primitives.resize(engine->renderer->getFrameCount());
-        for (size_t i = 0; i < model.meshes.size(); ++i)
+        for (size_t i = 0; i < info.model->meshes.size(); ++i)
         {
-            const auto& mesh = model.meshes[i];
+            const auto& mesh = info.model->meshes[i];
 
             for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
             {
@@ -93,7 +92,7 @@ namespace lotus::Component
                     .geometryType = vk::GeometryTypeKHR::eTriangles,
                     .geometry = { .triangles = vk::AccelerationStructureGeometryTrianglesDataKHR {
                         .vertexFormat = vk::Format::eR32G32B32Sfloat,
-                        .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = model_transform.vertex_buffers[i][image]->buffer}),
+                        .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = info.vertex_buffers[i][image]->buffer}),
                         .vertexStride = mesh->getVertexInputBindingDescription()[0].stride,
                         .maxVertex = mesh->getMaxIndex(),
                         .indexType = vk::IndexType::eUint16,
@@ -115,7 +114,7 @@ namespace lotus::Component
             if (std::ranges::any_of(raytrace_geometry, [](auto geo) { return !geo.empty(); }))
             {
                 acceleration_structure.blas.push_back(std::make_unique<BottomLevelAccelerationStructure>(engine->renderer.get(), command_buffer, std::move(raytrace_geometry[i]),
-                    std::move(raytrace_offset_info[i]), std::move(max_primitives[i]), true, model.lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
+                    std::move(raytrace_offset_info[i]), std::move(max_primitives[i]), true, info.model->lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastBuild));
             }
             else
             {
@@ -140,65 +139,25 @@ namespace lotus::Component
         });
 
         auto models = mesh_component.getModels();
-        uint32_t image = engine->renderer->getCurrentFrame();
-        uint32_t prev_image = engine->renderer->getPreviousFrame();
+        uint32_t current_frame = engine->renderer->getCurrentFrame();
+        uint32_t prev_frame = engine->renderer->getPreviousFrame();
 
         for (size_t i = 0; i < models.size(); ++i)
         {
-            const auto& model = models[i];
-            const auto& model_transform = mesh_component.getModelTransformGeometry(i);
-            auto& as = acceleration_structures[i].blas[engine->renderer->getCurrentFrame()];
+            const auto& model = models[i].model;
+            auto& as = acceleration_structures[i].blas[current_frame];
 
             if (as)
             {
                 as->Update(*command_buffer);
-                std::vector<vk::DescriptorBufferInfo> vertex_info;
-                std::vector<vk::DescriptorBufferInfo> vertex_prev_info;
-                std::vector<vk::DescriptorBufferInfo> index_info;
-                std::vector<vk::DescriptorBufferInfo> material_info;
-                std::vector<vk::DescriptorImageInfo> texture_info;
 
-                for (size_t j = 0; j < model->meshes.size(); ++j)
-                {
-                    const auto& mesh = model->meshes[j];
-
-                    vertex_info.push_back({ model_transform.vertex_buffers[j][image]->buffer, 0, VK_WHOLE_SIZE });
-                    vertex_prev_info.push_back({ model_transform.vertex_buffers[j][prev_image]->buffer, 0, VK_WHOLE_SIZE });
-                    index_info.push_back({ mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE });
-                    texture_info.push_back({ *mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal });
-                    auto [buffer, offset] = mesh->material->getBuffer();
-                    material_info.push_back({ buffer, offset, Material::getMaterialBufferSize(engine) });
-                }
-
-                uint16_t vertex_index = engine->renderer->resources->pushVertexInfo(vertex_info);
-                uint16_t vertex_prev_index = engine->renderer->resources->pushVertexPrevInfo(vertex_prev_info);
-                uint16_t index_index = engine->renderer->resources->pushIndexInfo(index_info);
-                uint16_t material_texture_index = engine->renderer->resources->pushMaterialTextureInfo(material_info, texture_info);
-
-                for (size_t j = 0; j < model->meshes.size(); ++j)
-                {
-                    const auto& mesh = model->meshes[j];
-                    mesh->material->index = material_texture_index + j;
-                    auto& mesh_info = engine->renderer->resources->getMeshInfo(model_transform.resource_index + j);
-                    mesh_info.vertex_offset = static_cast<uint32_t>(vertex_index + j);
-                    mesh_info.index_offset = static_cast<uint32_t>(index_index + j);
-                    mesh_info.material_index = (uint32_t)mesh->material->index;
-                    mesh_info.scale = base_component.getScale();
-                    mesh_info.billboard = 0;
-                    mesh_info.colour = glm::vec4{1.f};
-                    mesh_info.uv_offset = glm::vec2{0.f};
-                    mesh_info.animation_frame = models[i]->animation_frame;
-                    mesh_info.vertex_prev_offset = static_cast<uint32_t>(vertex_prev_index + j);
-                    mesh_info.model_prev = base_component.getPrevModelMatrix();
-                }
-
-                if (auto tlas = engine->renderer->raytracer->getTLAS(engine->renderer->getCurrentFrame()))
+                if (auto tlas = engine->renderer->raytracer->getTLAS(current_frame))
                 {
                     //transpose because VK_raytracing_KHR expects row-major
                     auto matrix = glm::mat3x4{ base_component.getModelMatrixT() };
                     vk::AccelerationStructureInstanceKHR instance
                     {
-                        .instanceCustomIndex = model_transform.resource_index,
+                        .instanceCustomIndex = static_cast<uint32_t>(models[i].mesh_infos[current_frame]->index),
                         .mask = static_cast<uint32_t>(RaytraceQueryer::ObjectFlags::DynamicEntities),
                         .instanceShaderBindingTableRecordOffset = RaytracePipeline::shaders_per_group * 0,
                         .flags = (VkGeometryInstanceFlagsKHR)vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable,

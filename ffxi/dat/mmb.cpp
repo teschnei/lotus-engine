@@ -453,6 +453,20 @@ namespace FFXI
 
             mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
             mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+            mesh->vertex_descriptor_index->write({
+                .buffer = mesh->vertex_buffer->buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+            });
+
+            mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+            mesh->index_descriptor_index->write({
+                .buffer = mesh->index_buffer->buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+            });
+
             mesh->setMaxIndex(*std::ranges::max_element(mmb_mesh.indices));
 
             vertices.push_back(std::move(vertices_uint8));
@@ -529,21 +543,7 @@ namespace FFXI
         color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
-        vk::PipelineColorBlendAttachmentState color_blend_attachment_accumulation = color_blend_attachment;
-        color_blend_attachment_accumulation.blendEnable = true;
-        color_blend_attachment_accumulation.srcColorBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.dstColorBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.dstAlphaBlendFactor = vk::BlendFactor::eOne;
-        vk::PipelineColorBlendAttachmentState color_blend_attachment_revealage = color_blend_attachment;
-        color_blend_attachment_revealage.blendEnable = true;
-        color_blend_attachment_revealage.srcColorBlendFactor = vk::BlendFactor::eZero;
-        color_blend_attachment_revealage.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-        color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
-        color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(7, color_blend_attachment);
-        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
 
         color_blend_attachment_states[3].blendEnable = true;
 
@@ -556,10 +556,6 @@ namespace FFXI
         color_blending.blendConstants[1] = 0.0f;
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
-
-        vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
-        color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
-        color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
 
         std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eScissor, vk::DynamicState::eViewport };
         vk::PipelineDynamicStateCreateInfo dynamic_state_ci

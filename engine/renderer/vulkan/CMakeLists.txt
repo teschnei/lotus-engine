@@ -1,9 +1,9 @@
 target_sources(engine
     PRIVATE
+    buffer_resource.h
+    descriptor_resource.h
     gpu.cpp
     gpu.h
-    global_resources.cpp
-    global_resources.h
     renderer.cpp
     renderer.h
     renderer_settings.h

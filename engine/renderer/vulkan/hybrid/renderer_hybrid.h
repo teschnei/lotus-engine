@@ -18,6 +18,7 @@ namespace lotus
         virtual Task<> drawFrame() override;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
 
         std::unique_ptr<Image> depth_image;

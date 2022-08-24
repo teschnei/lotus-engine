@@ -136,25 +136,26 @@ namespace lotus
         revealage_sample_layout_binding.pImmutableSamplers = nullptr;
         revealage_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding mesh_info_binding;
-        mesh_info_binding.binding = 6;
-        mesh_info_binding.descriptorCount = 1;
-        mesh_info_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
         vk::DescriptorSetLayoutBinding light_buffer_binding;
-        light_buffer_binding.binding = 7;
+        light_buffer_binding.binding = 6;
         light_buffer_binding.descriptorCount = 1;
         light_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         light_buffer_binding.pImmutableSamplers = nullptr;
         light_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding light_type_sample_layout_binding;
-        light_type_sample_layout_binding.binding = 8;
+        light_type_sample_layout_binding.binding = 7;
         light_type_sample_layout_binding.descriptorCount = 1;
         light_type_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         light_type_sample_layout_binding.pImmutableSamplers = nullptr;
         light_type_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding particle_sample_layout_binding;
+        particle_sample_layout_binding.binding = 8;
+        particle_sample_layout_binding.descriptorCount = 1;
+        particle_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        particle_sample_layout_binding.pImmutableSamplers = nullptr;
+        particle_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding camera_buffer_binding;
         camera_buffer_binding.binding = 9;
@@ -163,16 +164,9 @@ namespace lotus
         camera_buffer_binding.pImmutableSamplers = nullptr;
         camera_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding particle_sample_layout_binding;
-        particle_sample_layout_binding.binding = 10;
-        particle_sample_layout_binding.descriptorCount = 1;
-        particle_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        particle_sample_layout_binding.pImmutableSamplers = nullptr;
-        particle_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
         std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { position_sample_layout_binding, albedo_sample_layout_binding, light_sample_layout_binding,
-            material_index_layout_binding, accumulation_sample_layout_binding, revealage_sample_layout_binding, mesh_info_binding, light_buffer_binding,
-            light_type_sample_layout_binding, camera_buffer_binding, particle_sample_layout_binding };
+            material_index_layout_binding, accumulation_sample_layout_binding, revealage_sample_layout_binding, light_buffer_binding,
+            light_type_sample_layout_binding, particle_sample_layout_binding, camera_buffer_binding };
 
         vk::DescriptorSetLayoutCreateInfo deferred_layout_info;
         deferred_layout_info.bindingCount = static_cast<uint32_t>(rtx_deferred_bindings.size());
@@ -550,11 +544,6 @@ namespace lotus
         particle_info.imageView = *rasterizer->getGBuffer().particle.image_view;
         particle_info.sampler = *rasterizer->getGBuffer().sampler;
 
-        vk::DescriptorBufferInfo mesh_info;
-        mesh_info.buffer = resources->mesh_info_buffer->buffer;
-        mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * current_frame;
-        mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
-
         vk::DescriptorBufferInfo light_buffer_info;
         light_buffer_info.buffer = engine->lights->light_buffer->buffer;
         light_buffer_info.offset = current_frame * engine->lights->GetBufferSize();
@@ -570,7 +559,7 @@ namespace lotus
         camera_buffer_info.offset = current_frame * uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData));
         camera_buffer_info.range = sizeof(Component::CameraComponent::CameraData);
 
-        std::vector<vk::WriteDescriptorSet> descriptorWrites {11};
+        std::vector<vk::WriteDescriptorSet> descriptorWrites {10};
 
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
@@ -612,31 +601,25 @@ namespace lotus
         descriptorWrites[6].dstBinding = 6;
         descriptorWrites[6].dstArrayElement = 0;
         descriptorWrites[6].descriptorCount = 1;
-        descriptorWrites[6].pBufferInfo = &mesh_info;
+        descriptorWrites[6].pBufferInfo = &light_buffer_info;
 
-        descriptorWrites[7].descriptorType = vk::DescriptorType::eStorageBuffer;
         descriptorWrites[7].dstBinding = 7;
         descriptorWrites[7].dstArrayElement = 0;
+        descriptorWrites[7].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[7].descriptorCount = 1;
-        descriptorWrites[7].pBufferInfo = &light_buffer_info;
+        descriptorWrites[7].pImageInfo = &light_type_info;
 
         descriptorWrites[8].dstBinding = 8;
         descriptorWrites[8].dstArrayElement = 0;
         descriptorWrites[8].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[8].descriptorCount = 1;
-        descriptorWrites[8].pImageInfo = &light_type_info;
+        descriptorWrites[8].pImageInfo = &particle_info;
 
         descriptorWrites[9].descriptorType = vk::DescriptorType::eUniformBuffer;
         descriptorWrites[9].dstBinding = 9;
         descriptorWrites[9].dstArrayElement = 0;
         descriptorWrites[9].descriptorCount = 1;
         descriptorWrites[9].pBufferInfo = &camera_buffer_info;
-
-        descriptorWrites[10].dstBinding = 10;
-        descriptorWrites[10].dstArrayElement = 0;
-        descriptorWrites[10].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrites[10].descriptorCount = 1;
-        descriptorWrites[10].pImageInfo = &particle_info;
 
         buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
 
@@ -869,6 +852,8 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
+        global_descriptors->updateDescriptorSet();
+
         engine->worker_pool->deleteFinished();
         uint64_t frame_ready_value = timeline_sem_base[current_frame] + timeline_frame_ready;
         gpu->device->waitSemaphores({
@@ -877,7 +862,6 @@ namespace lotus
             .pValues = &frame_ready_value
         }, std::numeric_limits<uint64_t>::max());
         timeline_sem_base[current_frame] = timeline_sem_base[current_frame] + timeline_frame_ready;
-        resources->BindResources(current_frame);
 
         engine->worker_pool->clearProcessed(current_frame);
         swapchain->checkOldSwapchain(current_frame);
@@ -1017,7 +1001,16 @@ namespace lotus
     vk::Pipeline RendererHybrid::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
         info.layout = rasterizer->getPipelineLayout();
-        auto pipeline_rendering_info = rasterizer->getRenderPass();
+        auto pipeline_rendering_info = rasterizer->getMainRenderPassInfo();
+        info.pNext = &pipeline_rendering_info;
+        std::lock_guard lk{ shutdown_mutex };
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
+    }
+
+    vk::Pipeline RendererHybrid::createParticlePipeline(vk::GraphicsPipelineCreateInfo& info)
+    {
+        info.layout = rasterizer->getPipelineLayout();
+        auto pipeline_rendering_info = rasterizer->getTransparentRenderPassInfo();
         info.pNext = &pipeline_rendering_info;
         std::lock_guard lk{ shutdown_mutex };
         return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);

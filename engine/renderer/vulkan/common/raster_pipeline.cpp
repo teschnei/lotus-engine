@@ -10,7 +10,8 @@ namespace lotus
     {
         descriptor_set_layout = initializeDescriptorSetLayout(renderer);
         pipeline_layout = initializePipelineLayout(renderer, *descriptor_set_layout);
-        colour_attachment_formats = initializeRenderPass(renderer);
+        main_attachment_formats = initializeMainRenderPass(renderer);
+        transparency_attachment_formats = initializeTransparentRenderPass(renderer);
         gbuffer = initializeGBuffer(renderer);
     }
 
@@ -24,30 +25,12 @@ namespace lotus
                 .descriptorCount = 2,
                 .stageFlags = vk::ShaderStageFlagBits::eVertex
             },
-            vk::DescriptorSetLayoutBinding { //texture
-                .binding = 1,
-                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eFragment
-            },
             vk::DescriptorSetLayoutBinding { //model
-                .binding = 2,
+                .binding = 1,
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
                 .descriptorCount = 1,
                 .stageFlags = vk::ShaderStageFlagBits::eVertex
-            },
-            vk::DescriptorSetLayoutBinding { //mesh
-                .binding = 3,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eFragment
-            },
-            vk::DescriptorSetLayoutBinding { //material
-                .binding = 4,
-                .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eFragment
-            },
+            }
         };
 
         return renderer->gpu->device->createDescriptorSetLayoutUnique({
@@ -59,7 +42,7 @@ namespace lotus
 
     vk::UniquePipelineLayout RasterPipeline::initializePipelineLayout(Renderer* renderer, vk::DescriptorSetLayout descriptor_set_layout)
     {
-        std::array descriptor_layouts = { descriptor_set_layout };
+        std::array descriptor_layouts = { descriptor_set_layout, renderer->global_descriptors->getDescriptorLayout() };
 
         //material index
         vk::PushConstantRange push_constant_range
@@ -77,17 +60,27 @@ namespace lotus
         }, nullptr);
     }
 
-    vk::PipelineRenderingCreateInfoKHR RasterPipeline::getRenderPass()
+    vk::PipelineRenderingCreateInfoKHR RasterPipeline::getMainRenderPassInfo()
     {
         return {
             .viewMask = 0,
-            .colorAttachmentCount = static_cast<uint32_t>(colour_attachment_formats.size()),
-            .pColorAttachmentFormats = colour_attachment_formats.data(),
+            .colorAttachmentCount = static_cast<uint32_t>(main_attachment_formats.size()),
+            .pColorAttachmentFormats = main_attachment_formats.data(),
             .depthAttachmentFormat = renderer->gpu->getDepthFormat()
         };
     }
 
-    std::vector<vk::Format> RasterPipeline::initializeRenderPass(Renderer* renderer)
+    vk::PipelineRenderingCreateInfoKHR RasterPipeline::getTransparentRenderPassInfo()
+    {
+        return {
+            .viewMask = 0,
+            .colorAttachmentCount = static_cast<uint32_t>(transparency_attachment_formats.size()),
+            .pColorAttachmentFormats = transparency_attachment_formats.data(),
+            .depthAttachmentFormat = renderer->gpu->getDepthFormat()
+        };
+    }
+
+    std::vector<vk::Format> RasterPipeline::initializeMainRenderPass(Renderer* renderer)
     {
         return {
             vk::Format::eR32G32B32A32Sfloat,
@@ -96,7 +89,13 @@ namespace lotus
             vk::Format::eR8G8B8A8Unorm,
             vk::Format::eR16Uint,
             vk::Format::eR8Uint,
-            vk::Format::eR32G32B32A32Sfloat,
+            vk::Format::eR32G32B32A32Sfloat
+        };
+    }
+
+    std::vector<vk::Format> RasterPipeline::initializeTransparentRenderPass(Renderer* renderer)
+    {
+        return {
             vk::Format::eR16G16B16A16Sfloat,
             vk::Format::eR16Sfloat,
             vk::Format::eR32G32B32A32Sfloat

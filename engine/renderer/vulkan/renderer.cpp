@@ -60,9 +60,9 @@ namespace lotus
 
         createSwapchain();
         createSemaphores();
-        resources = std::make_unique<GlobalResources>(engine, this);
         async_compute = std::make_unique<AsyncCompute>(engine, this);
         post_process = std::make_unique<PostProcessPipeline>(this);
+        global_descriptors = std::make_unique<GlobalDescriptors>(this);
     }
 
     Renderer::~Renderer()

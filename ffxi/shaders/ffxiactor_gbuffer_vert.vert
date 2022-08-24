@@ -9,7 +9,7 @@ layout(binding = 0) uniform CameraUBO {
     vec4 eye_pos;
 } camera[2];
 
-layout(binding = 2) uniform ModelUBO {
+layout(binding = 1) uniform ModelUBO {
     mat4 model;
     mat3 model_IT;
     vec4 _pad;

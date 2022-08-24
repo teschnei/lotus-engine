@@ -143,6 +143,19 @@ lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lo
 
                 mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
                 mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+                mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+                mesh->vertex_descriptor_index->write({
+                    .buffer = mesh->vertex_buffer->buffer,
+                    .offset = 0,
+                    .range = VK_WHOLE_SIZE
+                });
+
+                mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+                mesh->index_descriptor_index->write({
+                    .buffer = mesh->index_buffer->buffer,
+                    .offset = 0,
+                    .range = VK_WHOLE_SIZE
+                });
                 mesh->setIndexCount(mesh_indices.size());
                 mesh->setVertexCount(os2_vertices.size());
                 mesh->setMaxIndex(*std::ranges::max_element(mesh_indices));

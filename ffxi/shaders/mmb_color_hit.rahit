@@ -13,26 +13,26 @@ struct Vertex
     vec2 uv;
 };
 
-layout(binding = 1, set = 0) buffer readonly Vertices
+layout(binding = 0, set = 2) buffer readonly Vertices
 {
     vec4 v[];
-} vertices[1024];
+} vertices[];
 
-layout(binding = 3, set = 0) buffer readonly Indices
+layout(binding = 1, set = 2) buffer readonly Indices
 {
     int i[];
-} indices[1024];
+} indices[];
 
-layout(binding = 4, set = 0) uniform sampler2D textures[1024];
+layout(binding = 2, set = 2) uniform sampler2D textures[];
 
-layout(binding = 5, set = 0) uniform MaterialInfo
+layout(binding = 3, set = 2) uniform MaterialInfo
 {
     Material m;
-} materials[1024];
+} materials[];
 
-layout(binding = 6, set = 0) buffer readonly MeshInfo
+layout(binding = 4, set = 2) buffer readonly MeshInfo
 {
-    Mesh m[1024];
+    Mesh m[];
 } meshInfo;
 
 hitAttributeEXT vec3 attribs;
@@ -86,8 +86,9 @@ void main()
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
     uv += meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].uv_offset;
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
-    float a = texture(textures[resource_index], uv).a;
+    uint material_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].material_index;
+    uint texture_index = materials[material_index].m.texture_index;
+    float a = texture(textures[texture_index], uv).a;
     if (a < 1.f/32.f)
         ignoreIntersectionEXT;
 }

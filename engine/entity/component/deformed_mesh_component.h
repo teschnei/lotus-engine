@@ -2,37 +2,40 @@
 #include "component.h"
 #include <memory>
 #include <vector>
+#include "render_base_component.h"
 #include "animation_component.h"
 #include "engine/worker_task.h"
 #include "engine/renderer/model.h"
+#include "engine/renderer/vulkan/common/global_descriptors.h"
 
 namespace lotus::Component
 {
-    class DeformedMeshComponent : public Component<DeformedMeshComponent>
+    class DeformedMeshComponent : public Component<DeformedMeshComponent, After<RenderBaseComponent>>
     {
     public:
-        explicit DeformedMeshComponent(Entity*, Engine* engine, const AnimationComponent& animation_component, std::vector<std::shared_ptr<Model>> models);
+        explicit DeformedMeshComponent(Entity*, Engine* engine, const RenderBaseComponent& base_component, const AnimationComponent& animation_component, std::vector<std::shared_ptr<Model>> models);
 
         WorkerTask<> init();
         WorkerTask<> tick(time_point time, duration elapsed);
 
-        struct ModelTransformedGeometry
+        struct ModelInfo
         {
+            std::shared_ptr<Model> model;
+            std::vector<std::unique_ptr<GlobalDescriptors::MeshInfoBuffer::View>> mesh_infos;
             //transformed vertex buffers (per mesh, per render target)
             std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
-            uint16_t resource_index{ 0 };
+            std::vector<std::vector<std::unique_ptr<GlobalDescriptors::VertexDescriptor::Index>>> vertex_buffer_indices;
         };
 
-        const ModelTransformedGeometry& getModelTransformGeometry(size_t index) const;
-        std::vector<std::shared_ptr<Model>> getModels() const;
-        WorkerTask<ModelTransformedGeometry> initModel(std::shared_ptr<Model> model) const;
-        void replaceModelIndex(std::shared_ptr<Model>, ModelTransformedGeometry&& transform, uint32_t index);
+        std::span<const ModelInfo> getModels() const;
+        WorkerTask<ModelInfo> initModel(std::shared_ptr<Model> model) const;
+        void replaceModelIndex(ModelInfo&& transform, uint32_t index);
 
     protected:
+        const RenderBaseComponent& base_component;
         const AnimationComponent& animation_component;
-        std::vector<ModelTransformedGeometry> model_transforms;
-        std::vector<std::shared_ptr<Model>> models;
+        std::vector<ModelInfo> models;
 
-        ModelTransformedGeometry initModelWork(vk::CommandBuffer command_buffer, const Model& model) const;
+        ModelInfo initModelWork(vk::CommandBuffer command_buffer, std::shared_ptr<Model> model) const;
     };
 }
