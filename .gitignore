@@ -8,8 +8,12 @@ cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
+vsxmake*
 _deps
 .cmake
+.xmake
+.vs
+.vscode
 
 bin
 build

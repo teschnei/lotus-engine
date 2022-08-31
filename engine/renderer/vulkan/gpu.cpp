@@ -106,6 +106,7 @@ namespace lotus
             .pNext = &clock_features,
             .synchronization2 = true,
             .dynamicRendering = true,
+            .maintenance4 = true,
         };
 
         vk::PhysicalDeviceVulkan12Features vk_12_features
