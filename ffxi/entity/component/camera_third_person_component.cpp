@@ -5,8 +5,9 @@
 
 namespace FFXI
 {
-    CameraThirdPersonComponent::CameraThirdPersonComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::CameraComponent& _camera, ActorComponent& _target) :
-        Component(_entity, _engine), camera(_camera), target(_target)
+    CameraThirdPersonComponent::CameraThirdPersonComponent(lotus::Entity* _entity, lotus::Engine* _engine, lotus::Component::CameraComponent& _camera,
+        ActorComponent& _target, bool right_click_face) :
+        Component(_entity, _engine), camera(_camera), target(_target), right_click(right_click_face ? Look::LookBoth : Look::LookCamera)
     {
     }
 
@@ -50,7 +51,7 @@ namespace FFXI
                 SDL_ShowCursor(SDL_FALSE);
                 SDL_SetWindowGrab(window, SDL_TRUE);
                 SDL_SetRelativeMouseMode(SDL_TRUE);
-                look = event.button.button == SDL_BUTTON_LEFT ? Look::LookCamera : Look::LookBoth;
+                look = event.button.button == SDL_BUTTON_LEFT ? Look::LookCamera : right_click;
                 look_pos = { event.button.x, event.button.y };
             }
         }
