@@ -7,6 +7,13 @@ namespace lotus
 {
     WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& texture_datas)
     {
+        descriptor_index = engine->renderer->global_descriptors->getTextureIndex();
+        descriptor_index->write({
+            .sampler = *sampler,
+            .imageView = *image_view,
+            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+        });
+
         size_t total_size = 0;
         for (const auto& texture_data : texture_datas)
         {
@@ -25,7 +32,7 @@ namespace lotus
 
         vk::CommandBufferAllocateInfo alloc_info = {};
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *engine->renderer->graphics_pool;
+        alloc_info.commandPool = *engine->renderer->compute_pool;
         alloc_info.commandBufferCount = 1;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -38,10 +45,10 @@ namespace lotus
 
         vk::ImageMemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
+            .srcStageMask = vk::PipelineStageFlagBits2::eNone,
+            .srcAccessMask = vk::AccessFlagBits2::eNone,
+            .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
             .oldLayout = vk::ImageLayout::eUndefined,
             .newLayout = vk::ImageLayout::eTransferDstOptimal,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -78,10 +85,10 @@ namespace lotus
         command_buffer->copyBufferToImage(staging_buffer->buffer, image->image, vk::ImageLayout::eTransferDstOptimal, region);
 
         barrier = {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eFragmentShader,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+            //.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader | vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            //.dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eTransferDstOptimal,
             .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -103,8 +110,7 @@ namespace lotus
 
         command_buffer->end();
 
-        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
-        engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
+        co_await engine->renderer->async_compute->compute(std::move(command_buffer));
         co_return;
     }
 }

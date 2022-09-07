@@ -11,20 +11,16 @@ layout(binding = 2) uniform sampler2D lightSampler;
 layout(binding = 3) uniform usampler2D materialIndexSampler;
 layout(binding = 4) uniform sampler2D accumulationSampler;
 layout(binding = 5) uniform sampler2D revealageSampler;
-layout(binding = 8) uniform usampler2D lightTypeSampler;
-layout(binding = 10) uniform sampler2D particleSampler;
 
-layout(binding = 6, set = 0) buffer readonly MeshInfo
-{
-    Mesh m[1024];
-} meshInfo;
-
-layout(std430, binding = 7) buffer readonly Light
+layout(std430, binding = 6) buffer readonly Light
 {
     LightBuffer light;
     uint light_count;
     LightInfo light_info[];
 } light;
+
+layout(binding = 7) uniform usampler2D lightTypeSampler;
+layout(binding = 8) uniform sampler2D particleSampler;
 
 layout(binding = 9) uniform Camera {
     mat4 proj;
@@ -33,6 +29,7 @@ layout(binding = 9) uniform Camera {
     mat4 view_inverse;
     vec4 eye_pos;
 } camera;
+
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec4 eye_dir;

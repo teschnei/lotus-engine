@@ -108,7 +108,7 @@ namespace lotus
             .layout = *pipeline_layout
         };
 
-        pipeline = renderer->gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr);
+        pipeline = renderer->gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr).value;
 
         for (auto& buffer : image_buffers)
         {
@@ -197,10 +197,10 @@ namespace lotus
         {
             barriers.push_back(
                 vk::ImageMemoryBarrier2KHR{
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eNone,
+                    .srcAccessMask = vk::AccessFlagBits2::eNone,
+                    .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                    .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                     .oldLayout = vk::ImageLayout::eUndefined,
                     .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -220,10 +220,10 @@ namespace lotus
         {
             barriers.push_back(
                 vk::ImageMemoryBarrier2KHR{
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-                    .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eNone,
+                    .srcAccessMask = vk::AccessFlagBits2::eNone,
+                    .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                    .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                     .oldLayout = vk::ImageLayout::eUndefined,
                     .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -250,7 +250,7 @@ namespace lotus
     vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)
     {
         vk::CommandBufferAllocateInfo alloc_info = {};
-        alloc_info.commandPool = *renderer->local_compute_pool;
+        alloc_info.commandPool = *renderer->graphics_pool;
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandBufferCount = 1;
 
@@ -371,10 +371,10 @@ namespace lotus
 
         std::array before_barriers {
             vk::ImageMemoryBarrier2KHR{
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                 .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                 .newLayout = vk::ImageLayout::eGeneral,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -389,10 +389,10 @@ namespace lotus
                 }
             },
             vk::ImageMemoryBarrier2KHR{
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                 .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                 .newLayout = vk::ImageLayout::eGeneral,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -419,10 +419,10 @@ namespace lotus
 
         std::array after_barriers {
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eNone,
+                .dstAccessMask = vk::AccessFlagBits2::eNone,
                 .oldLayout = vk::ImageLayout::eGeneral,
                 .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -437,10 +437,10 @@ namespace lotus
                 }
             },
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eNone,
+                .srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eNone,
+                .dstAccessMask = vk::AccessFlagBits2::eNone,
                 .oldLayout = vk::ImageLayout::eGeneral,
                 .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

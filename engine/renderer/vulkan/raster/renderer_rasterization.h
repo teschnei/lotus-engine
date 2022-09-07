@@ -14,7 +14,6 @@ namespace lotus
 
         virtual Task<> drawFrame() override;
 
-        vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> render_pass;
         vk::UniqueHandle<vk::RenderPass, vk::DispatchLoaderDynamic> shadowmap_render_pass;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> shadowmap_descriptor_set_layout;
         vk::UniqueHandle<vk::DescriptorSetLayout, vk::DispatchLoaderDynamic> deferred_descriptor_set_layout;
@@ -32,12 +31,12 @@ namespace lotus
         } landscape_pipeline_group, main_pipeline_group, particle_pipeline_group;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info);
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info);
 
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;
         std::unique_ptr<Image> depth_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;
-        std::vector<vk::UniqueHandle<vk::CommandBuffer, vk::DispatchLoaderDynamic>> render_commandbuffers;
 
         struct ShadowmapCascade
         {
@@ -51,15 +50,12 @@ namespace lotus
         std::unique_ptr<Image> shadowmap_image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> shadowmap_image_view;
 
-        vk::UniqueHandle<vk::Semaphore, vk::DispatchLoaderDynamic> gbuffer_sem;
-
     private:
 
         void createRenderpasses();
         void createDescriptorSetLayout();
         void createGraphicsPipeline();
         void createDepthImage();
-        void createFramebuffers();
         void createSyncs();
         void createShadowmapResources();
 
@@ -70,7 +66,7 @@ namespace lotus
 
         void updateCameraBuffers();
 
-        vk::CommandBuffer getRenderCommandbuffer();
+        std::vector<vk::CommandBuffer> getRenderCommandbuffers();
         vk::UniqueCommandBuffer getDeferredCommandBuffer();
     };
 }

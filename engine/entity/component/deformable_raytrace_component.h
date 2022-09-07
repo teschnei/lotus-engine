@@ -23,7 +23,7 @@ namespace lotus::Component
         WorkerTask<> init();
         Task<> tick(time_point time, duration delta);
 
-        WorkerTask<ModelAccelerationStructures> initModel(std::shared_ptr<Model> model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform) const;
+        WorkerTask<ModelAccelerationStructures> initModel(const DeformedMeshComponent::ModelInfo& model_info) const;
         void replaceModelIndex(ModelAccelerationStructures&& acceleration, uint32_t index);
 
     protected:
@@ -31,6 +31,6 @@ namespace lotus::Component
         const RenderBaseComponent& base_component;
         std::vector<ModelAccelerationStructures> acceleration_structures;
 
-        ModelAccelerationStructures initModelWork(vk::CommandBuffer command_buffer, const Model& model, const DeformedMeshComponent::ModelTransformedGeometry& model_transform) const;
+        ModelAccelerationStructures initModelWork(vk::CommandBuffer command_buffer, const DeformedMeshComponent::ModelInfo& model_info) const;
     };
 }

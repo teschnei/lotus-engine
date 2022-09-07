@@ -9,7 +9,7 @@ layout(binding = 0) uniform UniformBufferObject {
     vec4 eye_pos;
 } ubo;
 
-layout(binding = 2) uniform ModelUBO {
+layout(binding = 1) uniform ModelUBO {
     mat4 model;
     mat4 model_IT;
     mat4 model_prev;

@@ -2,6 +2,7 @@
 #include "actor_data.h"
 
 #include <ranges>
+#include <functional>
 #include "ffxi.h"
 #include "actor_skeleton_static.h"
 #include "dat/dat.h"
@@ -113,9 +114,19 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
             model_tasks.push_back(std::move(*model_task));
     }
 
+    //co_await all tasks
+    for (const auto& task : texture_tasks)
+    {
+        co_await task;
+    }
+    for (const auto& task : model_tasks)
+    {
+        co_await task;
+    }
+
     auto a = co_await lotus::Component::AnimationComponent::make_component(actor.get(), engine, std::move(skel));
     auto p = co_await lotus::Component::RenderBaseComponent::make_component(actor.get(), engine);
-    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *a, models);
+    auto d = co_await lotus::Component::DeformedMeshComponent::make_component(actor.get(), engine, *p, *a, models);
     auto r = engine->config->renderer.RasterizationEnabled() ? co_await lotus::Component::DeformableRasterComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
     auto rt = engine->config->renderer.RaytraceEnabled() ? co_await lotus::Component::DeformableRaytraceComponent::make_component(actor.get(), engine, *d, *p) : nullptr;
     auto sc = co_await FFXI::ActorSkeletonComponent::make_component(actor.get(), engine, *a, *d, rt.get(), static_skeleton, look, std::move(scheduler_map), std::move(generator_map));
@@ -143,15 +154,6 @@ lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Enti
         }
     }
 
-    //co_await all tasks
-    for (const auto& task : texture_tasks)
-    {
-        co_await task;
-    }
-    for (const auto& task : model_tasks)
-    {
-        co_await task;
-    }
     a->playAnimation("idl");
     co_return scene->AddComponents(std::move(a), std::move(p), std::move(d), std::move(r), std::move(rt), std::move(ac), std::move(sc));
 }

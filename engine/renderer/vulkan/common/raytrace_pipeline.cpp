@@ -14,7 +14,7 @@ namespace lotus
         resources_descriptor_sets = initializeResourceDescriptorSets(renderer, *resources_descriptor_layout, *resources_descriptor_pool);
         input_output_descriptor_layout = initializeInputOutputDescriptorSetLayout(renderer, input_output_descriptor_layout_desc);
 
-        std::array descriptors{ *resources_descriptor_layout, *input_output_descriptor_layout };
+        std::array descriptors{ *resources_descriptor_layout, *input_output_descriptor_layout, renderer->global_descriptors->getDescriptorLayout() };
         pipeline_layout = initializePipelineLayout(renderer, descriptors);
         pipeline = initializePipeline(renderer, *pipeline_layout, raygen);
         shader_binding_table = initializeSBT(renderer, *pipeline);
@@ -30,53 +30,10 @@ namespace lotus
                 .descriptorType = vk::DescriptorType::eAccelerationStructureKHR,
                 .descriptorCount = 1,
                 .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR,
-            },
-            vk::DescriptorSetLayoutBinding { //vertex
-                .binding = 1,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .descriptorCount = GlobalResources::max_resource_index,
-                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR,
-            },
-            vk::DescriptorSetLayoutBinding { //vertex prev
-                .binding = 2,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .descriptorCount = GlobalResources::max_resource_index,
-                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR,
-            },
-            vk::DescriptorSetLayoutBinding { //index
-                .binding = 3,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .descriptorCount = GlobalResources::max_resource_index,
-                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR,
-            },
-            vk::DescriptorSetLayoutBinding { //texture
-                .binding = 4,
-                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .descriptorCount = GlobalResources::max_resource_index,
-                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR,
-            },
-            vk::DescriptorSetLayoutBinding { //material
-                .binding = 5,
-                .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .descriptorCount = GlobalResources::max_resource_index,
-                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR,
-            },
-            vk::DescriptorSetLayoutBinding { //mesh info
-                .binding = 6,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eAnyHitKHR | vk::ShaderStageFlagBits::eIntersectionKHR,
             }
         };
 
-        std::vector<vk::DescriptorBindingFlags> binding_flags{ {}, vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind,
-            vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind, vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind,
-            vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind, vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind, {} };
-        vk::DescriptorSetLayoutBindingFlagsCreateInfo layout_flags{ .bindingCount =  static_cast<uint32_t>(binding_flags.size()), .pBindingFlags = binding_flags.data() };
-
         return renderer->gpu->device->createDescriptorSetLayoutUnique({
-            .pNext = &layout_flags,
-            .flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool,
             .bindingCount = descriptors.size(),
             .pBindings = descriptors.data()
         });
@@ -85,15 +42,11 @@ namespace lotus
     vk::UniqueDescriptorPool RaytracePipeline::initializeResourceDescriptorPool(Renderer* renderer, vk::DescriptorSetLayout layout)
     {
         std::array pool_sizes {
-            vk::DescriptorPoolSize{ vk::DescriptorType::eAccelerationStructureKHR, 1 },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eStorageBuffer, GlobalResources::max_resource_index },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eCombinedImageSampler, GlobalResources::max_resource_index },
-            vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBuffer, 1 }
+            vk::DescriptorPoolSize{ vk::DescriptorType::eAccelerationStructureKHR, renderer->getFrameCount()}
         };
 
         return renderer->gpu->device->createDescriptorPoolUnique({
-            .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
+            .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
             .maxSets = renderer->getFrameCount(),
             .poolSizeCount = pool_sizes.size(),
             .pPoolSizes = pool_sizes.data(),
@@ -369,7 +322,7 @@ namespace lotus
             .pGroups = shader_group_ci.data(),
             .maxPipelineRayRecursionDepth = 3,
             .layout = pipeline_layout
-        });
+        }).value;
     }
 
     RaytracePipeline::SBT RaytracePipeline::initializeSBT(Renderer* renderer, vk::Pipeline pipeline)
@@ -440,11 +393,6 @@ namespace lotus
         co_await tlas[renderer->getCurrentFrame()]->Build(engine);
     }
 
-    vk::DescriptorSet RaytracePipeline::getResourceDescriptorSet(uint32_t image) const
-    {
-        return *resources_descriptor_sets[image];
-    }
-
     TopLevelAccelerationStructure* RaytracePipeline::getTLAS(uint32_t image) const
     {
         if (image < tlas.size())
@@ -455,6 +403,7 @@ namespace lotus
     vk::UniqueCommandBuffer RaytracePipeline::getCommandBuffer(std::span<vk::WriteDescriptorSet> input_output_descriptors,
         std::span<vk::ImageMemoryBarrier2KHR> before_barriers, std::span<vk::ImageMemoryBarrier2KHR> after_barriers)
     {
+        auto frame = renderer->getCurrentFrame();
         auto buffer = renderer->gpu->device->allocateCommandBuffersUnique({
             .commandPool = *renderer->command_pool,
             .level = vk::CommandBufferLevel::ePrimary,
@@ -467,7 +416,27 @@ namespace lotus
 
         buffer[0]->bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, *pipeline);
 
-        buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 0, *resources_descriptor_sets[renderer->getCurrentFrame()], {});
+        vk::WriteDescriptorSetAccelerationStructureKHR write_as
+        {
+            .accelerationStructureCount = 1,
+            .pAccelerationStructures = &*tlas[frame]->acceleration_structure
+        };
+
+        vk::WriteDescriptorSet write_info_as
+        {
+            .pNext = &write_as,
+            .dstSet = *resources_descriptor_sets[frame],
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = vk::DescriptorType::eAccelerationStructureKHR,
+        };
+
+        renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
+
+        buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 0, *resources_descriptor_sets[frame], {});
+        buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 1, input_output_descriptors);
+        buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 2, renderer->global_descriptors->getDescriptorSet(), {});
 
         if (!before_barriers.empty())
         {
@@ -477,7 +446,17 @@ namespace lotus
             });
         }
 
-        buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 1, input_output_descriptors);
+        vk::MemoryBarrier2 tlas_barrier {
+            .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR,
+            .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR
+        };
+
+        buffer[0]->pipelineBarrier2KHR({
+            .memoryBarrierCount = 1,
+            .pMemoryBarriers = &tlas_barrier
+        });
 
         buffer[0]->traceRaysKHR(shader_binding_table.raygen, shader_binding_table.miss, shader_binding_table.hit, {}, renderer->swapchain->extent.width, renderer->swapchain->extent.height, 1);
 

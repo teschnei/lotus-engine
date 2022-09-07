@@ -5,15 +5,16 @@
 #include "window.h"
 #include "gpu.h"
 #include "swapchain.h"
-#include "global_resources.h"
 #include "ui_renderer.h"
 #include "common/raster_pipeline.h"
 #include "common/raytrace_pipeline.h"
 #include "common/post_process_pipeline.h"
+#include "common/async_compute.h"
 #include "engine/renderer/raytrace_query.h"
 #include "engine/task.h"
 #include "engine/renderer/model.h"
 #include "engine/entity/component/camera_component.h"
+#include "common/global_descriptors.h"
 
 namespace lotus
 {
@@ -50,6 +51,9 @@ namespace lotus
         };
         [[nodiscard]]
         ThreadLocals createThreadLocals();
+        void createDeferredImage();
+
+        vk::CommandBuffer prepareDeferredImageForPresent();
 
         uint32_t getImageCount() const { return static_cast<uint32_t>(swapchain->images.size()); }
         uint32_t getCurrentImage() const { return current_image; }
@@ -61,7 +65,14 @@ namespace lotus
 
         size_t uniform_buffer_align_up(size_t in_size) const;
         size_t storage_buffer_align_up(size_t in_size) const;
-        size_t align_up(size_t in_size, size_t alignment) const;
+        size_t acceleration_scratch_align_up(size_t in_size) const;
+        static inline size_t align_up(size_t in_size, size_t alignment)
+        {
+            if (in_size % alignment == 0)
+                return in_size;
+            else
+                return ((in_size / alignment) + 1) * alignment;
+        }
 
         virtual Task<> drawFrame() = 0;
 
@@ -69,6 +80,7 @@ namespace lotus
 
         vk::UniqueShaderModule getShader(const std::string& file_name);
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) = 0;
 
         vk::UniqueInstance instance;
@@ -77,12 +89,17 @@ namespace lotus
         vk::UniqueSurfaceKHR surface;
         std::unique_ptr<GPU> gpu;
         std::unique_ptr<Swapchain> swapchain;
-        std::unique_ptr<GlobalResources> resources;
+        std::unique_ptr<AsyncCompute> async_compute;
+
+        std::unique_ptr<GlobalDescriptors> global_descriptors;
 
         inline static thread_local vk::UniqueCommandPool graphics_pool;
         inline static thread_local vk::UniqueCommandPool compute_pool;
 
         inline static thread_local vk::UniqueDescriptorPool desc_pool;
+
+        std::unique_ptr<Image> deferred_image;
+        vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> deferred_image_view;
 
         struct
         {
@@ -111,7 +128,7 @@ namespace lotus
         std::vector<vk::UniquePipeline> pipelines;
 
         vk::UniqueCommandPool command_pool;
-        vk::UniqueCommandPool local_compute_pool;
+        std::vector<vk::UniqueCommandBuffer> present_buffers;
     public:
 
         struct FramebufferAttachment
@@ -142,6 +159,7 @@ namespace lotus
     protected:
         void createInstance(const std::string& app_name, uint32_t app_version);
         void createSwapchain();
+        void createSemaphores();
         void createCommandPool();
         void createAnimationResources();
 
@@ -154,10 +172,10 @@ namespace lotus
 
         Engine* engine;
         vk::UniqueDebugUtilsMessengerEXT debug_messenger;
-        std::vector<vk::UniqueFence> frame_fences;
         std::vector<vk::UniqueSemaphore> image_ready_sem;
         std::vector<vk::UniqueSemaphore> frame_finish_sem;
-        vk::UniqueSemaphore compute_sem;
+        std::vector<vk::UniqueSemaphore> frame_timeline_sem;
+        std::vector<uint64_t> timeline_sem_base{};
         uint32_t current_image{ 0 };
         uint32_t previous_image{ 0 };
         static constexpr uint32_t max_pending_frames{ 2 };

@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <engine/renderer/vulkan/vulkan_inc.h>
+#include <engine/renderer/vulkan/common/global_descriptors.h>
 #include "memory.h"
 #include "engine/worker_task.h"
 
@@ -53,6 +54,7 @@ namespace lotus
         void setWidth(uint32_t _width) { width = _width; }
         void setHeight(uint32_t _height) { height = _height; }
         std::string getName() { return name; }
+        uint32_t getDescriptorIndex() { return descriptor_index->index; }
 
         std::unique_ptr<Image> image;
         vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> image_view;
@@ -64,6 +66,7 @@ namespace lotus
         uint32_t width {0};
         uint32_t height {0};
         std::string name;
+        std::unique_ptr<GlobalDescriptors::TextureDescriptor::Index> descriptor_index;
 
         inline static std::unordered_map<std::string, std::weak_ptr<Texture>> texture_map{};
     };

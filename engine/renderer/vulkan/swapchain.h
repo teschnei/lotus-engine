@@ -20,7 +20,6 @@ namespace lotus
         vk::Extent2D extent{};
         vk::Format image_format{};
         std::vector<vk::Image> images;
-        std::vector<vk::UniqueImageView> image_views;
     private:
         void createSwapchain();
 

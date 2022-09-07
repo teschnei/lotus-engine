@@ -22,23 +22,21 @@ namespace lotus
 
     Task<> RendererHybrid::Init()
     {
-        createRenderpasses();
         createDescriptorSetLayout();
         rasterizer = std::make_unique<RasterPipeline>(this);
         createRaytracingPipeline();
         createGraphicsPipeline();
         createDepthImage();
-        createFramebuffers();
         createSyncs();
         createCommandPool();
         createGBufferResources();
         createAnimationResources();
+        createDeferredImage();
         post_process->Init();
 
         initializeCameraBuffers();
-        generateCommandBuffers();
 
-        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
+        current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
         raytracer->prepareNextFrame();
 
         co_await InitWork();
@@ -61,10 +59,10 @@ namespace lotus
 
         std::vector barriers = {
             vk::ImageMemoryBarrier2KHR {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eNone,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eNone,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
+                .srcStageMask = vk::PipelineStageFlagBits2::eNone,
+                .srcAccessMask = vk::AccessFlagBits2::eNone,
+                .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderWrite,
                 .oldLayout = vk::ImageLayout::eUndefined,
                 .newLayout = vk::ImageLayout::eGeneral,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -92,127 +90,6 @@ namespace lotus
         engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
         co_return;
-    }
-
-    void RendererHybrid::generateCommandBuffers()
-    {
-    }
-
-    void RendererHybrid::createRenderpasses()
-    {
-        {
-            vk::AttachmentDescription color_attachment;
-            color_attachment.format = swapchain->image_format;
-            color_attachment.samples = vk::SampleCountFlagBits::e1;
-            color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-            color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-            color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-            color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-            color_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentDescription depth_attachment;
-            depth_attachment.format = gpu->getDepthFormat();
-            depth_attachment.samples = vk::SampleCountFlagBits::e1;
-            depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-            depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-            depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-            depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-            depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-            vk::AttachmentReference color_attachment_ref;
-            color_attachment_ref.attachment = 0;
-            color_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference depth_attachment_ref;
-            depth_attachment_ref.attachment = 1;
-            depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-            vk::SubpassDescription subpass = {};
-            subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-            subpass.colorAttachmentCount = 1;
-            subpass.pColorAttachments = &color_attachment_ref;
-            subpass.pDepthStencilAttachment = &depth_attachment_ref;
-
-            vk::SubpassDependency dependency;
-            dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependency.dstSubpass = 0;
-            dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
-
-            std::array<vk::AttachmentDescription, 2> attachments = { color_attachment, depth_attachment };
-            vk::RenderPassCreateInfo render_pass_info;
-            render_pass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-            render_pass_info.pAttachments = attachments.data();
-            render_pass_info.subpassCount = 1;
-            render_pass_info.pSubpasses = &subpass;
-            render_pass_info.dependencyCount = 1;
-            render_pass_info.pDependencies = &dependency;
-
-            render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
-        }
-        {
-            vk::AttachmentDescription output_attachment;
-            output_attachment.format = swapchain->image_format;
-            output_attachment.samples = vk::SampleCountFlagBits::e1;
-            output_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-            output_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-            output_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-            output_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-            output_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            output_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentDescription depth_attachment;
-            depth_attachment.format = gpu->getDepthFormat();
-            depth_attachment.samples = vk::SampleCountFlagBits::e1;
-            depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-            depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-            depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-            depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-            depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-            vk::AttachmentReference deferred_output_attachment_ref;
-            deferred_output_attachment_ref.attachment = 0;
-            deferred_output_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            vk::AttachmentReference deferred_depth_attachment_ref;
-            deferred_depth_attachment_ref.attachment = 1;
-            deferred_depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-            std::vector<vk::AttachmentReference> deferred_color_attachment_refs = { deferred_output_attachment_ref };
-
-            vk::SubpassDescription rtx_subpass;
-            rtx_subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-            rtx_subpass.colorAttachmentCount = static_cast<uint32_t>(deferred_color_attachment_refs.size());
-            rtx_subpass.pColorAttachments = deferred_color_attachment_refs.data();
-            rtx_subpass.pDepthStencilAttachment = &deferred_depth_attachment_ref;
-
-            vk::SubpassDependency dependency_initial;
-            dependency_initial.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dependency_initial.dstSubpass = 0;
-            dependency_initial.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-            dependency_initial.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            dependency_initial.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-            dependency_initial.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
-            dependency_initial.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-
-            std::vector<vk::AttachmentDescription> gbuffer_attachments = { output_attachment, depth_attachment };
-            std::vector<vk::SubpassDescription> subpasses = { rtx_subpass };
-            std::vector<vk::SubpassDependency> subpass_dependencies = { dependency_initial };
-
-            vk::RenderPassCreateInfo render_pass_info;
-            render_pass_info.attachmentCount = static_cast<uint32_t>(gbuffer_attachments.size());
-            render_pass_info.pAttachments = gbuffer_attachments.data();
-            render_pass_info.subpassCount = static_cast<uint32_t>(subpasses.size());
-            render_pass_info.pSubpasses = subpasses.data();
-            render_pass_info.dependencyCount = static_cast<uint32_t>(subpass_dependencies.size());
-            render_pass_info.pDependencies = subpass_dependencies.data();
-
-            rtx_render_pass = gpu->device->createRenderPassUnique(render_pass_info, nullptr);
-        }
     }
 
     void RendererHybrid::createDescriptorSetLayout()
@@ -259,25 +136,26 @@ namespace lotus
         revealage_sample_layout_binding.pImmutableSamplers = nullptr;
         revealage_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding mesh_info_binding;
-        mesh_info_binding.binding = 6;
-        mesh_info_binding.descriptorCount = 1;
-        mesh_info_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
-        mesh_info_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
         vk::DescriptorSetLayoutBinding light_buffer_binding;
-        light_buffer_binding.binding = 7;
+        light_buffer_binding.binding = 6;
         light_buffer_binding.descriptorCount = 1;
         light_buffer_binding.descriptorType = vk::DescriptorType::eStorageBuffer;
         light_buffer_binding.pImmutableSamplers = nullptr;
         light_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding light_type_sample_layout_binding;
-        light_type_sample_layout_binding.binding = 8;
+        light_type_sample_layout_binding.binding = 7;
         light_type_sample_layout_binding.descriptorCount = 1;
         light_type_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         light_type_sample_layout_binding.pImmutableSamplers = nullptr;
         light_type_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        vk::DescriptorSetLayoutBinding particle_sample_layout_binding;
+        particle_sample_layout_binding.binding = 8;
+        particle_sample_layout_binding.descriptorCount = 1;
+        particle_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        particle_sample_layout_binding.pImmutableSamplers = nullptr;
+        particle_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         vk::DescriptorSetLayoutBinding camera_buffer_binding;
         camera_buffer_binding.binding = 9;
@@ -286,23 +164,16 @@ namespace lotus
         camera_buffer_binding.pImmutableSamplers = nullptr;
         camera_buffer_binding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 
-        vk::DescriptorSetLayoutBinding particle_sample_layout_binding;
-        particle_sample_layout_binding.binding = 10;
-        particle_sample_layout_binding.descriptorCount = 1;
-        particle_sample_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        particle_sample_layout_binding.pImmutableSamplers = nullptr;
-        particle_sample_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
         std::vector<vk::DescriptorSetLayoutBinding> rtx_deferred_bindings = { position_sample_layout_binding, albedo_sample_layout_binding, light_sample_layout_binding,
-            material_index_layout_binding, accumulation_sample_layout_binding, revealage_sample_layout_binding, mesh_info_binding, light_buffer_binding,
-            light_type_sample_layout_binding, camera_buffer_binding, particle_sample_layout_binding };
+            material_index_layout_binding, accumulation_sample_layout_binding, revealage_sample_layout_binding, light_buffer_binding,
+            light_type_sample_layout_binding, particle_sample_layout_binding, camera_buffer_binding };
 
-        vk::DescriptorSetLayoutCreateInfo rtx_deferred_layout_info;
-        rtx_deferred_layout_info.bindingCount = static_cast<uint32_t>(rtx_deferred_bindings.size());
-        rtx_deferred_layout_info.pBindings = rtx_deferred_bindings.data();
-        rtx_deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+        vk::DescriptorSetLayoutCreateInfo deferred_layout_info;
+        deferred_layout_info.bindingCount = static_cast<uint32_t>(rtx_deferred_bindings.size());
+        deferred_layout_info.pBindings = rtx_deferred_bindings.data();
+        deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
 
-        rtx_descriptor_layout_deferred = gpu->device->createDescriptorSetLayoutUnique(rtx_deferred_layout_info, nullptr);
+        descriptor_layout_deferred = gpu->device->createDescriptorSetLayoutUnique(deferred_layout_info, nullptr);
     }
 
     void RendererHybrid::createRaytracingPipeline()
@@ -411,9 +282,7 @@ namespace lotus
 
             vk::PipelineViewportStateCreateInfo viewport_state;
             viewport_state.viewportCount = 1;
-            viewport_state.pViewports = &viewport;
             viewport_state.scissorCount = 1;
-            viewport_state.pScissors = &scissor;
 
             vk::PipelineRasterizationStateCreateInfo rasterizer;
             rasterizer.depthClampEnable = false;
@@ -451,30 +320,50 @@ namespace lotus
             color_blending.blendConstants[2] = 0.0f;
             color_blending.blendConstants[3] = 0.0f;
 
-            std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *rtx_descriptor_layout_deferred };
+            std::array<vk::DescriptorSetLayout, 1> descriptor_layouts = { *descriptor_layout_deferred };
 
             vk::PipelineLayoutCreateInfo pipeline_layout_info;
             pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
             pipeline_layout_info.pSetLayouts = descriptor_layouts.data();
 
-            rtx_deferred_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
+            deferred_pipeline_layout = gpu->device->createPipelineLayoutUnique(pipeline_layout_info, nullptr);
 
-            vk::GraphicsPipelineCreateInfo pipeline_info;
-            pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-            pipeline_info.pStages = shaderStages.data();
-            pipeline_info.pVertexInputState = &vertex_input_info;
-            pipeline_info.pInputAssemblyState = &input_assembly;
-            pipeline_info.pViewportState = &viewport_state;
-            pipeline_info.pRasterizationState = &rasterizer;
-            pipeline_info.pMultisampleState = &multisampling;
-            pipeline_info.pDepthStencilState = &depth_stencil;
-            pipeline_info.pColorBlendState = &color_blending;
-            pipeline_info.layout = *rtx_deferred_pipeline_layout;
-            pipeline_info.renderPass = *rtx_render_pass;
-            pipeline_info.subpass = 0;
-            pipeline_info.basePipelineHandle = nullptr;
+            std::array attachment_formats{ vk::Format::eR32G32B32A32Sfloat };
 
-            rtx_deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr);
+            vk::PipelineRenderingCreateInfoKHR rendering_info {
+                .viewMask = 0,
+                .colorAttachmentCount = attachment_formats.size(),
+                .pColorAttachmentFormats = attachment_formats.data(),
+                .depthAttachmentFormat = gpu->getDepthFormat()
+            };
+
+            std::array dynamic_states{ vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+
+            vk::PipelineDynamicStateCreateInfo dynamic_state
+            {
+                .dynamicStateCount = dynamic_states.size(),
+                .pDynamicStates = dynamic_states.data()
+            };
+
+            vk::GraphicsPipelineCreateInfo pipeline_info
+            {
+                .pNext = &rendering_info,
+                .stageCount = static_cast<uint32_t>(shaderStages.size()),
+                .pStages = shaderStages.data(),
+                .pVertexInputState = &vertex_input_info,
+                .pInputAssemblyState = &input_assembly,
+                .pViewportState = &viewport_state,
+                .pRasterizationState = &rasterizer,
+                .pMultisampleState = &multisampling,
+                .pDepthStencilState = &depth_stencil,
+                .pColorBlendState = &color_blending,
+                .pDynamicState = &dynamic_state,
+                .layout = *deferred_pipeline_layout,
+                .subpass = 0,
+                .basePipelineHandle = nullptr
+            };
+
+            deferred_pipeline = gpu->device->createGraphicsPipelineUnique(nullptr, pipeline_info, nullptr).value;
         }
     }
 
@@ -497,39 +386,23 @@ namespace lotus
         depth_image_view = gpu->device->createImageViewUnique(image_view_info, nullptr);
     }
 
-    void RendererHybrid::createFramebuffers()
-    {
-        frame_buffers.clear();
-        for (auto& swapchain_image_view : swapchain->image_views) {
-            std::array<vk::ImageView, 2> attachments = {
-                *swapchain_image_view,
-                *depth_image_view
-            };
-
-            vk::FramebufferCreateInfo framebuffer_info = {};
-            framebuffer_info.renderPass = *render_pass;
-            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebuffer_info.pAttachments = attachments.data();
-            framebuffer_info.width = swapchain->extent.width;
-            framebuffer_info.height = swapchain->extent.height;
-            framebuffer_info.layers = 1;
-
-            frame_buffers.push_back(gpu->device->createFramebufferUnique(framebuffer_info, nullptr));
-        }
-    }
+    static constexpr uint64_t timeline_graphics = 1;
+    static constexpr uint64_t timeline_frame_ready = 2;
 
     void RendererHybrid::createSyncs()
     {
-        vk::FenceCreateInfo fenceInfo;
-        fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-        for (uint32_t i = 0; i < max_pending_frames; ++i)
+        vk::SemaphoreTypeCreateInfo semaphore_type
         {
-            frame_fences.push_back(gpu->device->createFenceUnique(fenceInfo, nullptr));
-            image_ready_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
-            frame_finish_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
+            .semaphoreType = vk::SemaphoreType::eTimeline,
+            .initialValue = timeline_frame_ready
+        };
+        for (auto i = 0; i < max_pending_frames; ++i)
+        {
+            frame_timeline_sem.push_back(gpu->device->createSemaphoreUnique({
+                .pNext = &semaphore_type
+            }));
+            timeline_sem_base.push_back(0);
         }
-        gbuffer_sem = gpu->device->createSemaphoreUnique({}, nullptr);
-        compute_sem = gpu->device->createSemaphoreUnique({}, nullptr);
     }
 
     void RendererHybrid::createGBufferResources()
@@ -575,27 +448,66 @@ namespace lotus
 
         vk::CommandBuffer buffer = *deferred_command_buffers[0];
 
-        vk::CommandBufferBeginInfo begin_info = {};
-        begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+        buffer.begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
 
-        buffer.begin(begin_info);
-
-        std::array clear_values
-        {
-            vk::ClearValue{ .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f } },
-            vk::ClearValue{ .depthStencil = 1.f }
+        std::array pre_render_transitions {
+            vk::ImageMemoryBarrier2KHR {
+                .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
+                .srcAccessMask = {},
+                .dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                .dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = deferred_image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            }
         };
 
-        vk::RenderPassBeginInfo renderpass_info;
-        renderpass_info.renderPass = *rtx_render_pass;
-        renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-        renderpass_info.pClearValues = clear_values.data();
-        renderpass_info.renderArea.offset = vk::Offset2D{ 0, 0 };
-        renderpass_info.renderArea.extent = swapchain->extent;
-        renderpass_info.framebuffer = *frame_buffers[current_image];
-        buffer.beginRenderPass(renderpass_info, vk::SubpassContents::eInline);
+        buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(pre_render_transitions.size()),
+            .pImageMemoryBarriers = pre_render_transitions.data()
+        });
 
-        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline);
+        std::array colour_attachments{
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *deferred_image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            }
+        };
+
+        vk::RenderingAttachmentInfoKHR depth_info {
+            .imageView = *depth_image_view,
+            .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+        };
+
+        buffer.beginRenderingKHR({
+            .renderArea = {
+                .extent = swapchain->extent
+            },
+            .layerCount = 1,
+            .viewMask = 0,
+            .colorAttachmentCount = colour_attachments.size(),
+            .pColorAttachments = colour_attachments.data(),
+            .pDepthAttachment = &depth_info
+        });
+
+        buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *deferred_pipeline);
 
         vk::DescriptorImageInfo albedo_info;
         albedo_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -632,11 +544,6 @@ namespace lotus
         particle_info.imageView = *rasterizer->getGBuffer().particle.image_view;
         particle_info.sampler = *rasterizer->getGBuffer().sampler;
 
-        vk::DescriptorBufferInfo mesh_info;
-        mesh_info.buffer = resources->mesh_info_buffer->buffer;
-        mesh_info.offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * current_frame;
-        mesh_info.range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index;
-
         vk::DescriptorBufferInfo light_buffer_info;
         light_buffer_info.buffer = engine->lights->light_buffer->buffer;
         light_buffer_info.offset = current_frame * engine->lights->GetBufferSize();
@@ -652,7 +559,7 @@ namespace lotus
         camera_buffer_info.offset = current_frame * uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData));
         camera_buffer_info.range = sizeof(Component::CameraComponent::CameraData);
 
-        std::vector<vk::WriteDescriptorSet> descriptorWrites {11};
+        std::vector<vk::WriteDescriptorSet> descriptorWrites {10};
 
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
@@ -694,19 +601,19 @@ namespace lotus
         descriptorWrites[6].dstBinding = 6;
         descriptorWrites[6].dstArrayElement = 0;
         descriptorWrites[6].descriptorCount = 1;
-        descriptorWrites[6].pBufferInfo = &mesh_info;
+        descriptorWrites[6].pBufferInfo = &light_buffer_info;
 
-        descriptorWrites[7].descriptorType = vk::DescriptorType::eStorageBuffer;
         descriptorWrites[7].dstBinding = 7;
         descriptorWrites[7].dstArrayElement = 0;
+        descriptorWrites[7].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[7].descriptorCount = 1;
-        descriptorWrites[7].pBufferInfo = &light_buffer_info;
+        descriptorWrites[7].pImageInfo = &light_type_info;
 
         descriptorWrites[8].dstBinding = 8;
         descriptorWrites[8].dstArrayElement = 0;
         descriptorWrites[8].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[8].descriptorCount = 1;
-        descriptorWrites[8].pImageInfo = &light_type_info;
+        descriptorWrites[8].pImageInfo = &particle_info;
 
         descriptorWrites[9].descriptorType = vk::DescriptorType::eUniformBuffer;
         descriptorWrites[9].dstBinding = 9;
@@ -714,17 +621,28 @@ namespace lotus
         descriptorWrites[9].descriptorCount = 1;
         descriptorWrites[9].pBufferInfo = &camera_buffer_info;
 
-        descriptorWrites[10].dstBinding = 10;
-        descriptorWrites[10].dstArrayElement = 0;
-        descriptorWrites[10].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrites[10].descriptorCount = 1;
-        descriptorWrites[10].pImageInfo = &particle_info;
+        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
 
-        buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *rtx_deferred_pipeline_layout, 0, descriptorWrites);
+        vk::Viewport viewport {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = (float)engine->renderer->swapchain->extent.width,
+            .height = (float)engine->renderer->swapchain->extent.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+
+        vk::Rect2D scissor {
+            .offset = vk::Offset2D{0, 0},
+            .extent = engine->renderer->swapchain->extent
+        };
+
+        buffer.setScissor(0, scissor);
+        buffer.setViewport(0, viewport);
 
         buffer.draw(3, 1, 0, 0);
 
-        buffer.endRenderPass();
+        buffer.endRenderingKHR();
 
         buffer.end();
 
@@ -737,40 +655,51 @@ namespace lotus
         camera_buffers.view_proj_mapped = static_cast<Component::CameraComponent::CameraData*>(camera_buffers.view_proj_ubo->map(0, engine->renderer->uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * getFrameCount(), {}));
     }
 
-    std::pair<vk::UniqueCommandBuffer, vk::UniqueCommandBuffer> RendererHybrid::getRenderCommandbuffers()
+    std::vector<vk::CommandBuffer> RendererHybrid::getRenderCommandbuffers()
     {
+        auto secondary_buffers = engine->worker_pool->getSecondaryGraphicsBuffers(current_frame);
+        auto transparent_buffers = engine->worker_pool->getParticleGraphicsBuffers(current_frame);
+        std::vector<vk::CommandBuffer> render_buffers(secondary_buffers.size() + transparent_buffers.size() + 3);
         auto buffer = gpu->device->allocateCommandBuffersUnique({
             .commandPool = *command_pool,
             .level = vk::CommandBufferLevel::ePrimary,
-            .commandBufferCount = 1,
+            .commandBufferCount = 3,
         });
 
         buffer[0]->begin({
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
         });
 
-        auto clear_values = rasterizer->getRenderPassClearValues();
-
-        buffer[0]->beginRenderPass({
-            .renderPass = rasterizer->getRenderPass(),
-            .framebuffer = *rasterizer->getGBuffer().frame_buffer,
-            .renderArea = vk::Rect2D {
-                .offset = vk::Offset2D{ 0, 0 },
-                .extent = swapchain->extent
-            },
-            .clearValueCount = static_cast<uint32_t>(clear_values.size()),
-            .pClearValues = clear_values.data(),
-        }, vk::SubpassContents::eSecondaryCommandBuffers);
-
-        auto secondary_buffers = engine->worker_pool->getSecondaryGraphicsBuffers(current_frame);
-        if (!secondary_buffers.empty())
-            buffer[0]->executeCommands(secondary_buffers);
-        buffer[0]->nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
-        auto particle_buffers = engine->worker_pool->getParticleGraphicsBuffers(current_frame);
-        if (!particle_buffers.empty())
-            buffer[0]->executeCommands(particle_buffers);
-        buffer[0]->endRenderPass();
+        rasterizer->beginRendering(*buffer[0]);
+        rasterizer->beginMainCommandBufferRendering(*buffer[0], vk::RenderingFlagBitsKHR::eSuspending);
+        buffer[0]->endRenderingKHR();
         buffer[0]->end();
+
+        render_buffers[0] = *buffer[0];
+        std::ranges::copy(secondary_buffers, render_buffers.begin() + 1);
+
+        buffer[1]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+
+        rasterizer->beginMainCommandBufferRendering(*buffer[1], vk::RenderingFlagBitsKHR::eResuming);
+        buffer[1]->endRenderingKHR();
+        rasterizer->beginTransparencyCommandBufferRendering(*buffer[1], vk::RenderingFlagBitsKHR::eSuspending);
+        buffer[1]->endRenderingKHR();
+        buffer[1]->end();
+
+        render_buffers[1 + secondary_buffers.size()] = *buffer[1];
+        std::ranges::copy(transparent_buffers, render_buffers.begin() + 2 + secondary_buffers.size());
+
+        buffer[2]->begin({
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
+        });
+        rasterizer->beginTransparencyCommandBufferRendering(*buffer[2], vk::RenderingFlagBitsKHR::eResuming);
+        buffer[2]->endRenderingKHR();
+        rasterizer->endRendering(*buffer[2]);
+        buffer[2]->end();
+
+        render_buffers.back() = *buffer[2];
 
         vk::DescriptorImageInfo target_image_info_colour {
             .imageView = *rtx_gbuffer.colour.image_view,
@@ -891,10 +820,10 @@ namespace lotus
         {
             vk::ImageMemoryBarrier2KHR
             {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eShaderWrite,
-                .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+                .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                 .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                 .newLayout = vk::ImageLayout::eGeneral,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -911,8 +840,11 @@ namespace lotus
         };
 
         auto raytrace_buffer = raytracer->getCommandBuffer(descriptors, {}, after_writes);
+        render_buffers.push_back(*raytrace_buffer);
 
-        return { std::move(buffer[0]), std::move(raytrace_buffer) };
+        engine->worker_pool->gpuResource(std::move(buffer), std::move(raytrace_buffer));
+
+        return render_buffers;
     }
     
     Task<> RendererHybrid::drawFrame()
@@ -920,128 +852,126 @@ namespace lotus
         if (!engine->game || !engine->game->scene)
             co_return;
 
+        global_descriptors->updateDescriptorSet();
+
         engine->worker_pool->deleteFinished();
-        gpu->device->waitForFences(*frame_fences[current_frame], true, std::numeric_limits<uint64_t>::max());
-        resources->BindResources(current_frame);
+        uint64_t frame_ready_value = timeline_sem_base[current_frame] + timeline_frame_ready;
+        gpu->device->waitSemaphores({
+            .semaphoreCount = 1,
+            .pSemaphores = &*frame_timeline_sem[current_frame],
+            .pValues = &frame_ready_value
+        }, std::numeric_limits<uint64_t>::max());
+        timeline_sem_base[current_frame] = timeline_sem_base[current_frame] + timeline_frame_ready;
+
+        engine->worker_pool->clearProcessed(current_frame);
+        swapchain->checkOldSwapchain(current_frame);
+
+        co_await raytracer->prepareFrame(engine);
+
+        engine->worker_pool->beginProcessing(current_frame);
+
+        engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
+        engine->lights->UpdateLightBuffer();
+
+        auto buffers_temp = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
+        auto render_buffers = getRenderCommandbuffers();
+        std::vector<vk::CommandBufferSubmitInfoKHR> buffers;
+        buffers.resize(buffers_temp.size() + render_buffers.size());
+        std::ranges::transform(buffers_temp, buffers.begin(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
+        std::ranges::transform(render_buffers, buffers.begin() + buffers_temp.size(), [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = buffer}; });
+
+        //post process
+        auto post_buffer = post_process->getCommandBuffer(*rtx_gbuffer.colour.image_view, *rasterizer->getGBuffer().normal.image_view, *rasterizer->getGBuffer().motion_vector.image_view);
+        buffers.push_back({ .commandBuffer = *post_buffer });
+
+        vk::SemaphoreSubmitInfoKHR graphics_sem {
+            .semaphore = *frame_timeline_sem[current_frame],
+            .value = timeline_sem_base[current_frame] + timeline_graphics,
+            .stageMask = vk::PipelineStageFlagBits2::eAllCommands
+        };
+
+        //deferred render
+        auto deferred_buffer = getDeferredCommandBuffer();
+        auto ui_buffers = ui->Render();
+        std::vector<vk::CommandBufferSubmitInfoKHR> deferred_buffers{ {.commandBuffer = *deferred_buffer} };
+        deferred_buffers.resize(1 + ui_buffers.size());
+        std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{ .commandBuffer = buffer }; });
+        deferred_buffers.push_back({ .commandBuffer = prepareDeferredImageForPresent()});
+
+        std::array deferred_waits {
+            graphics_sem,
+            vk::SemaphoreSubmitInfoKHR {
+                .semaphore = *image_ready_sem[current_frame],
+                .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput
+            }
+        };
+
+        std::array deferred_signals {
+            vk::SemaphoreSubmitInfoKHR {
+                .semaphore = *frame_timeline_sem[current_frame],
+                .value = timeline_sem_base[current_frame] + timeline_frame_ready,
+                .stageMask = vk::PipelineStageFlagBits2::eAllCommands
+            },
+            vk::SemaphoreSubmitInfoKHR {
+                .semaphore = *frame_finish_sem[current_frame],
+                .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput
+            }
+        };
+
+        gpu->graphics_queue.submit2KHR({
+            vk::SubmitInfo2KHR {
+                .commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
+                .pCommandBufferInfos = buffers.data(),
+                .signalSemaphoreInfoCount = 1,
+                .pSignalSemaphoreInfos = &graphics_sem
+            },
+            vk::SubmitInfo2KHR {
+                .waitSemaphoreInfoCount = deferred_waits.size(),
+                .pWaitSemaphoreInfos = deferred_waits.data(),
+                .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
+                .pCommandBufferInfos = deferred_buffers.data(),
+                .signalSemaphoreInfoCount = deferred_signals.size(),
+                .pSignalSemaphoreInfos = deferred_signals.data()
+            }
+        });
+
+        engine->worker_pool->gpuResource(std::move(post_buffer));
+        engine->worker_pool->gpuResource(std::move(deferred_buffer));
+
+        std::vector<vk::Semaphore> present_waits{ *frame_finish_sem[current_frame] };
+        std::vector<vk::SwapchainKHR> swap_chains = { *swapchain->swapchain };
+
+        co_await engine->worker_pool->mainThread();
 
         try
         {
-            engine->worker_pool->clearProcessed(current_frame);
-            swapchain->checkOldSwapchain(current_frame);
-
-            co_await raytracer->prepareFrame(engine);
-
-            engine->worker_pool->beginProcessing(current_frame);
-
-            engine->camera->writeToBuffer(*(Component::CameraComponent::CameraData*)(((uint8_t*)camera_buffers.view_proj_mapped) + uniform_buffer_align_up(sizeof(Component::CameraComponent::CameraData)) * current_frame));
-            engine->lights->UpdateLightBuffer();
-
-            std::vector<vk::Semaphore> waitSemaphores = { *image_ready_sem[current_frame] };
-            std::vector<vk::PipelineStageFlags> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eRayTracingShaderKHR };
-            auto buffers = engine->worker_pool->getPrimaryComputeBuffers(current_frame);
-            if (!buffers.empty())
-            {
-                vk::SubmitInfo submitInfo = {};
-                submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
-                submitInfo.pCommandBuffers = buffers.data();
-                //TODO: make this more fine-grained (having all graphics wait for compute is overkill)
-                vk::Semaphore compute_signal_sems[] = { *compute_sem };
-                submitInfo.signalSemaphoreCount = 1;
-                submitInfo.pSignalSemaphores = compute_signal_sems;
-
-                gpu->compute_queue.submit(submitInfo, nullptr);
-                waitSemaphores.push_back(*compute_sem);
-                waitStages.push_back(vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR | vk::PipelineStageFlagBits::eVertexInput);
-            }
-
-            vk::SubmitInfo submitInfo = {};
-            submitInfo.waitSemaphoreCount = waitSemaphores.size();
-            submitInfo.pWaitSemaphores = waitSemaphores.data();
-            submitInfo.pWaitDstStageMask = waitStages.data();
-
-            buffers = engine->worker_pool->getPrimaryGraphicsBuffers(current_frame);
-            auto [raster_buffer, raytrace_buffer] = getRenderCommandbuffers();
-            buffers.push_back(*raster_buffer);
-            buffers.push_back(*raytrace_buffer);
-
-            submitInfo.commandBufferCount = static_cast<uint32_t>(buffers.size());
-            submitInfo.pCommandBuffers = buffers.data();
-
-            std::vector<vk::Semaphore> gbuffer_semaphores = { *gbuffer_sem };
-            submitInfo.pSignalSemaphores = gbuffer_semaphores.data();
-            submitInfo.signalSemaphoreCount = gbuffer_semaphores.size();
-
-            gpu->graphics_queue.submit(submitInfo, nullptr);
-
-            engine->worker_pool->gpuResource(std::move(raster_buffer), std::move(raytrace_buffer));
-
-            //post process
-            auto post_buffer = post_process->getCommandBuffer(*rtx_gbuffer.colour.image_view, *rasterizer->getGBuffer().normal.image_view, *rasterizer->getGBuffer().motion_vector.image_view);
-            std::vector<vk::PipelineStageFlags> post_process_stage_flags = { vk::PipelineStageFlagBits::eComputeShader };
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &*post_buffer;
-            submitInfo.pWaitDstStageMask = post_process_stage_flags.data();
-
-            submitInfo.waitSemaphoreCount = gbuffer_semaphores.size();
-            submitInfo.pWaitSemaphores = gbuffer_semaphores.data();
-            std::vector<vk::Semaphore> post_sems = { *compute_sem };
-            submitInfo.signalSemaphoreCount = post_sems.size();
-            submitInfo.pSignalSemaphores = post_sems.data();
-            gpu->compute_queue.submit(submitInfo, nullptr);
-
-            engine->worker_pool->gpuResource(std::move(post_buffer));
-
-            //deferred render
-            submitInfo.waitSemaphoreCount = post_sems.size();
-            submitInfo.pWaitSemaphores = post_sems.data();
-            auto deferred_buffer = getDeferredCommandBuffer();
-            std::vector<vk::CommandBuffer> deferred_commands{ *deferred_buffer };
-            submitInfo.commandBufferCount = static_cast<uint32_t>(deferred_commands.size());
-            submitInfo.pCommandBuffers = deferred_commands.data();
-
-            std::vector<vk::Semaphore> frame_sem = { *frame_finish_sem[current_frame] };
-            submitInfo.signalSemaphoreCount = frame_sem.size();
-            submitInfo.pSignalSemaphores = frame_sem.data();
-            gpu->graphics_queue.submit(submitInfo, nullptr);
-
-            engine->worker_pool->gpuResource(std::move(deferred_buffer));
-
-            //ui
-            auto ui_buffer = ui->Render();
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &ui_buffer;
-
-            submitInfo.waitSemaphoreCount = frame_sem.size();
-            submitInfo.pWaitSemaphores = frame_sem.data();
-            submitInfo.signalSemaphoreCount = frame_sem.size();
-            submitInfo.pSignalSemaphores = frame_sem.data();
-            gpu->device->resetFences(*frame_fences[current_frame]);
-            gpu->graphics_queue.submit(submitInfo, *frame_fences[current_frame]);
-
-            vk::PresentInfoKHR presentInfo = {};
-
-            presentInfo.waitSemaphoreCount = frame_sem.size();
-            presentInfo.pWaitSemaphores = frame_sem.data();
-
-            std::vector<vk::SwapchainKHR> swap_chains = { *swapchain->swapchain };
-            presentInfo.swapchainCount = swap_chains.size();
-            presentInfo.pSwapchains = swap_chains.data();
-
-            presentInfo.pImageIndices = &current_image;
-
-            co_await engine->worker_pool->mainThread();
-            gpu->present_queue.presentKHR(presentInfo);
-
-            previous_frame = current_frame;
-            current_frame = (current_frame + 1) % max_pending_frames;
-            previous_image = current_image;
-            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr);
-            raytracer->prepareNextFrame();
+            gpu->present_queue.presentKHR({
+                .waitSemaphoreCount = static_cast<uint32_t>(present_waits.size()),
+                .pWaitSemaphores = present_waits.data(),
+                .swapchainCount = static_cast<uint32_t>(swap_chains.size()),
+                .pSwapchains = swap_chains.data(),
+                .pImageIndices = &current_image
+                });
         }
         catch (vk::OutOfDateKHRError&)
         {
-            resize = true;
+            co_return;
         }
+
+        previous_frame = current_frame;
+        current_frame = (current_frame + 1) % max_pending_frames;
+        previous_image = current_image;
+        try
+        {
+            current_image = gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
+        }
+
+        catch (vk::OutOfDateKHRError&)
+        {
+            co_return;
+        }
+
+        raytracer->prepareNextFrame();
 
         if (resize)
         {
@@ -1056,11 +986,9 @@ namespace lotus
         engine->worker_pool->Reset();
         swapchain->recreateSwapchain(current_frame);
 
-        createRenderpasses();
         createDepthImage();
         //can skip this if scissor/viewport are dynamic
         createGraphicsPipeline();
-        createFramebuffers();
         createGBufferResources();
         createAnimationResources();
         post_process->Init();
@@ -1073,8 +1001,18 @@ namespace lotus
     vk::Pipeline RendererHybrid::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info)
     {
         info.layout = rasterizer->getPipelineLayout();
-        info.renderPass = rasterizer->getRenderPass();
+        auto pipeline_rendering_info = rasterizer->getMainRenderPassInfo();
+        info.pNext = &pipeline_rendering_info;
         std::lock_guard lk{ shutdown_mutex };
-        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr));
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
+    }
+
+    vk::Pipeline RendererHybrid::createParticlePipeline(vk::GraphicsPipelineCreateInfo& info)
+    {
+        info.layout = rasterizer->getPipelineLayout();
+        auto pipeline_rendering_info = rasterizer->getTransparentRenderPassInfo();
+        info.pNext = &pipeline_rendering_info;
+        std::lock_guard lk{ shutdown_mutex };
+        return *pipelines.emplace_back(gpu->device->createGraphicsPipelineUnique(nullptr, info, nullptr).value);
     }
 }

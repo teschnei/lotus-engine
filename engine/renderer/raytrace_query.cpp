@@ -164,12 +164,12 @@ namespace lotus
             missSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_miss, shader_stride, shader_stride * shader_misscount };
             hitSBT = vk::StridedDeviceAddressRegionKHR{ engine->renderer->gpu->device->getBufferAddress({.buffer = shader_binding_table->buffer}) + shader_offset_hit, shader_stride, shader_stride * shader_hitcount };
         }
-        raytrace_query_queue = engine->renderer->gpu->device->getQueue(engine->renderer->gpu->compute_queue_index, 1);
+        raytrace_query_queue = engine->renderer->gpu->device->getQueue(engine->renderer->gpu->graphics_queue_index, 0);
         vk::FenceCreateInfo fence_info;
         fence = engine->renderer->gpu->device->createFenceUnique(fence_info, nullptr);
 
         vk::CommandPoolCreateInfo pool_info = {};
-        pool_info.queueFamilyIndex = engine->renderer->gpu->compute_queue_index;
+        pool_info.queueFamilyIndex = engine->renderer->gpu->graphics_queue_index;
 
         command_pool = engine->renderer->gpu->device->createCommandPoolUnique(pool_info, nullptr);
     }
@@ -177,7 +177,7 @@ namespace lotus
     Task<float> RaytraceQueryer::query(ObjectFlags object_flags, glm::vec3 origin, glm::vec3 direction, float min, float max)
     {
         auto q = query_queue(object_flags, origin, direction, min, max);
-        if (!query_running.test_and_set())
+        if (task_count.fetch_add(1) == 0)
         {
             runQueries();
         }
@@ -196,10 +196,11 @@ namespace lotus
             auto tlas = engine->renderer->raytracer->getTLAS(engine->renderer->getPreviousFrame());
             if (engine->game->scene && tlas && tlas->handle != 0)
             {
-                auto processing_queries = async_query_queue.getAll();
-
-                if (!processing_queries.empty())
+                auto local_task_count = 1;
+                while (local_task_count > 0)
                 {
+                    auto processing_queries = async_query_queue.getAll();
+
                     size_t input_buffer_size = sizeof(RaytraceInput) * processing_queries.size();
                     size_t output_buffer_size = sizeof(RaytraceOutput) * processing_queries.size();
                     input_buffer = engine->renderer->gpu->memory_manager->GetBuffer(input_buffer_size, vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -272,10 +273,10 @@ namespace lotus
 
                     vk::MemoryBarrier2KHR barrier
                     {
-                        .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                        .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
-                        .dstStageMask = vk::PipelineStageFlagBits2KHR::eRayTracingShader,
-                        .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead
+                        .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                        .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR,
+                        .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+                        .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR
                     };
 
                     buffer[0]->pipelineBarrier2KHR({
@@ -305,17 +306,22 @@ namespace lotus
                         query->awaiting.resume();
                     }
                     output_buffer->unmap();
-                    query_running.clear();
-                    return;
+
+                    local_task_count = task_count.fetch_sub(processing_queries.size()) - processing_queries.size();
                 }
                 return;
             }
         }
-        for (auto& query : async_query_queue.getAll())
+        auto local_task_count = 1;
+        while (local_task_count > 0)
         {
-            query->data.result = query->data.max;
-            query->awaiting.resume();
+            auto queries = async_query_queue.getAll();
+            for (auto& query : queries)
+            {
+                query->data.result = query->data.max;
+                query->awaiting.resume();
+            }
+            local_task_count = task_count.fetch_sub(queries.size()) - queries.size();
         }
-        query_running.clear();
     }
 }

@@ -17,7 +17,6 @@ namespace lotus
         old_swapchain_image = image;
         swapchain.reset();
         images.clear();
-        image_views.clear();
         createSwapchain();
     }
 
@@ -95,7 +94,7 @@ namespace lotus
         swapchain_create_info.imageColorSpace = surface_format.colorSpace;
         swapchain_create_info.imageExtent = swap_extent;
         swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+        swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eTransferDst;
 
         if (old_swapchain)
         {
@@ -138,15 +137,6 @@ namespace lotus
         image_view_info.subresourceRange.levelCount = 1;
         image_view_info.subresourceRange.baseArrayLayer = 0;
         image_view_info.subresourceRange.layerCount = 1;
-
-        if (image_views.empty())
-        {
-            for (auto& swapchain_image : images)
-            {
-                image_view_info.image = swapchain_image;
-                image_views.push_back(gpu->device->createImageViewUnique(image_view_info, nullptr));
-            }
-        }
     }
 
     Swapchain::swapChainInfo Swapchain::getSwapChainInfo(vk::PhysicalDevice device, vk::SurfaceKHR surface)

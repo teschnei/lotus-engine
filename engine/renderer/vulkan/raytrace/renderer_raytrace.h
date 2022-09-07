@@ -17,22 +17,18 @@ namespace lotus
 
         virtual Task<> drawFrame() override;
 
-        vk::UniqueDescriptorSetLayout static_descriptor_set_layout;
-        vk::UniqueDescriptorSetLayout deferred_descriptor_set_layout;
-
         std::unique_ptr<Image> depth_image;
         vk::UniqueImageView depth_image_view;
         std::vector<vk::UniqueCommandBuffer> render_commandbuffers;
-        vk::UniqueSemaphore raytrace_sem;
 
         virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
+        virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
         virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
 
         /* Ray tracing */
-        vk::UniqueDescriptorSetLayout rtx_descriptor_layout_deferred;
-        vk::UniqueRenderPass rtx_render_pass;
-        vk::UniquePipelineLayout rtx_deferred_pipeline_layout;
-        vk::UniquePipeline rtx_deferred_pipeline;
+        vk::UniqueDescriptorSetLayout descriptor_layout_deferred;
+        vk::UniquePipelineLayout deferred_pipeline_layout;
+        vk::UniquePipeline deferred_pipeline;
 
         struct RaytraceGBuffer
         {
@@ -43,22 +39,19 @@ namespace lotus
             FramebufferAttachment motion_vector;
 
             vk::UniqueSampler sampler;
-        } rtx_gbuffer;
+        } gbuffer;
 
     private:
-        void createRenderpasses();
         void createDescriptorSetLayout();
         void createRaytracingPipeline();
         void createGraphicsPipeline();
         void createDepthImage();
-        void createFramebuffers();
         void createSyncs();
         void createGBufferResources();
 
         virtual Task<> recreateRenderer() override;
 
         void initializeCameraBuffers();
-        void generateCommandBuffers();
 
         vk::CommandBuffer getRenderCommandbuffer();
         vk::UniqueCommandBuffer getDeferredCommandBuffer();

@@ -18,7 +18,7 @@ namespace lotus::Component
         {
             vk::CommandBufferAllocateInfo alloc_info {
                 .commandPool = *engine->renderer->graphics_pool,
-                .level = vk::CommandBufferLevel::eSecondary,
+                .level = vk::CommandBufferLevel::ePrimary,
                 .commandBufferCount = command_buffer_count
             };
 
@@ -39,16 +39,11 @@ namespace lotus::Component
     {
         uint32_t image = engine->renderer->getCurrentFrame();
 
-        vk::CommandBufferInheritanceInfo inheritInfo {
-            .renderPass = engine->renderer->rasterizer->getRenderPass(),
-            .subpass = 1,
-            .framebuffer = *engine->renderer->rasterizer->getGBuffer().frame_buffer
-        };
-
         command_buffer.begin({
-            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue,
-            .pInheritanceInfo = &inheritInfo
+            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
         });
+
+        engine->renderer->rasterizer->beginTransparencyCommandBufferRendering(command_buffer, vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending);
 
         std::array camera_buffer_info
         {
@@ -72,12 +67,6 @@ namespace lotus::Component
             .range = model_buffer_range
         };
 
-        vk::DescriptorBufferInfo mesh_info {
-            .buffer = engine->renderer->resources->mesh_info_buffer->buffer,
-            .offset = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index * image,
-            .range = sizeof(GlobalResources::MeshInfo) * GlobalResources::max_resource_index,
-        };
-
         std::array descriptorWrites {
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
@@ -89,49 +78,56 @@ namespace lotus::Component
             },
             vk::WriteDescriptorSet {
                 .dstSet = nullptr,
-                .dstBinding = 2,
+                .dstBinding = 1,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
                 .pBufferInfo = &model_buffer_info
-            },
-            vk::WriteDescriptorSet {
-                .dstSet = nullptr,
-                .dstBinding = 3,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .pBufferInfo = &mesh_info
             }
         };
 
         command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
+        command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 1, engine->renderer->global_descriptors->getDescriptorSet(), {});
+
+        vk::Viewport viewport {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = (float)engine->renderer->swapchain->extent.width,
+            .height = (float)engine->renderer->swapchain->extent.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+
+        vk::Rect2D scissor {
+            .offset = vk::Offset2D{0, 0},
+            .extent = engine->renderer->swapchain->extent
+        };
+
+        command_buffer.setScissor(0, scissor);
+        command_buffer.setViewport(0, viewport);
 
         drawModels(command_buffer, false);
         drawModels(command_buffer, true);
 
+        command_buffer.endRenderingKHR();
         command_buffer.end();
     }
 
     void ParticleRasterComponent::drawModels(vk::CommandBuffer command_buffer, bool transparency)
     {
-        auto models = particle_component.getModels();
-        for (size_t model_i = 0; model_i < models.size(); ++model_i)
+        auto [model, info] = particle_component.getModel();
+        if (!model->meshes.empty() && model->rendered)
         {
-            Model* model = models[model_i].get();
-            if (!model->meshes.empty() && model->rendered)
+            for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
             {
-                for (size_t mesh_i = 0; mesh_i < model->meshes.size(); ++mesh_i)
+                Mesh* mesh = model->meshes[mesh_i].get();
+                if (mesh->has_transparency == transparency)
                 {
-                    Mesh* mesh = model->meshes[mesh_i].get();
-                    if (mesh->has_transparency == transparency)
-                    {
-                        auto quad_size = mesh->getVertexStride() * 6;
-                        auto vertex_buffer_offset = particle_component.current_sprite * quad_size;
-                        command_buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, {vertex_buffer_offset});
-                        //TODO: different for particles probably
-                        drawMesh(command_buffer, *mesh, particle_component.resource_index + mesh_i, particle_component.pipeline_index);
-                    }
+                    auto quad_size = mesh->getVertexStride() * 6;
+                    auto vertex_buffer_offset = particle_component.current_sprite * quad_size;
+                    command_buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, {vertex_buffer_offset});
+                    //TODO: different for particles probably
+                    drawMesh(command_buffer, *mesh, info->index, particle_component.pipeline_index);
                 }
             }
         }
@@ -139,49 +135,10 @@ namespace lotus::Component
 
     void ParticleRasterComponent::drawMesh(vk::CommandBuffer command_buffer, const Mesh& mesh, uint32_t material_index, uint32_t pipeline_index)
     {
-        vk::DescriptorBufferInfo material_info;
-
-        vk::DescriptorImageInfo image_info;
-        image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-        //TODO: debug texture? probably AYAYA
-        if (mesh.material)
-        {
-            auto [buffer, offset] = mesh.material->getBuffer();
-            material_info.buffer = buffer;
-            material_info.offset = offset;
-            material_info.range = Material::getMaterialBufferSize(engine);
-            if (mesh.material->texture)
-            {
-                image_info.imageView = *mesh.material->texture->image_view;
-                image_info.sampler = *mesh.material->texture->sampler;
-            }
-        }
-
         vk::PipelineLayout pipeline_layout;
 
         pipeline_layout = engine->renderer->rasterizer->getPipelineLayout();
         command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[pipeline_index]);
-
-        std::array descriptorWrites {
-            vk::WriteDescriptorSet {
-                .dstSet = nullptr,
-                .dstBinding = 1,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .pImageInfo = &image_info
-            },
-            vk::WriteDescriptorSet {
-                .dstSet = nullptr,
-                .dstBinding = 4,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .pBufferInfo = &material_info
-            }
-        };
-        command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, descriptorWrites);
 
         command_buffer.pushConstants<uint32_t>(pipeline_layout, vk::ShaderStageFlagBits::eFragment, 0, material_index);
 

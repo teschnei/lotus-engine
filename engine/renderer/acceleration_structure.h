@@ -5,7 +5,6 @@
 #include "memory.h"
 #include "engine/types.h"
 #include "engine/worker_task.h"
-#include "engine/renderer/vulkan/global_resources.h"
 
 namespace lotus
 {

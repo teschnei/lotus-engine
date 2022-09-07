@@ -358,6 +358,19 @@ namespace FFXI
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertex_buffer_size, vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(index_buffer_size, index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+        mesh->vertex_descriptor_index->write({
+            .buffer = mesh->vertex_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
+
+        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+        mesh->index_descriptor_index->write({
+            .buffer = mesh->index_buffer->buffer,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE
+        });
         mesh->setMaxIndex(3);
         mesh->setVertexCount(vertices.size());
         mesh->setIndexCount(indices.size());
@@ -544,10 +557,10 @@ namespace FFXI
         {
             vk::MemoryBarrier2KHR barrier
             {
-                .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eAccelerationStructureWrite
+                .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                .dstStageMask =  vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR | vk::AccessFlagBits2::eAccelerationStructureWriteKHR
             };
 
             command_buffer->pipelineBarrier2KHR({
@@ -561,8 +574,7 @@ namespace FFXI
 
         command_buffer->end();
 
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
-        engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
+        co_await engine->renderer->async_compute->compute(std::move(command_buffer));
         co_return;
     }
 

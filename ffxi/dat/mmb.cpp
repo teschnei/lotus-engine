@@ -453,6 +453,20 @@ namespace FFXI
 
             mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
             mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
+            mesh->vertex_descriptor_index->write({
+                .buffer = mesh->vertex_buffer->buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+            });
+
+            mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
+            mesh->index_descriptor_index->write({
+                .buffer = mesh->index_buffer->buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+            });
+
             mesh->setMaxIndex(*std::ranges::max_element(mmb_mesh.indices));
 
             vertices.push_back(std::move(vertices_uint8));
@@ -499,24 +513,6 @@ namespace FFXI
         input_assembly.topology = vk::PrimitiveTopology::eTriangleList;
         input_assembly.primitiveRestartEnable = false;
 
-        vk::Viewport viewport;
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float)engine->renderer->swapchain->extent.width;
-        viewport.height = (float)engine->renderer->swapchain->extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-
-        vk::Rect2D scissor;
-        scissor.offset = vk::Offset2D{0, 0};
-        scissor.extent = engine->renderer->swapchain->extent;
-
-        vk::PipelineViewportStateCreateInfo viewport_state;
-        viewport_state.viewportCount = 1;
-        viewport_state.pViewports = &viewport;
-        viewport_state.scissorCount = 1;
-        viewport_state.pScissors = &scissor;
-
         vk::PipelineRasterizationStateCreateInfo rasterizer;
         rasterizer.depthClampEnable = false;
         rasterizer.rasterizerDiscardEnable = false;
@@ -547,21 +543,7 @@ namespace FFXI
         color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
         color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
 
-        vk::PipelineColorBlendAttachmentState color_blend_attachment_accumulation = color_blend_attachment;
-        color_blend_attachment_accumulation.blendEnable = true;
-        color_blend_attachment_accumulation.srcColorBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.dstColorBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-        color_blend_attachment_accumulation.dstAlphaBlendFactor = vk::BlendFactor::eOne;
-        vk::PipelineColorBlendAttachmentState color_blend_attachment_revealage = color_blend_attachment;
-        color_blend_attachment_revealage.blendEnable = true;
-        color_blend_attachment_revealage.srcColorBlendFactor = vk::BlendFactor::eZero;
-        color_blend_attachment_revealage.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-        color_blend_attachment_revealage.srcAlphaBlendFactor = vk::BlendFactor::eZero;
-        color_blend_attachment_revealage.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcColor;
-
         std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states(7, color_blend_attachment);
-        std::vector<vk::PipelineColorBlendAttachmentState> color_blend_attachment_states_subpass1{ color_blend_attachment_accumulation, color_blend_attachment_revealage };
 
         color_blend_attachment_states[3].blendEnable = true;
 
@@ -575,22 +557,33 @@ namespace FFXI
         color_blending.blendConstants[2] = 0.0f;
         color_blending.blendConstants[3] = 0.0f;
 
-        vk::PipelineColorBlendStateCreateInfo color_blending_subpass1 = color_blending;
-        color_blending_subpass1.attachmentCount = static_cast<uint32_t>(color_blend_attachment_states_subpass1.size());
-        color_blending_subpass1.pAttachments = color_blend_attachment_states_subpass1.data();
+        std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eScissor, vk::DynamicState::eViewport };
+        vk::PipelineDynamicStateCreateInfo dynamic_state_ci
+        {
+            .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+            .pDynamicStates = dynamic_states.data()
+        };
 
-        vk::GraphicsPipelineCreateInfo pipeline_info;
-        pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipeline_info.pStages = shaderStages.data();
-        pipeline_info.pVertexInputState = &vertex_input_info;
-        pipeline_info.pInputAssemblyState = &input_assembly;
-        pipeline_info.pViewportState = &viewport_state;
-        pipeline_info.pRasterizationState = &rasterizer;
-        pipeline_info.pMultisampleState = &multisampling;
-        pipeline_info.pDepthStencilState = &depth_stencil;
-        pipeline_info.pColorBlendState = &color_blending;
-        pipeline_info.subpass = 0;
-        pipeline_info.basePipelineHandle = nullptr;
+        vk::PipelineViewportStateCreateInfo viewport_info
+        {
+            .viewportCount = 1,
+            .scissorCount = 1
+        };
+
+        vk::GraphicsPipelineCreateInfo pipeline_info
+        {
+            .stageCount = static_cast<uint32_t>(shaderStages.size()),
+            .pStages = shaderStages.data(),
+            .pVertexInputState = &vertex_input_info,
+            .pInputAssemblyState = &input_assembly,
+            .pViewportState = &viewport_info,
+            .pRasterizationState = &rasterizer,
+            .pMultisampleState = &multisampling,
+            .pDepthStencilState = &depth_stencil,
+            .pColorBlendState = &color_blending,
+            .pDynamicState = &dynamic_state_ci,
+            .basePipelineHandle = nullptr
+        };
 
         pipeline = engine->renderer->createGraphicsPipeline(pipeline_info);
 
@@ -615,19 +608,12 @@ namespace FFXI
         pipeline_info.stageCount = static_cast<uint32_t>(shaderStages.size());
         pipeline_info.pStages = shaderStages.data();
 
-        viewport.width = engine->settings.renderer_settings.shadowmap_dimension;
-        viewport.height = engine->settings.renderer_settings.shadowmap_dimension;
-        scissor.extent.width = engine->settings.renderer_settings.shadowmap_dimension;
-        scissor.extent.height = engine->settings.renderer_settings.shadowmap_dimension;
-
         rasterizer.depthClampEnable = true;
         rasterizer.depthBiasEnable = true;
 
-        std::vector<vk::DynamicState> dynamic_states = { vk::DynamicState::eDepthBias };
-        vk::PipelineDynamicStateCreateInfo dynamic_state_ci;
+        dynamic_states.push_back(vk::DynamicState::eDepthBias);
         dynamic_state_ci.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
         dynamic_state_ci.pDynamicStates = dynamic_states.data();
-        pipeline_info.pDynamicState = &dynamic_state_ci;
         pipeline_shadowmap_blend = engine->renderer->createShadowmapPipeline(pipeline_info);
 
         pipeline_info.stageCount = 1;

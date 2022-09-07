@@ -4,6 +4,7 @@
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "memory.h"
 #include "material.h"
+#include "engine/renderer/vulkan/common/global_descriptors.h"
 
 namespace lotus
 {
@@ -56,6 +57,8 @@ namespace lotus
         std::unique_ptr<Buffer> index_buffer;
         std::unique_ptr<Buffer> aabbs_buffer;
 
+        std::unique_ptr<GlobalDescriptors::VertexDescriptor::Index> vertex_descriptor_index;
+        std::unique_ptr<GlobalDescriptors::IndexDescriptor::Index> index_descriptor_index;
 
         std::shared_ptr<Material> material;
 
@@ -75,5 +78,4 @@ namespace lotus
         uint32_t max_index{ 0 };
         uint16_t sprite_count{ 1 };
     };
-
 }

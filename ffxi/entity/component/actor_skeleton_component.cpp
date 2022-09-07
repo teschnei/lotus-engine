@@ -92,27 +92,28 @@ namespace FFXI
             }
         }
 
-        auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + std::string(os2s.front()->name, 4) + std::to_string(modelid), FFXIActorLoader::LoadModel, engine, os2s);
-
-        auto init_task = deformed_component.initModel(model);
-
         for (const auto& task : texture_tasks)
         {
             co_await task;
         }
+
+        auto [model, model_task] = lotus::Model::LoadModel(std::string("iroha_test") + std::string(os2s.front()->name, 4) + std::to_string(modelid), FFXIActorLoader::LoadModel, engine, os2s);
+
         if (model_task)
             co_await *model_task;
+
+        auto init_task = deformed_component.initModel(model);
 
         auto new_model_transform = co_await std::move(init_task);
         lotus::Component::DeformableRaytraceComponent::ModelAccelerationStructures acceleration;
         if (raytrace_component)
         {
-            acceleration = co_await raytrace_component->initModel(model, new_model_transform);
+            acceleration = co_await raytrace_component->initModel(new_model_transform);
         }
 
         co_await engine->worker_pool->waitForFrame();
 
-        deformed_component.replaceModelIndex(model, std::move(new_model_transform), slot);
+        deformed_component.replaceModelIndex(std::move(new_model_transform), slot);
         if (raytrace_component)
         {
             raytrace_component->replaceModelIndex(std::move(acceleration), slot);

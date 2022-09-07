@@ -67,7 +67,7 @@ namespace lotus::Component
     {
         vk::CommandBufferAllocateInfo alloc_info;
         alloc_info.level = vk::CommandBufferLevel::ePrimary;
-        alloc_info.commandPool = *engine->renderer->compute_pool;
+        alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = 1;
 
         auto command_buffers = engine->renderer->gpu->device->allocateCommandBuffersUnique(alloc_info);
@@ -99,10 +99,10 @@ namespace lotus::Component
 
         vk::BufferMemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eComputeShader,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eShaderRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+            .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+            .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer = skeleton_bone_buffer->buffer,
@@ -116,7 +116,7 @@ namespace lotus::Component
         });
         command_buffer->end();
 
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         co_return;
     }

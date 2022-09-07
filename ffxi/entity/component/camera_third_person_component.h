@@ -11,7 +11,7 @@ namespace FFXI
     class CameraThirdPersonComponent : public lotus::Component::Component<CameraThirdPersonComponent, lotus::Component::Before<lotus::Component::CameraComponent, ActorComponent>>
     {
     public:
-        explicit CameraThirdPersonComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::CameraComponent& camera, ActorComponent& target);
+        explicit CameraThirdPersonComponent(lotus::Entity*, lotus::Engine* engine, lotus::Component::CameraComponent& camera, ActorComponent& target, bool right_click_face);
 
         lotus::Task<> tick(lotus::time_point time, lotus::duration delta);
         bool handleInput(lotus::Input*, const SDL_Event&);
@@ -37,6 +37,7 @@ namespace FFXI
             LookBoth
         };
         Look look{ Look::NoLook };
+        Look right_click{ Look::LookBoth };
         glm::ivec2 look_pos{};
     };
 }

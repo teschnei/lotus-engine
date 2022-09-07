@@ -15,6 +15,8 @@ namespace lotus
         build_info.pGeometries = geometries.data();
 
         auto size_info = renderer->gpu->device->getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, build_info, max_primitive_counts);
+        size_info.buildScratchSize += renderer->gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment;
+        size_info.updateScratchSize += renderer->gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment;
 
         scratch_memory = renderer->gpu->memory_manager->GetBuffer(size_info.buildScratchSize > size_info.updateScratchSize ?
             size_info.buildScratchSize : size_info.updateScratchSize, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -41,10 +43,10 @@ namespace lotus
     {
         vk::BufferMemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
+            .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer = scratch_memory->buffer,
@@ -64,7 +66,7 @@ namespace lotus
             .dstAccelerationStructure = *acceleration_structure,
             .geometryCount = static_cast<uint32_t>(geometries.size()),
             .pGeometries = geometries.data(),
-            .scratchData = renderer->gpu->device->getBufferAddress({.buffer = scratch_memory->buffer}) 
+            .scratchData = renderer->acceleration_scratch_align_up(renderer->gpu->device->getBufferAddress({.buffer = scratch_memory->buffer})) 
         };
 
         command_buffer.buildAccelerationStructuresKHR( build_info, ranges.data());
@@ -124,7 +126,7 @@ namespace lotus
         uint32_t instance_count = instance_index.load();
         //priority: 2
         vk::CommandBufferAllocateInfo alloc_info {
-            .commandPool = *renderer->compute_pool,
+            .commandPool = *renderer->graphics_pool,
             .level = vk::CommandBufferLevel::ePrimary,
             .commandBufferCount = 1,
         };
@@ -161,20 +163,6 @@ namespace lotus
             //info.allowsTransforms = true;
             std::vector<uint32_t> max_primitives { { instance_count } };
             CreateAccelerationStructure(instance_data_vec, max_primitives);
-
-            vk::WriteDescriptorSet write_info_as;
-            write_info_as.descriptorCount = 1;
-            write_info_as.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
-            write_info_as.dstBinding = 0;
-            write_info_as.dstArrayElement = 0;
-
-            vk::WriteDescriptorSetAccelerationStructureKHR write_as;
-            write_as.accelerationStructureCount = 1;
-            write_as.pAccelerationStructures = &*acceleration_structure;
-            write_info_as.pNext = &write_as;
-
-            write_info_as.dstSet = renderer->raytracer->getResourceDescriptorSet(renderer->getCurrentFrame());
-            renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
         }
         auto data = instance_memory->map(0, instance_count * sizeof(vk::AccelerationStructureInstanceKHR), {});
         memcpy(data, instances.GetData(), instance_count * sizeof(vk::AccelerationStructureInstanceKHR));
@@ -182,10 +170,10 @@ namespace lotus
 
         vk::MemoryBarrier2KHR barrier
         {
-            .srcStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .srcAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-            .dstStageMask = vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-            .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+            .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
+            .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+            .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
         };
 
         command_buffer->pipelineBarrier2KHR({
@@ -197,7 +185,7 @@ namespace lotus
 
         command_buffer->end();
 
-        engine->worker_pool->command_buffers.compute.queue(*command_buffer);
+        engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
         engine->worker_pool->gpuResource(std::move(command_buffer));
         co_return;
     }

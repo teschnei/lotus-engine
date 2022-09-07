@@ -51,7 +51,7 @@ namespace lotus::ui
     void Element::GenerateCommandBuffers(Engine* engine)
     {
         vk::CommandBufferAllocateInfo alloc_info;
-        alloc_info.level = vk::CommandBufferLevel::eSecondary;
+        alloc_info.level = vk::CommandBufferLevel::ePrimary;
         alloc_info.commandPool = *engine->renderer->graphics_pool;
         alloc_info.commandBufferCount = static_cast<uint32_t>(engine->renderer->getImageCount());
 

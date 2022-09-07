@@ -13,19 +13,19 @@ struct Vertex
     vec2 uv;
 };
 
-layout(binding = 1, set = 0) buffer readonly Vertices
+layout(binding = 0, set = 2) buffer readonly Vertices
 {
     vec4 v[];
-} vertices[1024];
+} vertices[];
 
-layout(binding = 3, set = 0) buffer readonly Indices
+layout(binding = 1, set = 2) buffer readonly Indices
 {
     int i[];
-} indices[1024];
+} indices[];
 
-layout(binding = 6, set = 0) buffer readonly MeshInfo
+layout(binding = 4, set = 2) buffer readonly MeshInfo
 {
-    Mesh m[1024];
+    Mesh m[];
 } meshInfo;
 
 hitAttributeEXT block {

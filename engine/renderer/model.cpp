@@ -92,10 +92,10 @@ namespace lotus
                 //TODO: test if just buffermemorybarrier is faster
                 vk::MemoryBarrier2KHR barrier
                 {
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                    .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eTransferRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                    .dstStageMask =  vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                    .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR | vk::AccessFlagBits2::eTransferRead,
                 };
 
                 command_buffer->pipelineBarrier2KHR({
@@ -105,86 +105,12 @@ namespace lotus
 
                 bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(renderer, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info),
                     std::move(max_primitive_count), false, lifetime == Lifetime::Long, BottomLevelAccelerationStructure::Performance::FastTrace);
-
-                if (lifetime == Lifetime::Long && rendered)
-                {
-                    std::vector<vk::DescriptorBufferInfo> descriptor_vertex_info;
-                    std::vector<vk::DescriptorBufferInfo> descriptor_index_info;
-                    std::vector<vk::DescriptorBufferInfo> descriptor_material_info;
-                    std::vector<vk::DescriptorImageInfo> descriptor_texture_info;
-                    resource_index = renderer->resources->static_binding_offset.fetch_add(meshes.size());
-                    for (size_t i = 0; i < meshes.size(); ++i)
-                    {
-                        auto& mesh = meshes[i];
-                        descriptor_vertex_info.emplace_back(mesh->vertex_buffer->buffer, 0, VK_WHOLE_SIZE);
-                        descriptor_index_info.emplace_back(mesh->index_buffer->buffer, 0, VK_WHOLE_SIZE);
-                        uint32_t mesh_index = 0;
-                        if (mesh->material)
-                        {
-                            auto [buffer, offset] = mesh->material->getBuffer();
-                            descriptor_material_info.emplace_back(buffer, offset, Material::getMaterialBufferSize(engine));
-                            descriptor_texture_info.emplace_back(*mesh->material->texture->sampler, *mesh->material->texture->image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
-                            mesh->material->index = resource_index + i;
-                            mesh_index = (uint32_t)mesh->material->index;
-                        }
-                        for (size_t image = 0; image < engine->renderer->getFrameCount(); ++image)
-                        {
-                            renderer->resources->mesh_info_buffer_mapped[image * GlobalResources::max_resource_index + resource_index + i] =
-                            { resource_index + (uint32_t)i, resource_index + (uint32_t)i, (uint32_t)mesh->getIndexCount(), mesh_index, glm::vec3{1.0}, 0, glm::vec4{1.f} };
-                        }
-                    }
-
-                    vk::WriteDescriptorSet write_info_vertex;
-                    write_info_vertex.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    write_info_vertex.dstArrayElement = resource_index;
-                    write_info_vertex.dstBinding = 1;
-                    write_info_vertex.descriptorCount = static_cast<uint32_t>(descriptor_vertex_info.size());
-                    write_info_vertex.pBufferInfo = descriptor_vertex_info.data();
-
-                    vk::WriteDescriptorSet write_info_index;
-                    write_info_index.descriptorType = vk::DescriptorType::eStorageBuffer;
-                    write_info_index.dstArrayElement = resource_index;
-                    write_info_index.dstBinding = 3;
-                    write_info_index.descriptorCount = static_cast<uint32_t>(descriptor_index_info.size());
-                    write_info_index.pBufferInfo = descriptor_index_info.data();
-
-                    vk::WriteDescriptorSet write_info_texture;
-                    write_info_texture.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-                    write_info_texture.dstArrayElement = resource_index;
-                    write_info_texture.dstBinding = 4;
-                    write_info_texture.descriptorCount = static_cast<uint32_t>(descriptor_texture_info.size());
-                    write_info_texture.pImageInfo = descriptor_texture_info.data();
-
-                    vk::WriteDescriptorSet write_info_material;
-                    write_info_material.descriptorType = vk::DescriptorType::eUniformBuffer;
-                    write_info_material.dstArrayElement = resource_index;
-                    write_info_material.dstBinding = 5;
-                    write_info_material.descriptorCount = static_cast<uint32_t>(descriptor_material_info.size());
-                    write_info_material.pBufferInfo = descriptor_material_info.data();
-
-                    std::vector<vk::WriteDescriptorSet> writes;
-                    for (size_t i = 0; i < engine->renderer->getFrameCount(); ++i)
-                    {
-                        write_info_vertex.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
-                        write_info_index.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
-                        write_info_texture.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
-                        write_info_material.dstSet = renderer->raytracer->getResourceDescriptorSet(i);
-                        if (write_info_vertex.descriptorCount > 0)
-                            writes.push_back(write_info_vertex);
-                        if (write_info_index.descriptorCount > 0)
-                            writes.push_back(write_info_index);
-                        if (write_info_texture.descriptorCount > 0)
-                            writes.push_back(write_info_texture);
-                        if (write_info_material.descriptorCount > 0)
-                            writes.push_back(write_info_material);
-                    }
-                    engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
-                }
             }
             command_buffer->end();
 
-            engine->worker_pool->command_buffers.compute.queue(*command_buffer);
-            engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
+            //engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);
+            co_await engine->renderer->async_compute->compute(std::move(command_buffer));
+            //engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
         }
         co_return;
     }
@@ -259,10 +185,10 @@ namespace lotus
             {
                 vk::MemoryBarrier2KHR barrier
                 {
-                    .srcStageMask = vk::PipelineStageFlagBits2KHR::eTransfer,
-                    .srcAccessMask = vk::AccessFlagBits2KHR::eTransferWrite,
-                    .dstStageMask =  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
-                    .dstAccessMask = vk::AccessFlagBits2KHR::eAccelerationStructureWrite | vk::AccessFlagBits2KHR::eAccelerationStructureRead | vk::AccessFlagBits2KHR::eTransferRead,
+                    .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                    .dstStageMask =  vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                    .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR | vk::AccessFlagBits2::eTransferRead,
                 };
 
                 command_buffer->pipelineBarrier2KHR({
@@ -274,8 +200,7 @@ namespace lotus
             }
             command_buffer->end();
 
-            engine->worker_pool->command_buffers.compute.queue(*command_buffer);
-            engine->worker_pool->gpuResource(std::move(staging_buffer), std::move(command_buffer));
+            co_await engine->renderer->async_compute->compute(std::move(command_buffer));
         }
         co_return;
     }

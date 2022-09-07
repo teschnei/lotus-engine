@@ -10,8 +10,9 @@ namespace lotus
     {
         descriptor_set_layout = initializeDescriptorSetLayout(renderer);
         pipeline_layout = initializePipelineLayout(renderer, *descriptor_set_layout);
-        render_pass = initializeRenderPass(renderer, *pipeline_layout);
-        gbuffer = initializeGBuffer(renderer, *render_pass);
+        main_attachment_formats = initializeMainRenderPass(renderer);
+        transparency_attachment_formats = initializeTransparentRenderPass(renderer);
+        gbuffer = initializeGBuffer(renderer);
     }
 
     vk::UniqueDescriptorSetLayout RasterPipeline::initializeDescriptorSetLayout(Renderer* renderer)
@@ -24,30 +25,12 @@ namespace lotus
                 .descriptorCount = 2,
                 .stageFlags = vk::ShaderStageFlagBits::eVertex
             },
-            vk::DescriptorSetLayoutBinding { //texture
-                .binding = 1,
-                .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eFragment
-            },
             vk::DescriptorSetLayoutBinding { //model
-                .binding = 2,
+                .binding = 1,
                 .descriptorType = vk::DescriptorType::eUniformBuffer,
                 .descriptorCount = 1,
                 .stageFlags = vk::ShaderStageFlagBits::eVertex
-            },
-            vk::DescriptorSetLayoutBinding { //mesh
-                .binding = 3,
-                .descriptorType = vk::DescriptorType::eStorageBuffer,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eFragment
-            },
-            vk::DescriptorSetLayoutBinding { //material
-                .binding = 4,
-                .descriptorType = vk::DescriptorType::eUniformBuffer,
-                .descriptorCount = 1,
-                .stageFlags = vk::ShaderStageFlagBits::eFragment
-            },
+            }
         };
 
         return renderer->gpu->device->createDescriptorSetLayoutUnique({
@@ -59,7 +42,7 @@ namespace lotus
 
     vk::UniquePipelineLayout RasterPipeline::initializePipelineLayout(Renderer* renderer, vk::DescriptorSetLayout descriptor_set_layout)
     {
-        std::array descriptor_layouts = { descriptor_set_layout };
+        std::array descriptor_layouts = { descriptor_set_layout, renderer->global_descriptors->getDescriptorLayout() };
 
         //material index
         vk::PushConstantRange push_constant_range
@@ -77,228 +60,46 @@ namespace lotus
         }, nullptr);
     }
 
-    vk::UniqueRenderPass RasterPipeline::initializeRenderPass(Renderer* renderer, vk::PipelineLayout pipeline_layout)
+    vk::PipelineRenderingCreateInfoKHR RasterPipeline::getMainRenderPassInfo()
     {
-        std::array attachments {
-            vk::AttachmentDescription { //position
-                .format = vk::Format::eR32G32B32A32Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-            },
-            vk::AttachmentDescription { //normal
-                .format = vk::Format::eR32G32B32A32Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-            },
-            vk::AttachmentDescription { //face normal
-                .format = vk::Format::eR32G32B32A32Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            },
-            vk::AttachmentDescription { //albedo
-                .format = vk::Format::eR8G8B8A8Unorm,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-            },
-            vk::AttachmentDescription { //material
-                .format = vk::Format::eR16Uint,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            },
-            vk::AttachmentDescription { //light
-                .format = vk::Format::eR8Uint,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            },
-            vk::AttachmentDescription { //motion vector
-                .format = vk::Format::eR32G32B32A32Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eDontCare,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eGeneral,
-            },
-            vk::AttachmentDescription { //accumulation
-                .format = vk::Format::eR16G16B16A16Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            },
-            vk::AttachmentDescription { //revealage
-                .format = vk::Format::eR16Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            },
-            vk::AttachmentDescription { //particle
-                .format = vk::Format::eR32G32B32A32Sfloat,
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eStore,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            },
-            vk::AttachmentDescription { //depth
-                .format = renderer->gpu->getDepthFormat(),
-                .samples = vk::SampleCountFlagBits::e1,
-                .loadOp = vk::AttachmentLoadOp::eClear,
-                .storeOp = vk::AttachmentStoreOp::eDontCare,
-                .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-                .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-                .initialLayout = vk::ImageLayout::eUndefined,
-                .finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-            },
+        return {
+            .viewMask = 0,
+            .colorAttachmentCount = static_cast<uint32_t>(main_attachment_formats.size()),
+            .pColorAttachmentFormats = main_attachment_formats.data(),
+            .depthAttachmentFormat = renderer->gpu->getDepthFormat()
         };
+    }
 
-        std::array color_attachment_refs {
-            vk::AttachmentReference { //position
-                .attachment = 0,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //normal
-                .attachment = 1,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //face normal
-                .attachment = 2,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //albedo
-                .attachment = 3,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //material
-                .attachment = 4,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //light type
-                .attachment = 5,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //motion vector
-                .attachment = 6,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            }
+    vk::PipelineRenderingCreateInfoKHR RasterPipeline::getTransparentRenderPassInfo()
+    {
+        return {
+            .viewMask = 0,
+            .colorAttachmentCount = static_cast<uint32_t>(transparency_attachment_formats.size()),
+            .pColorAttachmentFormats = transparency_attachment_formats.data(),
+            .depthAttachmentFormat = renderer->gpu->getDepthFormat()
         };
+    }
 
-        vk::AttachmentReference depth_attachment_ref {
-            .attachment = 10,
-            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
+    std::vector<vk::Format> RasterPipeline::initializeMainRenderPass(Renderer* renderer)
+    {
+        return {
+            vk::Format::eR32G32B32A32Sfloat,
+            vk::Format::eR32G32B32A32Sfloat,
+            vk::Format::eR32G32B32A32Sfloat,
+            vk::Format::eR8G8B8A8Unorm,
+            vk::Format::eR16Uint,
+            vk::Format::eR8Uint,
+            vk::Format::eR32G32B32A32Sfloat
         };
+    }
 
-        std::array color_attachment_transparent_refs {
-            vk::AttachmentReference { //accumulation
-                .attachment = 7,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //revealage
-                .attachment = 8,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            },
-            vk::AttachmentReference { //particle
-                .attachment = 9,
-                .layout = vk::ImageLayout::eColorAttachmentOptimal
-            }
+    std::vector<vk::Format> RasterPipeline::initializeTransparentRenderPass(Renderer* renderer)
+    {
+        return {
+            vk::Format::eR16G16B16A16Sfloat,
+            vk::Format::eR16Sfloat,
+            vk::Format::eR32G32B32A32Sfloat
         };
-
-        std::vector<uint32_t> preserve_attachment_transparent_refs;
-        std::ranges::transform(color_attachment_refs, std::back_inserter(preserve_attachment_transparent_refs), &vk::AttachmentReference::attachment);
-
-        std::array subpasses
-        {
-            vk::SubpassDescription { //main render pass
-                .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-                .colorAttachmentCount = static_cast<uint32_t>(color_attachment_refs.size()),
-                .pColorAttachments = color_attachment_refs.data(),
-                .pDepthStencilAttachment = &depth_attachment_ref
-            },
-            vk::SubpassDescription { //transparency pass
-                .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-                .colorAttachmentCount = static_cast<uint32_t>(color_attachment_transparent_refs.size()),
-                .pColorAttachments = color_attachment_transparent_refs.data(),
-                .pDepthStencilAttachment = &depth_attachment_ref,
-                .preserveAttachmentCount = static_cast<uint32_t>(preserve_attachment_transparent_refs.size()),
-                .pPreserveAttachments = preserve_attachment_transparent_refs.data()
-            }
-        };
-
-        std::array dependencies
-        {
-            vk::SubpassDependency {
-                .srcSubpass = VK_SUBPASS_EXTERNAL,
-                .dstSubpass = 0,
-                .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                .dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite
-            },
-            vk::SubpassDependency {
-                .srcSubpass = 0,
-                .dstSubpass = 1,
-                .srcStageMask = vk::PipelineStageFlagBits::eLateFragmentTests,
-                .dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests,
-                .srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-                .dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead
-            },
-            vk::SubpassDependency {
-                .srcSubpass = 0,
-                .dstSubpass = VK_SUBPASS_EXTERNAL,
-                .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                .dstStageMask = vk::PipelineStageFlagBits::eRayTracingShaderKHR,
-                .srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
-                .dstAccessMask = vk::AccessFlagBits::eShaderRead
-            }
-        };
-
-        return renderer->gpu->device->createRenderPassUnique({
-            .attachmentCount = static_cast<uint32_t>(attachments.size()),
-            .pAttachments = attachments.data(),
-            .subpassCount = subpasses.size(),
-            .pSubpasses = subpasses.data(),
-            .dependencyCount = dependencies.size(),
-            .pDependencies = dependencies.data()
-        }, nullptr);
     }
 
     RasterPipeline::FramebufferAttachment RasterPipeline::initializeFramebufferAttachment(Renderer* renderer, vk::Extent2D extent, vk::Format format, vk::ImageUsageFlags usage_flags)
@@ -323,7 +124,7 @@ namespace lotus
         };
     }
 
-    RasterPipeline::GBuffer RasterPipeline::initializeGBuffer(Renderer* renderer, vk::RenderPass render_pass)
+    RasterPipeline::GBuffer RasterPipeline::initializeGBuffer(Renderer* renderer)
     {
         auto extent = renderer->swapchain->extent;
         GBuffer gbuffer{
@@ -354,15 +155,6 @@ namespace lotus
             *gbuffer.depth.image_view
         };
 
-        gbuffer.frame_buffer = renderer->gpu->device->createFramebufferUnique({
-            .renderPass = render_pass,
-            .attachmentCount = static_cast<uint32_t>(attachments.size()),
-            .pAttachments = attachments.data(),
-            .width = extent.width,
-            .height = extent.height,
-            .layers = 1
-        }, nullptr);
-
         gbuffer.sampler = renderer->gpu->device->createSamplerUnique({
             .magFilter = vk::Filter::eNearest,
             .minFilter = vk::Filter::eNearest,
@@ -381,20 +173,231 @@ namespace lotus
         return gbuffer;
     }
 
-    std::vector<vk::ClearValue> RasterPipeline::getRenderPassClearValues()
+    void RasterPipeline::beginRendering(vk::CommandBuffer buffer)
     {
-        return {
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 0.2f, 0.4f, 0.6f, 1.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f }},
-            { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+        std::vector<vk::ImageMemoryBarrier2KHR> pre_render_transitions;
+
+        for (const auto& i : { gbuffer.position.image->image, gbuffer.normal.image->image, gbuffer.face_normal.image->image, gbuffer.albedo.image->image,
+            gbuffer.material.image->image, gbuffer.light_type.image->image, gbuffer.motion_vector.image->image, gbuffer.accumulation.image->image,
+            gbuffer.revealage.image->image, gbuffer.particle.image->image })
+        {
+            pre_render_transitions.push_back({
+                .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
+                .srcAccessMask = {},
+                .dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                .dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = i,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            });
+        }
+
+        pre_render_transitions.push_back({
+                .srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                .srcAccessMask = {},
+                .dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                .dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                .oldLayout = vk::ImageLayout::eUndefined,
+                .newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = gbuffer.depth.image->image,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eDepth,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            });
+
+        buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(pre_render_transitions.size()),
+            .pImageMemoryBarriers = pre_render_transitions.data()
+        });
+    }
+
+    void RasterPipeline::endRendering(vk::CommandBuffer buffer)
+    {
+        std::vector<vk::ImageMemoryBarrier2KHR> post_render_transitions;
+
+        for (const auto& i : { gbuffer.position.image->image, gbuffer.normal.image->image, gbuffer.face_normal.image->image, gbuffer.albedo.image->image,
+            gbuffer.material.image->image, gbuffer.light_type.image->image, gbuffer.accumulation.image->image,
+            gbuffer.revealage.image->image, gbuffer.particle.image->image })
+        {
+            post_render_transitions.push_back({
+                .srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                .srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+                .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR | vk::PipelineStageFlagBits2::eFragmentShader,
+                .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
+                .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = i,
+                .subresourceRange = {
+                    .aspectMask = vk::ImageAspectFlagBits::eColor,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            });
+        }
+
+        post_render_transitions.push_back({
+            .srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+            .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
+            .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
+            .newLayout = vk::ImageLayout::eGeneral,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = gbuffer.motion_vector.image->image,
+            .subresourceRange = {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            }
+        });
+
+        buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(post_render_transitions.size()),
+            .pImageMemoryBarriers = post_render_transitions.data()
+        });
+    }
+
+    void RasterPipeline::beginMainCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlagsKHR flags)
+    {
+        std::array colour_attachments {
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.position.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.normal.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.face_normal.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.albedo.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.material.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.light_type.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.motion_vector.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            }
         };
+
+        vk::RenderingAttachmentInfoKHR depth_info {
+            .imageView = *gbuffer.depth.image_view,
+            .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eClear,
+            .storeOp = vk::AttachmentStoreOp::eStore,
+            .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+        };
+
+        buffer.beginRenderingKHR({
+            .flags = flags,
+            .renderArea = {
+                .extent = renderer->swapchain->extent
+            },
+            .layerCount = 1,
+            .viewMask = 0,
+            .colorAttachmentCount = colour_attachments.size(),
+            .pColorAttachments = colour_attachments.data(),
+            .pDepthAttachment = &depth_info
+        });
+    }
+
+    void RasterPipeline::beginTransparencyCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlagsKHR flags)
+    {
+        std::array colour_attachments {
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.accumulation.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.revealage.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 1.0f, 1.0f, 1.0f, 1.0f }}
+            },
+            vk::RenderingAttachmentInfoKHR {
+                .imageView = *gbuffer.particle.image_view,
+                .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                .loadOp = vk::AttachmentLoadOp::eClear,
+                .storeOp = vk::AttachmentStoreOp::eStore,
+                .clearValue = { .color = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.0f }}
+            }
+        };
+
+        vk::RenderingAttachmentInfoKHR depth_info {
+            .imageView = *gbuffer.depth.image_view,
+            .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+            .loadOp = vk::AttachmentLoadOp::eLoad,
+            .storeOp = vk::AttachmentStoreOp::eDontCare,
+            .clearValue = { .depthStencil = vk::ClearDepthStencilValue{ 1.0f, 0 }}
+        };
+
+        buffer.beginRenderingKHR({
+            .flags = flags,
+            .renderArea = {
+                .extent = renderer->swapchain->extent
+            },
+            .layerCount = 1,
+            .viewMask = 0,
+            .colorAttachmentCount = colour_attachments.size(),
+            .pColorAttachments = colour_attachments.data(),
+            .pDepthAttachment = &depth_info
+        });
     }
 }

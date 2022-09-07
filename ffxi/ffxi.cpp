@@ -29,7 +29,6 @@
 
 #include "entity/component/actor_component.h"
 #include "entity/component/equipment_test_component.h"
-#include "entity/component/modern_third_person_input_component.h"
 #include "entity/component/landscape_component.h"
 
 #include "entity/component/particle_component.h"
@@ -71,6 +70,7 @@ lotus::Task<> FFXIGame::entry()
     co_await engine->ui->addElement(ele2, ele);
 
     engine->worker_pool->background(load_scene());
+    co_return;
 }
 
 lotus::Task<> FFXIGame::tick(lotus::time_point, lotus::duration)
@@ -90,8 +90,8 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     (i < 256 ? i + 6720 : i + 86235) // Event
     */
 
-    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(175);
-    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291);
+    //auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(175); //eldieme
+    auto landscape = co_await loading_scene->AddEntity<FFXILandscapeEntity>(291); //reisenjima
     audio->setMusic(79, 0);
     //audio->setMusic(114, 0);
     //iroha 3111 (arciela 3074)
@@ -110,18 +110,17 @@ lotus::WorkerTask<> FFXIGame::load_scene()
     });
     auto ac = std::get<FFXI::ActorComponent*>(player_components);
     //ac->setPos((glm::vec3(-681.f, -12.f, 161.f)), false);
-    //ac->setPos((glm::vec3(419, -53.f, -103.f)), false);
+    //ac->setPos((glm::vec3(419, -53.f, -103.f)), false); //eldieme entrance
     //player->setPos(glm::vec3(-430.f, -42.2f, 46.f));
-    ac->setPos(glm::vec3(259.f, -87.f, 99.f), false);
-    auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXIVCamera>(ac);
+    ac->setPos(glm::vec3(259.f, -87.f, 99.f), false); //reisenjima torii
     auto a = std::get<lotus::Component::AnimationComponent*>(player_components);
+    auto [camera, camera_components] = co_await loading_scene->AddEntity<ThirdPersonFFXICamera>(ac, a);
     //auto ac_models = std::get<FFXI::ActorPCModelsComponent*>(player_components);
     auto ac_skeleton = std::get<FFXI::ActorSkeletonComponent*>(player_components);
 
-    auto ac2 = co_await FFXI::ModernThirdPersonInputComponent::make_component(player.get(), engine.get(), *ac, *a);
-    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac, *ac_skeleton);
+    auto equip = co_await FFXI::EquipmentTestComponent::make_component(player.get(), engine.get(), *ac,  *ac_skeleton);
     auto particle_tester = co_await ParticleTester::make_component(player.get(), engine.get(), *ac_skeleton);
-    loading_scene->AddComponents(std::move(ac2), std::move(equip), std::move(particle_tester));
+    loading_scene->AddComponents(std::move(equip), std::move(particle_tester));
 
     engine->set_camera(std::get<lotus::Component::CameraComponent*>(camera_components));
     engine->camera->setPerspective(glm::radians(70.f), engine->renderer->swapchain->extent.width / (float)engine->renderer->swapchain->extent.height, 0.01f, 1000.f);
