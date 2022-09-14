@@ -42,10 +42,13 @@ namespace lotus::Component
                 size_t frame = (interpolation_time / frame_duration) % current_animation->transforms.size();
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
-                    auto& bone = skeleton->bones[i];
-                    std::tie(bone.rot, bone.trans, bone.scale) = interpBone(
-                        lotus::Animation::BoneTransform{ .rot = bones_interpolate[i].rot, .trans = bones_interpolate[i].trans, .scale = bones_interpolate[i].scale },
-                        applyTransform(i, current_animation->transforms[frame][i]), frame_f);
+                    if (const auto& transform = current_animation->transforms[frame].find(i); transform != current_animation->transforms[frame].end())
+                    {
+                        auto& bone = skeleton->bones[i];
+                        std::tie(bone.rot, bone.trans, bone.scale) = interpBone(
+                            lotus::Animation::BoneTransform{ .rot = bones_interpolate[i].rot, .trans = bones_interpolate[i].trans, .scale = bones_interpolate[i].scale },
+                            applyTransform(i, transform->second), frame_f);
+                    }
                 }
             }
             else
@@ -55,8 +58,14 @@ namespace lotus::Component
                 uint32_t next_frame = (frame + 1) % current_animation->transforms.size();
                 for (uint32_t i = 0; i < skeleton->bones.size(); ++i)
                 {
-                    auto& bone = skeleton->bones[i];
-                    std::tie(bone.rot, bone.trans, bone.scale) = interpBone(applyTransform(i, current_animation->transforms[frame][i]), applyTransform(i, current_animation->transforms[next_frame][i]), frame_f);
+                    if (const auto& transform = current_animation->transforms[frame].find(i); transform != current_animation->transforms[frame].end())
+                    {
+                        if (const auto& next_transform = current_animation->transforms[next_frame].find(i); next_transform != current_animation->transforms[next_frame].end())
+                        {
+                            auto& bone = skeleton->bones[i];
+                            std::tie(bone.rot, bone.trans, bone.scale) = interpBone(applyTransform(i, transform->second), applyTransform(i, next_transform->second), frame_f);
+                        }
+                    }
                 }
             }
         }
@@ -170,7 +179,7 @@ namespace lotus::Component
         }
     }
 
-    lotus::Animation::BoneTransform AnimationComponent::applyTransform(size_t bone_index, lotus::Animation::BoneTransform& transform)
+    lotus::Animation::BoneTransform AnimationComponent::applyTransform(size_t bone_index, const lotus::Animation::BoneTransform& transform)
     {
         auto& bone = skeleton->bone_data.bones[bone_index];
         if (bone_index == 0)

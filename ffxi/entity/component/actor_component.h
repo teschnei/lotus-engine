@@ -29,6 +29,8 @@ namespace FFXI
         void setModelOffsetRot(glm::quat rot);
         void setSpeed(float _speed) { speed = _speed; }
 
+        std::string getIdleAnim();
+
         void enterCombat();
         void exitCombat();
 

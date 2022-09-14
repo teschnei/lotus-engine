@@ -21,6 +21,11 @@ namespace lotus
         };
 
         Animation(std::string name, size_t frames, duration frame_duration);
+        Animation(const Animation&) = delete;
+        Animation& operator=(const Animation&) = delete;
+        Animation(Animation&&) = default;
+        Animation& operator=(Animation&&) = default;
+
         std::string name;
         duration frame_duration;
 

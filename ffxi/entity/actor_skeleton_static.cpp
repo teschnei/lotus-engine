@@ -7,6 +7,7 @@
 #include "dat/scheduler.h"
 #include "dat/mo2.h"
 #include <numeric>
+#include <unordered_set>
 
 namespace FFXI
 {
@@ -51,10 +52,14 @@ namespace FFXI
     }
 
     lotus::WorkerTask<std::shared_ptr<ActorSkeletonStatic>> ActorSkeletonStatic::loadSkeleton(lotus::Engine* engine, std::span<size_t> skeleton_ids, std::span<size_t> motions, std::span<size_t> dw_motions_l, std::span<size_t> dw_motions_r)
-
     {
         auto skeleton = std::shared_ptr<ActorSkeletonStatic>(new ActorSkeletonStatic());
 
+        std::array<std::vector<FFXI::MO2*>, skeleton_size> skeleton_animations;
+        std::unordered_map<std::string, lotus::Animation> anims;
+        std::unordered_set<std::string> nonbattle_anim_names;
+
+        int skeleton_i = 0;
         for (auto id : skeleton_ids)
         {
             const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(id);
@@ -70,22 +75,11 @@ namespace FFXI
                 }
                 else if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
                 {
-                    auto anim = skeleton->animations.find(mo2->name);
-                    if (anim == skeleton->animations.end())
+                    skeleton_animations[skeleton_i].push_back(mo2);
+                    anims.insert({ mo2->name, { mo2->name, mo2->frames, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)) } });
+                    if (skeleton_i == 1)
                     {
-                        anim = skeleton->animations.emplace(mo2->name, std::make_unique<lotus::Animation>(mo2->name, mo2->frames, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)))).first;
-                    }
-                    auto& animation = anim->second;
-
-                    for (size_t i = 0; i < mo2->frames; ++i)
-                    {
-                        for (const auto& transform : mo2->animation_data)
-                        {
-                            auto bone_index = transform.first;
-                            auto& mo2_transform = transform.second[i];
-                            const auto& bone = skeleton->static_bone_data.bones[bone_index];
-                            animation->addFrameData(i, bone_index, bone.parent_bone, bone.rot, bone.trans, { mo2_transform.rot, mo2_transform.trans, mo2_transform.scale });
-                        }
+                        nonbattle_anim_names.insert(mo2->name);
                     }
                 }
                 else if (auto scheduler = dynamic_cast<FFXI::Scheduler*>(chunk.get()))
@@ -105,69 +99,132 @@ namespace FFXI
                     DEBUG_BREAK();
                 }
             }
+            ++skeleton_i;
+        }
+
+        //iterate skeleton_i, exclude 2 (tbd what that's for)
+        for (auto i : { 0, 1, 3 })
+        {
+            for (auto mo2 : skeleton_animations[i])
+            {
+                skeleton->combineAnimation(anims.at(mo2->name), mo2);
+            }
+        }
+
+        for (auto& [anim_name, anim] : anims)
+        {
+            //for animations that get replaced by battle, store them elsewhere so it's easier to bring them back
+            // when combat state changes
+            if (nonbattle_anim_names.contains(anim_name))
+            {
+                skeleton->nonbattle_animations.insert({ anim.name, std::move(anim) });
+            }
+            else
+            {
+                skeleton->general_animations.insert({ anim.name, std::move(anim) });
+            }
         }
 
         size_t index = 0;
         for (auto id : motions)
         {
-            skeleton->battle_animations[index++] = skeleton->loadAnimationDat(engine, id);
+            for (auto& [anim_name, anim] : skeleton->loadAnimationDat(engine, id))
+            {
+                for (auto i : { 0, 3 })
+                {
+                    for (const auto& mo2 : skeleton_animations[i])
+                    {
+                        if (mo2->name == anim_name)
+                            skeleton->combineAnimation(anim, mo2);
+                    }
+                }
+                skeleton->battle_animations[index].insert({anim_name, std::move(anim)});
+            }
+            ++index;
         }
 
         index = 0;
         for (auto id : dw_motions_l)
         {
-            skeleton->dw_animations_l[index++] = skeleton->loadAnimationDat(engine, id);
+            for (auto& [anim_name, anim] : skeleton->loadAnimationDat(engine, id))
+            {
+                for (auto i : { 0, 3 })
+                {
+                    for (const auto& mo2 : skeleton_animations[i])
+                    {
+                        if (mo2->name == anim_name)
+                            skeleton->combineAnimation(anim, mo2);
+                    }
+                }
+                skeleton->dw_animations_l[index].insert({anim_name, std::move(anim)});
+            }
+            ++index;
         }
 
         index = 0;
         for (auto id : dw_motions_r)
         {
-            skeleton->dw_animations_r[index++] = skeleton->loadAnimationDat(engine, id);
+            for (auto& [anim_name, anim] : skeleton->loadAnimationDat(engine, id))
+            {
+                for (auto i : { 0, 3 })
+                {
+                    for (const auto& mo2 : skeleton_animations[i])
+                    {
+                        if (mo2->name == anim_name)
+                            skeleton->combineAnimation(anim, mo2);
+                    }
+                }
+                skeleton->dw_animations_r[index].insert({anim_name, std::move(anim)});
+            }
+            ++index;
         }
 
         co_return skeleton;
     }
 
-    std::unordered_map<std::string, std::unique_ptr<lotus::Animation>> ActorSkeletonStatic::loadAnimationDat(lotus::Engine* engine, size_t dat_id)
+    std::unordered_map<std::string, lotus::Animation> ActorSkeletonStatic::loadAnimationDat(lotus::Engine* engine, size_t dat_id)
     {
-        const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_id);
-        std::unordered_map<std::string, std::unique_ptr<lotus::Animation>> animation_map;
-
-        for (const auto& chunk : dat.root->children)
+        std::unordered_map<std::string, lotus::Animation> animations;
+        //the dats all have extra bone data at 128 and 256, but I don't know what the one at 256 is for yet (it seems the same as the 128 one)
+        for (auto id : { dat_id, dat_id + 128 })
         {
-            if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
-            {
-                //TODO: instead of combining, they should be separate so they can be composed of different animations (legs vs torso etc)
-                auto anim = animation_map.find(mo2->name);
-                if (anim == animation_map.end())
-                {
-                    anim = animation_map.emplace(mo2->name, std::make_unique<lotus::Animation>(mo2->name, mo2->frames, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed)))).first;
-                }
-                auto& animation = anim->second;
+            const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(id);
 
-                for (size_t i = 0; i < mo2->frames; ++i)
+            for (const auto& chunk : dat.root->children)
+            {
+                if (auto mo2 = dynamic_cast<FFXI::MO2*>(chunk.get()))
                 {
-                    for (const auto& transform : mo2->animation_data)
-                    {
-                        auto bone_index = transform.first;
-                        auto& mo2_transform = transform.second[i];
-                        const auto& bone = static_bone_data.bones[bone_index];
-                        animation->addFrameData(i, bone_index, bone.parent_bone, bone.rot, bone.trans, {mo2_transform.rot, mo2_transform.trans, mo2_transform.scale});
-                    }
+                    auto& animation = animations.insert({ mo2->name, {mo2->name, mo2->frames, std::chrono::milliseconds(static_cast<int>(1000 * (1.f / 30.f) / mo2->speed))} }).first->second;
+
+                    combineAnimation(animation, mo2);
                 }
-            }
-            else if (auto scheduler = dynamic_cast<FFXI::Scheduler*>(chunk.get()))
-            {
-                //TODO
-                //scheduler_map.insert({ std::string(chunk->name, 4), scheduler });
-            }
-            else if (auto generator = dynamic_cast<FFXI::Generator*>(chunk.get()))
-            {
-                DEBUG_BREAK();
+                else if (auto scheduler = dynamic_cast<FFXI::Scheduler*>(chunk.get()))
+                {
+                    //TODO
+                    //scheduler_map.insert({ std::string(chunk->name, 4), scheduler });
+                }
+                else if (auto generator = dynamic_cast<FFXI::Generator*>(chunk.get()))
+                {
+                    DEBUG_BREAK();
+                }
             }
         }
 
-        return animation_map;
+        return animations;
+    }
+
+    void ActorSkeletonStatic::combineAnimation(lotus::Animation& animation, FFXI::MO2* mo2)
+    {
+        for (size_t i = 0; i < mo2->frames; ++i)
+        {
+            for (const auto& transform : mo2->animation_data)
+            {
+                auto bone_index = transform.first;
+                auto& mo2_transform = transform.second[i];
+                const auto& bone = static_bone_data.bones[bone_index];
+                animation.addFrameData(i, bone_index, bone.parent_bone, bone.rot, bone.trans, {mo2_transform.rot, mo2_transform.trans, mo2_transform.scale});
+            }
+        }
     }
 
     ActorSkeletonStatic::ActorSkeletonStatic()
@@ -185,17 +242,22 @@ namespace FFXI
         return generator_map;
     }
 
-    const std::unordered_map<std::string, std::unique_ptr<lotus::Animation>>& ActorSkeletonStatic::getAnimations() const
+    const std::unordered_map<std::string, lotus::Animation>& ActorSkeletonStatic::getGeneralAnimations() const
     {
-        return animations;
+        return general_animations;
     }
 
-    const std::unordered_map<std::string, std::unique_ptr<lotus::Animation>>& ActorSkeletonStatic::getBattleAnimations(size_t index) const
+    const std::unordered_map<std::string, lotus::Animation>& ActorSkeletonStatic::getNonBattleAnimations() const
+    {
+        return nonbattle_animations;
+    }
+
+    const std::unordered_map<std::string, lotus::Animation>& ActorSkeletonStatic::getBattleAnimations(size_t index) const
     {
         return battle_animations[index];
     }
 
-    std::tuple<const std::unordered_map<std::string, std::unique_ptr<lotus::Animation>>&, const std::unordered_map<std::string, std::unique_ptr<lotus::Animation>>&> ActorSkeletonStatic::getBattleAnimationsDualWield(size_t index) const
+    std::tuple<const std::unordered_map<std::string, lotus::Animation>&, const std::unordered_map<std::string, lotus::Animation>&> ActorSkeletonStatic::getBattleAnimationsDualWield(size_t index) const
     {
         return { dw_animations_l[index], dw_animations_r[index] };
     }

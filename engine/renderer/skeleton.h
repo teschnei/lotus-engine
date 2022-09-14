@@ -34,6 +34,6 @@ namespace lotus
 
         const BoneData& bone_data;
         std::vector<Bone> bones;
-        std::unordered_map<std::string, Animation*> animations;
+        std::unordered_map<std::string, const Animation*> animations;
     };
 }

@@ -62,7 +62,7 @@ namespace FFXI
             }
             else
             {
-                animation_component.playAnimationLoop("idl");
+                animation_component.playAnimationLoop(actor.getIdleAnim());
             }
         }
         auto face_dir = glm::vec3{ 1.f, 0.f, 0.f };

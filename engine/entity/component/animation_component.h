@@ -39,7 +39,7 @@ namespace lotus
             void changeAnimation(std::string name, float speed);
             static constexpr duration interpolation_time{ 100ms };
 
-            Animation* current_animation{ nullptr };
+            const Animation* current_animation{ nullptr };
             time_point animation_start;
             std::optional<std::string> next_anim;
             std::vector<Skeleton::Bone> bones_interpolate;
@@ -47,7 +47,7 @@ namespace lotus
             bool loop{ true };
             uint8_t repetitions{ 0 };
 
-            lotus::Animation::BoneTransform applyTransform(size_t bone_index, lotus::Animation::BoneTransform&);
+            lotus::Animation::BoneTransform applyTransform(size_t bone_index, const lotus::Animation::BoneTransform&);
             std::tuple<glm::quat, glm::vec3, glm::vec3> interpBone(lotus::Animation::BoneTransform t1, lotus::Animation::BoneTransform t2, float interp);
         };
     }

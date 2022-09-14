@@ -56,7 +56,7 @@ namespace FFXI
             }
             else
             {
-                animation_component.playAnimationLoop("idl");
+                animation_component.playAnimationLoop(actor.getIdleAnim());
             }
         }
 

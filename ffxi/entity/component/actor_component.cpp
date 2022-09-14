@@ -58,6 +58,11 @@ namespace FFXI
         model_offset_rot = _rot;
     }
 
+    std::string ActorComponent::getIdleAnim()
+    {
+        return combat ? "btl" : "idl";
+    }
+
     void ActorComponent::enterCombat()
     {
         if (!combat)

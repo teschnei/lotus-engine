@@ -30,9 +30,13 @@ namespace FFXI
             generator_map.insert_or_assign(name, generator);
         }
 
-        for (const auto& [name, animation] : skeleton->getAnimations())
+        for (const auto& [name, animation] : skeleton->getGeneralAnimations())
         {
-            animation_component.skeleton->animations.insert_or_assign(name, animation.get());
+            animation_component.skeleton->animations.insert_or_assign(name, &animation);
+        }
+        for (const auto& [name, animation] : skeleton->getNonBattleAnimations())
+        {
+            animation_component.skeleton->animations.insert_or_assign(name, &animation);
         }
     }
 
@@ -147,23 +151,14 @@ namespace FFXI
         {
             for (const auto& [name, anim] : skeleton->getBattleAnimations(motion_index))
             {
-                auto& animation = animation_component.skeleton->animations.insert({ name, anim.get() }).first->second;
-                size_t frame = 0;
-                for (const auto& frame_map : anim->transforms)
-                {
-                    for (const auto& [bone, transform] : frame_map)
-                    {
-                        animation->transforms[frame][bone] = transform;
-                    }
-                    frame++;
-                }
+                animation_component.skeleton->animations.insert_or_assign(name, &anim);
             }
         }
         else
         {
-            for (const auto& [name, anim] : skeleton->getAnimations())
+            for (const auto& [name, anim] : skeleton->getNonBattleAnimations())
             {
-                animation_component.skeleton->animations.insert_or_assign(name, anim.get());
+                animation_component.skeleton->animations.insert_or_assign(name, &anim);
             }
         }
     }
