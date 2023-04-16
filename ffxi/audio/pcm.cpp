@@ -1,5 +1,7 @@
 #include "pcm.h"
+
 #include <algorithm>
+#include <cstring>
 
 PCMInstance::PCMInstance(PCM* pcm) : pcm(pcm)
 {

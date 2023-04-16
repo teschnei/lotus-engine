@@ -1,6 +1,7 @@
 #include "dat_loader.h"
 #include <fstream>
 #include <format>
+#include <algorithm>
 
 namespace FFXI
 {

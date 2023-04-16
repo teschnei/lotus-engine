@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <optional>
+#include <span>
 #include "vulkan_inc.h"
 #include "engine/renderer/memory.h"
 

@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <array>
 #include <unordered_map>
+#include <optional>
 #include "engine/audio.h"
 
 namespace SoLoud

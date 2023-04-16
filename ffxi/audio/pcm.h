@@ -4,6 +4,7 @@
 #include <vector>
 #define SOLOUD_NO_ASSERTS
 #include <soloud.h>
+#include "engine/types.h"
 
 class PCM;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <algorithm>
 #include <array>
 
 namespace lotus

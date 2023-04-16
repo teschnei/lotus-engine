@@ -1,6 +1,7 @@
 #include "ffxi_audio.h"
 
 #include <fstream>
+#include <format>
 
 #include "engine/core.h"
 

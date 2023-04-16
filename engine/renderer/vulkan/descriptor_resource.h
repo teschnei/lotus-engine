@@ -6,20 +6,21 @@
 
 namespace lotus
 {
-    template<vk::DescriptorType Type, uint32_t Binding>
+    namespace 
+    {
+        template<vk::DescriptorType T>
+        struct DescriptorInfoType { using type = vk::DescriptorBufferInfo; };
+        template<>
+        struct DescriptorInfoType<vk::DescriptorType::eCombinedImageSampler> { using type = vk::DescriptorImageInfo; };
+    }
+
+    template<vk::DescriptorType _Type, uint32_t _Binding>
     class DescriptorResource
     {
     public:
         DescriptorResource(vk::DescriptorSet _set) : set(_set) {}
 
-    private:
-        template<vk::DescriptorType T>
-        struct DescriptorInfoType { using type = vk::DescriptorBufferInfo; };
-        template<>
-        struct DescriptorInfoType<vk::DescriptorType::eCombinedImageSampler> { using type = vk::DescriptorImageInfo; };
-
-    public:
-        using DescriptorInfo = typename DescriptorInfoType<Type>::type;
+        using DescriptorInfo = typename DescriptorInfoType<_Type>::type;
 
         class Index
         {
@@ -54,8 +55,8 @@ namespace lotus
                 device.updateDescriptorSets(w, nullptr);
         }
 
-        static constexpr uint32_t Binding = Binding;
-        static constexpr vk::DescriptorType Type = Type;
+        static constexpr uint32_t Binding = _Binding;
+        static constexpr vk::DescriptorType Type = _Type;
 
     private:
         vk::DescriptorSet set;

@@ -107,7 +107,7 @@ namespace FFXI
             light = true;
             break;
         default:
-            std::cout << std::format("unhandled generation type: {:#04x}", static_cast<uint8_t>(type)) << std::endl;
+            //std::cout << std::format("unhandled generation type: {:#04x}", static_cast<uint8_t>(type)) << std::endl;
             break;
         }
     }

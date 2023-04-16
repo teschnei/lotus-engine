@@ -3,6 +3,7 @@
 #include <engine/renderer/vulkan/vulkan_inc.h>
 #include "vk_mem_alloc.h"
 #include <mutex>
+#include <memory>
 
 #undef MemoryBarrier
 

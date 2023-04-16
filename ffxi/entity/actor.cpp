@@ -29,8 +29,8 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitComponents>> Ac
     auto skeleton = co_await FFXI::ActorSkeletonStatic::getSkeleton(engine, dat_index);
     const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_index);
 
-    auto components = co_await Actor::Load(actor, engine, scene, skeleton, modelid, { dat });
-    co_return std::make_pair(actor, components);
+    //auto components = co_await Actor::Load(actor, engine, scene, skeleton, modelid, { dat });
+    co_return std::make_pair(actor, Actor::InitComponents{});
 }
 
 lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> Actor::Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorSkeletonComponent::LookData look)
@@ -41,6 +41,7 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> 
     auto skeleton_dats = ActorData::PCSkeletonIDs[look.look.race - 1];
     auto skeleton = co_await FFXI::ActorSkeletonStatic::getSkeleton(engine, skeleton_dats);
 
+/*
     auto components = co_await Actor::Load(actor, engine, scene, skeleton, look, {
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.face - 1, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.head, look.look.race)),
@@ -52,8 +53,10 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> 
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_sub, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_range, look.look.race))
         });
+        */
     //auto pc_components = co_await Actor::LoadPC(actor, engine, scene, components, look, {});
-    co_return std::make_pair(actor, components);
+    //co_return std::make_pair(actor, components);
+    co_return std::make_pair(actor, Actor::InitPCComponents{});
 }
 
 lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Entity> actor, lotus::Engine* engine, lotus::Scene* scene,

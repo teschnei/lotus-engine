@@ -1,6 +1,7 @@
 #pragma once
 
 #include <coroutine>
+#include <atomic>
 #include <utility>
 #include <exception>
 #include <iostream>
@@ -76,7 +77,7 @@ namespace lotus
         Task<Result> get_return_object() noexcept;
 
         template<typename R> requires std::convertible_to<R&&, Result>
-        void return_value(R&& value) noexcept(std::is_nothrow_convertible<R&&, Result>)
+        void return_value(R&& value) noexcept(std::is_nothrow_convertible_v<R&&, Result>)
         {
             result_store = std::move(value);
         }

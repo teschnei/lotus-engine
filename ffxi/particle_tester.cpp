@@ -12,6 +12,7 @@
 #include "entity/component/actor_skeleton_component.h"
 #include "entity/component/scheduler_component.h"
 
+
 ParticleTester::ParticleTester(lotus::Entity* _entity, lotus::Engine* _engine, FFXI::ActorSkeletonComponent& _actor) : Component(_entity, _engine), actor(_actor)
 {
 }

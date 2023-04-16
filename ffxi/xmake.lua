@@ -12,8 +12,8 @@ rule("glslang")
 
         -- TODO: scan for includes
         depend.on_changed(function ()
-            os.vrunv('glslangvalidator', { "--target-env", "vulkan1.3", "-V", sourcefile, "-o", targetfile})
-            progress.show(opt.progress, "${color.build.object}glslangvalidator %s", sourcefile)
+            os.vrunv('glslangValidator', { "--target-env", "vulkan1.3", "-V", sourcefile, "-o", targetfile})
+            progress.show(opt.progress, "${color.build.object}glslangValidator %s", sourcefile)
         end, {files = sourcefile})
     end)
 
@@ -41,5 +41,7 @@ target("ffxi")
     add_files("**.cpp", "**.comp", "**.vert", "**.frag", "**.rgen", "**.rmiss", "**.rchit", "**.rahit", "**.rint")
     add_files("textures/**.png")
     add_headerfiles("**.h", {install=false})
-    add_syslinks("Advapi32")
+    if is_os("windows") then
+        add_syslinks("Advapi32")
+    end
     add_includedirs(".")

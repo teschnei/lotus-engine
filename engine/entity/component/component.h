@@ -37,6 +37,19 @@ namespace lotus
             static consteval int priority() { return 0; }
         };
 
+        //technically should be some form of is_base_of but it doesn't work with crtp
+        template<typename T>
+        concept ComponentConcept = requires(T t) { T::priority; };
+
+        template<typename T>
+        concept ComponentTickConcept = ComponentConcept<T> && requires(T t) { t.tick(time_point{}, duration{}); };
+
+        template<typename T>
+        concept ComponentInitConcept = ComponentConcept<T> && requires(T t) { t.init(); };
+
+        template<typename T>
+        concept ComponentInputConcept = ComponentConcept<T> && requires(T t, Input* i, const SDL_Event& e) { { t.handleInput(i, e) } -> std::convertible_to<bool>; };
+
         template<typename T, typename Order = Zero>
         class Component
         {
@@ -66,19 +79,6 @@ namespace lotus
             Engine* engine;
             bool _remove{ false };
         };
-
-        //technically should be some form of is_base_of but it doesn't work with crtp
-        template<typename T>
-        concept ComponentConcept = requires(T t) { T::priority; };
-
-        template<typename T>
-        concept ComponentTickConcept = ComponentConcept<T> && requires(T t) { t.tick(time_point{}, duration{}); };
-
-        template<typename T>
-        concept ComponentInitConcept = ComponentConcept<T> && requires(T t) { t.init(); };
-
-        template<typename T>
-        concept ComponentInputConcept = ComponentConcept<T> && requires(T t, Input* i, const SDL_Event& e) { { t.handleInput(i, e) } -> std::convertible_to<bool>; };
 
         class ComponentRunners
         {
@@ -192,7 +192,7 @@ namespace lotus
                     auto part = std::ranges::partition(components, [](auto& c) { return !c->removed(); });
                     if (std::ranges::begin(part) != std::ranges::end(part))
                     {
-                        std::vector<decltype(components)::value_type> removed_elements(std::make_move_iterator(std::ranges::begin(part)), std::make_move_iterator(std::ranges::end(part)));
+                        std::vector<typename decltype(components)::value_type> removed_elements(std::make_move_iterator(std::ranges::begin(part)), std::make_move_iterator(std::ranges::end(part)));
                         components.erase(std::ranges::begin(part), std::ranges::end(part));
                         engine->worker_pool->gpuResource(std::move(removed_elements));
                     }

@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <condition_variable>
 #include <mutex>
+#include <span>
 #include "memory.h"
 #include "engine/types.h"
 #include "engine/worker_task.h"

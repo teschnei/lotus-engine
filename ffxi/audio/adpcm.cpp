@@ -1,5 +1,7 @@
 #include "adpcm.h"
 
+#include <cstring>
+
 ADPCMInstance::ADPCMInstance(ADPCM* adpcm) : adpcm(adpcm)
 {
 }

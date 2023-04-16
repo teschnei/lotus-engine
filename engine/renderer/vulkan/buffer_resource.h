@@ -6,7 +6,7 @@
 
 namespace lotus
 {
-    template<typename T, uint32_t Binding>
+    template<typename T, uint32_t _Binding>
     class BufferResource
     {
     public:
@@ -41,7 +41,7 @@ namespace lotus
             vk::WriteDescriptorSet write
             {
                 .dstSet = _set,
-                .dstBinding = Binding,
+                .dstBinding = _Binding,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = Type,
@@ -59,7 +59,7 @@ namespace lotus
             return std::make_unique<View>(this, count);
         }
 
-        static constexpr uint32_t Binding = Binding;
+        static constexpr uint32_t Binding = _Binding;
         static constexpr vk::DescriptorType Type = vk::DescriptorType::eStorageBuffer;
 
     private:

@@ -1,6 +1,7 @@
 #include "raytrace_pipeline.h"
 
 #include <ranges>
+#include <format>
 
 #include "engine/core.h"
 #include "engine/renderer/vulkan/renderer.h"

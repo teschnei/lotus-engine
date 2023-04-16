@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <map>
+#include "engine/types.h"
 
 namespace ActorData
 {

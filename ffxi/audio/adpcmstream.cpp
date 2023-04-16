@@ -1,5 +1,7 @@
 #include "adpcmstream.h"
 
+#include <cstring>
+
 ADPCMStreamInstance::ADPCMStreamInstance(ADPCMStream* adpcm) : adpcm(adpcm)
 {
     data = adpcm->getNextBlock();
