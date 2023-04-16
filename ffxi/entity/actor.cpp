@@ -27,10 +27,13 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitComponents>> Ac
     else
         dat_index = modelid + 1300;
     auto skeleton = co_await FFXI::ActorSkeletonStatic::getSkeleton(engine, dat_index);
-    const auto& dat = static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_index);
 
-    //auto components = co_await Actor::Load(actor, engine, scene, skeleton, modelid, { dat });
-    co_return std::make_pair(actor, Actor::InitComponents{});
+    std::vector<std::reference_wrapper<const FFXI::Dat>> dats = {
+        static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(dat_index)
+    };
+
+    auto components = co_await Actor::Load(actor, engine, scene, skeleton, modelid, dats);
+    co_return std::make_pair(actor, components);
 }
 
 lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> Actor::Init(lotus::Engine* engine, lotus::Scene* scene, FFXI::ActorSkeletonComponent::LookData look)
@@ -41,8 +44,7 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> 
     auto skeleton_dats = ActorData::PCSkeletonIDs[look.look.race - 1];
     auto skeleton = co_await FFXI::ActorSkeletonStatic::getSkeleton(engine, skeleton_dats);
 
-/*
-    auto components = co_await Actor::Load(actor, engine, scene, skeleton, look, {
+    std::vector<std::reference_wrapper<const FFXI::Dat>> dats = {
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.face - 1, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.head, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.body, look.look.race)),
@@ -52,16 +54,17 @@ lotus::Task<std::pair<std::shared_ptr<lotus::Entity>, Actor::InitPCComponents>> 
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_sub, look.look.race)),
         static_cast<FFXIGame*>(engine->game)->dat_loader->GetDat(Actor::GetPCModelDatID(look.look.weapon_range, look.look.race))
-        });
-        */
+    };
+
+    auto components = co_await Actor::Load(actor, engine, scene, skeleton, look, dats);
+        
     //auto pc_components = co_await Actor::LoadPC(actor, engine, scene, components, look, {});
-    //co_return std::make_pair(actor, components);
-    co_return std::make_pair(actor, Actor::InitPCComponents{});
+    co_return std::make_pair(actor, components);
 }
 
 lotus::WorkerTask<Actor::InitComponents> Actor::Load(std::shared_ptr<lotus::Entity> actor, lotus::Engine* engine, lotus::Scene* scene,
     std::shared_ptr<const FFXI::ActorSkeletonStatic> static_skeleton, std::variant<FFXI::ActorSkeletonComponent::LookData, uint16_t> look,
-    std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats)
+    std::vector<std::reference_wrapper<const FFXI::Dat>> dats)
 {
     std::unique_ptr<lotus::Skeleton> skel = std::make_unique<lotus::Skeleton>(static_skeleton->getBoneData());
     std::vector<std::vector<FFXI::OS2*>> os2s;

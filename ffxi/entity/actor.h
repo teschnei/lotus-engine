@@ -35,7 +35,7 @@ public:
     static size_t GetPCModelDatID(uint16_t modelid, uint8_t race);
 protected:
     static lotus::WorkerTask<InitComponents> Load(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene,
-        std::shared_ptr<const FFXI::ActorSkeletonStatic>, std::variant<FFXI::ActorSkeletonComponent::LookData, uint16_t>, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
+        std::shared_ptr<const FFXI::ActorSkeletonStatic>, std::variant<FFXI::ActorSkeletonComponent::LookData, uint16_t>, std::vector<std::reference_wrapper<const FFXI::Dat>> dats);
     //static lotus::WorkerTask<std::tuple<>> LoadPC(std::shared_ptr<lotus::Entity> entity, lotus::Engine* engine, lotus::Scene* scene,
     //    InitComponents components, FFXI::ActorPCModelsComponent::LookData look, std::initializer_list<std::reference_wrapper<const FFXI::Dat>> dats);
 };

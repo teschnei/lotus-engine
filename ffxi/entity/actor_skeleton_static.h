@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <unordered_map>
+#include <span>
 #include "actor_data.h"
 #include "engine/task.h"
 #include "engine/worker_task.h"

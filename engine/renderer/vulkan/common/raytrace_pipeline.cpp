@@ -1,7 +1,7 @@
 #include "raytrace_pipeline.h"
 
 #include <ranges>
-#include <format>
+#include <fmt/core.h>
 
 #include "engine/core.h"
 #include "engine/renderer/vulkan/renderer.h"
@@ -85,7 +85,7 @@ namespace lotus
     vk::UniquePipeline RaytracePipeline::initializePipeline(Renderer* renderer, vk::PipelineLayout pipeline_layout, std::string raygen)
     {
         //ray-tracing pipeline
-        auto raygen_shader_module = renderer->getShader(std::format("shaders/{}", raygen));
+        auto raygen_shader_module = renderer->getShader(fmt::format("shaders/{}", raygen));
         auto miss_shader_module = renderer->getShader("shaders/miss.spv");
         auto miss_gi_shader_module = renderer->getShader("shaders/miss_gi.spv");
         auto shadow_miss_shader_module = renderer->getShader("shaders/shadow_miss.spv");
@@ -321,7 +321,7 @@ namespace lotus
             .pStages = shaders.data(),
             .groupCount = static_cast<uint32_t>(shader_group_ci.size()),
             .pGroups = shader_group_ci.data(),
-            .maxPipelineRayRecursionDepth = 3,
+            .maxPipelineRayRecursionDepth = 1,
             .layout = pipeline_layout
         }).value;
     }

@@ -2,6 +2,7 @@
 
 #include "dat_chunk.h"
 #include "engine/audio.h"
+#include <optional>
 
 namespace FFXI
 {

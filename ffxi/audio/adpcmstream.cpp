@@ -1,6 +1,7 @@
 #include "adpcmstream.h"
 
 #include <cstring>
+#include <cstddef>
 
 ADPCMStreamInstance::ADPCMStreamInstance(ADPCMStream* adpcm) : adpcm(adpcm)
 {
