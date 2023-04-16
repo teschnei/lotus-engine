@@ -15,11 +15,10 @@ namespace lotus
         build_info.pGeometries = geometries.data();
 
         auto size_info = renderer->gpu->device->getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice, build_info, max_primitive_counts);
-        size_info.buildScratchSize += renderer->gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment;
-        size_info.updateScratchSize += renderer->gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment;
 
-        scratch_memory = renderer->gpu->memory_manager->GetBuffer(size_info.buildScratchSize > size_info.updateScratchSize ?
-            size_info.buildScratchSize : size_info.updateScratchSize, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        scratch_memory = renderer->gpu->memory_manager->GetAlignedBuffer(size_info.buildScratchSize > size_info.updateScratchSize ?  size_info.buildScratchSize : size_info.updateScratchSize,
+            renderer->gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment,
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         object_memory = renderer->gpu->memory_manager->GetBuffer(size_info.accelerationStructureSize, vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
@@ -66,7 +65,7 @@ namespace lotus
             .dstAccelerationStructure = *acceleration_structure,
             .geometryCount = static_cast<uint32_t>(geometries.size()),
             .pGeometries = geometries.data(),
-            .scratchData = renderer->acceleration_scratch_align_up(renderer->gpu->device->getBufferAddress({.buffer = scratch_memory->buffer})) 
+            .scratchData = renderer->gpu->device->getBufferAddress({.buffer = scratch_memory->buffer}) 
         };
 
         command_buffer.buildAccelerationStructuresKHR( build_info, ranges.data());

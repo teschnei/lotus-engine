@@ -69,7 +69,10 @@ namespace lotus
             vk::DeviceSize shader_offset_miss = (((shader_stride * shader_raygencount) / engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment;
             vk::DeviceSize shader_offset_hit = shader_offset_miss + (((shader_stride * shader_misscount) / engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment) + 1) * engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment;
             vk::DeviceSize sbt_size = (shader_stride * shader_hitcount) + shader_offset_hit;
-            shader_binding_table = engine->renderer->gpu->memory_manager->GetBuffer(sbt_size, vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eHostVisible);
+            shader_binding_table = engine->renderer->gpu->memory_manager->GetAlignedBuffer(sbt_size,
+                engine->renderer->gpu->ray_tracing_properties.shaderGroupBaseAlignment,
+                vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                vk::MemoryPropertyFlagBits::eHostVisible);
 
             vk::DescriptorSetLayoutBinding acceleration_structure_binding;
             acceleration_structure_binding.binding = 0;

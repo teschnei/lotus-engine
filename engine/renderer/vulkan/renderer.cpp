@@ -345,11 +345,6 @@ namespace lotus
         return align_up(in_size, gpu->properties.properties.limits.minStorageBufferOffsetAlignment);
     }
 
-    size_t lotus::Renderer::acceleration_scratch_align_up(size_t in_size) const
-    {
-        return align_up(in_size, gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment);
-    }
-
     void Renderer::createDeferredImage()
     {
         auto format = vk::Format::eR32G32B32A32Sfloat;

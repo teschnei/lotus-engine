@@ -32,7 +32,7 @@ private:
     SystemDat& operator=(const SystemDat&) = delete;
     SystemDat& operator=(SystemDat&&) = default;
 
-    void ParseDir(FFXI::DatChunk*, std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>>& texture_tasks, std::vector<lotus::Task<>>& model_tasks);
+    lotus::Task<> ParseDir(FFXI::DatChunk*);
 
     std::vector<std::shared_ptr<lotus::Model>> generator_models;
     std::unordered_map<std::string, FFXI::Keyframe*> keyframes;

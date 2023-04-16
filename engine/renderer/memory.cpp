@@ -55,8 +55,7 @@ namespace lotus
         vmaDestroyAllocator(allocator);
     }
 
-    std::unique_ptr<Buffer> MemoryManager::GetBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags memoryflags)
+    std::unique_ptr<Buffer> MemoryManager::GetBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryflags)
     {
         std::scoped_lock lg(allocation_mutex);
         VkBufferCreateInfo buffer_create_info = {};
@@ -73,6 +72,27 @@ namespace lotus
         VmaAllocationInfo alloc_info;
 
         vmaCreateBuffer(allocator, &buffer_create_info, &vma_ci, &buffer, &allocation, &alloc_info);
+
+        return std::make_unique<Buffer>(this, buffer, allocation, alloc_info, size);
+    }
+
+    std::unique_ptr<Buffer> MemoryManager::GetAlignedBuffer(vk::DeviceSize size, vk::DeviceSize alignment, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryflags)
+    {
+        std::scoped_lock lg(allocation_mutex);
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = size;
+        buffer_create_info.usage = (VkBufferUsageFlags)usage;
+        buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VmaAllocationCreateInfo vma_ci = {};
+        vma_ci.requiredFlags = (VkMemoryPropertyFlags)memoryflags;
+
+        VkBuffer buffer;
+        VmaAllocation allocation;
+        VmaAllocationInfo alloc_info;
+
+        vmaCreateBufferWithAlignment(allocator, &buffer_create_info, &vma_ci, alignment, &buffer, &allocation, &alloc_info);
 
         return std::make_unique<Buffer>(this, buffer, allocation, alloc_info, size);
     }

@@ -65,7 +65,6 @@ namespace lotus
 
         size_t uniform_buffer_align_up(size_t in_size) const;
         size_t storage_buffer_align_up(size_t in_size) const;
-        size_t acceleration_scratch_align_up(size_t in_size) const;
         static inline size_t align_up(size_t in_size, size_t alignment)
         {
             if (in_size % alignment == 0)

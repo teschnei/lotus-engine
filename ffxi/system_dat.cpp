@@ -15,26 +15,16 @@ lotus::Task<std::unique_ptr<SystemDat>> SystemDat::Load(FFXIGame* game)
     const auto& ffxi_dat = game->dat_loader->GetDat(0);
     auto dat = std::make_unique<SystemDat>(game, _private_tag{});
 
-    std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
-    std::vector<lotus::Task<>> model_tasks;
-
-    dat->ParseDir(ffxi_dat.root.get(), texture_tasks, model_tasks);
-
-    //co_await all tasks
-    for (const auto& task : texture_tasks)
-    {
-        co_await task;
-    }
-    for (const auto& task : model_tasks)
-    {
-        co_await task;
-    }
+    co_await dat->ParseDir(ffxi_dat.root.get());
 
     co_return std::move(dat);
 }
 
-void SystemDat::ParseDir(FFXI::DatChunk* chunk, std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>>& texture_tasks, std::vector<lotus::Task<>>& model_tasks)
+lotus::Task<> SystemDat::ParseDir(FFXI::DatChunk* chunk)
 {
+    std::vector<lotus::Task<std::shared_ptr<lotus::Texture>>> texture_tasks;
+    std::vector<lotus::Task<>> model_tasks;
+
     //not sure if by design or not, but it seems like all the subitems don't have any overlapping names
     for (const auto& child_chunk : chunk->children)
     {
@@ -58,6 +48,12 @@ void SystemDat::ParseDir(FFXI::DatChunk* chunk, std::vector<lotus::Task<std::sha
             keyframes.insert({ std::string(keyframe->name, 4), keyframe });
         }
     }
+
+    for (const auto& task : texture_tasks)
+    {
+        co_await task;
+    }
+
     for (const auto& child_chunk : chunk->children)
     {
         if (auto d3m = dynamic_cast<FFXI::D3M*>(child_chunk.get()))
@@ -75,8 +71,14 @@ void SystemDat::ParseDir(FFXI::DatChunk* chunk, std::vector<lotus::Task<std::sha
                 model_tasks.push_back(std::move(*model_task));
         }
     }
+
+    for (const auto& task : model_tasks)
+    {
+        co_await task;
+    }
+
     for (const auto& child_chunk : chunk->children)
     {
-        ParseDir(child_chunk.get(), texture_tasks, model_tasks);
+        co_await ParseDir(child_chunk.get());
     }
 }

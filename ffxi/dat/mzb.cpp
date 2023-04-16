@@ -606,7 +606,7 @@ namespace FFXI
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertex_buffer_size, vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(index_buffer_size, index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->transform_buffer = engine->renderer->gpu->memory_manager->GetBuffer(transformation_buffer_size, transform_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        mesh->transform_buffer = engine->renderer->gpu->memory_manager->GetAlignedBuffer(transformation_buffer_size, 16, transform_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         model->meshes.push_back(std::move(mesh));
         model->lifetime = lotus::Lifetime::Long;
