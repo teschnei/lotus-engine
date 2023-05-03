@@ -1,6 +1,6 @@
 #include "dat_loader.h"
 #include <fstream>
-#include <fmt/core.h>
+#include <format>
 #include <algorithm>
 
 namespace FFXI
@@ -108,11 +108,11 @@ namespace FFXI
             auto ft_val = *reinterpret_cast<uint16_t*>(ftables[ftable_index - 1].data() + (index * 2));
             if (ftable_index == 1)
             {
-                return fmt::format("ROM/{}/{}.DAT", ft_val >> 7, ft_val & 0x7F);
+                return std::format("ROM/{}/{}.DAT", ft_val >> 7, ft_val & 0x7F);
             }
             else
             {
-                return fmt::format("ROM{}/{}/{}.DAT", ftable_index, ft_val >> 7, ft_val & 0x7F);
+                return std::format("ROM{}/{}/{}.DAT", ftable_index, ft_val >> 7, ft_val & 0x7F);
             }
         }
         return {};

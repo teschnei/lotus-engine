@@ -1,7 +1,7 @@
 #include "ffxi_audio.h"
 
 #include <fstream>
-#include <fmt/core.h>
+#include <format>
 
 #include "engine/core.h"
 
@@ -58,7 +58,7 @@ FFXI::Audio::Audio(lotus::Engine* _engine) : engine(_engine)
     sound_paths[0] = base_path / "sound/win";
     for (auto i = 1u; i < 16u; ++i)
     {
-        sound_paths[i] = base_path / fmt::format("sound{}/win", i);
+        sound_paths[i] = base_path / std::format("sound{}/win", i);
     }
 }
 
@@ -93,7 +93,7 @@ std::unique_ptr<SoLoud::AudioSource> FFXI::Audio::loadSound(uint32_t id)
 {
     for (const auto& path : sound_paths)
     {
-        if (auto as = loadAudioSource(path / fmt::format("se/se{:03}/se{:06}.spw", id / 1000, id)))
+        if (auto as = loadAudioSource(path / std::format("se/se{:03}/se{:06}.spw", id / 1000, id)))
         {
             return as;
         }
@@ -105,7 +105,7 @@ std::unique_ptr<SoLoud::AudioSource> FFXI::Audio::loadMusic(uint32_t id)
 {
     for (const auto& path : sound_paths)
     {
-        if (auto as = loadAudioSource(path / fmt::format("music/data/music{:03}.bgw", id)))
+        if (auto as = loadAudioSource(path / std::format("music/data/music{:03}.bgw", id)))
         {
             return as;
         }
