@@ -1,0 +1,11 @@
+target_sources(ffxi
+    PRIVATE
+    adpcm.cpp
+    adpcm.h
+    adpcmstream.cpp
+    adpcmstream.h
+    pcm.cpp
+    pcm.h
+    ffxi_audio.cpp
+    ffxi_audio.h
+    )
