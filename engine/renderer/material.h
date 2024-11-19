@@ -18,14 +18,11 @@ namespace lotus
         const uint32_t light_type;
         size_t index{ 0 };
 
-        auto getIndex() const { return descriptor_index->index; }
-
         std::pair<vk::Buffer, uint32_t> getBuffer() { return { buffer->buffer, buffer_offset }; }
         static size_t getMaterialBufferSize(Engine*);
     private:
         Material(std::shared_ptr<Buffer>, uint32_t buffer_offset, std::shared_ptr<Texture> texture, uint32_t light_type, float specular_exponent, float specular_intensity);
         std::shared_ptr<Buffer> buffer;
         uint32_t buffer_offset;
-        std::unique_ptr<GlobalDescriptors::MaterialDescriptor::Index> descriptor_index;
     };
 }

@@ -277,7 +277,7 @@ namespace FFXI
 
         return triangles + triangle_count * sizeof(uint16_t) * 4;
     }
-    
+
     void MZB::parseGridEntry(uint8_t* buffer, uint32_t offset, int x, int y)
     {
         uint32_t& pos = *(uint32_t*)(buffer + offset);
@@ -333,7 +333,7 @@ namespace FFXI
         }
 
         std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
-            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
         std::shared_ptr<lotus::Texture> texture = co_await lotus::Texture::LoadTexture("water", LoadWaterTexture, engine);
         mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
 
@@ -358,19 +358,6 @@ namespace FFXI
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertex_buffer_size, vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(index_buffer_size, index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
-        mesh->vertex_descriptor_index->write({
-            .buffer = mesh->vertex_buffer->buffer,
-            .offset = 0,
-            .range = VK_WHOLE_SIZE
-        });
-
-        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
-        mesh->index_descriptor_index->write({
-            .buffer = mesh->index_buffer->buffer,
-            .offset = 0,
-            .range = VK_WHOLE_SIZE
-        });
         mesh->setMaxIndex(3);
         mesh->setVertexCount(vertices.size());
         mesh->setIndexCount(indices.size());

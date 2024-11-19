@@ -4,7 +4,7 @@
 
 namespace lotus::Component
 {
-    DeformedMeshComponent::DeformedMeshComponent(Entity* _entity, Engine* _engine, const RenderBaseComponent& _base_component, 
+    DeformedMeshComponent::DeformedMeshComponent(Entity* _entity, Engine* _engine, const RenderBaseComponent& _base_component,
         const AnimationComponent& _animation_component, std::vector<std::shared_ptr<Model>> _models) :
         Component(_entity, _engine), base_component(_base_component), animation_component(_animation_component)
     {
@@ -51,7 +51,6 @@ namespace lotus::Component
             .model = model
         };
         info.vertex_buffers.resize(model->meshes.size());
-        info.vertex_buffer_indices.resize(model->meshes.size());
         for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
         {
             info.mesh_infos.push_back(engine->renderer->global_descriptors->getMeshInfoBuffer(model->meshes.size()));
@@ -62,29 +61,26 @@ namespace lotus::Component
 
             for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
             {
+                auto material_buffer = mesh->material->getBuffer();
                 size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-                info.vertex_buffers[i].push_back(engine->renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
-                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR, vk::MemoryPropertyFlagBits::eDeviceLocal));
-                auto vertex_index = engine->renderer->global_descriptors->getVertexIndex();
-                vertex_index->write({
-                    .buffer = info.vertex_buffers[i][image]->buffer,
-                    .offset = 0,
-                    .range = VK_WHOLE_SIZE
-                });
+                auto new_vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(mesh->getVertexCount() * vertex_size,
+                    vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
+                    vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
+                    vk::MemoryPropertyFlagBits::eDeviceLocal);
                 info.mesh_infos[image]->buffer_view[i] = {
-                    .vertex_offset = vertex_index->index,
-                    .index_offset = mesh->index_descriptor_index->index,
-                    .indices = static_cast<uint32_t>(mesh->getIndexCount()),
-                    .material_index = mesh->material->getIndex(),
+                    .vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = new_vertex_buffer->buffer}),
+                    .vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
+                    .index_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer}),
+                    .material = engine->renderer->gpu->device->getBufferAddress({.buffer = material_buffer.first}) + material_buffer.second,
                     .scale = glm::vec3{1.0},
                     .billboard = 0,
                     .colour = glm::vec4{1.0},
                     .uv_offset = glm::vec2{0.0},
                     .animation_frame = 0,
-                    .vertex_prev_offset = 0,
+                    .index_count = static_cast<uint32_t>(mesh->getIndexCount()),
                     .model_prev = glm::mat4{1.0}
                 };
-                info.vertex_buffer_indices[i].push_back(std::move(vertex_index));
+                info.vertex_buffers[i].push_back(std::move(new_vertex_buffer));
             }
         }
 
@@ -278,11 +274,11 @@ namespace lotus::Component
                     .pBufferMemoryBarriers = &barrier
                 });
 
-                auto vertex_index = models[i].vertex_buffer_indices[j][current_frame]->index;
-                auto prev_vertex_index = models[i].vertex_buffer_indices[j][previous_frame]->index;
+                auto current_vertex_buffer = models[i].vertex_buffers[j][current_frame]->buffer;
+                auto prev_vertex_buffer = models[i].vertex_buffers[j][previous_frame]->buffer;
 
-                models[i].mesh_infos[current_frame]->buffer_view[j].vertex_offset = vertex_index;
-                models[i].mesh_infos[current_frame]->buffer_view[j].vertex_prev_offset = prev_vertex_index;
+                models[i].mesh_infos[current_frame]->buffer_view[j].vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = current_vertex_buffer}),
+                models[i].mesh_infos[current_frame]->buffer_view[j].vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = prev_vertex_buffer}),
                 models[i].mesh_infos[current_frame]->buffer_view[j].animation_frame = models[0].model->animation_frame;
                 models[i].mesh_infos[current_frame]->buffer_view[j].model_prev = base_component.getPrevModelMatrix();
             }

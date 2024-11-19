@@ -1,7 +1,6 @@
 #include "mmb.h"
 #include "key_tables.h"
 #include <list>
-#include <ranges>
 #include "engine/core.h"
 #include "engine/renderer/model.h"
 #include "engine/renderer/vulkan/renderer.h"
@@ -414,7 +413,7 @@ namespace FFXI
         if (mmb->meshes.size() > 0)
         {
             material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine) * mmb->meshes.size(),
-                vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+                vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
         }
         uint32_t material_buffer_offset = 0;
 
@@ -453,19 +452,6 @@ namespace FFXI
 
             mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
             mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-            mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
-            mesh->vertex_descriptor_index->write({
-                .buffer = mesh->vertex_buffer->buffer,
-                .offset = 0,
-                .range = VK_WHOLE_SIZE
-            });
-
-            mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
-            mesh->index_descriptor_index->write({
-                .buffer = mesh->index_buffer->buffer,
-                .offset = 0,
-                .range = VK_WHOLE_SIZE
-            });
 
             mesh->setMaxIndex(*std::ranges::max_element(mmb_mesh.indices));
 

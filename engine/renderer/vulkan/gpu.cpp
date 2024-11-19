@@ -113,6 +113,7 @@ namespace lotus
         {
             .pNext = &vk_13_features,
             .descriptorIndexing = true,
+            .shaderSampledImageArrayNonUniformIndexing = true,
             .descriptorBindingUniformBufferUpdateAfterBind = true,
             .descriptorBindingSampledImageUpdateAfterBind = true,
             .descriptorBindingStorageBufferUpdateAfterBind = true,
@@ -120,7 +121,13 @@ namespace lotus
             .runtimeDescriptorArray = true,
             .uniformBufferStandardLayout = true,
             .timelineSemaphore = true,
-            .bufferDeviceAddress = true
+            .bufferDeviceAddress = true,
+        };
+
+        vk::PhysicalDeviceVulkan11Features vk_11_features
+        {
+            .pNext = &vk_12_features,
+            .storageBuffer16BitAccess = true
         };
 
         vk::PhysicalDeviceFeatures physical_device_features
@@ -145,7 +152,7 @@ namespace lotus
 
         vk::DeviceCreateInfo device_create_info
         {
-            .pNext = &vk_12_features,
+            .pNext = &vk_11_features,
             .queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size()),
             .pQueueCreateInfos = queue_create_infos.data(),
             .enabledExtensionCount = static_cast<uint32_t>(device_extensions2.size()),

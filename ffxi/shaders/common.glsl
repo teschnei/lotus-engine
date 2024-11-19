@@ -1,17 +1,26 @@
 #define M_PI 3.141592
 
+const uint //SceneInfo
+    eMeshInfo = 0,
+    eTextures = 1
+    ;
+
+const uint //RTInfo
+    eAS = 0
+    ;
+
 struct Mesh
 {
-    int vertex_offset;
-    int index_offset;
-    uint indices;
-    int material_index;
+    uint64_t vertex_buffer;
+    uint64_t vertex_prev_buffer;
+    uint64_t index_buffer;
+    uint64_t material;
     vec3 scale;
     uint billboard;
     vec4 colour;
     vec2 uv_offset;
     float animation_frame;
-    uint vertex_prev_offset;
+    uint index_count;
     mat4x4 model_prev;
 };
 

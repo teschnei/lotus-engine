@@ -1,21 +1,20 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 
-layout(binding = 2, set = 1) uniform sampler2D textures[];
-
-layout(binding = 3, set = 1) uniform MaterialInfo
-{
-    Material m;
-} materials[];
-
-layout(binding = 4, set = 1) buffer readonly MeshInfo
+layout(set = 2, binding = eMeshInfo) buffer readonly MeshInfo
 {
     Mesh m[];
 } meshInfo;
+layout(set = 2, binding = eTextures) uniform sampler2D textures[];
+
+layout(buffer_reference, scalar) buffer Materials { Material m; };
 
 layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -31,11 +30,12 @@ layout(push_constant) uniform PushConstant
 } push;
 
 void main() {
-    Mesh meshinfo = meshInfo.m[push.mesh_index];
-    Material mat = materials[meshinfo.material_index].m;
+    Mesh mesh = meshInfo.m[push.mesh_index];
+    Materials materials = Materials(mesh.material);
+    Material mat = materials.m;
 
     vec4 texture_colour = texture(textures[mat.texture_index], fragTexCoord);
-    vec4 mesh_colour = meshinfo.colour;
+    vec4 mesh_colour = mesh.colour;
     vec3 colour = fragColor.rgb *  mesh_colour.rgb * texture_colour.rgb * 4;
     float alpha = fragColor.a * mesh_colour.a * texture_colour.a * 2;
 

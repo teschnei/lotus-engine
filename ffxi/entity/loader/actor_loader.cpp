@@ -1,6 +1,5 @@
 #include "actor_loader.h"
 
-#include <ranges>
 #include "dat/os2.h"
 #include "engine/core.h"
 #include "engine/renderer/vulkan/renderer.h"
@@ -71,7 +70,7 @@ lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lo
         if (os2->meshes.size() > 0)
         {
             std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine) * os2->meshes.size(),
-                vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+                vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
             uint32_t material_buffer_offset = 0;
             for (const auto& os2_mesh : os2->meshes)
             {
@@ -143,19 +142,6 @@ lotus::Task<> FFXIActorLoader::LoadModel(std::shared_ptr<lotus::Model> model, lo
 
                 mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
                 mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices_uint8.size(), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-                mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
-                mesh->vertex_descriptor_index->write({
-                    .buffer = mesh->vertex_buffer->buffer,
-                    .offset = 0,
-                    .range = VK_WHOLE_SIZE
-                });
-
-                mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
-                mesh->index_descriptor_index->write({
-                    .buffer = mesh->index_buffer->buffer,
-                    .offset = 0,
-                    .range = VK_WHOLE_SIZE
-                });
                 mesh->setIndexCount(mesh_indices.size());
                 mesh->setVertexCount(os2_vertices.size());
                 mesh->setMaxIndex(*std::ranges::max_element(mesh_indices));

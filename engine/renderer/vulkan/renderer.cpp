@@ -284,7 +284,7 @@ namespace lotus
         std::ifstream file(file_name, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
-            throw std::runtime_error("failed to open file!");
+            throw std::runtime_error(std::format("failed to open shader {}", file_name));
         }
 
         size_t fileSize = (size_t) file.tellg();
@@ -325,7 +325,7 @@ namespace lotus
     std::vector<const char*> Renderer::getRequiredExtensions() const
     {
         auto extensions = window->getRequiredExtensions();
-        
+
         if (enableValidationLayers) {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }

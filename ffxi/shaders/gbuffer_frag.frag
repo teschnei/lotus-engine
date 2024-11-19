@@ -1,21 +1,20 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 
-layout(binding = 2, set = 1) uniform sampler2D textures[];
-
-layout(binding = 3, set = 1) uniform MaterialInfo
-{
-    Material m;
-} materials[];
-
-layout(binding = 4, set = 1) buffer readonly MeshInfo
+layout(set = 2, binding = eMeshInfo) buffer readonly MeshInfo
 {
     Mesh m[];
 } meshInfo;
+layout(set = 2, binding = eTextures) uniform sampler2D textures[];
+
+layout(buffer_reference, scalar) buffer Materials { Material m; };
 
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -46,13 +45,14 @@ void main() {
     if ((dot(cross_vec, normal)) < 0)
         cross_vec = -cross_vec;
 
-    Mesh meshinfo = meshInfo.m[push.mesh_index];
-    Material mat = materials[meshinfo.material_index].m;
+    Mesh mesh = meshInfo.m[push.mesh_index];
+    Materials materials = Materials(mesh.material);
+    Material mat = materials.m;
 
     outFaceNormal = vec4(cross_vec, 1.0);
     outAlbedo = texture(textures[mat.texture_index], fragTexCoord);
     outAlbedo.rgb *= fragColor;
-    
+
     /*
     if (outAlbedo.a > 1.f/32.f)
         outAlbedo.a = 1;
@@ -60,7 +60,7 @@ void main() {
         outAlbedo.a = 0;
     */
     outAlbedo.a = 1;
-        
+
     outMaterialIndex = push.mesh_index;
     outLightType = mat.light_type;
     vec2 curScreenPos = (pos.xy / pos.w) * 0.5 + 0.5;

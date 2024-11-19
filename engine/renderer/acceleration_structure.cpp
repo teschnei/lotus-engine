@@ -20,7 +20,9 @@ namespace lotus
             renderer->gpu->acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment,
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-        object_memory = renderer->gpu->memory_manager->GetBuffer(size_info.accelerationStructureSize, vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR, vk::MemoryPropertyFlagBits::eDeviceLocal);
+        object_memory = renderer->gpu->memory_manager->GetBuffer(size_info.accelerationStructureSize,
+                vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         vk::AccelerationStructureCreateInfoKHR info;
         info.type = type;
@@ -65,10 +67,11 @@ namespace lotus
             .dstAccelerationStructure = *acceleration_structure,
             .geometryCount = static_cast<uint32_t>(geometries.size()),
             .pGeometries = geometries.data(),
-            .scratchData = renderer->gpu->device->getBufferAddress({.buffer = scratch_memory->buffer}) 
+            .scratchData = renderer->gpu->device->getBufferAddress({.buffer = scratch_memory->buffer})
         };
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR*> ranges_v = { ranges.data() };
 
-        command_buffer.buildAccelerationStructuresKHR( build_info, ranges.data());
+        command_buffer.buildAccelerationStructuresKHR(build_info, ranges_v) ;
     }
 
     void AccelerationStructure::Copy(vk::CommandBuffer command_buffer, AccelerationStructure& target)
@@ -151,7 +154,7 @@ namespace lotus
                 .geometry = { .instances = vk::AccelerationStructureGeometryInstancesDataKHR{
                     .arrayOfPointers = false,
                     .data = renderer->gpu->device->getBufferAddress({.buffer = instance_memory->buffer})
-                }} 
+                }}
             }
         };
         vk::AccelerationStructureBuildRangeInfoKHR build_range{ .primitiveCount = instance_count };

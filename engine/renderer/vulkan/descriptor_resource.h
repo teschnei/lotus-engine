@@ -6,7 +6,7 @@
 
 namespace lotus
 {
-    namespace 
+    namespace
     {
         template<vk::DescriptorType T>
         struct DescriptorInfoType { using type = vk::DescriptorBufferInfo; };

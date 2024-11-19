@@ -17,9 +17,12 @@ namespace FFXI
         struct Vertex
         {
             glm::vec3 pos;
+            float _pad;
             glm::vec3 normal;
+            float _pad2;
             glm::vec4 color;
             glm::vec2 tex_coord;
+            glm::vec2 _pad3;
         };
         struct Mesh
         {
@@ -37,7 +40,7 @@ namespace FFXI
         std::vector<Mesh> meshes;
         uint8_t type{ 0 };
     private:
-        
+
     };
 
     class MMBLoader

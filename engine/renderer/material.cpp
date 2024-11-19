@@ -61,14 +61,6 @@ namespace lotus
 
         co_await engine->renderer->async_compute->compute(std::move(command_buffers[0]));
 
-        material->descriptor_index = engine->renderer->global_descriptors->getMaterialIndex();
-
-        material->descriptor_index->write({
-            .buffer = material->buffer->buffer,
-            .offset = material->buffer_offset,
-            .range = buffer_size
-        });
-
         co_return material;
     }
 }

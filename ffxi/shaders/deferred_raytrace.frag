@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 
@@ -29,9 +30,9 @@ void main() {
 
     if (albedo.a > light.light.landscape.min_fog && albedo.a < light.light.landscape.max_fog)
     {
-        outColor.rgb = mix(outColor.rgb, light.light.landscape.fog_color.rgb, (albedo.a - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));   
+        outColor.rgb = mix(outColor.rgb, light.light.landscape.fog_color.rgb, (albedo.a - light.light.landscape.min_fog) / (light.light.landscape.max_fog - light.light.landscape.min_fog));
     }
-    
+
     outColor.rgb += particle;
 
     float exposure = 1.0;

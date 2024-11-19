@@ -56,18 +56,19 @@ namespace lotus::Component
             for (size_t i = 0; i < model.model->meshes.size(); ++i)
             {
                 const auto& mesh = model.model->meshes[i];
+                auto material_buffer = mesh->material->getBuffer();
                 model.mesh_infos->buffer_view[i] = {
-                    .vertex_offset = mesh->vertex_descriptor_index->index,
-                    .index_offset = mesh->index_descriptor_index->index,
-                    .indices = static_cast<uint32_t>(mesh->getIndexCount()),
-                    .material_index = mesh->material->getIndex(),
+                    .vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
+                    .vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
+                    .index_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer}),
+                    .material = engine->renderer->gpu->device->getBufferAddress({.buffer = material_buffer.first}) + material_buffer.second,
                     .scale = glm::vec3{1.0},
                     .billboard = 0,
                     .colour = glm::vec4{1.0},
                     .uv_offset = glm::vec2{0.0},
                     .animation_frame = 0,
-                    .vertex_prev_offset = mesh->vertex_descriptor_index->index,
-                    .model_prev = glm::mat4{1.0}
+                    .index_count = static_cast<uint32_t>(mesh->getIndexCount()),
+                    .model_prev = glm::mat4{1.0},
                 };
             }
         }

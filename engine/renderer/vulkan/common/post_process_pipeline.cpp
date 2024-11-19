@@ -21,7 +21,7 @@ namespace lotus
                 .pImmutableSamplers = nullptr,
             },
             //input normals
-            vk::DescriptorSetLayoutBinding 
+            vk::DescriptorSetLayoutBinding
             {
                 .binding = 1,
                 .descriptorType = vk::DescriptorType::eStorageImage,
@@ -129,7 +129,7 @@ namespace lotus
                 renderer->swapchain->extent.height,
                 vk::Format::eR8Uint,
                 vk::ImageTiling::eOptimal,
-                vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage,
+                vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst,
                 vk::MemoryPropertyFlagBits::eDeviceLocal
             );
         }
@@ -190,7 +190,7 @@ namespace lotus
         });
     }
 
-    void PostProcessPipeline::InitWork(vk::CommandBuffer buffer)
+    void PostProcessPipeline::InitWork(vk::CommandBuffer command_buffer)
     {
         std::vector<vk::ImageMemoryBarrier2KHR> barriers;
         for (const auto& buffer : image_buffers)
@@ -222,9 +222,50 @@ namespace lotus
                 vk::ImageMemoryBarrier2KHR{
                     .srcStageMask = vk::PipelineStageFlagBits2::eNone,
                     .srcAccessMask = vk::AccessFlagBits2::eNone,
+                    .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                    .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
+                    .oldLayout = vk::ImageLayout::eUndefined,
+                    .newLayout = vk::ImageLayout::eTransferDstOptimal,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = buffer.image->image,
+                    .subresourceRange = {
+                        .aspectMask = vk::ImageAspectFlagBits::eColor,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1
+                    }
+                }
+            );
+        }
+
+        command_buffer.pipelineBarrier2KHR({
+            .imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()),
+            .pImageMemoryBarriers = barriers.data()
+        });
+
+        barriers.clear();
+        for (const auto& buffer : factor_buffers)
+        {
+            vk::ImageSubresourceRange range {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            };
+            vk::ClearColorValue clear {std::array<float, 4>{0,0,0,0}};
+            command_buffer.clearColorImage(buffer.image->image, vk::ImageLayout::eTransferDstOptimal,
+                    &clear, 1, &range);
+
+            barriers.push_back(
+                vk::ImageMemoryBarrier2KHR{
+                    .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+                    .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
                     .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
                     .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
-                    .oldLayout = vk::ImageLayout::eUndefined,
+                    .oldLayout = vk::ImageLayout::eTransferDstOptimal,
                     .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -240,11 +281,10 @@ namespace lotus
             );
         }
 
-        buffer.pipelineBarrier2KHR({
+        command_buffer.pipelineBarrier2KHR({
             .imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()),
             .pImageMemoryBarriers = barriers.data()
         });
-
     }
 
     vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)

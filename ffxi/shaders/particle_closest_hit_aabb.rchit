@@ -3,45 +3,40 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_shader_16bit_storage : enable
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 
 struct Vertex
 {
     vec3 pos;
+    float _pad;
     vec3 norm;
+    float _pad2;
     vec4 colour;
     vec2 uv;
+    vec2 _pad3;
 };
 
-layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 0, set = 2) buffer readonly Vertices
-{
-    vec4 v[];
-} vertices[];
+layout(set = 0, binding = eAS) uniform accelerationStructureEXT topLevelAS;
 
-layout(binding = 1, set = 2) buffer readonly Indices
-{
-    int i[];
-} indices[];
-
-layout(binding = 2, set = 2) uniform sampler2D textures[];
-
-layout(binding = 3, set = 2) uniform MaterialInfo
-{
-    Material m;
-} materials[];
-
-layout(binding = 4, set = 2) buffer readonly MeshInfo
-{
-    Mesh m[];
-} meshInfo;
-
-layout(std430, binding = 6, set = 1) buffer readonly Light
+layout(set = 1, binding = 6, std430) buffer readonly Light
 {
     LightBuffer light;
     LightInfo light_info[];
 } light;
+
+layout(set = 2, binding = eMeshInfo) buffer readonly MeshInfo
+{
+    Mesh m[];
+} meshInfo;
+layout(set = 2, binding = eTextures) uniform sampler2D textures[];
+
+layout(buffer_reference, scalar) buffer Indices { uint16_t i[]; };
+layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; };
+layout(buffer_reference, scalar) buffer Materials { Material m; };
 
 layout(location = 0) rayPayloadInEXT HitValue
 {
@@ -57,7 +52,7 @@ layout(location = 0) rayPayloadInEXT HitValue
     vec3 particle;
 } hitValue;
 
-layout(location = 1) rayPayloadEXT Shadow 
+layout(location = 1) rayPayloadEXT Shadow
 {
     vec4 light;
     vec4 shadow;
@@ -67,44 +62,6 @@ hitAttributeEXT block {
     vec2 bary_coord;
     uint primitive_id;
 } attribs;
-
-ivec3 getIndex(uint primitive_id)
-{
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].index_offset;
-    ivec3 ret;
-    uint base_index = primitive_id * 3;
-    if (base_index % 2 == 0)
-    {
-        ret.x = indices[resource_index].i[base_index / 2] & 0xFFFF;
-        ret.y = (indices[resource_index].i[base_index / 2] >> 16) & 0xFFFF;
-        ret.z = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
-    }
-    else
-    {
-        ret.x = (indices[resource_index].i[base_index / 2] >> 16) & 0xFFFF;
-        ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
-        ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
-    }
-    return ret;
-}
-
-uint vertexSize = 3;
-
-Vertex unpackVertex(uint index)
-{
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_offset;
-    Vertex v;
-
-    vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
-    vec4 d1 = vertices[resource_index].v[vertexSize * index + 1];
-    vec4 d2 = vertices[resource_index].v[vertexSize * index + 2];
-
-    v.pos = d0.xyz;
-    v.norm = vec3(d0.w, d1.x, d1.y);
-    v.colour = vec4(d1.z, d1.w, d2.x, d2.y);
-    v.uv = vec2(d2.z, d2.w);
-    return v;
-}
 
 void main()
 {
@@ -116,10 +73,19 @@ void main()
         hitValue.distance = gl_HitTEXT;
         return;
     }
-    ivec3 primitive_indices = getIndex(attribs.primitive_id);
-    Vertex v0 = unpackVertex(primitive_indices.x);
-    Vertex v1 = unpackVertex(primitive_indices.y);
-    Vertex v2 = unpackVertex(primitive_indices.z);
+    Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
+
+    Indices indices = Indices(mesh.index_buffer);
+    uvec3 primitive_indices = uvec3(
+        uint(indices.i[gl_PrimitiveID * 3 + 0]),
+        uint(indices.i[gl_PrimitiveID * 3 + 1]),
+        uint(indices.i[gl_PrimitiveID * 3 + 2])
+    );
+
+    Vertices vertices = Vertices(mesh.vertex_buffer);
+    Vertex v0 = vertices.v[primitive_indices.x];
+    Vertex v1 = vertices.v[primitive_indices.y];
+    Vertex v2 = vertices.v[primitive_indices.z];
 
     const vec3 barycentrics = vec3(1.0 - attribs.bary_coord.x - attribs.bary_coord.y, attribs.bary_coord.x, attribs.bary_coord.y);
 
@@ -130,10 +96,10 @@ void main()
     float dot_product = dot(-light.light.diffuse_dir, normalized_normal);
 
     vec2 uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
-    Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT];
     uv += mesh.uv_offset;
-    uint texture_index = materials[mesh.material_index].m.texture_index;
-    vec4 texture_colour = texture(textures[texture_index], uv);
+    Materials materials = Materials(mesh.material);
+    uint texture_index = materials.m.texture_index;
+    vec4 texture_colour = texture(textures[nonuniformEXT(texture_index)], uv);
     vec4 model_colour = v0.colour * barycentrics.x + v1.colour * barycentrics.y + v2.colour * barycentrics.z;
     vec3 colour = model_colour.rgb * mesh.colour.rgb * texture_colour.rgb * 4;
     float a = model_colour.a * mesh.colour.a * texture_colour.a * 2;

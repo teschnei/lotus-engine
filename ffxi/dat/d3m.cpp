@@ -1,6 +1,7 @@
 #include "d3m.h"
 
 #include <numeric>
+#include <vulkan/vulkan_enums.hpp>
 #include "engine/core.h"
 #include "engine/renderer/vulkan/renderer.h"
 
@@ -80,7 +81,12 @@ namespace FFXI
         for (size_t i = 0; i < num_triangles * 3; ++i)
         {
             glm::vec4 color{ ((vertices[i].color & 0xFF0000) >> 16) / 128.f, ((vertices[i].color & 0xFF00) >> 8) / 128.f, ((vertices[i].color & 0xFF)) / 128.f, ((vertices[i].color & 0xFF000000) >> 24) / 128.f };
-            vertex_buffer.push_back({ vertices[i].pos, vertices[i].normal, color, vertices[i].uv });
+            vertex_buffer.push_back({
+                .pos = vertices[i].pos,
+                .normal = vertices[i].normal,
+                .color = color,
+                .uv = vertices[i].uv
+            });
         }
     }
 
@@ -97,7 +103,12 @@ namespace FFXI
             for (size_t j = 0; j < 6; ++j)
             {
                 glm::vec4 color{ ((rects[i].vertices[j].color & 0xFF0000) >> 16) / 128.f, ((rects[i].vertices[j].color & 0xFF00) >> 8) / 128.f, ((rects[i].vertices[j].color & 0xFF)) / 128.f, ((rects[i].vertices[j].color & 0xFF000000) >> 24) / 128.f };
-                vertex_buffer.push_back({ rects[i].vertices[j].pos, glm::vec3(0.f,0.f,1.f), color, rects[i].vertices[j].uv });
+                vertex_buffer.push_back({
+                    .pos = rects[i].vertices[j].pos,
+                    .normal = glm::vec3(0.f,0.f,1.f),
+                    .color = color,
+                    .uv = rects[i].vertices[j].uv
+                });
             }
         }
     }
@@ -126,30 +137,17 @@ namespace FFXI
             aabbs_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
         }
 
-        auto mesh = std::make_unique<lotus::Mesh>(); 
+        auto mesh = std::make_unique<lotus::Mesh>();
         mesh->has_transparency = true;
 
         std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
-            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
         if (!texture)
             texture = blank_texture;
         mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
 
         mesh->vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(vertices_uint8.size(), vertex_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices.size() * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
-        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
-        mesh->vertex_descriptor_index->write({
-            .buffer = mesh->vertex_buffer->buffer,
-            .offset = 0,
-            .range = VK_WHOLE_SIZE
-        });
-
-        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
-        mesh->index_descriptor_index->write({
-            .buffer = mesh->index_buffer->buffer,
-            .offset = 0,
-            .range = VK_WHOLE_SIZE
-        });
         mesh->aabbs_buffer = engine->renderer->gpu->memory_manager->GetBuffer(sizeof(vk::AabbPositionsKHR), aabbs_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(indices.size());
         mesh->setVertexCount(vertices.size());
@@ -200,11 +198,11 @@ namespace FFXI
             index_usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
         }
 
-        auto mesh = std::make_unique<lotus::Mesh>(); 
+        auto mesh = std::make_unique<lotus::Mesh>();
         mesh->has_transparency = true;
 
         std::shared_ptr<lotus::Buffer> material_buffer = engine->renderer->gpu->memory_manager->GetBuffer(lotus::Material::getMaterialBufferSize(engine),
-            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal);
+            vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eShaderDeviceAddress, vk::MemoryPropertyFlagBits::eDeviceLocal);
         if (!texture)
             texture = blank_texture;
         mesh->material = co_await lotus::Material::make_material(engine, material_buffer, 0, texture);
@@ -213,19 +211,6 @@ namespace FFXI
         mesh->index_buffer = engine->renderer->gpu->memory_manager->GetBuffer(indices.size() * sizeof(uint16_t), index_usage_flags, vk::MemoryPropertyFlagBits::eDeviceLocal);
         mesh->setIndexCount(indices.size());
         mesh->setVertexCount(vertices.size());
-        mesh->vertex_descriptor_index = engine->renderer->global_descriptors->getVertexIndex();
-        mesh->vertex_descriptor_index->write({
-            .buffer = mesh->vertex_buffer->buffer,
-            .offset = 0,
-            .range = VK_WHOLE_SIZE
-        });
-
-        mesh->index_descriptor_index = engine->renderer->global_descriptors->getIndexIndex();
-        mesh->index_descriptor_index->write({
-            .buffer = mesh->index_buffer->buffer,
-            .offset = 0,
-            .range = VK_WHOLE_SIZE
-        });
         mesh->setMaxIndex(vertices.size() - 1);
         mesh->setVertexInputAttributeDescription(getAttributeDescriptions(), sizeof(D3M::Vertex));
         mesh->setVertexInputBindingDescription(getBindingDescriptions());

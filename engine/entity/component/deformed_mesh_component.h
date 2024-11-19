@@ -24,7 +24,6 @@ namespace lotus::Component
             std::vector<std::unique_ptr<GlobalDescriptors::MeshInfoBuffer::View>> mesh_infos;
             //transformed vertex buffers (per mesh, per render target)
             std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
-            std::vector<std::vector<std::unique_ptr<GlobalDescriptors::VertexDescriptor::Index>>> vertex_buffer_indices;
         };
 
         std::span<const ModelInfo> getModels() const;

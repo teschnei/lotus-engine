@@ -1,74 +1,37 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_shader_16bit_storage : enable
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 
 struct Vertex
 {
     vec3 pos;
+    float _pad;
     vec3 norm;
+    float _pad2;
     vec4 colour;
     vec2 uv;
+    vec2 _pad3;
 };
 
-layout(binding = 0, set = 2) buffer readonly Vertices
-{
-    vec4 v[];
-} vertices[];
-
-layout(binding = 1, set = 2) buffer readonly Indices
-{
-    int i[];
-} indices[];
-
-layout(binding = 4, set = 2) buffer readonly MeshInfo
+layout(set = 2, binding = eMeshInfo) buffer readonly MeshInfo
 {
     Mesh m[];
 } meshInfo;
+
+layout(buffer_reference, scalar) buffer Indices { uint16_t i[]; };
+layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; };
 
 hitAttributeEXT block {
     vec2 bary_coord;
     uint primitive_id;
 } attribs;
-
-ivec3 getIndex(uint base_index, uint resource_index)
-{
-    ivec3 ret;
-    if (base_index % 2 == 0)
-    {
-        ret.x = indices[resource_index].i[base_index / 2] & 0xFFFF;
-        ret.y = (indices[resource_index].i[base_index / 2] >> 16) & 0xFFFF;
-        ret.z = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
-    }
-    else
-    {
-        ret.x = (indices[resource_index].i[base_index / 2] >> 16) & 0xFFFF;
-        ret.y = indices[resource_index].i[(base_index / 2) + 1] & 0xFFFF;
-        ret.z = (indices[resource_index].i[(base_index / 2) + 1] >> 16) & 0xFFFF;
-    }
-    return ret;
-}
-
-uint vertexSize = 3;
-
-Vertex unpackVertex(uint index)
-{
-    uint resource_index = meshInfo.m[gl_InstanceCustomIndexEXT+gl_GeometryIndexEXT].vertex_offset;
-    
-    Vertex v;
-
-    vec4 d0 = vertices[resource_index].v[vertexSize * index + 0];
-    vec4 d1 = vertices[resource_index].v[vertexSize * index + 1];
-    vec4 d2 = vertices[resource_index].v[vertexSize * index + 2];
-
-    v.pos = d0.xyz;
-    v.norm = vec3(d0.w, d1.x, d1.y);
-    v.colour = vec4(d1.z, d1.w, d2.x, d2.y);
-    v.uv = vec2(d2.z, d2.w);
-    return v;
-}
 
 mat4 lookAt(vec3 eye, vec3 center, vec3 up)
 {
@@ -95,10 +58,17 @@ mat4 lookAt(vec3 eye, vec3 center, vec3 up)
 
 void main()
 {
-    Mesh mesh_info = meshInfo.m[gl_InstanceCustomIndexEXT + gl_GeometryIndexEXT];
-    for (uint i = 0; i < mesh_info.indices; i += 3)
+    Mesh mesh = meshInfo.m[gl_InstanceCustomIndexEXT + gl_GeometryIndexEXT];
+    Indices indices = Indices(mesh.index_buffer);
+    Vertices vertices = Vertices(mesh.vertex_buffer);
+
+    for (uint i = 0; i < mesh.index_count; i += 3)
     {
-        ivec3 triangle_indices = getIndex(i, mesh_info.index_offset);
+        uvec3 triangle_indices = uvec3(
+            uint(indices.i[i]),
+            uint(indices.i[i + 1]),
+            uint(indices.i[i + 2])
+        );
 
         mat4x3 transform = gl_ObjectToWorldEXT;
         /*
@@ -112,9 +82,9 @@ void main()
         }
         */
 
-        vec3 v0 = transform * vec4(unpackVertex(triangle_indices.x).pos, 1.0);
-        vec3 v1 = transform * vec4(unpackVertex(triangle_indices.y).pos, 1.0);
-        vec3 v2 = transform * vec4(unpackVertex(triangle_indices.z).pos, 1.0);
+        vec3 v0 = transform * vec4(vertices.v[triangle_indices.x].pos, 1.0);
+        vec3 v1 = transform * vec4(vertices.v[triangle_indices.y].pos, 1.0);
+        vec3 v2 = transform * vec4(vertices.v[triangle_indices.z].pos, 1.0);
 
         vec3 e1 = v1 - v0;
         vec3 e2 = v2 - v0;

@@ -4,21 +4,13 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_ARB_shader_clock : enable
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 #include "sampling.glsl"
 
-layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
-
-layout(binding = 3, set = 2) uniform MaterialInfo
-{
-    Material m;
-} materials[];
-
-layout(binding = 4, set = 2) buffer readonly MeshInfo
-{
-    Mesh m[];
-} meshInfo;
+layout(binding = eAS, set = 0) uniform accelerationStructureEXT topLevelAS;
 
 layout(binding = 0, set = 1, rgba32f) uniform image2D light_out;
 layout(binding = 1, set = 1) uniform sampler2D position_in;
@@ -41,6 +33,14 @@ layout(binding = 7, set = 1) uniform Camera {
     vec4 eye_pos;
 } camera;
 
+layout(set = 2, binding = eMeshInfo) buffer readonly MeshInfo
+{
+    Mesh m[];
+} meshInfo;
+
+layout(buffer_reference, scalar) buffer Materials { Material m; };
+
+
 layout(location = 0) rayPayloadEXT HitValue
 {
     vec3 BRDF;
@@ -56,13 +56,13 @@ layout(location = 0) rayPayloadEXT HitValue
     vec3 prev_pos;
 } hitValue;
 
-layout(location = 1) rayPayloadEXT Shadow 
+layout(location = 1) rayPayloadEXT Shadow
 {
     vec4 light;
     vec4 shadow;
 } shadow;
 
-void main() 
+void main()
 {
     vec2 uv = vec2(float(gl_LaunchIDEXT.x)/float(gl_LaunchSizeEXT.x - 1), float(gl_LaunchIDEXT.y)/float(gl_LaunchSizeEXT.y - 1));
     vec3 position = texture(position_in, uv).xyz;
@@ -70,14 +70,15 @@ void main()
     vec3 face_normal = texture(face_normal_in, uv).xyz;
     vec4 albedo = texture(albedo_in, uv);
     uint mesh_index = texture(material_index_in, uv).r;
-    uint material_index = meshInfo.m[mesh_index].material_index;
+    Mesh mesh = meshInfo.m[mesh_index];
 
     float dot_product = dot(-light.light.diffuse_dir, normal);
 
     vec3 diffuse_color = vec3(0.0);
     float brightness = 0;
 
-    Material material = materials[material_index].m;
+    Materials materials = Materials(mesh.material);
+    Material material = materials.m;
 
     if (material.light_type == 0)
     {

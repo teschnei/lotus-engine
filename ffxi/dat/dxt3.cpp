@@ -73,7 +73,7 @@ namespace FFXI
                         ++buf_p;
                     }
                 }
-                    
+
                 break;
             }
             case 0x05:

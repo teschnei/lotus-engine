@@ -1,7 +1,7 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
 
-layout(location = 1) rayPayloadInEXT Shadow 
+layout(location = 1) rayPayloadInEXT Shadow
 {
     vec4 light;
     vec4 shadow;

@@ -2,11 +2,12 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_ARB_shader_clock : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common.glsl"
 #include "sampling.glsl"
 
-layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+layout(binding = eAS, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 0, set = 1) uniform writeonly restrict image2D albedo;
 layout(binding = 1, set = 1) uniform writeonly restrict image2D normal;
 layout(binding = 2, set = 1) uniform writeonly restrict image2D light;
@@ -36,7 +37,7 @@ layout(location = 0) rayPayloadEXT HitValue
     vec3 prev_pos;
 } hitValue;
 
-void main() 
+void main()
 {
     const vec2 center = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
     const vec2 in_uv = center / vec2(gl_LaunchSizeEXT.xy);
@@ -70,6 +71,7 @@ void main()
     const int max_samples = 1;
     const int max_depth = 2;
     vec3 accumulation = vec3(0.0);
+
     if (hitValue.depth < max_depth)
     {
         for (int samples = 0; samples < max_samples; ++samples)

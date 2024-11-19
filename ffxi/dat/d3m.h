@@ -14,9 +14,12 @@ namespace FFXI
         struct Vertex
         {
             glm::vec3 pos;
+            float _pad;
             glm::vec3 normal;
+            float _pad2;
             glm::vec4 color;
             glm::vec2 uv;
+            glm::vec2 _pad3;
         };
         D3M(char* name, uint8_t* buffer, size_t len);
 
