@@ -1,8 +1,7 @@
 # lotus-engine
-This repository is the implementation of lotus-engine, plus an implementation of FFXI using it.
+This repository is the implementation of lotus-engine
 
-Currently it can only load maps, non-player character models, animations, some schedulers/generators/particles, and collision meshes.
-It is mostly just a demonstration of lotus-engine as I implement various rendering techniques for fun.  
+While it does support rasterization, hybrid RT, and full RT, I mostly only test with full RT because it's the most fun
 
 # Build Requirements
 * (Windows) Visual Studio 2022
@@ -19,8 +18,4 @@ It is mostly just a demonstration of lotus-engine as I implement various renderi
 
 # Running Requirements
 * GPU compatible with VK_KHR_raytracing (RTX2000+, AMD6000+)
-* FFXI installed somewhere (located via registry (Windows) or environment variable FFXI_PATH (Linux))
 
-# Run
-    cd build/bin
-    FFXI_PATH=(...) ./ffxi

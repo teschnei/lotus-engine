@@ -1,0 +1,22 @@
+target_sources(lotus-engine
+    PRIVATE
+    buffer_resource.h
+    descriptor_resource.h
+    gpu.cpp
+    gpu.h
+    renderer.cpp
+    renderer.h
+    renderer_settings.h
+    swapchain.cpp
+    swapchain.h
+    ui_renderer.cpp
+    ui_renderer.h
+    vulkan_inc.h
+    window.cpp
+    window.h
+    )
+
+add_subdirectory(hybrid)
+add_subdirectory(raster)
+add_subdirectory(raytrace)
+add_subdirectory(common)

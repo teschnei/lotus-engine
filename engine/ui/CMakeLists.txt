@@ -1,9 +1,0 @@
-target_sources(engine
-    PRIVATE
-    element.cpp
-    element.h
-    events.cpp
-    events.h
-    ui.cpp
-    ui.h
-    )
