@@ -1,7 +1,9 @@
 # lotus-engine
 This repository is the implementation of lotus-engine
 
-While it does support rasterization, hybrid RT, and full RT, I mostly only test with full RT because it's the most fun
+While it does support rasterization, hybrid RT, and full RT, I mostly only test with full RT because it's the most fun.
+
+For an implementation example, see https://github.com/teschnei/lotus-ffxi
 
 # Build Requirements
 * (Windows) Visual Studio 2022
