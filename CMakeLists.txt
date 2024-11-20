@@ -11,7 +11,6 @@ set(CMAKE_MODULE_PATH
 ###############################
 ## deps
 ###############################
-include( "cmake/compiler.cmake" )
 
 find_package(Vulkan REQUIRED)
 find_package(GLM REQUIRED)
@@ -23,7 +22,8 @@ add_library(lotus-engine)
 target_include_directories(lotus-engine PUBLIC "." )
 target_include_directories(lotus-engine PUBLIC "external/soloud/include" )
 
-target_compile_options(lotus-engine PUBLIC $<$<PLATFORM_ID:Linux>:-fcoroutines>)
+target_compile_features(lotus-engine PUBLIC cxx_std_20)
+target_compile_definitions(lotus-engine PUBLIC GLM_ENABLE_EXPERIMENTAL)
 
 target_link_libraries(lotus-engine $<$<PLATFORM_ID:Linux>:-ldl>)
 target_link_libraries(lotus-engine Vulkan::Vulkan SDL::SDL2 GLM::GLM soloud GPUOpen::VulkanMemoryAllocator)
