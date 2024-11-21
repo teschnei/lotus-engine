@@ -28,7 +28,7 @@ namespace lotus
         BufferResource(MemoryManager* memory_manager, vk::Device device, vk::DescriptorSet _set)
         {
             free_indices.resize(max_index_size);
-            constexpr auto size = this->max_resource_index * sizeof(T);
+            constexpr auto size = BufferResource::max_resource_index * sizeof(T);
             this->buffer = memory_manager->GetBuffer(size, vk::BufferUsageFlagBits::eStorageBuffer, vk::MemoryPropertyFlagBits::eHostVisible);
             this->buffer_mapped = (T*)this->buffer->map(0, size, {});
 
