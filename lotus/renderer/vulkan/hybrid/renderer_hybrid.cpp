@@ -1,11 +1,12 @@
 #include "renderer_hybrid.h"
-#include <glm/glm.hpp>
 #include <fstream>
 
 #include "lotus/core.h"
 #include "lotus/game.h"
 #include "lotus/config.h"
 #include "lotus/light_manager.h"
+
+import glm;
 
 namespace lotus
 {
@@ -846,7 +847,7 @@ namespace lotus
 
         return render_buffers;
     }
-    
+
     Task<> RendererHybrid::drawFrame()
     {
         if (!engine->game || !engine->game->scene)

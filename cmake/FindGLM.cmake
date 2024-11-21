@@ -63,4 +63,13 @@ IF(GLM_FOUND)
 	set_target_properties(GLM::GLM PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${GLM_INCLUDE_DIR}"
 	)
+	add_library(GLMModule)
+
+	target_sources(GLMModule PUBLIC
+  	FILE_SET CXX_MODULES
+  	BASE_DIRS ${GLM_INCLUDE_DIR}
+  	FILES ${GLM_INCLUDE_DIR}/glm/glm.cppm
+	)
+
+	target_compile_features(GLMModule PUBLIC cxx_std_20)
 ENDIF(GLM_FOUND)

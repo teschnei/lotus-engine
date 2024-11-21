@@ -1,5 +1,4 @@
 #include "renderer_raytrace.h"
-#include <glm/glm.hpp>
 #include <fstream>
 
 #include "lotus/core.h"
@@ -8,6 +7,8 @@
 #include "lotus/light_manager.h"
 #include "lotus/entity/component/camera_component.h"
 #include "lotus/renderer/acceleration_structure.h"
+
+import glm;
 
 namespace lotus
 {

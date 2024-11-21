@@ -2,8 +2,9 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
-#include <glm/gtc/quaternion.hpp>
 #include "lotus/renderer/animation.h"
+
+import glm;
 
 namespace lotus
 {

@@ -1,11 +1,12 @@
 #include "renderer.h"
-#include <glm/glm.hpp>
 #include <fstream>
 #include <iostream>
 
 #include "lotus/core.h"
 #include "lotus/game.h"
 #include "lotus/config.h"
+
+import glm;
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 

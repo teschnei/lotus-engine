@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <glm/glm.hpp>
 #include "window.h"
 #include "gpu.h"
 #include "swapchain.h"
@@ -15,6 +14,8 @@
 #include "lotus/renderer/model.h"
 #include "lotus/entity/component/camera_component.h"
 #include "common/global_descriptors.h"
+
+import glm;
 
 namespace lotus
 {

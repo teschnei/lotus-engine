@@ -1,9 +1,10 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/renderer/vulkan/descriptor_resource.h"
 #include "lotus/renderer/vulkan/buffer_resource.h"
+
+import glm;
 
 namespace lotus
 {

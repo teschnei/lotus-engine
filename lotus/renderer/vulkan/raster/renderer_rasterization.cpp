@@ -1,5 +1,4 @@
 #include "renderer_rasterization.h"
-#include <glm/glm.hpp>
 #include <fstream>
 #include <iostream>
 
@@ -7,6 +6,8 @@
 #include "lotus/game.h"
 #include "lotus/config.h"
 #include "lotus/light_manager.h"
+
+import glm;
 
 namespace lotus
 {
@@ -276,8 +277,8 @@ namespace lotus
         shadowmap_deferred_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
         std::vector<vk::DescriptorSetLayoutBinding> deferred_bindings = {
-            pos_sample_layout_binding, 
-            normal_sample_layout_binding, 
+            pos_sample_layout_binding,
+            normal_sample_layout_binding,
             albedo_sample_layout_binding,
             light_type_sample_layout_binding,
             accumulation_sample_layout_binding,
@@ -752,7 +753,7 @@ namespace lotus
         descriptorWrites[9].descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrites[9].descriptorCount = 1;
         descriptorWrites[9].pImageInfo = &shadowmap_image_info;
-        
+
         gpu->device->updateDescriptorSets(descriptorWrites, {});
         buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, *deferred_descriptor_set[current_frame], {});
 

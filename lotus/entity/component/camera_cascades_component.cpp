@@ -4,7 +4,8 @@
 #include "lotus/core.h"
 #include "lotus/light_manager.h"
 #include "lotus/renderer/vulkan/raster/renderer_rasterization.h"
-#include <glm/glm.hpp>
+
+import glm;
 
 namespace lotus::Component
 {

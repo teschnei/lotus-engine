@@ -4,8 +4,9 @@
 #include "lotus/task.h"
 #include "lotus/worker_pool.h"
 #include <functional>
-#include <glm/glm.hpp>
 #include <vector>
+
+import glm;
 
 // class for doing generic raytracing queries
 namespace lotus {

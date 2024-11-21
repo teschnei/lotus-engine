@@ -1,10 +1,10 @@
 #pragma once
 #include "component.h"
 #include <memory>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 #include "lotus/renderer/memory.h"
+
+import glm;
 
 namespace lotus::Component
 {

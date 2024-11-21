@@ -1,8 +1,8 @@
 #pragma once
 #include "component.h"
 #include <memory>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
+
+import glm;
 
 #include "lotus/renderer/memory.h"
 

@@ -2,7 +2,8 @@
 
 #include "texture.h"
 #include "lotus/renderer/vulkan/common/global_descriptors.h"
-#include <glm/glm.hpp>
+
+import glm;
 
 namespace lotus
 {

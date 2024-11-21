@@ -1,11 +1,12 @@
 #pragma once
-#include <glm/glm.hpp>
 #include <condition_variable>
 #include <mutex>
 #include <span>
 #include "memory.h"
 #include "lotus/types.h"
 #include "lotus/worker_task.h"
+
+import glm;
 
 namespace lotus
 {

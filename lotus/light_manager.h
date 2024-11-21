@@ -1,9 +1,10 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include <vector>
 #include <shared_mutex>
 #include "renderer/memory.h"
+
+import glm;
 
 namespace lotus
 {

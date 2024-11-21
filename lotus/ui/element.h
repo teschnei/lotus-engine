@@ -3,10 +3,11 @@
 #include "lotus/types.h"
 #include <vector>
 #include <iterator>
-#include <glm/glm.hpp>
 #include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/renderer/texture.h"
 #include "lotus/worker_task.h"
+
+import glm;
 
 namespace lotus
 {

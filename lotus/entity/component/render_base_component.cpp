@@ -29,7 +29,7 @@ namespace lotus::Component
         {
             if (billboard != Billboard::None)
             {
-                auto rot_mat = glm::transpose(glm::toMat4(rot));
+                auto rot_mat = glm::transpose(glm::mat4_cast(rot));
                 auto camera_mat = glm::mat4(glm::transpose(glm::mat3(engine->camera->getViewMatrix())));
                 if (billboard == Billboard::Y)
                 {

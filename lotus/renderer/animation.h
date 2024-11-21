@@ -2,10 +2,10 @@
 
 #include <string>
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
 #include <map>
 #include "lotus/types.h"
+
+import glm;
 
 namespace lotus
 {

@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <vector>
 #include "vulkan_inc.h"
 #include "lotus/renderer/memory.h"
