@@ -1,7 +1,9 @@
 #pragma once
 
 #include "lotus/renderer/sdl_inc.h"
-#include "vulkan_inc.h"
+#include <vector>
+
+import vulkan_hpp;
 
 namespace lotus
 {

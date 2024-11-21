@@ -17,9 +17,9 @@ public:
 
     virtual Task<> drawFrame() override;
 
-    virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
-    virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info);
-    virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
+    virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) override;
+    virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) override;
+    virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) override { return {}; }
 
     std::unique_ptr<Image> depth_image;
     vk::UniqueHandle<vk::ImageView, vk::DispatchLoaderDynamic> depth_image_view;

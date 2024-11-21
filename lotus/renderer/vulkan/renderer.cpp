@@ -6,6 +6,8 @@
 #include "lotus/core.h"
 #include "lotus/game.h"
 
+#include <vulkan/vulkan_hpp_macros.hpp>
+
 import glm;
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE

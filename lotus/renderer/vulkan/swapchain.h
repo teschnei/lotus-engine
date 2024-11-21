@@ -1,6 +1,8 @@
 #pragma once
+#include <cstdint>
+#include <vector>
 
-#include "vulkan_inc.h"
+import vulkan_hpp;
 
 namespace lotus
 {

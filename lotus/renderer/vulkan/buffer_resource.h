@@ -1,9 +1,11 @@
 #pragma once
 #include "lotus/renderer/memory.h"
 #include "lotus/shared_linked_list.h"
-#include "vulkan_inc.h"
 #include <atomic>
+#include <span>
 #include <vector>
+
+import vulkan_hpp;
 
 namespace lotus
 {

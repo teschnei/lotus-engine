@@ -16,6 +16,23 @@ find_package(GLM REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 
+# Vulkan Module (temporary)
+add_library( VulkanHppModule )
+target_sources( VulkanHppModule PUBLIC
+  FILE_SET CXX_MODULES
+  BASE_DIRS ${Vulkan_INCLUDE_DIR}
+  FILES ${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm
+)
+target_compile_definitions(VulkanHppModule
+	PUBLIC
+	VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+	PRIVATE
+	VULKAN_HPP_NO_CONSTRUCTORS
+	VULKAN_HPP_NO_SETTERS
+)
+target_compile_features( VulkanHppModule PUBLIC cxx_std_20 )
+target_link_libraries( VulkanHppModule PUBLIC Vulkan::Vulkan )
+
 add_library(lotus-engine)
 
 target_include_directories(lotus-engine PUBLIC "." )
@@ -23,7 +40,7 @@ target_include_directories(lotus-engine PUBLIC "external/soloud/include" )
 
 target_compile_features(lotus-engine PUBLIC cxx_std_20)
 
-target_link_libraries(lotus-engine PUBLIC Vulkan::Vulkan SDL::SDL2 GLMModule soloud GPUOpen::VulkanMemoryAllocator $<$<PLATFORM_ID:Linux>:-ldl>)
+target_link_libraries(lotus-engine PUBLIC VulkanHppModule SDL::SDL2 GLMModule soloud GPUOpen::VulkanMemoryAllocator $<$<PLATFORM_ID:Linux>:-ldl>)
 
 target_compile_definitions(GLMModule PUBLIC
 	GLM_FORCE_LEFT_HANDED

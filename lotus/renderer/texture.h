@@ -1,12 +1,13 @@
 #pragma once
 
 #include "lotus/renderer/vulkan/common/global_descriptors.h"
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/worker_task.h"
 #include "memory.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
+
+import vulkan_hpp;
 
 namespace lotus
 {

@@ -21,9 +21,9 @@ public:
     vk::UniqueImageView depth_image_view;
     std::vector<vk::UniqueCommandBuffer> render_commandbuffers;
 
-    virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
-    virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
-    virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) { return {}; }
+    virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) override { return {}; }
+    virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) override { return {}; }
+    virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) override { return {}; }
 
     /* Ray tracing */
     vk::UniqueDescriptorSetLayout descriptor_layout_deferred;

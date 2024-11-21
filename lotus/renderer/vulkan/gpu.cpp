@@ -3,6 +3,7 @@
 #include "lotus/config.h"
 #include "renderer.h"
 #include <set>
+#include <vulkan/vulkan_hpp_macros.hpp>
 
 namespace lotus
 {

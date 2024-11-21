@@ -1,13 +1,13 @@
 #pragma once
 
 #include "lotus/renderer/texture.h"
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/types.h"
 #include "lotus/worker_task.h"
 #include <iterator>
 #include <vector>
 
 import glm;
+import vulkan_hpp;
 
 namespace lotus
 {

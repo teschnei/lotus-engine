@@ -1,7 +1,6 @@
 #pragma once
 
 #include "async_queue.h"
-#include "renderer/vulkan/vulkan_inc.h"
 #include "shared_linked_list.h"
 #include "task.h"
 #include <coroutine>
@@ -10,6 +9,8 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+import vulkan_hpp;
 
 namespace lotus
 {

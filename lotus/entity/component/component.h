@@ -152,6 +152,7 @@ private:
         virtual Task<> run(Engine* engine, time_point time, duration elapsed) = 0;
         virtual void remove(Entity* entity) = 0;
         virtual bool handleInput(Input* input, const SDL_Event& event) = 0;
+        virtual ~ComponentRunnerInterface() {}
     };
 
     template <ComponentConcept T> class ComponentRunner : public ComponentRunnerInterface

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "material.h"
 #include "memory.h"
 #include <memory>
+
+import vulkan_hpp;
 
 namespace lotus
 {

@@ -1,8 +1,9 @@
 #pragma once
 #include "lotus/shared_linked_list.h"
-#include "vulkan_inc.h"
 #include <atomic>
 #include <vector>
+
+import vulkan_hpp;
 
 namespace lotus
 {

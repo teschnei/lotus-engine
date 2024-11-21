@@ -1,11 +1,10 @@
 #pragma once
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "vk_mem_alloc.h"
 #include <memory>
 #include <mutex>
 #include <utility>
 
-#undef MemoryBarrier
+import vulkan_hpp;
 
 namespace lotus
 {

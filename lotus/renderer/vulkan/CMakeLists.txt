@@ -11,7 +11,6 @@ target_sources(lotus-engine
     swapchain.h
     ui_renderer.cpp
     ui_renderer.h
-    vulkan_inc.h
     window.cpp
     window.h
     )

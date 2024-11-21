@@ -30,9 +30,9 @@ public:
         vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> blended_shadowmap_pipeline;
     } landscape_pipeline_group, main_pipeline_group, particle_pipeline_group;
 
-    virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info);
-    virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info);
-    virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info);
+    virtual vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo& info) override;
+    virtual vk::Pipeline createParticlePipeline(vk::GraphicsPipelineCreateInfo& info) override;
+    virtual vk::Pipeline createShadowmapPipeline(vk::GraphicsPipelineCreateInfo& info) override;
 
     vk::UniqueHandle<vk::Pipeline, vk::DispatchLoaderDynamic> deferred_pipeline;
     std::unique_ptr<Image> depth_image;

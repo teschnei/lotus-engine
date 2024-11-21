@@ -3,7 +3,8 @@
 #include "lotus/renderer/memory.h"
 #include "lotus/renderer/texture.h"
 #include "lotus/ui/element.h"
-#include "vulkan_inc.h"
+
+import vulkan_hpp;
 
 namespace lotus
 {

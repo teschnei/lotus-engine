@@ -4,6 +4,7 @@
 #include "lotus/config.h"
 #include "lotus/core.h"
 #include <SDL2/SDL_vulkan.h>
+#include <vulkan/vulkan_hpp_macros.hpp>
 
 namespace lotus
 {

@@ -1,12 +1,12 @@
 #pragma once
 #include "lotus/renderer/memory.h"
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/task.h"
 #include "lotus/worker_pool.h"
 #include <functional>
 #include <vector>
 
 import glm;
+import vulkan_hpp;
 
 // class for doing generic raytracing queries
 namespace lotus

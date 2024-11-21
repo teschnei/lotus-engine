@@ -1,9 +1,10 @@
 #pragma once
 
 #include "lotus/async_queue.h"
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/task.h"
 #include "lotus/worker_pool.h"
+
+import vulkan_hpp;
 
 namespace lotus
 {
