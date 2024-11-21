@@ -1,5 +1,5 @@
 #pragma once
 
 #include <SDL2/SDL.h>
-//very cool windows
+// very cool windows
 #undef MemoryBarrier

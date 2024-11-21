@@ -3,24 +3,21 @@
 
 namespace lotus
 {
-    Skeleton::Skeleton(const BoneData& bone_data)
+Skeleton::Skeleton(const BoneData& bone_data)
+{
+    for (const auto& bone : bone_data.bones)
     {
-        for (const auto& bone : bone_data.bones)
+        Bone new_bone = bone;
+
+        if (!bones.empty())
         {
-            Bone new_bone = bone;
-
-            if (!bones.empty())
-            {
-                const Bone& parent = bone_data.bones[bone.parent_bone];
-                new_bone.rot = parent.rot * bone.rot;
-                new_bone.trans = parent.trans + (parent.rot * bone.trans);
-            }
-            bones.push_back(std::move(new_bone));
+            const Bone& parent = bone_data.bones[bone.parent_bone];
+            new_bone.rot = parent.rot * bone.rot;
+            new_bone.trans = parent.trans + (parent.rot * bone.trans);
         }
-    }
-
-    void Skeleton::BoneData::addBone(uint8_t parent_bone, glm::quat rot, glm::vec3 trans)
-    {
-        bones.emplace_back(parent_bone, rot, trans);
+        bones.push_back(std::move(new_bone));
     }
 }
+
+void Skeleton::BoneData::addBone(uint8_t parent_bone, glm::quat rot, glm::vec3 trans) { bones.emplace_back(parent_bone, rot, trans); }
+} // namespace lotus

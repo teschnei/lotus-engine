@@ -1,39 +1,39 @@
 #pragma once
 
-#include "lotus/renderer/vulkan/vulkan_inc.h"
 #include "lotus/renderer/memory.h"
+#include "lotus/renderer/vulkan/vulkan_inc.h"
 
 namespace lotus
 {
-    class Renderer;
+class Renderer;
 
-    class PostProcessPipeline
+class PostProcessPipeline
+{
+public:
+    PostProcessPipeline(Renderer* renderer);
+
+    void Init();
+    void InitWork(vk::CommandBuffer buffer);
+    vk::UniqueCommandBuffer getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors);
+    vk::ImageView getOutputImageView();
+
+private:
+    Renderer* renderer;
+
+    struct ImageData
     {
-    public:
-        PostProcessPipeline(Renderer* renderer);
-
-        void Init();
-        void InitWork(vk::CommandBuffer buffer);
-        vk::UniqueCommandBuffer getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors);
-        vk::ImageView getOutputImageView();
-
-    private:
-        Renderer* renderer;
-
-        struct ImageData
-        {
-            std::unique_ptr<Image> image;
-            vk::UniqueImageView image_view;
-        };
-
-        std::array<ImageData, 2> image_buffers;
-        vk::UniqueSampler history_sampler;
-        std::array<ImageData, 2> factor_buffers;
-        vk::UniqueSampler factor_sampler;
-        uint8_t buffer_index{ 0 };
-
-        vk::UniqueDescriptorSetLayout descriptor_set_layout;
-        vk::UniquePipelineLayout pipeline_layout;
-        vk::UniquePipeline pipeline;
+        std::unique_ptr<Image> image;
+        vk::UniqueImageView image_view;
     };
-}
+
+    std::array<ImageData, 2> image_buffers;
+    vk::UniqueSampler history_sampler;
+    std::array<ImageData, 2> factor_buffers;
+    vk::UniqueSampler factor_sampler;
+    uint8_t buffer_index{0};
+
+    vk::UniqueDescriptorSetLayout descriptor_set_layout;
+    vk::UniquePipelineLayout pipeline_layout;
+    vk::UniquePipeline pipeline;
+};
+} // namespace lotus

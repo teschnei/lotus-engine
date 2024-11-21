@@ -3,8 +3,8 @@
 
 namespace lotus
 {
-    struct RendererSettings
-    {
-        uint32_t shadowmap_dimension{ 2048 };
-    };
-}
+struct RendererSettings
+{
+    uint32_t shadowmap_dimension{2048};
+};
+} // namespace lotus

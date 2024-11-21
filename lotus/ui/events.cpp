@@ -2,14 +2,14 @@
 
 namespace lotus::ui
 {
-    void Events::trigger(std::string event)
+void Events::trigger(std::string event)
+{
+    if (auto ev = event_listeners.find(event); ev != event_listeners.end())
     {
-        if (auto ev = event_listeners.find(event); ev != event_listeners.end())
+        for (auto& e : ev->second)
         {
-            for (auto& e : ev->second)
-            {
-                e.call();
-            }
+            e.call();
         }
     }
 }
+} // namespace lotus::ui

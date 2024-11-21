@@ -3,25 +3,27 @@
 #include "lotus/renderer/sdl_inc.h"
 #include "vulkan_inc.h"
 
-namespace lotus {
+namespace lotus
+{
 class GPU;
 class Config;
 struct Settings;
 
-class Window {
+class Window
+{
 public:
-  Window(Settings *settings, Config *config);
+    Window(Settings* settings, Config* config);
 
-  vk::UniqueSurfaceKHR createSurface(vk::Instance instance);
+    vk::UniqueSurfaceKHR createSurface(vk::Instance instance);
 
-  SDL_Window *window{nullptr};
+    SDL_Window* window{nullptr};
 
-  std::vector<const char *> getRequiredExtensions() const;
-  std::pair<int, int> getWindowDimensions() const;
-  bool isMinimized() const;
+    std::vector<const char*> getRequiredExtensions() const;
+    std::pair<int, int> getWindowDimensions() const;
+    bool isMinimized() const;
 
 private:
-  Settings *settings;
-  Config *config;
+    Settings* settings;
+    Config* config;
 };
 } // namespace lotus
