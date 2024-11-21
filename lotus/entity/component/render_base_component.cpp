@@ -36,7 +36,7 @@ Task<> RenderBaseComponent::tick(time_point time, duration elapsed)
         }
         else
         {
-            model = glm::translate(glm::mat4{1.f}, pos) * glm::transpose(glm::toMat4(rot)) * glm::scale(glm::mat4{1.f}, scale);
+            model = glm::translate(glm::mat4{1.f}, pos) * glm::transpose(glm::mat4_cast(rot)) * glm::scale(glm::mat4{1.f}, scale);
         }
         modelT = glm::transpose(model);
         modelIT = glm::mat3(glm::transpose(glm::inverse(model)));
