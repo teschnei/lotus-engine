@@ -1,10 +1,22 @@
-#include "raytrace_pipeline.h"
+module;
 
+#include <array>
+#include <coroutine>
+#include <cstring>
 #include <format>
+#include <memory>
 #include <ranges>
+#include <string>
+#include <vector>
 
-#include "lotus/core.h"
-#include "lotus/renderer/vulkan/renderer.h"
+module lotus;
+
+import :renderer.vulkan.pipelines.raytrace;
+
+import :core.engine;
+import :renderer.memory;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -166,76 +178,76 @@ vk::UniquePipeline RaytracePipeline::initializePipeline(Renderer* renderer, vk::
 
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {{.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                             .generalShader = 0,
-                                                                            .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .intersectionShader = VK_SHADER_UNUSED_KHR},
+                                                                            .closestHitShader = vk::ShaderUnusedKHR,
+                                                                            .anyHitShader = vk::ShaderUnusedKHR,
+                                                                            .intersectionShader = vk::ShaderUnusedKHR},
                                                                            {.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                             .generalShader = 1,
-                                                                            .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .intersectionShader = VK_SHADER_UNUSED_KHR},
+                                                                            .closestHitShader = vk::ShaderUnusedKHR,
+                                                                            .anyHitShader = vk::ShaderUnusedKHR,
+                                                                            .intersectionShader = vk::ShaderUnusedKHR},
                                                                            {.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                             .generalShader = 2,
-                                                                            .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .intersectionShader = VK_SHADER_UNUSED_KHR},
+                                                                            .closestHitShader = vk::ShaderUnusedKHR,
+                                                                            .anyHitShader = vk::ShaderUnusedKHR,
+                                                                            .intersectionShader = vk::ShaderUnusedKHR},
                                                                            {.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                             .generalShader = 3,
-                                                                            .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                                                            .intersectionShader = VK_SHADER_UNUSED_KHR}};
+                                                                            .closestHitShader = vk::ShaderUnusedKHR,
+                                                                            .anyHitShader = vk::ShaderUnusedKHR,
+                                                                            .intersectionShader = vk::ShaderUnusedKHR}};
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
                                    .closestHitShader = 4,
                                    .anyHitShader = 5,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
-                                   .closestHitShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
+                                   .closestHitShader = vk::ShaderUnusedKHR,
                                    .anyHitShader = 5,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
                                    .closestHitShader = 6,
                                    .anyHitShader = 7,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
-                                   .closestHitShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
+                                   .closestHitShader = vk::ShaderUnusedKHR,
                                    .anyHitShader = 7,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
                                    .closestHitShader = 8,
                                    .anyHitShader = 9,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
-                                   .closestHitShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
+                                   .closestHitShader = vk::ShaderUnusedKHR,
                                    .anyHitShader = 10,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
                                    .closestHitShader = 11,
                                    .anyHitShader = 12,
                                    .intersectionShader = 14});
@@ -243,26 +255,26 @@ vk::UniquePipeline RaytracePipeline::initializePipeline(Renderer* renderer, vk::
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
-                                   .closestHitShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
+                                   .closestHitShader = vk::ShaderUnusedKHR,
                                    .anyHitShader = 13,
                                    .intersectionShader = 14});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
+                                   .generalShader = vk::ShaderUnusedKHR,
                                    .closestHitShader = 15,
-                                   .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .anyHitShader = vk::ShaderUnusedKHR,
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
     for (int i = 0; i < shaders_per_group; ++i)
     {
         shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                   .generalShader = VK_SHADER_UNUSED_KHR,
-                                   .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                   .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                   .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                   .generalShader = vk::ShaderUnusedKHR,
+                                   .closestHitShader = vk::ShaderUnusedKHR,
+                                   .anyHitShader = vk::ShaderUnusedKHR,
+                                   .intersectionShader = vk::ShaderUnusedKHR});
     }
 
     return renderer->gpu->device

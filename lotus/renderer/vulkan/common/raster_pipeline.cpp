@@ -1,8 +1,18 @@
-#include "raster_pipeline.h"
+module;
 
+#include <array>
+#include <cstdint>
+#include <memory>
 #include <ranges>
+#include <vector>
 
-#include "lotus/renderer/vulkan/renderer.h"
+module lotus;
+
+import :renderer.vulkan.pipelines.raster;
+
+import :renderer.memory;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -160,8 +170,8 @@ void RasterPipeline::beginRendering(vk::CommandBuffer buffer)
              .dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
              .oldLayout = vk::ImageLayout::eUndefined,
              .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
-             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+             .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
              .image = i,
              .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
     }
@@ -173,8 +183,8 @@ void RasterPipeline::beginRendering(vk::CommandBuffer buffer)
          .dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
          .oldLayout = vk::ImageLayout::eUndefined,
          .newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+         .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+         .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
          .image = gbuffer.depth.image->image,
          .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eDepth, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
 
@@ -197,8 +207,8 @@ void RasterPipeline::endRendering(vk::CommandBuffer buffer)
              .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
              .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
              .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+             .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
              .image = i,
              .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
     }
@@ -210,8 +220,8 @@ void RasterPipeline::endRendering(vk::CommandBuffer buffer)
          .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
          .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
          .newLayout = vk::ImageLayout::eGeneral,
-         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+         .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+         .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
          .image = gbuffer.motion_vector.image->image,
          .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
 

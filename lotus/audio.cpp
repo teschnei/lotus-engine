@@ -1,6 +1,16 @@
-#include "audio.h"
-#include "config.h"
-#include "core.h"
+module;
+
+#include <memory>
+// asserts bring in windows.h, which is the devil
+#define SOLOUD_NO_ASSERTS
+#include <soloud.h>
+
+module lotus;
+
+import :core.audio;
+
+import :core.config;
+import :core.engine;
 
 namespace lotus
 {

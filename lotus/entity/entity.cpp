@@ -1,6 +1,10 @@
-#include "entity.h"
-#include <ranges>
+module;
 
+#include <memory>
+
+module lotus;
+
+import :entity;
 import glm;
 
 namespace lotus

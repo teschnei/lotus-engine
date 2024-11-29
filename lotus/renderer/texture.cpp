@@ -1,7 +1,17 @@
-#include "texture.h"
-#include "lotus/core.h"
-#include "lotus/renderer/vulkan/renderer.h"
-#include "lotus/worker_pool.h"
+module;
+
+#include <coroutine>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+
+module lotus;
+
+import :renderer.texture;
+
+import :core.engine;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -50,8 +60,8 @@ WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& t
                                        .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
                                        .oldLayout = vk::ImageLayout::eUndefined,
                                        .newLayout = vk::ImageLayout::eTransferDstOptimal,
-                                       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                       .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+                                       .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
                                        .image = image->image,
                                        .subresourceRange = {
                                            .aspectMask = vk::ImageAspectFlagBits::eColor,
@@ -81,8 +91,8 @@ WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& t
                // vk::PipelineStageFlagBits2::eRayTracingShaderKHR, .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
                .oldLayout = vk::ImageLayout::eTransferDstOptimal,
                .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-               .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-               .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+               .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+               .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
                .image = image->image,
                .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor,
                                     .baseMipLevel = 0,

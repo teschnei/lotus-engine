@@ -1,7 +1,17 @@
-#include "swapchain.h"
-#include "gpu.h"
-#include "lotus/config.h"
-#include "window.h"
+module;
+
+#include <algorithm>
+#include <cstdint>
+#include <vector>
+
+module lotus;
+
+import :renderer.vulkan.swapchain;
+
+import :core.config;
+import :renderer.vulkan.gpu;
+import :renderer.vulkan.window;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -109,7 +119,7 @@ void Swapchain::createSwapchain()
     swapchain_create_info.preTransform = swap_chain_info.capabilities.currentTransform;
     swapchain_create_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     swapchain_create_info.presentMode = present_mode;
-    swapchain_create_info.clipped = VK_TRUE;
+    swapchain_create_info.clipped = true;
 
     image_format = surface_format.format;
     swapchain = gpu->device->createSwapchainKHRUnique(swapchain_create_info, nullptr);

@@ -1,10 +1,19 @@
-#include "window.h"
+module;
 
-#include "gpu.h"
-#include "lotus/config.h"
-#include "lotus/core.h"
+#include "lotus/renderer/sdl_inc.h"
 #include <SDL2/SDL_vulkan.h>
+#include <stdexcept>
+#include <vector>
 #include <vulkan/vulkan_hpp_macros.hpp>
+
+module lotus;
+
+import :renderer.vulkan.window;
+
+import :core.config;
+import :core.engine;
+import :renderer.vulkan.gpu;
+import vulkan_hpp;
 
 namespace lotus
 {

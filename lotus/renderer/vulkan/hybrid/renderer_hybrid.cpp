@@ -1,12 +1,21 @@
-#include "renderer_hybrid.h"
+module;
+
+#include <algorithm>
+#include <coroutine>
+#include <cstdint>
 #include <fstream>
+#include <memory>
+#include <vector>
 
-#include "lotus/config.h"
-#include "lotus/core.h"
-#include "lotus/game.h"
-#include "lotus/light_manager.h"
+module lotus;
 
+import :renderer.vulkan.renderer.hybrid;
+import :core.config;
+import :core.game;
+import :core.light_manager;
+import :util;
 import glm;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -64,8 +73,8 @@ WorkerTask<> RendererHybrid::InitWork()
         .dstAccessMask = vk::AccessFlagBits2::eShaderWrite,
         .oldLayout = vk::ImageLayout::eUndefined,
         .newLayout = vk::ImageLayout::eGeneral,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
         .image = rtx_gbuffer.colour.image->image,
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
@@ -426,8 +435,8 @@ vk::UniqueCommandBuffer RendererHybrid::getDeferredCommandBuffer()
         .dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
         .oldLayout = vk::ImageLayout::eUndefined,
         .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
         .image = deferred_image->image,
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
@@ -744,8 +753,8 @@ std::vector<vk::CommandBuffer> RendererHybrid::getRenderCommandbuffers()
         .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
         .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
         .newLayout = vk::ImageLayout::eGeneral,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
         .image = rasterizer->getGBuffer().normal.image->image,
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 

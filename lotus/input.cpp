@@ -1,8 +1,12 @@
-#include "input.h"
+module;
 
-#include "core.h"
-#include "game.h"
-#include "lotus/renderer/vulkan/renderer.h"
+#include "lotus/renderer/sdl_inc.h"
+#include <set>
+
+module lotus;
+
+import :core.input;
+import :renderer.vulkan.renderer;
 
 namespace lotus
 {

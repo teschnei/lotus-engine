@@ -1,6 +1,21 @@
-#include "async_compute.h"
-#include "lotus/core.h"
-#include "lotus/renderer/vulkan/renderer.h"
+module;
+
+#include <algorithm>
+#include <coroutine>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <ranges>
+#include <vector>
+
+module lotus;
+
+import :renderer.vulkan.common.async_compute;
+
+import :core.engine;
+import :renderer.vulkan.renderer;
+import :util;
+import vulkan_hpp;
 
 namespace lotus
 {

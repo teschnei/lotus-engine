@@ -32,6 +32,7 @@ target_compile_definitions(VulkanHppModule
 )
 target_compile_features( VulkanHppModule PUBLIC cxx_std_20 )
 target_link_libraries( VulkanHppModule PUBLIC Vulkan::Vulkan )
+# End Vulkan Module
 
 add_library(lotus-engine)
 
@@ -40,7 +41,7 @@ target_include_directories(lotus-engine PUBLIC "external/soloud/include" )
 
 target_compile_features(lotus-engine PUBLIC cxx_std_20)
 
-target_link_libraries(lotus-engine PUBLIC VulkanHppModule SDL::SDL2 GLMModule soloud GPUOpen::VulkanMemoryAllocator $<$<PLATFORM_ID:Linux>:-ldl>)
+target_link_libraries(lotus-engine PUBLIC VulkanHppModule SDL::SDL2 GLMModule soloud GPUOpen::VulkanMemoryAllocator)
 
 target_compile_definitions(GLMModule PUBLIC
 	GLM_FORCE_LEFT_HANDED

@@ -1,5 +1,11 @@
-#include "skeleton.h"
-#include "animation.h"
+module;
+
+#include <memory>
+
+module lotus;
+
+import :renderer.skeleton;
+import glm;
 
 namespace lotus
 {

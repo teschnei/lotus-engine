@@ -1,9 +1,19 @@
-#include "ui.h"
+module;
 
-#include "element.h"
-#include "lotus/core.h"
-#include "lotus/renderer/vulkan/renderer.h"
-#include <algorithm>
+#include <coroutine>
+#include <memory>
+#include <vector>
+
+module lotus;
+
+import :ui;
+
+import :ui.element;
+import :core.engine;
+import :renderer.vulkan.renderer;
+import :util;
+import glm;
+import vulkan_hpp;
 
 namespace lotus::ui
 {

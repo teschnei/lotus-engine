@@ -1,7 +1,19 @@
-#include "acceleration_structure.h"
-#include "lotus/core.h"
-#include "lotus/renderer/model.h"
-#include "lotus/renderer/vulkan/renderer.h"
+module;
+
+#include <condition_variable>
+#include <coroutine>
+#include <cstring>
+#include <span>
+#include <vector>
+
+module lotus;
+
+import :renderer.acceleration_structure;
+
+import :core.engine;
+import :renderer.model;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -48,10 +60,10 @@ void AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command
         .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
         .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
         .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
         .buffer = scratch_memory->buffer,
-        .size = VK_WHOLE_SIZE,
+        .size = vk::WholeSize,
     };
 
     command_buffer.pipelineBarrier2KHR({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});

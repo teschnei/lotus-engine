@@ -1,14 +1,24 @@
-#include "renderer_raytrace.h"
+module;
+
+#include <algorithm>
+#include <coroutine>
+#include <cstdint>
 #include <fstream>
+#include <memory>
+#include <vector>
 
-#include "lotus/config.h"
-#include "lotus/core.h"
-#include "lotus/entity/component/camera_component.h"
-#include "lotus/game.h"
-#include "lotus/light_manager.h"
-#include "lotus/renderer/acceleration_structure.h"
+module lotus;
 
+import :renderer.vulkan.renderer.raytrace;
+
+import :core.config;
+import :core.engine;
+import :core.game;
+import :core.light_manager;
+import :entity.component.camera;
+import :renderer.acceleration_structure;
 import glm;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -63,8 +73,8 @@ WorkerTask<> RendererRaytrace::InitWork()
     vk::ImageMemoryBarrier2KHR barrier_albedo;
     barrier_albedo.oldLayout = vk::ImageLayout::eUndefined;
     barrier_albedo.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    barrier_albedo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier_albedo.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier_albedo.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+    barrier_albedo.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
     barrier_albedo.image = gbuffer.albedo.image->image;
     barrier_albedo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     barrier_albedo.subresourceRange.baseMipLevel = 0;
@@ -417,8 +427,8 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eGeneral,
             .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.albedo.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
         vk::ImageMemoryBarrier2KHR{
@@ -428,8 +438,8 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eGeneral,
             .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.particle.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
         vk::ImageMemoryBarrier2KHR{
@@ -439,8 +449,8 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
             .dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
             .oldLayout = vk::ImageLayout::eUndefined,
             .newLayout = vk::ImageLayout::eColorAttachmentOptimal,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = deferred_image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
@@ -591,8 +601,8 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .newLayout = vk::ImageLayout::eGeneral,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.albedo.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
         vk::ImageMemoryBarrier2KHR{
@@ -602,8 +612,8 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .newLayout = vk::ImageLayout::eGeneral,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.particle.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
@@ -691,8 +701,8 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eGeneral,
             .newLayout = vk::ImageLayout::eGeneral,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.light.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
         vk::ImageMemoryBarrier2KHR{
@@ -702,8 +712,8 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eGeneral,
             .newLayout = vk::ImageLayout::eGeneral,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.normal.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
         vk::ImageMemoryBarrier2KHR{
@@ -713,8 +723,8 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
             .oldLayout = vk::ImageLayout::eGeneral,
             .newLayout = vk::ImageLayout::eGeneral,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.motion_vector.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 

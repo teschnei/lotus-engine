@@ -1,8 +1,17 @@
-#include "scene.h"
-#include "core.h"
-#include "renderer/vulkan/renderer.h"
+module;
 
+#include <algorithm>
+#include <chrono>
+#include <coroutine>
 #include <ranges>
+#include <vector>
+
+module lotus;
+
+import :core.scene;
+
+import :core.engine;
+import :renderer.vulkan.renderer;
 
 namespace lotus
 {

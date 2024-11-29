@@ -1,7 +1,16 @@
-#include "material.h"
-#include "lotus/core.h"
-#include "lotus/renderer/memory.h"
-#include "lotus/renderer/vulkan/renderer.h"
+module;
+
+#include <coroutine>
+#include <memory>
+
+module lotus;
+
+import :renderer.material;
+
+import :core.engine;
+import :renderer.memory;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {

@@ -1,8 +1,20 @@
-#include "ui_renderer.h"
+module;
 
-#include "lotus/core.h"
-#include "lotus/ui/ui.h"
-#include "renderer.h"
+#include <array>
+#include <coroutine>
+#include <cstring>
+#include <memory>
+#include <vector>
+
+module lotus;
+
+import :renderer.vulkan.ui_renderer;
+
+import :core.engine;
+import :ui;
+import :renderer.vulkan.renderer;
+import glm;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -353,7 +365,7 @@ Task<> UiRenderer::createBuffers()
     default_texture = co_await Texture::LoadTexture("ui_default",
                                                     [this](std::shared_ptr<Texture> texture) -> lotus::Task<>
                                                     {
-                                                        VkDeviceSize imageSize = sizeof(glm::vec4);
+                                                        vk::DeviceSize imageSize = sizeof(glm::vec4);
 
                                                         texture->setWidth(1);
                                                         texture->setHeight(1);

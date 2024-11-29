@@ -1,9 +1,18 @@
-#include "light_manager.h"
+module;
 
+#include <cstring>
 #include <ranges>
+#include <shared_mutex>
+#include <string>
+#include <vector>
 
-#include "core.h"
-#include "renderer/vulkan/renderer.h"
+module lotus;
+
+import :core.light_manager;
+
+import :core.engine;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {

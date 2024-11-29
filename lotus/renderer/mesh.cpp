@@ -1,4 +1,11 @@
-#include "mesh.h"
+module;
+
+#include <cstdint>
+#include <unistd.h>
+
+module lotus;
+
+import :renderer.mesh;
 
 void lotus::Mesh::setVertexBuffer(uint8_t* buffer, size_t len)
 {

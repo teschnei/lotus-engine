@@ -1,9 +1,10 @@
-target_sources(lotus-engine
-    PRIVATE
-    element.cpp
-    element.h
-    events.cpp
-    events.h
-    ui.cpp
-    ui.h
-    )
+target_sources(lotus-engine PUBLIC
+	FILE_SET CXX_MODULES
+	FILES
+	element.cppm
+	events.cppm
+	ui.cppm
+	PRIVATE
+	element.cpp
+	ui.cpp
+)

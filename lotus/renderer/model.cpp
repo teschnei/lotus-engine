@@ -1,7 +1,19 @@
-#include "model.h"
+module;
 
-#include "lotus/core.h"
-#include "lotus/renderer/vulkan/renderer.h"
+#include <coroutine>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <vector>
+
+module lotus;
+
+import :renderer.model;
+
+import :core.engine;
+import :renderer.vulkan.renderer;
+import vulkan_hpp;
 
 namespace lotus
 {

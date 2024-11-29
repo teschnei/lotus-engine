@@ -1,5 +1,13 @@
-#include "animation.h"
-#include "skeleton.h"
+module;
+
+#include <cstdint>
+#include <string>
+
+module lotus;
+
+import :renderer.animation;
+
+import glm;
 
 namespace lotus
 {

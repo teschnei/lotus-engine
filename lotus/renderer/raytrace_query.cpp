@@ -1,9 +1,21 @@
-#include "raytrace_query.h"
+module;
 
-#include "lotus/core.h"
-#include "lotus/game.h"
-#include "lotus/renderer/acceleration_structure.h"
-#include "lotus/renderer/vulkan/renderer.h"
+#include <atomic>
+#include <coroutine>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+
+module lotus;
+
+import :renderer.raytrace_query;
+
+import :core.engine;
+import :core.game;
+import :renderer.acceleration_structure;
+import :renderer.vulkan.renderer;
+import glm;
+import vulkan_hpp;
 
 namespace lotus
 {
@@ -38,22 +50,22 @@ RaytraceQueryer::RaytraceQueryer(Engine* _engine) : engine(_engine)
 
         std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {{.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                                 .generalShader = 0,
-                                                                                .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                                                                .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                                                                .intersectionShader = VK_SHADER_UNUSED_KHR},
+                                                                                .closestHitShader = vk::ShaderUnusedKHR,
+                                                                                .anyHitShader = vk::ShaderUnusedKHR,
+                                                                                .intersectionShader = vk::ShaderUnusedKHR},
                                                                                {.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                                 .generalShader = 1,
-                                                                                .closestHitShader = VK_SHADER_UNUSED_KHR,
-                                                                                .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                                                                .intersectionShader = VK_SHADER_UNUSED_KHR}};
+                                                                                .closestHitShader = vk::ShaderUnusedKHR,
+                                                                                .anyHitShader = vk::ShaderUnusedKHR,
+                                                                                .intersectionShader = vk::ShaderUnusedKHR}};
 
         for (int i = 0; i < shader_hitcount; ++i)
         {
             shader_group_ci.push_back({.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup,
-                                       .generalShader = VK_SHADER_UNUSED_KHR,
+                                       .generalShader = vk::ShaderUnusedKHR,
                                        .closestHitShader = 2,
-                                       .anyHitShader = VK_SHADER_UNUSED_KHR,
-                                       .intersectionShader = VK_SHADER_UNUSED_KHR});
+                                       .anyHitShader = vk::ShaderUnusedKHR,
+                                       .intersectionShader = vk::ShaderUnusedKHR});
         }
 
         vk::DeviceSize shader_stride = engine->renderer->gpu->ray_tracing_properties.shaderGroupHandleSize;

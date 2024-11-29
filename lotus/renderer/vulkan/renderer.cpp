@@ -1,20 +1,28 @@
-#include "renderer.h"
+module;
+
+#include <coroutine>
+#include <cstring>
+#include <format>
 #include <fstream>
 #include <iostream>
-
-#include "lotus/config.h"
-#include "lotus/core.h"
-#include "lotus/game.h"
-
+#include <memory>
+#include <string>
+#include <vector>
+#include <vulkan/vulkan.h>
 #include <vulkan/vulkan_hpp_macros.hpp>
 
-import glm;
+module lotus;
 
-VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+import :renderer.vulkan.renderer;
+
+import :core.config;
+import :core.engine;
+import :core.game;
+import glm;
+import vulkan_hpp;
 
 namespace lotus
 {
-
 const std::vector<const char*> validation_layers = {"VK_LAYER_KHRONOS_validation", "VK_LAYER_LUNARG_monitor"};
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -22,23 +30,21 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-const std::vector<const char*> instance_extensions = {VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
+const std::vector<const char*> instance_extensions = {vk::KHRGetPhysicalDeviceProperties2ExtensionName};
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+static VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+                              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
     std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
-    return VK_FALSE;
+    return vk::False;
 }
 
 Renderer::Renderer(Engine* _engine) : engine(_engine)
 {
     window = std::make_unique<Window>(&engine->settings, engine->config.get());
 
-    vk::DynamicLoader dl;
-    PFN_vkGetInstanceProcAddr instance_proc_addr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(instance_proc_addr);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
     createInstance(engine->settings.app_name, engine->settings.app_version);
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 
@@ -93,8 +99,8 @@ void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
     vk::ApplicationInfo appInfo{.pApplicationName = app_name.c_str(),
                                 .applicationVersion = app_version,
                                 .pEngineName = "lotus",
-                                .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-                                .apiVersion = VK_API_VERSION_1_3};
+                                .engineVersion = vk::makeApiVersion(0, 1, 0, 0),
+                                .apiVersion = vk::ApiVersion13};
 
     vk::InstanceCreateInfo createInfo = {};
     createInfo.pApplicationInfo = &appInfo;
@@ -328,7 +334,7 @@ std::vector<const char*> Renderer::getRequiredExtensions() const
 
     if (enableValidationLayers)
     {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        extensions.push_back(vk::EXTDebugUtilsExtensionName);
     }
 
     extensions.insert(extensions.end(), instance_extensions.begin(), instance_extensions.end());
@@ -380,8 +386,8 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
             .dstAccessMask = vk::AccessFlagBits2::eTransferRead,
             .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
             .newLayout = vk::ImageLayout::eTransferSrcOptimal,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = deferred_image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
         vk::ImageMemoryBarrier2KHR{
@@ -391,8 +397,8 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
             .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
             .oldLayout = vk::ImageLayout::eUndefined,
             .newLayout = vk::ImageLayout::eTransferDstOptimal,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+            .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = swapchain->images[current_image],
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
@@ -415,8 +421,8 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
         .dstAccessMask = {},
         .oldLayout = vk::ImageLayout::eTransferDstOptimal,
         .newLayout = vk::ImageLayout::ePresentSrcKHR,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
         .image = swapchain->images[current_image],
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 

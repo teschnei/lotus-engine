@@ -1,6 +1,17 @@
-#include "global_descriptors.h"
-#include "lotus/renderer/vulkan/gpu.h"
-#include "lotus/renderer/vulkan/renderer.h"
+module;
+
+#include <array>
+#include <memory>
+#include <vector>
+
+module lotus;
+
+import :renderer.vulkan.common.global_descriptors;
+
+import :renderer.vulkan.gpu;
+import :renderer.vulkan.renderer;
+import glm;
+import vulkan_hpp;
 
 namespace lotus
 {

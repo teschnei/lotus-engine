@@ -1,8 +1,19 @@
-#include "element.h"
-#include "glm/gtc/matrix_transform.hpp"
-#include "lotus/core.h"
-#include "lotus/renderer/vulkan/gpu.h"
-#include "lotus/renderer/vulkan/renderer.h"
+module;
+
+#include <algorithm>
+#include <coroutine>
+#include <cstdint>
+#include <memory>
+
+module lotus;
+
+import :ui.element;
+
+import :core.engine;
+import :renderer.vulkan.gpu;
+import :renderer.vulkan.renderer;
+import glm;
+import vulkan_hpp;
 
 namespace lotus::ui
 {
