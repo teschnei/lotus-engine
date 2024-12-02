@@ -133,7 +133,9 @@ void ParticleRasterComponent::drawModels(vk::CommandBuffer command_buffer, bool 
             {
                 auto quad_size = mesh->getVertexStride() * 6;
                 auto vertex_buffer_offset = particle_component.current_sprite * quad_size;
-                command_buffer.bindVertexBuffers(0, mesh->vertex_buffer->buffer, {vertex_buffer_offset});
+                // TODO: this only works for single mesh particles
+                command_buffer.bindVertexBuffers(0, model->vertex_buffer->buffer, {vertex_buffer_offset});
+                command_buffer.bindIndexBuffer(model->index_buffer->buffer, mesh->index_offset, vk::IndexType::eUint16);
                 // TODO: different for particles probably
                 drawMesh(command_buffer, *mesh, info->index, particle_component.pipeline_index);
             }
@@ -149,8 +151,6 @@ void ParticleRasterComponent::drawMesh(vk::CommandBuffer command_buffer, const M
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mesh.pipelines[pipeline_index]);
 
     command_buffer.pushConstants<uint32_t>(pipeline_layout, vk::ShaderStageFlagBits::eFragment, 0, material_index);
-
-    command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, 0, vk::IndexType::eUint16);
 
     command_buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0);
 }

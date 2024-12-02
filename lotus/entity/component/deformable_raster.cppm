@@ -33,7 +33,7 @@ protected:
     void drawModelsToBuffer(vk::CommandBuffer command_buffer);
     void drawShadowmapsToBuffer(vk::CommandBuffer command_buffer);
     void drawModels(vk::CommandBuffer command_buffer, bool transparency, bool shadowmap);
-    void drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Mesh& mesh, uint32_t material_index);
+    void drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Model& model, const Mesh& mesh, uint32_t material_index);
 };
 
 DeformableRasterComponent::DeformableRasterComponent(Entity* _entity, Engine* _engine, const DeformedMeshComponent& _mesh_component,
@@ -199,17 +199,17 @@ void DeformableRasterComponent::drawModels(vk::CommandBuffer command_buffer, boo
                 Mesh* mesh = model->meshes[mesh_i].get();
                 if (mesh->has_transparency == transparency)
                 {
-                    command_buffer.bindVertexBuffers(0, info.vertex_buffers[mesh_i][engine->renderer->getCurrentFrame()]->buffer, {0});
-                    command_buffer.bindVertexBuffers(1, info.vertex_buffers[mesh_i][engine->renderer->getPreviousFrame()]->buffer, {0});
+                    command_buffer.bindVertexBuffers(0, info.vertex_buffers[engine->renderer->getCurrentFrame()]->buffer, {mesh->vertex_offset});
+                    command_buffer.bindVertexBuffers(1, info.vertex_buffers[engine->renderer->getPreviousFrame()]->buffer, {mesh->vertex_offset});
                     material_index = info.mesh_infos[engine->renderer->getCurrentFrame()]->index + mesh_i;
-                    drawMesh(command_buffer, shadowmap, *mesh, material_index);
+                    drawMesh(command_buffer, shadowmap, *model, *mesh, material_index);
                 }
             }
         }
     }
 }
 
-void DeformableRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Mesh& mesh, uint32_t material_index)
+void DeformableRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Model& model, const Mesh& mesh, uint32_t material_index)
 {
     vk::PipelineLayout pipeline_layout;
 
@@ -226,7 +226,7 @@ void DeformableRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool 
 
     command_buffer.pushConstants<uint32_t>(pipeline_layout, vk::ShaderStageFlagBits::eFragment, 0, material_index);
 
-    command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, 0, vk::IndexType::eUint16);
+    command_buffer.bindIndexBuffer(model.index_buffer->buffer, mesh.index_offset, vk::IndexType::eUint16);
 
     command_buffer.drawIndexed(mesh.getIndexCount(), 1, 0, 0, 0);
 }

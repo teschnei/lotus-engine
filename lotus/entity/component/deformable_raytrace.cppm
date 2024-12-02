@@ -126,17 +126,20 @@ DeformableRaytraceComponent::ModelAccelerationStructures DeformableRaytraceCompo
 
         for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
         {
-            raytrace_geometry[image].push_back(vk::AccelerationStructureGeometryKHR{
-                .geometryType = vk::GeometryTypeKHR::eTriangles,
-                .geometry = {.triangles =
-                                 vk::AccelerationStructureGeometryTrianglesDataKHR{
-                                     .vertexFormat = vk::Format::eR32G32B32Sfloat,
-                                     .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = info.vertex_buffers[i][image]->buffer}),
-                                     .vertexStride = mesh->getVertexInputBindingDescription()[0].stride,
-                                     .maxVertex = mesh->getMaxIndex(),
-                                     .indexType = vk::IndexType::eUint16,
-                                     .indexData = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer})}},
-                .flags = mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque});
+            raytrace_geometry[image].push_back(
+                vk::AccelerationStructureGeometryKHR{
+                    .geometryType = vk::GeometryTypeKHR::eTriangles,
+                    .geometry = {.triangles =
+                                     vk::AccelerationStructureGeometryTrianglesDataKHR{
+                                         .vertexFormat = vk::Format::eR32G32B32Sfloat,
+                                         .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = info.vertex_buffers[image]->buffer}) +
+                                                       mesh->vertex_offset,
+                                         .vertexStride = mesh->getVertexInputBindingDescription()[0].stride,
+                                         .maxVertex = mesh->getMaxIndex(),
+                                         .indexType = vk::IndexType::eUint16,
+                                         .indexData = engine->renderer->gpu->device->getBufferAddress({.buffer = info.model->index_buffer->buffer}) +
+                                                      mesh->index_offset}},
+                    .flags = mesh->has_transparency ? vk::GeometryFlagsKHR{} : vk::GeometryFlagBitsKHR::eOpaque});
 
             raytrace_offset_info[image].push_back({.primitiveCount = static_cast<uint32_t>(mesh->getIndexCount() / 3)});
 

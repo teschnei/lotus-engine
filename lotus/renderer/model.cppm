@@ -10,9 +10,11 @@ export module lotus:renderer.model;
 
 import :renderer.acceleration_structure;
 import :renderer.mesh;
+import :renderer.memory;
 import :renderer.vulkan.common.global_descriptors;
 import :util;
 import vulkan_hpp;
+import glm;
 
 export namespace lotus
 {
@@ -67,15 +69,25 @@ public:
         }
     }
 
+    struct TransformEntry
+    {
+        glm::mat3x4 transform;
+        uint32_t mesh_index;
+    };
+
     [[nodiscard]]
     WorkerTask<> InitWork(Engine* engine, std::vector<std::vector<uint8_t>>&& vertex_buffers, std::vector<std::vector<uint8_t>>&& index_buffers,
-                          uint32_t vertex_stride);
+                          uint32_t vertex_stride, std::vector<TransformEntry>&& transforms = {});
 
     [[nodiscard]]
     WorkerTask<> InitWorkAABB(Engine* engine, std::vector<uint8_t>&& vertex_buffer, std::vector<uint16_t>&&, uint32_t vertex_stride, float aabb_dist);
 
     std::string name;
     std::vector<std::unique_ptr<Mesh>> meshes;
+    std::unique_ptr<Buffer> vertex_buffer;
+    std::unique_ptr<Buffer> index_buffer;
+    std::unique_ptr<Buffer> transform_buffer;
+    std::unique_ptr<Buffer> aabbs_buffer;
     bool is_static{false};
     bool weighted{false};
     Lifetime lifetime{Lifetime::Short};

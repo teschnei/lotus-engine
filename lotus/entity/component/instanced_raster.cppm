@@ -36,7 +36,7 @@ protected:
     void drawModelsToBuffer(vk::CommandBuffer command_buffer, uint32_t image, uint32_t prev_image);
     void drawShadowmapsToBuffer(vk::CommandBuffer command_buffer, uint32_t image);
     void drawModels(vk::CommandBuffer command_buffer, bool transparency, bool shadowmap);
-    void drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Mesh& mesh, uint32_t material_index, uint32_t count);
+    void drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Model& model, const Mesh& mesh, uint32_t material_index, uint32_t count);
 };
 
 InstancedRasterComponent::InstancedRasterComponent(Entity* _entity, Engine* _engine, InstancedModelsComponent& models)
@@ -209,14 +209,15 @@ void InstancedRasterComponent::drawModels(vk::CommandBuffer command_buffer, bool
                 auto& mesh = model->meshes[i];
                 if (mesh->has_transparency == transparency)
                 {
-                    drawMesh(command_buffer, shadowmap, *mesh, models[model_i].mesh_infos->index + i, count);
+                    drawMesh(command_buffer, shadowmap, *model, *mesh, models[model_i].mesh_infos->index + i, count);
                 }
             }
         }
     }
 }
 
-void InstancedRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Mesh& mesh, uint32_t material_index, uint32_t count)
+void InstancedRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool shadowmap, const Model& model, const Mesh& mesh, uint32_t material_index,
+                                        uint32_t count)
 {
     vk::PipelineLayout pipeline_layout;
 
@@ -233,8 +234,8 @@ void InstancedRasterComponent::drawMesh(vk::CommandBuffer command_buffer, bool s
 
     command_buffer.pushConstants<uint32_t>(pipeline_layout, vk::ShaderStageFlagBits::eFragment, 0, material_index);
 
-    command_buffer.bindVertexBuffers(0, mesh.vertex_buffer->buffer, {0});
-    command_buffer.bindIndexBuffer(mesh.index_buffer->buffer, 0, vk::IndexType::eUint16);
+    command_buffer.bindVertexBuffers(0, model.vertex_buffer->buffer, {mesh.vertex_offset});
+    command_buffer.bindIndexBuffer(model.index_buffer->buffer, mesh.index_offset, vk::IndexType::eUint16);
 
     command_buffer.drawIndexed(mesh.getIndexCount(), count, 0, 0, 0);
 }

@@ -34,7 +34,7 @@ public:
         std::shared_ptr<Model> model;
         std::vector<std::unique_ptr<GlobalDescriptors::MeshInfoBuffer::View>> mesh_infos;
         // transformed vertex buffers (per mesh, per render target)
-        std::vector<std::vector<std::unique_ptr<Buffer>>> vertex_buffers;
+        std::vector<std::unique_ptr<Buffer>> vertex_buffers;
     };
 
     std::span<const ModelInfo> getModels() const;
@@ -88,28 +88,31 @@ WorkerTask<> DeformedMeshComponent::init()
 DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::CommandBuffer command_buffer, std::shared_ptr<Model> model) const
 {
     ModelInfo info{.model = model};
-    info.vertex_buffers.resize(model->meshes.size());
+    info.vertex_buffers.reserve(model->meshes.size());
+    vk::DeviceSize buffer_size = 0;
+    for (size_t i = 0; i < model->meshes.size(); ++i)
+    {
+        size_t vertex_size = model->meshes[i]->getVertexInputBindingDescription()[0].stride;
+        buffer_size += model->meshes[i]->getVertexCount() * vertex_size;
+    }
     for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
     {
         info.mesh_infos.push_back(engine->renderer->global_descriptors->getMeshInfoBuffer(model->meshes.size()));
-    }
-    for (size_t i = 0; i < model->meshes.size(); ++i)
-    {
-        const auto& mesh = model->meshes[i];
+        auto new_vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(
+            buffer_size,
+            vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress |
+                vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
+            vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-        for (uint32_t image = 0; image < engine->renderer->getFrameCount(); ++image)
+        for (size_t i = 0; i < model->meshes.size(); ++i)
         {
+            const auto& mesh = model->meshes[i];
             auto material_buffer = mesh->material->getBuffer();
             size_t vertex_size = mesh->getVertexInputBindingDescription()[0].stride;
-            auto new_vertex_buffer = engine->renderer->gpu->memory_manager->GetBuffer(
-                mesh->getVertexCount() * vertex_size,
-                vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress |
-                    vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
-                vk::MemoryPropertyFlagBits::eDeviceLocal);
             info.mesh_infos[image]->buffer_view[i] = {
-                .vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = new_vertex_buffer->buffer}),
-                .vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
-                .index_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer}),
+                .vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = new_vertex_buffer->buffer}) + mesh->vertex_offset,
+                .vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = model->vertex_buffer->buffer}) + mesh->vertex_offset,
+                .index_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = model->index_buffer->buffer}) + mesh->index_offset,
                 .material = engine->renderer->gpu->device->getBufferAddress({.buffer = material_buffer.first}) + material_buffer.second,
                 .scale = glm::vec3{1.0},
                 .billboard = 0,
@@ -118,8 +121,8 @@ DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::Comman
                 .animation_frame = 0,
                 .index_count = static_cast<uint32_t>(mesh->getIndexCount()),
                 .model_prev = glm::mat4{1.0}};
-            info.vertex_buffers[i].push_back(std::move(new_vertex_buffer));
         }
+        info.vertex_buffers.push_back(std::move(new_vertex_buffer));
     }
 
     // TODO: transform with a default t-pose instead of current animation to improve acceleration structure build
@@ -152,11 +155,12 @@ DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::Comman
         for (size_t j = 0; j < model->meshes.size(); ++j)
         {
             auto& mesh = model->meshes[j];
-            auto& vertex_buffer = info.vertex_buffers[j][current_frame];
+            auto& vertex_buffer = info.vertex_buffers[current_frame];
 
-            vk::DescriptorBufferInfo vertex_weights_buffer_info{.buffer = mesh->vertex_buffer->buffer, .offset = 0, .range = vk::WholeSize};
+            vk::DescriptorBufferInfo vertex_weights_buffer_info{
+                .buffer = model->vertex_buffer->buffer, .offset = mesh->vertex_offset, .range = mesh->vertex_size};
 
-            vk::DescriptorBufferInfo vertex_output_buffer_info{.buffer = vertex_buffer->buffer, .offset = 0, .range = vk::WholeSize};
+            vk::DescriptorBufferInfo vertex_output_buffer_info{.buffer = vertex_buffer->buffer, .offset = mesh->vertex_offset, .range = mesh->vertex_size};
 
             vk::WriteDescriptorSet weight_descriptor_set{.dstSet = nullptr,
                                                          .dstBinding = 0,
@@ -225,11 +229,12 @@ WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
         for (size_t j = 0; j < models[i].model->meshes.size(); ++j)
         {
             auto& mesh = models[i].model->meshes[j];
-            auto& vertex_buffer = models[i].vertex_buffers[j][current_frame];
+            auto& vertex_buffer = models[i].vertex_buffers[current_frame];
 
-            vk::DescriptorBufferInfo vertex_weights_buffer_info{.buffer = mesh->vertex_buffer->buffer, .offset = 0, .range = vk::WholeSize};
+            vk::DescriptorBufferInfo vertex_weights_buffer_info{
+                .buffer = models[i].model->vertex_buffer->buffer, .offset = mesh->vertex_offset, .range = mesh->vertex_size};
 
-            vk::DescriptorBufferInfo vertex_output_buffer_info{.buffer = vertex_buffer->buffer, .offset = 0, .range = vk::WholeSize};
+            vk::DescriptorBufferInfo vertex_output_buffer_info{.buffer = vertex_buffer->buffer, .offset = mesh->vertex_offset, .range = mesh->vertex_size};
 
             vk::WriteDescriptorSet weight_descriptor_set{
                 .dstSet = nullptr,
@@ -264,13 +269,13 @@ WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
 
             command_buffer->pipelineBarrier2KHR({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
 
-            auto current_vertex_buffer = models[i].vertex_buffers[j][current_frame]->buffer;
-            auto prev_vertex_buffer = models[i].vertex_buffers[j][previous_frame]->buffer;
+            auto current_vertex_buffer = models[i].vertex_buffers[current_frame]->buffer;
+            auto prev_vertex_buffer = models[i].vertex_buffers[previous_frame]->buffer;
 
             models[i].mesh_infos[current_frame]->buffer_view[j].vertex_buffer =
-                engine->renderer->gpu->device->getBufferAddress({.buffer = current_vertex_buffer}),
+                engine->renderer->gpu->device->getBufferAddress({.buffer = current_vertex_buffer}) + mesh->vertex_offset;
             models[i].mesh_infos[current_frame]->buffer_view[j].vertex_prev_buffer =
-                engine->renderer->gpu->device->getBufferAddress({.buffer = prev_vertex_buffer}),
+                engine->renderer->gpu->device->getBufferAddress({.buffer = prev_vertex_buffer}) + mesh->vertex_offset;
             models[i].mesh_infos[current_frame]->buffer_view[j].animation_frame = models[0].model->animation_frame;
             models[i].mesh_infos[current_frame]->buffer_view[j].model_prev = base_component.getPrevModelMatrix();
         }

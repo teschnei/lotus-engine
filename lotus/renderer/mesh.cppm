@@ -47,9 +47,11 @@ public:
 
     void setVertexBuffer(uint8_t* buffer, size_t len);
 
-    std::unique_ptr<Buffer> vertex_buffer;
-    std::unique_ptr<Buffer> index_buffer;
-    std::unique_ptr<Buffer> aabbs_buffer;
+    vk::DeviceSize vertex_offset{0};
+    vk::DeviceSize vertex_size{0};
+    vk::DeviceSize index_offset{0};
+    vk::DeviceSize index_size{0};
+    vk::DeviceSize transform_offset{0};
 
     std::shared_ptr<Material> material;
 

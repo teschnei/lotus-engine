@@ -21,14 +21,6 @@ import vulkan_hpp;
 
 export namespace lotus
 {
-class CollisionMesh : public Mesh
-{
-public:
-    CollisionMesh() : Mesh() {}
-
-    std::unique_ptr<Buffer> transform_buffer;
-};
-
 namespace Component
 {
 class StaticCollisionComponent : public Component<StaticCollisionComponent>

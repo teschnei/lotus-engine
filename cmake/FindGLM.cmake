@@ -71,5 +71,5 @@ IF(GLM_FOUND)
   	FILES ${GLM_INCLUDE_DIR}/glm/glm.cppm
 	)
 
-	target_compile_features(GLMModule PUBLIC cxx_std_20)
+	target_compile_features(GLMModule PUBLIC cxx_std_23)
 ENDIF(GLM_FOUND)

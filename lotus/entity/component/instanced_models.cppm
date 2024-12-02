@@ -103,9 +103,9 @@ WorkerTask<> InstancedModelsComponent::init()
             const auto& mesh = model.model->meshes[i];
             auto material_buffer = mesh->material->getBuffer();
             model.mesh_infos->buffer_view[i] = {
-                .vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
-                .vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->vertex_buffer->buffer}),
-                .index_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = mesh->index_buffer->buffer}),
+                .vertex_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = model.model->vertex_buffer->buffer}) + mesh->vertex_offset,
+                .vertex_prev_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = model.model->vertex_buffer->buffer}) + mesh->vertex_offset,
+                .index_buffer = engine->renderer->gpu->device->getBufferAddress({.buffer = model.model->index_buffer->buffer}) + mesh->index_offset,
                 .material = engine->renderer->gpu->device->getBufferAddress({.buffer = material_buffer.first}) + material_buffer.second,
                 .scale = glm::vec3{1.0},
                 .billboard = 0,
