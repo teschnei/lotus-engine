@@ -3,7 +3,7 @@ module;
 #include <cstdint>
 #include <vector>
 
-export module lotus:renderer.vulkan.swapchain;
+module lotus:renderer.vulkan.swapchain;
 
 import vulkan_hpp;
 
@@ -13,7 +13,7 @@ class Config;
 class GPU;
 class Window;
 
-export class Swapchain
+class Swapchain
 {
 public:
     Swapchain(Config* config, GPU* gpu, Window* window, vk::SurfaceKHR surface);

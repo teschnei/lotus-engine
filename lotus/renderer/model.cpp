@@ -20,8 +20,8 @@ namespace lotus
 {
 Model::Model(const std::string& _name) : name(_name) {}
 
-WorkerTask<> Model::InitWork(Engine* engine, std::vector<std::vector<uint8_t>>&& vertex_buffers, std::vector<std::vector<uint8_t>>&& index_buffers,
-                             uint32_t vertex_stride, std::vector<TransformEntry>&& transforms)
+WorkerTask<> Model::InitWork(Engine* engine, const std::vector<std::span<const std::byte>>& vertex_buffers,
+                             const std::vector<std::span<const std::byte>>& index_buffers, uint32_t vertex_stride, std::vector<TransformEntry>&& transforms)
 {
     // priority: -1
     if (!vertex_buffers.empty())

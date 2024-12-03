@@ -13,7 +13,6 @@ import :core.engine;
 import :entity.component;
 import :entity.component.deformed_mesh;
 import :entity.component.render_base;
-import :renderer.acceleration_structure;
 import :renderer.memory;
 import :renderer.raytrace_query;
 import :util;

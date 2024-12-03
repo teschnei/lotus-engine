@@ -76,8 +76,8 @@ public:
     };
 
     [[nodiscard]]
-    WorkerTask<> InitWork(Engine* engine, std::vector<std::vector<uint8_t>>&& vertex_buffers, std::vector<std::vector<uint8_t>>&& index_buffers,
-                          uint32_t vertex_stride, std::vector<TransformEntry>&& transforms = {});
+    WorkerTask<> InitWork(Engine* engine, const std::vector<std::span<const std::byte>>& vertex_buffers,
+                          const std::vector<std::span<const std::byte>>& index_buffers, uint32_t vertex_stride, std::vector<TransformEntry>&& transforms = {});
 
     [[nodiscard]]
     WorkerTask<> InitWorkAABB(Engine* engine, std::vector<uint8_t>&& vertex_buffer, std::vector<uint16_t>&&, uint32_t vertex_stride, float aabb_dist);

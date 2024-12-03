@@ -433,4 +433,6 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
 
     return buffer;
 }
+
+vk::Extent2D Renderer::getExtent() const { return swapchain->extent; }
 } // namespace lotus

@@ -6,17 +6,17 @@ module;
 #include <span>
 #include <vector>
 
-export module lotus:renderer.acceleration_structure;
+module lotus:renderer.acceleration_structure;
 
 import :renderer.memory;
 import :util;
 import glm;
 import vulkan_hpp;
 
-export namespace lotus
+namespace lotus
 {
-class Model;
-class Renderer;
+export class Model;
+export class Renderer;
 
 class AccelerationStructure
 {

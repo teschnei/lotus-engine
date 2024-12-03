@@ -16,7 +16,6 @@ import :core.engine;
 import :core.game;
 import :core.light_manager;
 import :entity.component.camera;
-import :renderer.acceleration_structure;
 import glm;
 import vulkan_hpp;
 

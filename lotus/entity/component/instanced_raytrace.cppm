@@ -11,7 +11,6 @@ export module lotus:entity.component.instanced_raytrace;
 import :core.engine;
 import :entity.component;
 import :entity.component.instanced_models;
-import :renderer.acceleration_structure;
 import :renderer.memory;
 import :renderer.raytrace_query;
 import :util;

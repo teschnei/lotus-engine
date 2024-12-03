@@ -27,8 +27,8 @@ import vulkan_hpp;
 namespace lotus
 {
 export class Engine;
-export class TopLevelAccelerationStructure;
-export class BottomLevelAccelerationStructure;
+class TopLevelAccelerationStructure;
+class BottomLevelAccelerationStructure;
 
 class RendererRaytrace;
 class RendererRasterization;
@@ -82,6 +82,8 @@ public:
         else
             return ((in_size / alignment) + 1) * alignment;
     }
+
+    vk::Extent2D getExtent() const;
 
     virtual Task<> drawFrame() = 0;
 

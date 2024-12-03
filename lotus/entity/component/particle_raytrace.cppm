@@ -11,7 +11,6 @@ import :core.engine;
 import :entity.component;
 import :entity.component.particle;
 import :entity.component.render_base;
-import :renderer.acceleration_structure;
 import :renderer.memory;
 import :renderer.raytrace_query;
 import :util;

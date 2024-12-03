@@ -3,12 +3,12 @@ module;
 #include <atomic>
 #include <memory>
 
-export module lotus:renderer.vulkan.common.async_compute;
+module lotus:renderer.vulkan.common.async_compute;
 
 import :util;
 import vulkan_hpp;
 
-export namespace lotus
+namespace lotus
 {
 class Engine;
 class Renderer;

@@ -12,7 +12,6 @@ import :renderer.raytrace_query;
 
 import :core.engine;
 import :core.game;
-import :renderer.acceleration_structure;
 import :renderer.vulkan.renderer;
 import glm;
 import vulkan_hpp;
