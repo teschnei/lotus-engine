@@ -132,7 +132,7 @@ DeformableRaytraceComponent::ModelAccelerationStructures DeformableRaytraceCompo
                                      vk::AccelerationStructureGeometryTrianglesDataKHR{
                                          .vertexFormat = vk::Format::eR32G32B32Sfloat,
                                          .vertexData = engine->renderer->gpu->device->getBufferAddress({.buffer = info.vertex_buffers[image]->buffer}) +
-                                                       mesh->vertex_offset,
+                                                       info.vertex_offsets[i],
                                          .vertexStride = mesh->getVertexInputBindingDescription()[0].stride,
                                          .maxVertex = mesh->getMaxIndex(),
                                          .indexType = vk::IndexType::eUint16,

@@ -35,9 +35,7 @@ public:
     {
         glm::vec4 rot;
         glm::vec3 trans;
-        float _pad1;
         glm::vec3 scale;
-        float _pad2;
     };
     std::unique_ptr<Buffer> skeleton_bone_buffer;
 

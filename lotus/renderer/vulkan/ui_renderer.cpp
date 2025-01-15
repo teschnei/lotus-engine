@@ -211,18 +211,17 @@ void UiRenderer::createDescriptorSetLayout()
 
 void UiRenderer::createPipeline()
 {
-    auto vertex_module = renderer->getShader("shaders/ui_vert.spv");
-    auto fragment_module = renderer->getShader("shaders/ui_frag.spv");
+    auto shader_module = renderer->getShader("shaders/ui.spv");
 
     vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
     vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
-    vert_shader_stage_info.module = *vertex_module;
-    vert_shader_stage_info.pName = "main";
+    vert_shader_stage_info.module = *shader_module;
+    vert_shader_stage_info.pName = "Vertex";
 
     vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
     frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
-    frag_shader_stage_info.module = *fragment_module;
-    frag_shader_stage_info.pName = "main";
+    frag_shader_stage_info.module = *shader_module;
+    frag_shader_stage_info.pName = "Fragment";
 
     std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages = {vert_shader_stage_info, frag_shader_stage_info};
 

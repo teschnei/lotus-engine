@@ -53,7 +53,11 @@ struct Promise_base
 
     auto final_suspend() noexcept { return final_awaitable{}; }
 
-    void unhandled_exception() { exception = std::current_exception(); }
+    void unhandled_exception()
+    {
+        exception = std::current_exception();
+        std::cout << "Exception thrown in task" << std::endl;
+    }
 
     std::exception_ptr exception;
     std::atomic<std::coroutine_handle<>> next_handle{std::noop_coroutine()};

@@ -10,6 +10,7 @@ import :renderer.material;
 import :core.engine;
 import :renderer.memory;
 import :renderer.vulkan.renderer;
+import glm;
 import vulkan_hpp;
 
 namespace lotus
@@ -17,26 +18,23 @@ namespace lotus
 struct MaterialBufferBlock
 {
     uint32_t texture_index;
-    float specular_exponent;
-    float specular_intensity;
+    glm::vec2 roughness;
+    float ior;
     uint32_t light_type;
 };
 
 size_t Material::getMaterialBufferSize(Engine* engine) { return engine->renderer->uniform_buffer_align_up(sizeof(MaterialBufferBlock)); }
 
-Material::Material(std::shared_ptr<Buffer> _buffer, uint32_t _buffer_offset, std::shared_ptr<Texture> _texture, uint32_t _light_type, float _specular_exponent,
-                   float _specular_intensity)
-    : buffer(_buffer), buffer_offset(_buffer_offset), specular_exponent(_specular_exponent), specular_intensity(_specular_intensity), light_type(_light_type),
-      texture(_texture)
+Material::Material(std::shared_ptr<Buffer> _buffer, uint32_t _buffer_offset, std::shared_ptr<Texture> _texture, uint32_t _light_type, glm::vec2 _roughness,
+                   float _ior)
+    : buffer(_buffer), buffer_offset(_buffer_offset), roughness(_roughness), ior(_ior), light_type(_light_type), texture(_texture)
 {
 }
 
 WorkerTask<std::shared_ptr<Material>> Material::make_material(Engine* engine, std::shared_ptr<Buffer> buffer, uint32_t buffer_offset,
-                                                              std::shared_ptr<Texture> texture, uint32_t light_type, float specular_exponent,
-                                                              float specular_intensity)
+                                                              std::shared_ptr<Texture> texture, uint32_t light_type, glm::vec2 roughness, float ior)
 {
-    std::shared_ptr<Material> material =
-        std::shared_ptr<Material>(new Material(buffer, buffer_offset, texture, light_type, specular_exponent, specular_intensity));
+    std::shared_ptr<Material> material = std::shared_ptr<Material>(new Material(buffer, buffer_offset, texture, light_type, roughness, ior));
 
     auto buffer_size = engine->renderer->uniform_buffer_align_up(sizeof(MaterialBufferBlock));
 
@@ -52,8 +50,8 @@ WorkerTask<std::shared_ptr<Material>> Material::make_material(Engine* engine, st
 
     MaterialBufferBlock* mapped = static_cast<MaterialBufferBlock*>(staging_buffer->map(0, buffer_size, {}));
     mapped->texture_index = material->texture->getDescriptorIndex();
-    mapped->specular_exponent = material->specular_exponent;
-    mapped->specular_intensity = material->specular_intensity;
+    mapped->roughness = material->roughness;
+    mapped->ior = material->ior;
     mapped->light_type = material->light_type;
 
     staging_buffer->unmap();

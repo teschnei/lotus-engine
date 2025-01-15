@@ -7,6 +7,8 @@ set(CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_SOURCE_DIR}/cmake
 )
 
+include(cmake/SlangUtils.cmake)
+
 ###############################
 ## deps
 ###############################
@@ -53,4 +55,5 @@ target_compile_definitions(GLMModule PUBLIC
 )
 
 add_subdirectory(lotus)
+add_subdirectory(shaders)
 add_subdirectory(external/soloud/contrib)

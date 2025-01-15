@@ -3,6 +3,7 @@ module;
 #include <atomic>
 #include <coroutine>
 #include <exception>
+#include <iostream>
 
 export module lotus:util.worker_task;
 
@@ -28,7 +29,11 @@ struct WorkerPromise_base
 
     auto final_suspend() noexcept { return final_awaitable{}; }
 
-    void unhandled_exception() { exception = std::current_exception(); }
+    void unhandled_exception()
+    {
+        exception = std::current_exception();
+        std::cout << "Exception thrown in worker task" << std::endl;
+    }
 
     std::exception_ptr exception;
     std::atomic<std::coroutine_handle<>> next_handle{std::noop_coroutine()};

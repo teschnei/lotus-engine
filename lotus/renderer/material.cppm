@@ -18,12 +18,12 @@ class Material
 {
 public:
     static WorkerTask<std::shared_ptr<Material>> make_material(Engine* engine, std::shared_ptr<Buffer> buffer, uint32_t buffer_offset,
-                                                               std::shared_ptr<Texture> texture, uint32_t light_type = 0, float specular_exponent = 0.f,
-                                                               float specular_intensity = 0.f);
+                                                               std::shared_ptr<Texture> texture, uint32_t light_type = 0, glm::vec2 roughness = glm::vec2(1),
+                                                               float ior = 0.f);
 
     const std::shared_ptr<Texture> texture;
-    const float specular_exponent;
-    const float specular_intensity;
+    const glm::vec2 roughness;
+    const float ior;
     const uint32_t light_type;
     size_t index{0};
 
@@ -31,8 +31,7 @@ public:
     static size_t getMaterialBufferSize(Engine*);
 
 private:
-    Material(std::shared_ptr<Buffer>, uint32_t buffer_offset, std::shared_ptr<Texture> texture, uint32_t light_type, float specular_exponent,
-             float specular_intensity);
+    Material(std::shared_ptr<Buffer>, uint32_t buffer_offset, std::shared_ptr<Texture> texture, uint32_t light_type, glm::vec2 roughness, float ior);
     std::shared_ptr<Buffer> buffer;
     uint32_t buffer_offset;
 };

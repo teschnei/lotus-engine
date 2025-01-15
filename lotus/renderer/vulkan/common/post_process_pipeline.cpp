@@ -76,7 +76,7 @@ void PostProcessPipeline::Init()
 
     auto post_process_module = renderer->getShader("shaders/post_process.spv");
     // pipeline
-    vk::ComputePipelineCreateInfo pipeline_ci{.stage = {.stage = vk::ShaderStageFlagBits::eCompute, .module = *post_process_module, .pName = "main"},
+    vk::ComputePipelineCreateInfo pipeline_ci{.stage = {.stage = vk::ShaderStageFlagBits::eCompute, .module = *post_process_module, .pName = "Denoise"},
                                               .layout = *pipeline_layout};
 
     pipeline = renderer->gpu->device->createComputePipelineUnique(nullptr, pipeline_ci, nullptr).value;

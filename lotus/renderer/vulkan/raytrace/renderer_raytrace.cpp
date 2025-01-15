@@ -208,25 +208,24 @@ void RendererRaytrace::createRaytracingPipeline()
                                        .pImmutableSamplers = nullptr},
     };
 
-    raytracer = std::make_unique<RaytracePipeline>(this, "raygen.spv", descriptors);
+    raytracer = std::make_unique<RaytracePipeline>(this, "raytrace_pure", descriptors);
 }
 
 void RendererRaytrace::createGraphicsPipeline()
 {
     {
         // deferred pipeline
-        auto vertex_module = getShader("shaders/quad.spv");
-        auto fragment_module = getShader("shaders/deferred_raytrace.spv");
+        auto shader_module = getShader("shaders/deferred_raytrace.spv");
 
         vk::PipelineShaderStageCreateInfo vert_shader_stage_info;
         vert_shader_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
-        vert_shader_stage_info.module = *vertex_module;
-        vert_shader_stage_info.pName = "main";
+        vert_shader_stage_info.module = *shader_module;
+        vert_shader_stage_info.pName = "Vertex";
 
         vk::PipelineShaderStageCreateInfo frag_shader_stage_info;
         frag_shader_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
-        frag_shader_stage_info.module = *fragment_module;
-        frag_shader_stage_info.pName = "main";
+        frag_shader_stage_info.module = *shader_module;
+        frag_shader_stage_info.pName = "Fragment";
 
         std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = {vert_shader_stage_info, frag_shader_stage_info};
 

@@ -203,7 +203,7 @@ void Renderer::createAnimationResources()
     vk::PipelineShaderStageCreateInfo animation_shader_stage_info;
     animation_shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
     animation_shader_stage_info.module = *animation_module;
-    animation_shader_stage_info.pName = "main";
+    animation_shader_stage_info.pName = "Skin";
 
     pipeline_ci.stage = animation_shader_stage_info;
 

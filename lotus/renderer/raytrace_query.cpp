@@ -23,23 +23,21 @@ RaytraceQueryer::RaytraceQueryer(Engine* _engine) : engine(_engine)
     if (engine->config->renderer.RaytraceEnabled())
     {
         auto rayquery_shader_module = engine->renderer->getShader("shaders/rayquery.spv");
-        auto query_miss_shader_module = engine->renderer->getShader("shaders/query_miss.spv");
-        auto query_closest_hit_module = engine->renderer->getShader("shaders/query_closest_hit.spv");
 
         vk::PipelineShaderStageCreateInfo rayquery_stage_ci;
         rayquery_stage_ci.stage = vk::ShaderStageFlagBits::eRaygenKHR;
         rayquery_stage_ci.module = *rayquery_shader_module;
-        rayquery_stage_ci.pName = "main";
+        rayquery_stage_ci.pName = "Query";
 
         vk::PipelineShaderStageCreateInfo ray_miss_stage_ci;
         ray_miss_stage_ci.stage = vk::ShaderStageFlagBits::eMissKHR;
-        ray_miss_stage_ci.module = *query_miss_shader_module;
-        ray_miss_stage_ci.pName = "main";
+        ray_miss_stage_ci.module = *rayquery_shader_module;
+        ray_miss_stage_ci.pName = "Miss";
 
         vk::PipelineShaderStageCreateInfo ray_closest_hit_stage_ci;
         ray_closest_hit_stage_ci.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
-        ray_closest_hit_stage_ci.module = *query_closest_hit_module;
-        ray_closest_hit_stage_ci.pName = "main";
+        ray_closest_hit_stage_ci.module = *rayquery_shader_module;
+        ray_closest_hit_stage_ci.pName = "ClosestHit";
 
         constexpr uint32_t shader_raygencount = 1;
         constexpr uint32_t shader_misscount = 1;

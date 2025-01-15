@@ -31,7 +31,7 @@ vk::UniqueSurfaceKHR Window::createSurface(vk::Instance instance)
     {
         throw std::runtime_error("Unable to create SDL Vulkan surface");
     }
-    return vk::UniqueSurfaceKHR(vksurface, vk::ObjectDestroy(instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER));
+    return vk::UniqueSurfaceKHR(vksurface);
 }
 
 std::vector<const char*> Window::getRequiredExtensions() const

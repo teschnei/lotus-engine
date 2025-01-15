@@ -151,24 +151,27 @@ void GPU::createDevice(std::span<const char* const> layers)
         .maintenance4 = true,
     };
 
-    vk::PhysicalDeviceVulkan12Features vk_12_features{
-        .pNext = &vk_13_features,
-        .descriptorIndexing = true,
-        .shaderSampledImageArrayNonUniformIndexing = true,
-        .descriptorBindingUniformBufferUpdateAfterBind = true,
-        .descriptorBindingSampledImageUpdateAfterBind = true,
-        .descriptorBindingStorageBufferUpdateAfterBind = true,
-        .descriptorBindingPartiallyBound = true,
-        .runtimeDescriptorArray = true,
-        .uniformBufferStandardLayout = true,
-        .timelineSemaphore = true,
-        .bufferDeviceAddress = true,
-    };
+    vk::PhysicalDeviceVulkan12Features vk_12_features{.pNext = &vk_13_features,
+                                                      .shaderInt8 = true,
+                                                      .descriptorIndexing = true,
+                                                      .shaderSampledImageArrayNonUniformIndexing = true,
+                                                      .descriptorBindingUniformBufferUpdateAfterBind = true,
+                                                      .descriptorBindingSampledImageUpdateAfterBind = true,
+                                                      .descriptorBindingStorageBufferUpdateAfterBind = true,
+                                                      .descriptorBindingPartiallyBound = true,
+                                                      .runtimeDescriptorArray = true,
+                                                      .uniformBufferStandardLayout = true,
+                                                      .timelineSemaphore = true,
+                                                      .bufferDeviceAddress = true};
 
     vk::PhysicalDeviceVulkan11Features vk_11_features{.pNext = &vk_12_features, .storageBuffer16BitAccess = true};
 
-    vk::PhysicalDeviceFeatures physical_device_features{
-        .independentBlend = true, .depthClamp = true, .samplerAnisotropy = true, .shaderStorageImageWriteWithoutFormat = true, .shaderInt64 = true};
+    vk::PhysicalDeviceFeatures physical_device_features{.independentBlend = true,
+                                                        .depthClamp = true,
+                                                        .samplerAnisotropy = true,
+                                                        .shaderStorageImageWriteWithoutFormat = true,
+                                                        .shaderInt64 = true,
+                                                        .shaderInt16 = true};
 
     std::vector<const char*> device_extensions2 = device_extensions;
     if (config->renderer.RaytraceEnabled())

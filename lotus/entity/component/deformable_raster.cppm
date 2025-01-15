@@ -199,8 +199,8 @@ void DeformableRasterComponent::drawModels(vk::CommandBuffer command_buffer, boo
                 Mesh* mesh = model->meshes[mesh_i].get();
                 if (mesh->has_transparency == transparency)
                 {
-                    command_buffer.bindVertexBuffers(0, info.vertex_buffers[engine->renderer->getCurrentFrame()]->buffer, {mesh->vertex_offset});
-                    command_buffer.bindVertexBuffers(1, info.vertex_buffers[engine->renderer->getPreviousFrame()]->buffer, {mesh->vertex_offset});
+                    command_buffer.bindVertexBuffers(0, info.vertex_buffers[engine->renderer->getCurrentFrame()]->buffer, {info.vertex_offsets[mesh_i]});
+                    command_buffer.bindVertexBuffers(1, info.vertex_buffers[engine->renderer->getPreviousFrame()]->buffer, {info.vertex_offsets[mesh_i]});
                     material_index = info.mesh_infos[engine->renderer->getCurrentFrame()]->index + mesh_i;
                     drawMesh(command_buffer, shadowmap, *model, *mesh, material_index);
                 }

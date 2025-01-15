@@ -94,87 +94,77 @@ vk::UniquePipelineLayout RaytracePipeline::initializePipelineLayout(Renderer* re
 vk::UniquePipeline RaytracePipeline::initializePipeline(Renderer* renderer, vk::PipelineLayout pipeline_layout, std::string raygen)
 {
     // ray-tracing pipeline
-    auto raygen_shader_module = renderer->getShader(std::format("shaders/{}", raygen));
-    auto miss_shader_module = renderer->getShader("shaders/miss.spv");
-    auto miss_gi_shader_module = renderer->getShader("shaders/miss_gi.spv");
-    auto shadow_miss_shader_module = renderer->getShader("shaders/shadow_miss.spv");
-    auto closest_hit_shader_module = renderer->getShader("shaders/closesthit.spv");
-    auto color_hit_shader_module = renderer->getShader("shaders/color_hit.spv");
-    auto landscape_closest_hit_shader_module = renderer->getShader("shaders/mmb_closest_hit.spv");
-    auto landscape_color_hit_shader_module = renderer->getShader("shaders/mmb_color_hit.spv");
-    auto particle_closest_hit_shader_module = renderer->getShader("shaders/particle_closest_hit.spv");
-    auto particle_color_hit_shader_module = renderer->getShader("shaders/particle_color_hit.spv");
-    auto particle_shadow_color_hit_shader_module = renderer->getShader("shaders/particle_shadow_color_hit.spv");
-    auto particle_closest_hit_aabb_shader_module = renderer->getShader("shaders/particle_closest_hit_aabb.spv");
-    auto particle_color_hit_aabb_shader_module = renderer->getShader("shaders/particle_color_hit_aabb.spv");
-    auto particle_shadow_color_hit_aabb_shader_module = renderer->getShader("shaders/particle_shadow_color_hit_aabb.spv");
-    auto particle_intersection_shader_module = renderer->getShader("shaders/particle_intersection.spv");
-    auto water_closest_hit_shader_module = renderer->getShader("shaders/water_closest_hit.spv");
+    auto raytrace_module = renderer->getShader(std::format("shaders/raytrace.spv", raygen));
+    auto raytrace_internal_module = renderer->getShader(std::format("shaders/{}.spv", raygen));
+    auto mmb_module = renderer->getShader(std::format("shaders/raytrace_mmb.spv", raygen));
+    auto sk2_module = renderer->getShader(std::format("shaders/raytrace_sk2.spv", raygen));
+    auto d3m_module = renderer->getShader(std::format("shaders/raytrace_d3m.spv", raygen));
+    auto water_module = renderer->getShader(std::format("shaders/raytrace_water.spv", raygen));
 
     std::array shaders{vk::PipelineShaderStageCreateInfo{// raygen
                                                          .stage = vk::ShaderStageFlagBits::eRaygenKHR,
-                                                         .module = *raygen_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *raytrace_internal_module,
+                                                         .pName = "Raygen"},
                        vk::PipelineShaderStageCreateInfo{// miss
                                                          .stage = vk::ShaderStageFlagBits::eMissKHR,
-                                                         .module = *miss_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *raytrace_module,
+                                                         .pName = "Miss"},
                        vk::PipelineShaderStageCreateInfo{// miss (GI)
                                                          .stage = vk::ShaderStageFlagBits::eMissKHR,
-                                                         .module = *miss_gi_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *raytrace_internal_module,
+                                                         .pName = "MissGI"},
                        vk::PipelineShaderStageCreateInfo{// miss (shadow)
                                                          .stage = vk::ShaderStageFlagBits::eMissKHR,
-                                                         .module = *shadow_miss_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *raytrace_internal_module,
+                                                         .pName = "MissShadow"},
                        vk::PipelineShaderStageCreateInfo{// closest hit
                                                          .stage = vk::ShaderStageFlagBits::eClosestHitKHR,
-                                                         .module = *closest_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *sk2_module,
+                                                         .pName = "ClosestHit"},
                        vk::PipelineShaderStageCreateInfo{// colour hit
                                                          .stage = vk::ShaderStageFlagBits::eAnyHitKHR,
-                                                         .module = *color_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *sk2_module,
+                                                         .pName = "AnyHit"},
                        vk::PipelineShaderStageCreateInfo{// landscape closest hit
                                                          .stage = vk::ShaderStageFlagBits::eClosestHitKHR,
-                                                         .module = *landscape_closest_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *mmb_module,
+                                                         .pName = "ClosestHit"},
                        vk::PipelineShaderStageCreateInfo{// landscape colour hit
                                                          .stage = vk::ShaderStageFlagBits::eAnyHitKHR,
-                                                         .module = *landscape_color_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *mmb_module,
+                                                         .pName = "AnyHit"},
                        vk::PipelineShaderStageCreateInfo{// particle closest hit
                                                          .stage = vk::ShaderStageFlagBits::eClosestHitKHR,
-                                                         .module = *particle_closest_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "ClosestHit"},
                        vk::PipelineShaderStageCreateInfo{// particle colour hit
                                                          .stage = vk::ShaderStageFlagBits::eAnyHitKHR,
-                                                         .module = *particle_color_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "AnyHit"},
                        vk::PipelineShaderStageCreateInfo{// particle shadow colour hit
                                                          .stage = vk::ShaderStageFlagBits::eAnyHitKHR,
-                                                         .module = *particle_shadow_color_hit_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "AnyHitShadow"},
                        vk::PipelineShaderStageCreateInfo{// particle closest hit (AABB)
                                                          .stage = vk::ShaderStageFlagBits::eClosestHitKHR,
-                                                         .module = *particle_closest_hit_aabb_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "ClosestHitAABB"},
                        vk::PipelineShaderStageCreateInfo{// particle colour hit (AABB)
                                                          .stage = vk::ShaderStageFlagBits::eAnyHitKHR,
-                                                         .module = *particle_color_hit_aabb_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "AnyHitAABB"},
                        vk::PipelineShaderStageCreateInfo{// particle shadow colour hit (AABB)
                                                          .stage = vk::ShaderStageFlagBits::eAnyHitKHR,
-                                                         .module = *particle_shadow_color_hit_aabb_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "AnyHitShadowAABB"},
                        vk::PipelineShaderStageCreateInfo{// particle intersection
                                                          .stage = vk::ShaderStageFlagBits::eIntersectionKHR,
-                                                         .module = *particle_intersection_shader_module,
-                                                         .pName = "main"},
+                                                         .module = *d3m_module,
+                                                         .pName = "Intersection"},
                        vk::PipelineShaderStageCreateInfo{// water closest hit
                                                          .stage = vk::ShaderStageFlagBits::eClosestHitKHR,
-                                                         .module = *water_closest_hit_shader_module,
-                                                         .pName = "main"}};
+                                                         .module = *water_module,
+                                                         .pName = "ClosestHit"}};
 
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_ci = {{.type = vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                             .generalShader = 0,
