@@ -160,6 +160,7 @@ void GPU::createDevice(std::span<const char* const> layers)
                                                       .descriptorBindingStorageBufferUpdateAfterBind = true,
                                                       .descriptorBindingPartiallyBound = true,
                                                       .runtimeDescriptorArray = true,
+                                                      .scalarBlockLayout = true,
                                                       .uniformBufferStandardLayout = true,
                                                       .timelineSemaphore = true,
                                                       .bufferDeviceAddress = true};

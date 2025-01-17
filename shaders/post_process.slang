@@ -1,6 +1,6 @@
-[vk_binding(0)] Texture2D in_colour;
-[vk_binding(1)] Texture2D in_normal;
-[vk_binding(2)] Texture2D in_motionvector;
+[vk_binding(0)] RWTexture2D in_colour;
+[vk_binding(1)] RWTexture2D in_normal;
+[vk_binding(2)] RWTexture2D in_motionvector;
 [vk_binding(3)] Sampler2D<uint8_t> in_factor;
 [vk_binding(4)] Sampler2D in_image_prev;
 [vk_binding(5)] RWTexture2D<uint8_t> out_factor;
