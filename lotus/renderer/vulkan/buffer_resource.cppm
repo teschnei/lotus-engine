@@ -61,7 +61,7 @@ public:
 private:
     // ???
     static constexpr uint16_t max_resource_index{4096};
-    static constexpr uint32_t max_index_size = 16;
+    static constexpr uint32_t max_index_size = 32;
 
     std::unique_ptr<Buffer> buffer;
     T* buffer_mapped{nullptr};

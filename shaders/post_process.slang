@@ -83,7 +83,7 @@ void Denoise(uint3 threadId : SV_DispatchThreadID) {
 
     //pos+(0.5,0.5) to get the center of the desired pixel
     float2 hist_pos = pos + float2(0.5, 0.5) - mv.xy;
-    float4 hist_colour = in_image_prev.Sample(hist_pos);
+    float4 hist_colour = in_image_prev.SampleLevel(hist_pos, 0);
 
     float3 sum = float3(0.0);
     float c_phi = 1.0;
@@ -121,7 +121,7 @@ void Denoise(uint3 threadId : SV_DispatchThreadID) {
             cum_w += weight*kernel[i];
         }
     }
-    uint8_t factor = min(uint8_t(30), in_factor.Sample(hist_pos));
+    uint8_t factor = min(uint8_t(30), in_factor.SampleLevel(hist_pos, 0));
 
     //TODO: this on its own is probably insufficient - also probably want some kind of entity id check? if the history point is on a different entity we can be reasonably sure it's not the same thing
     if (abs(mv.z - hist_colour.w) > 1)
