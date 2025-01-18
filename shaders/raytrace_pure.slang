@@ -20,16 +20,16 @@ void Raygen()
     float4 target = mul(camera[0].proj_inverse, float4(d.x, d.y, 1, 1));
     float4 dir = mul(camera[0].view_inverse, float4(normalize(target.xyz), 0));
 
-    lotus::RayPayload payload;
+    float3 accumulation = float3(0.0);
+    float3 f = float3(0.0);
+    float3 pos = float3(0.0);
+    float3 pos_prev = float3(0.0);
+    float3 hit_normal = float3(0.0);
+    float3 particle_colour = float3(0.0);
+    float3 diffuse = float3(0.0);
+    float distance = 0.0;
 
-    payload.normal = float3(1.0);
-    payload.depth = 0;
-    payload.seed = lotus::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB()));
-    payload.weight = 0.0;
-    payload.particle = float3(0.0);
-    payload.distance = 0.0;
-    payload.origin = float3(0);
-    payload.prev_pos = float3(0);
+    var payload = lotus::RayPayload(lotus::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB())));
 
     RayDesc ray;
     ray.Origin = origin.xyz;
@@ -38,43 +38,49 @@ void Raygen()
     ray.TMax = 1000.0;
 
     TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x10 | 0x20, 0, 0, 0, ray, payload);
-    float3 hit_normal = payload.normal;
-    float3 diffuse = payload.diffuse;
-    float3 BRDF = payload.BRDF;
-    float3 gi_origin = payload.origin;
-    float3 pos = payload.origin;
-    float3 pos_prev = payload.prev_pos;
-    float3 gi_dir = payload.direction;
-    float pdf = payload.weight;
-    //initial weight is 1.0 because the initial BRDF was pulled out into a separate buffer
-    float3 gi_weight = float3(1.0);
-    float3 particle_colour = payload.particle;
-    float dist = payload.distance;
+
     static const int max_samples = 1;
     static const int max_depth = 2;
-    float3 accumulation = float3(0.0);
-
-    if (payload.depth < max_depth)
+    if (let bsdf = payload.bsdf)
     {
-        for (int samples = 0; samples < max_samples; ++samples)
+        f = bsdf.f;
+        diffuse = payload.diffuse;
+        hit_normal = payload.normal;
+        pos = payload.origin;
+        pos_prev = payload.prev_pos;
+        particle_colour = payload.particle;
+        distance = payload.distance;
+        float3 initial_origin = payload.origin;
+
+        if (payload.depth < max_depth)
         {
-            float3 weight = gi_weight;
-            payload.depth = 1;
-            payload.origin = gi_origin;
-            payload.direction = gi_dir;
-            payload.distance = 0.0;
-            for(; payload.depth < max_depth; payload.depth++)
+            for (int samples = 0; samples < max_samples; ++samples)
             {
-                ray.Origin = payload.origin;
-                ray.Direction = payload.direction;
-                TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x20, 0, 0, 0, ray, payload);
-                weight *= payload.BRDF;
-                accumulation += payload.diffuse * weight;
+                float3 weight = float(1.0); //accum will get multiplied by bsdf.f in the deferred shader
+                payload.depth = 1;
+                payload.distance = 0.0;
+                ray.Direction = bsdf.wi;
+                ray.Origin = initial_origin;
+                for(; payload.depth < max_depth; payload.depth++)
+                {
+                    TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x20, 0, 0, 1, ray, payload);
+                    if (let bsdf = payload.bsdf)
+                    {
+                        accumulation += bsdf.f * payload.diffuse * weight;
+                        weight *= bsdf.f * bsdf.pdf_inv;
+                        ray.Direction = bsdf.wi;
+                        ray.Origin = payload.origin;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
             }
         }
     }
 
-    float3 light_total = (accumulation * pdf / float(max_samples)) + diffuse;
+    float3 light_total = (accumulation / float(max_samples)) + diffuse;
 
     float4 pos_proj = mul(camera[0].proj, mul(camera[0].view, float4(pos, 1.0)));
     float4 prev_pos_proj = mul(camera[1].proj, mul(camera[1].view, float4(pos_prev, 1.0)));
@@ -82,7 +88,7 @@ void Raygen()
     float2 curScreenPos = (pos_proj.xy / pos_proj.w) * 0.5 + 0.5;
     float2 prevScreenPos = (prev_pos_proj.xy / prev_pos_proj.w) * 0.5 + 0.5;
 
-    albedo[DispatchRaysIndex().xy] = float4(BRDF, dist);
+    albedo[DispatchRaysIndex().xy] = float4(f, distance);
     normal[DispatchRaysIndex().xy] = float4(hit_normal, 0.0);
     light[DispatchRaysIndex().xy] = float4(light_total, 1.0);
     particle[DispatchRaysIndex().xy] = float4(particle_colour, 1.0);
@@ -96,7 +102,7 @@ void MissGI(inout lotus::RayPayload payload)
 }
 
 [shader("miss")]
-void MissShadow(inout lotus::ShadowPayload payload)
+void MissShadow(inout lotus::LightPayload payload)
 {
     lotus::MissShadow(payload);
 }

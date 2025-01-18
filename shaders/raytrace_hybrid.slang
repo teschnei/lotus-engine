@@ -14,10 +14,10 @@ import pbr;
 void Raygen()
 {
     float2 uv = float2(float(DispatchRaysIndex().x)/float(DispatchRaysDimensions().x - 1), float(DispatchRaysIndex().y)/float(DispatchRaysDimensions().y - 1));
-    float3 position = position.Sample(uv).xyz;
-    float3 normal = normal.Sample(uv).xyz;
-    float3 face_normal = face_normal.Sample(uv).xyz;
-    float4 albedo = albedo.Sample(uv);
+    float3 position = position.SampleLevel(uv, 0).xyz;
+    float3 normal = normal.SampleLevel(uv, 0).xyz;
+    float3 face_normal = face_normal.SampleLevel(uv, 0).xyz;
+    float4 albedo = albedo.SampleLevel(uv, 0);
 
     uint mesh_index = material_index.Sample(uv).r;
     lotus::Mesh mesh = meshes[mesh_index];
@@ -50,40 +50,41 @@ void Raygen()
         diffuse += lotus::TraceLight(lights[0].light_info, trace_origin, normal, u);
     }
 
-    float3 tangent, bitangent;
-    pbr::createCoordinateSystem(normal, tangent, bitangent);
+    var payload = lotus::RayPayload(lotus::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB())));
 
-    lotus::RayPayload payload;
-
-    payload.depth = 0;
-    payload.seed = seed;
-    payload.weight = 0.0;
-
-    const int max_samples = 1;
-    float3 BRDF = (albedo.xyz / M_PI);
+    static const int max_samples = 1;
+    static const int max_depth = 1;
+    var bxdf = pbr::DiffuseBxDF(albedo.xyz);
+    var bsdf = pbr::BSDF<pbr::DiffuseBxDF>(bxdf, normal);
     float3 accumulation = diffuse;
     RayDesc ray;
     ray.TMin = 0.0;
     ray.TMax = 1000.0;
     for (int samples = 0; samples < max_samples; ++samples)
     {
-        //BRDF * M_PI
-        float3 weight = albedo.rgb;
-        float pdf;
-        payload.origin = position.xyz;
-        float3 sample = pbr::SampleCosineHemisphere(float2(lotus.rand::rnd(payload.seed), lotus.rand::rnd(payload.seed)));
-        payload.direction = normalize(sample.x * tangent + sample.y * bitangent + sample.z * normal);
-        for(; payload.depth < 1; payload.depth++)
+        float3 weight = float3(1.0);
+
+        if (let new_sample = bsdf.Sample_f(normalize(camera.eye_pos.xyz - position), lotus.rand::rnd(payload.seed), float2(lotus.rand::rnd(payload.seed), lotus.rand::rnd(payload.seed))))
         {
-            ray.Origin = payload.origin;
-            ray.Direction = payload.direction;
-            TraceRay(topLevelAS, 0, 0x01 | 0x02, 0, 0, 1, ray, payload);
-            float3 factor = payload.BRDF * weight;
-            accumulation += payload.diffuse * factor;
-            weight *= factor;
+            ray.Direction = new_sample.wi;
+            ray.Origin = position.xyz;
+            for(; payload.depth < max_depth; payload.depth++)
+            {
+                TraceRay(topLevelAS, 0, 0x01 | 0x02, 0, 0, 1, ray, payload);
+                if (let payload_sample = payload.bsdf)
+                {
+                    accumulation += payload_sample.f * payload.diffuse * weight;
+                    weight *= payload_sample.f * payload_sample.pdf_inv;
+                    ray.Direction = payload_sample.wi;
+                    ray.Origin = payload.origin;
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
     }
-
     output[DispatchRaysIndex().xy] = (float4(accumulation, 0.0) / float(max_samples)) / M_PI;
 }
 
@@ -94,7 +95,7 @@ void MissGI(inout lotus::RayPayload payload)
 }
 
 [shader("miss")]
-void MissShadow(inout lotus::ShadowPayload payload)
+void MissShadow(inout lotus::LightPayload payload)
 {
     lotus::MissShadow(payload);
 }

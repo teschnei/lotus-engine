@@ -14,23 +14,22 @@ namespace lotus
 {
 public struct RayPayload
 {
-    public float3 BRDF;
-    public float3 diffuse;
-    public float3 normal;
-    public int depth;
-    public uint seed;
-    public float weight;
-    public float3 origin;
-    public float3 direction;
-    public float distance;
-    public float3 particle;
-    public float3 prev_pos;
+    public __init(uint _seed) { seed = _seed; }
+    public Optional<pbr::BSDFSample> bsdf;
+    public float3 diffuse = float3(0);
+    public float3 normal = float3(0);
+    public int depth = 0;
+    public uint seed = 0;
+    public float3 origin = float3(0);
+    public float distance = 0;
+    public float3 particle = float3(0);
+    public float3 prev_pos = float3(0);
 };
 
 public void MissGI(inout RayPayload payload)
 {
-    payload.BRDF = float3(1.0) / M_PI;
-    payload.diffuse = lights[0].light.landscape.ambient_color.rgb * lights[0].light.landscape.brightness / 2;
+    payload.bsdf = pbr::BSDFSample(float3(1.0), 1, float3(0));
+    payload.diffuse = lights[0].light.landscape.ambient_color.rgb * lights[0].light.landscape.brightness;
     payload.depth = 10;
 }
 
@@ -39,69 +38,44 @@ public Mesh GetMeshInfo()
     return meshes[InstanceID() + GeometryIndex()];
 }
 
-public struct ShadowPayload
+public struct LightPayload
 {
-    float4 light;
-    float4 shadow;
+    float3 light_potential = float3(0.0);
+    float3 light_actual = float3(0.0);
 }
 
 public float3 TraceLight(LightInfo light, float3 origin, float3 normal, float2 u)
 {
-    float3 diff = light.pos - origin;
-    float3 dir = normalize(diff);
-    float length = length(diff);
-    float radius = light.radius;
     float3 diffuse = float3(0);
-
-    if (length > radius)
+    float attenuation = 1.0;
+    Optional<pbr::LightSample> sample;
+    if(light.intensity == 0.0)
     {
-        float att = 1;
-        float intensity = light.intensity;
-        int use_pdf = 1;
-        if (intensity > 0)
+        let pbr_light = pbr::DistantAreaLight(light.colour, light.pos, light.radius);
+        let sampler = pbr::LightSampler<pbr::DistantAreaLight>(pbr_light);
+        sample = sampler.SampleLi(origin, u);
+    }
+    if (let s = sample)
+    {
+        attenuation *= dot(s.wi, normal);
+        if (attenuation > 0.001)
         {
-            att = max(1, radius * radius) / (length * length);
-        }
-        else
-        {
-            intensity = 1;
-            use_pdf = 0;
-        }
-        ShadowPayload shadow;
-        shadow.shadow = float4(0.0);
-        shadow.light = float4(light.colour * intensity, 1.0);
-        float3 trace_dir = dir;
-        float pdf = 1;
-
-        if (radius > 0)
-        {
-            float3 tangent, bitangent;
-                pbr::createCoordinateSystem(dir, tangent, bitangent);
-
-            float temp_pdf;
-            trace_dir = pbr::SampleCone(u, temp_pdf, tangent, bitangent, dir, radius, dot(diff, diff));
-            if (use_pdf > 0)
-                pdf = temp_pdf;
-        }
-
-        att *= dot(trace_dir, normal);
-        if (att > 0.001)
-        {
+            LightPayload light_ray;
+            light_ray.light_potential = float3(s.L * attenuation);
             RayDesc ray;
             ray.Origin = origin;
             ray.TMin = 0.0;
-            ray.Direction = trace_dir;
-            ray.TMax = length;
-            TraceRay(topLevelAS, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0x01 | 0x02 | 0x10 , 1, 0, 2, ray, shadow);
-            diffuse = att * shadow.shadow.rgb / pdf;
+            ray.Direction = s.wi;
+            ray.TMax = s.len;
+            TraceRay(topLevelAS, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0x01 | 0x02 | 0x10 , 1, 0, 2, ray, light_ray);
+            diffuse = light_ray.light_actual * s.pdf_inv;
         }
     }
     return diffuse;
 }
 
-public void MissShadow(inout ShadowPayload payload)
+public void MissShadow(inout LightPayload payload)
 {
-    payload.shadow = payload.light;
-    payload.shadow.a = 1.0;
+    payload.light_actual = payload.light_potential;
 }
 }

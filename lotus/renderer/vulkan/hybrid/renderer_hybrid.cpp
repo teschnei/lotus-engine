@@ -811,8 +811,8 @@ Task<> RendererHybrid::drawFrame()
     auto deferred_buffer = getDeferredCommandBuffer();
     auto ui_buffers = ui->Render();
     std::vector<vk::CommandBufferSubmitInfoKHR> deferred_buffers{{.commandBuffer = *deferred_buffer}};
-    deferred_buffers.resize(1 + ui_buffers.size());
-    std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = buffer}; });
+    // deferred_buffers.resize(1 + ui_buffers.size());
+    // std::ranges::transform(ui_buffers, deferred_buffers.begin() + 1, [](auto buffer) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = buffer}; });
     deferred_buffers.push_back({.commandBuffer = prepareDeferredImageForPresent()});
 
     std::array deferred_waits{graphics_sem, vk::SemaphoreSubmitInfoKHR{.semaphore = *image_ready_sem[current_frame],
