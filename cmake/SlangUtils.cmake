@@ -35,8 +35,7 @@
 #   )
 function(add_slang_shader TargetName)
 	set(options)
-	set(oneValueArgs SOURCE ENTRY)
-	set(multiValueArgs SLANG_INCLUDE_DIRECTORIES MODULES)
+	set(multiValueArgs SOURCE SLANG_INCLUDE_DIRECTORIES MODULES)
 	cmake_parse_arguments(arg "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
 	if (NOT SLANGC)
@@ -44,12 +43,17 @@ function(add_slang_shader TargetName)
 	endif()
 
 	# The input slang file
-	set(SLANG_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/${arg_SOURCE}")
+	set(SOURCEFILES)
+	foreach (source ${arg_SOURCE})
+		set(SLANG_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+		list(APPEND SOURCEFILES "${SLANG_SHADER}")
+
+	endforeach()
 
 	# The generated SPIRV file
-	cmake_path(GET arg_SOURCE STEM LAST_ONLY stem)
+	# cmake_path(GET ${TargetName} STEM LAST_ONLY stem)
 	set(SPIRV_SHADER_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders")
-	set(SPIRV_SHADER "${SPIRV_SHADER_DIR}/${stem}.spv")
+	set(SPIRV_SHADER "${SPIRV_SHADER_DIR}/${TargetName}.spv")
 
 	# Dependency file
 	set(DEPFILE "${CMAKE_CURRENT_BINARY_DIR}/${TargetName}.depfile")
@@ -90,7 +94,7 @@ function(add_slang_shader TargetName)
 		${CMAKE_COMMAND} -E make_directory ${SPIRV_SHADER_DIR}
 		COMMAND
 			${SLANGC}
-			${SLANG_SHADER}
+			${SOURCEFILES}
 			-fvk-use-entrypoint-name
 			-fvk-use-scalar-layout
 			-target spirv

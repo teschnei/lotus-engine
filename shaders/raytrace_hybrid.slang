@@ -13,6 +13,7 @@ import pbr;
 [shader("raygeneration")]
 void Raygen()
 {
+    /*
     float2 uv = float2(float(DispatchRaysIndex().x)/float(DispatchRaysDimensions().x - 1), float(DispatchRaysIndex().y)/float(DispatchRaysDimensions().y - 1));
     float3 position = position.SampleLevel(uv, 0).xyz;
     float3 normal = normal.SampleLevel(uv, 0).xyz;
@@ -42,20 +43,23 @@ void Raygen()
 
     float3 trace_origin = position + face_normal * 0.001;
     float3 diffuse = float3(0.0);
-    uint seed = lotus::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB()));
+    uint seed = pbr::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB()));
 
-    for (int i = 0; i < lights[0].light.light_count; i++)
-    {
-        float2 u = float2(lotus.rand::rnd(seed), lotus.rand::rnd(seed));
-        diffuse += lotus::TraceLight(lights[0].light_info, trace_origin, normal, u);
-    }
-
-    var payload = lotus::RayPayload(lotus::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB())));
+    var payload = lotus::RayPayload(pbr::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB())));
 
     static const int max_samples = 1;
     static const int max_depth = 1;
+    float3 wo = normalize(camera.eye_pos.xyz - position);
     var bxdf = pbr::DiffuseBxDF(albedo.xyz);
     var bsdf = pbr::BSDF<pbr::DiffuseBxDF>(bxdf, normal);
+
+    for (int i = 0; i < lights[0].light.light_count; i++)
+    {
+        float2 u = float2(pbr.rand::rnd(seed), pbr.rand::rnd(seed));
+        let l = lotus::TraceLight(lights[0].light_info, trace_origin, normal, u);
+        diffuse += l.light * bsdf.f(wo, l.wi);
+    }
+
     float3 accumulation = diffuse;
     RayDesc ray;
     ray.TMin = 0.0;
@@ -64,7 +68,7 @@ void Raygen()
     {
         float3 weight = float3(1.0);
 
-        if (let new_sample = bsdf.Sample_f(normalize(camera.eye_pos.xyz - position), lotus.rand::rnd(payload.seed), float2(lotus.rand::rnd(payload.seed), lotus.rand::rnd(payload.seed))))
+        if (let new_sample = bsdf.Sample_f(wo, pbr.rand::rnd(payload.seed), float2(pbr.rand::rnd(payload.seed), pbr.rand::rnd(payload.seed))))
         {
             ray.Direction = new_sample.wi;
             ray.Origin = position.xyz;
@@ -86,6 +90,7 @@ void Raygen()
         }
     }
     output[DispatchRaysIndex().xy] = (float4(accumulation, 0.0) / float(max_samples)) / M_PI;
+    */
 }
 
 [shader("miss")]

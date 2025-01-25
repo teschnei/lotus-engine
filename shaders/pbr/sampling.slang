@@ -22,8 +22,7 @@ public Sample SampleCosineHemisphere(float2 u)
     float z_sqr = 1.0 - p.x - p.y;
     float z = z_sqr > 0 ? sqrt(z_sqr) : 1;
 
-    //pdf_inv should be M_PI / cos(theta), but currently it's only used with diffuse bxdf where it cancels out
-    return Sample(float3(p, z), M_PI);
+    return Sample(float3(p, z), M_PI / z);
 }
 // Randomly sampling in direction of +Z
 public Sample SampleCone(float2 u, float radius, float length_sq)

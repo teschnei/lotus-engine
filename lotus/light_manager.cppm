@@ -22,7 +22,6 @@ struct Light
     glm::vec3 colour;
     float radius;
     LightID id;
-    float _pad[3];
 };
 
 struct Lights
@@ -34,7 +33,6 @@ struct Lights
     float max_fog;
     float min_fog;
     float brightness;
-    float _pad;
 };
 
 struct LightBuffer

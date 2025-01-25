@@ -1,11 +1,11 @@
-implementing lotus;
+implementing pbr;
 
 //from https://github.com/nvpro-samples/vk_raytracing_tutorial_KHR/blob/master/ray_tracing_gltf/shaders/sampling.glsl
 
 // Generate a random unsigned int from two unsigned int values, using 16 pairs
 // of rounds of the Tiny Encryption Algorithm. See Zafar, Olano, and Curtis,
 // "GPU Random Numbers via the Tiny Encryption Algorithm"
-namespace lotus.rand
+namespace pbr.rand
 {
 public uint tea(uint val0, uint val1)
 {

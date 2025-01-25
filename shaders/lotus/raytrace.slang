@@ -14,23 +14,28 @@ namespace lotus
 {
 public struct RayPayload
 {
-    public __init(uint _seed) { seed = _seed; }
-    public Optional<pbr::BSDFSample> bsdf;
-    public float3 diffuse = float3(0);
+    public pbr::SerializedBxDF bxdf = pbr::SerializedBxDF();
     public float3 normal = float3(0);
+    public float3 face_normal = float3(0);
     public int depth = 0;
-    public uint seed = 0;
-    public float3 origin = float3(0);
+    public float3 intersection = float3(0);
     public float distance = 0;
     public float3 particle = float3(0);
     public float3 prev_pos = float3(0);
+    public uint id = 0;
+    public float3 albedo = float3(0);
 };
 
 public void MissGI(inout RayPayload payload)
 {
-    payload.bsdf = pbr::BSDFSample(float3(1.0), 1, float3(0));
-    payload.diffuse = lights[0].light.landscape.ambient_color.rgb * lights[0].light.landscape.brightness;
-    payload.depth = 10;
+    payload.bxdf = pbr::ConstantBxDF(lights[0].light.landscape.ambient_color.rgb * lights[0].light.landscape.brightness / M_PI, 1).Serialize();
+    payload.distance = RayTCurrent();
+}
+
+public int GetMeshID()
+{
+    //TODO: technically not exactly correct, but kind of works for now
+    return ((Material*)GetMeshInfo().material)->texture_index + GeometryIndex();
 }
 
 public Mesh GetMeshInfo()
@@ -44,9 +49,14 @@ public struct LightPayload
     float3 light_actual = float3(0.0);
 }
 
-public float3 TraceLight(LightInfo light, float3 origin, float3 normal, float2 u)
+public struct IncomingLight
 {
-    float3 diffuse = float3(0);
+    public float3 light;
+    public float3 wi;
+}
+
+public IncomingLight TraceLight(LightInfo light, float3 origin, float3 normal, float2 u)
+{
     float attenuation = 1.0;
     Optional<pbr::LightSample> sample;
     if(light.intensity == 0.0)
@@ -57,10 +67,11 @@ public float3 TraceLight(LightInfo light, float3 origin, float3 normal, float2 u
     }
     if (let s = sample)
     {
-        attenuation *= dot(s.wi, normal);
+        float3 diffuse = float3(0);
+        attenuation *= abs(dot(s.wi, normal));
         if (attenuation > 0.001)
         {
-            LightPayload light_ray;
+            var light_ray = LightPayload();
             light_ray.light_potential = float3(s.L * attenuation);
             RayDesc ray;
             ray.Origin = origin;
@@ -68,10 +79,15 @@ public float3 TraceLight(LightInfo light, float3 origin, float3 normal, float2 u
             ray.Direction = s.wi;
             ray.TMax = s.len;
             TraceRay(topLevelAS, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0x01 | 0x02 | 0x10 , 1, 0, 2, ray, light_ray);
-            diffuse = light_ray.light_actual * s.pdf_inv;
+            diffuse = light_ray.light_actual;
+            if (light.intensity > 0.0)
+            {
+                diffuse *= s.pdf_inv;
+            }
         }
+        return {diffuse, s.wi};
     }
-    return diffuse;
+    return {float3(0), float3(0)};
 }
 
 public void MissShadow(inout LightPayload payload)

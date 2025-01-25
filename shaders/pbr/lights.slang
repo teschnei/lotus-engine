@@ -44,7 +44,7 @@ public struct DistantAreaLight : ILight
         {
             var frame = Frame(direction);
             Sample sample = pbr::SampleCone(u, radius, dot(difference, difference));
-            return LightSample(colour, frame.LocalToWorld(sample.wi), length, 1);
+            return LightSample(colour, frame.LocalToWorld(sample.wi), length, sample.pdf_inv);
         }
         return none;
     }

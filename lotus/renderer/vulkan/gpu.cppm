@@ -81,9 +81,26 @@ void GPU::createPhysicalDevice()
                                                     auto formats = device.getSurfaceFormatsKHR(surface);
                                                     auto present_modes = device.getSurfacePresentModesKHR(surface);
                                                     auto supported_features = device.getFeatures();
+                                                    auto properties = device.getProperties2();
                                                     return graphics && present && compute && extensions_supported && !formats.empty() &&
-                                                           !present_modes.empty() && supported_features.samplerAnisotropy;
+                                                           !present_modes.empty() && supported_features.samplerAnisotropy &&
+                                                           properties.properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
                                                 });
+
+    if (physical_device_pointer == physical_devices.end())
+    {
+        physical_device_pointer = std::find_if(physical_devices.begin(), physical_devices.end(),
+                                               [this](auto& device)
+                                               {
+                                                   auto [graphics, present, compute] = getQueueFamilies(device);
+                                                   auto extensions_supported = extensionsSupported(device);
+                                                   auto formats = device.getSurfaceFormatsKHR(surface);
+                                                   auto present_modes = device.getSurfacePresentModesKHR(surface);
+                                                   auto supported_features = device.getFeatures();
+                                                   return graphics && present && compute && extensions_supported && !formats.empty() &&
+                                                          !present_modes.empty() && supported_features.samplerAnisotropy;
+                                               });
+    }
 
     if (physical_device_pointer == physical_devices.end())
     {

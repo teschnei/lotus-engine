@@ -1,19 +1,25 @@
 add_slang_module(lotus-slang-module
     SOURCE lotus.slang
     IMPLEMENTING
+    lotus/billboard.slang
     lotus/common.slang
-    lotus/random.slang
     SLANG_INCLUDE_DIRECTORIES
     .
 )
 add_slang_module(pbr-slang-module
     SOURCE pbr.slang
     IMPLEMENTING
-    pbr/sampling.slang
-    pbr/bxdf.slang
-    pbr/diffuse.slang
-    pbr/lights.slang
+    pbr/bsdf.slang
     pbr/common.slang
+    pbr/complex.slang
+    pbr/conductor_bxdf.slang
+    pbr/dielectric_bxdf.slang
+    pbr/diffuse_bxdf.slang
+    pbr/layered_bxdf.slang
+    pbr/lights.slang
+    pbr/mathutil.slang
+    pbr/random.slang
+    pbr/sampling.slang
 )
 add_slang_module(lotus-rt-slang-module
     SOURCE lotus/raytrace.slang

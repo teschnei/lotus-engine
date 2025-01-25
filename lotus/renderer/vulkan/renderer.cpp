@@ -8,7 +8,6 @@ module;
 #include <memory>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
 #include <vulkan/vulkan_hpp_macros.hpp>
 
 module lotus;
@@ -32,8 +31,8 @@ const bool enableValidationLayers = true;
 
 const std::vector<const char*> instance_extensions = {vk::KHRGetPhysicalDeviceProperties2ExtensionName};
 
-static VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-                              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+static vk::Bool32 debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
+                                const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
     std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 

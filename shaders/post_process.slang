@@ -1,9 +1,9 @@
 [vk_binding(0)] RWTexture2D in_colour;
 [vk_binding(1)] RWTexture2D in_normal;
 [vk_binding(2)] RWTexture2D in_motionvector;
-[vk_binding(3)] Sampler2D<uint8_t> in_factor;
+[vk_binding(3)] Sampler2D<uint16_t2> in_factor;
 [vk_binding(4)] Sampler2D in_image_prev;
-[vk_binding(5)] RWTexture2D<uint8_t> out_factor;
+[vk_binding(5)] RWTexture2D<uint16_t2> out_factor;
 [vk_binding(6)] RWTexture2D out_image;
 
 static float denoiseStrength = 3.0f;
@@ -112,8 +112,11 @@ void Denoise(uint3 threadId : SV_DispatchThreadID) {
             dist2 = max(dot(t4,t4), 0.0);
             float n_w = min(exp(-(dist2)/n_phi), 1.0);
 
+            /*
             dist2 = pval - brdf_tmp.a;
             float p_w = min(exp(-(dist2)/p_phi), 1.0);
+            */
+            float p_w = pval == brdf_tmp.a && nval.w == ntmp.w ? 1.0 : 0.0;
 
             //float weight = c_w*n_w*p_w;
             float weight = n_w * p_w;
@@ -121,14 +124,17 @@ void Denoise(uint3 threadId : SV_DispatchThreadID) {
             cum_w += weight*kernel[i];
         }
     }
-    uint8_t factor = min(uint8_t(30), in_factor.SampleLevel(hist_pos, 0));
+    uint16_t2 hist_buffer = in_factor.SampleLevel(hist_pos, 0);
+    uint16_t factor = min(uint16_t(15), hist_buffer.x);
+    uint16_t id = hist_buffer.y;
 
-    //TODO: this on its own is probably insufficient - also probably want some kind of entity id check? if the history point is on a different entity we can be reasonably sure it's not the same thing
-    if (abs(mv.z - hist_colour.w) > 1)
+    if (nval.w != hist_colour.w)
+        factor = 0;
+    if (uint16_t(pval) != id)
         factor = 0;
     float3 color = hist_colour.xyz * factor;
-    color = (color + (sum / cum_w)) / (factor + 1);
-    out_factor[pos] = factor + 1;
-    out_image[pos] = float4(color, mv.z);
+    color = (color + (sum / cum_w)) / float3(factor + 1);
+    out_factor[pos] = uint16_t2(factor + 1, uint16_t(pval));
+    out_image[pos] = float4(color, nval.w);
 }
 

@@ -91,7 +91,7 @@ void PostProcessPipeline::Init()
     for (auto& buffer : factor_buffers)
     {
         buffer.image = renderer->gpu->memory_manager->GetImage(
-            renderer->swapchain->extent.width, renderer->swapchain->extent.height, vk::Format::eR8Uint, vk::ImageTiling::eOptimal,
+            renderer->swapchain->extent.width, renderer->swapchain->extent.height, vk::Format::eR16G16Uint, vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst,
             vk::MemoryPropertyFlagBits::eDeviceLocal);
     }
@@ -106,7 +106,7 @@ void PostProcessPipeline::Init()
         buffer.image_view = renderer->gpu->device->createImageViewUnique(image_view_info, nullptr);
     }
 
-    image_view_info.format = vk::Format::eR8Uint;
+    image_view_info.format = vk::Format::eR16G16Uint;
     for (auto& buffer : factor_buffers)
     {
         image_view_info.image = buffer.image->image;

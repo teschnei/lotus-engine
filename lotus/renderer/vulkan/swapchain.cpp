@@ -74,7 +74,7 @@ void Swapchain::createSwapchain()
     }
 
     vk::Extent2D swap_extent;
-    if (swap_chain_info.capabilities.currentExtent.width == -1)
+    if (swap_chain_info.capabilities.currentExtent.width != 0xFFFFFFFF)
     {
         swap_extent = swap_chain_info.capabilities.currentExtent;
     }

@@ -53,7 +53,6 @@ public struct LightAmbient
     public float max_fog;
     public float min_fog;
     public float brightness;
-    float _pad;
 };
 
 public struct LightInfo
@@ -63,7 +62,6 @@ public struct LightInfo
     public float3 colour;
     public float radius;
     public uint id;
-    float _pad[3];
 };
 
 public struct LightBuffer

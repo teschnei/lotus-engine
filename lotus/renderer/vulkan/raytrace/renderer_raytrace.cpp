@@ -204,7 +204,8 @@ void RendererRaytrace::createRaytracingPipeline()
                                        .binding = 6,
                                        .descriptorType = vk::DescriptorType::eStorageBuffer,
                                        .descriptorCount = 1,
-                                       .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR,
+                                       .stageFlags =
+                                           vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR,
                                        .pImmutableSamplers = nullptr},
     };
 

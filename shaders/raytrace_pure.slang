@@ -22,14 +22,9 @@ void Raygen()
 
     float3 accumulation = float3(0.0);
     float3 f = float3(0.0);
-    float3 pos = float3(0.0);
-    float3 pos_prev = float3(0.0);
-    float3 hit_normal = float3(0.0);
-    float3 particle_colour = float3(0.0);
-    float3 diffuse = float3(0.0);
-    float distance = 0.0;
 
-    var payload = lotus::RayPayload(lotus::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB())));
+    uint seed = pbr::rand.tea(DispatchRaysIndex().y * DispatchRaysDimensions().x + DispatchRaysIndex().x, int(clockARB()));
+    var payload = lotus::RayPayload();
 
     RayDesc ray;
     ray.Origin = origin.xyz;
@@ -37,50 +32,89 @@ void Raygen()
     ray.Direction = dir.xyz;
     ray.TMax = 1000.0;
 
-    TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x10 | 0x20, 0, 0, 0, ray, payload);
+    float3 hit_normal = float3(0);
+    float3 pos = float3(0);
+    float3 pos_prev = float3(0);
+    float3 particle_colour = float3(0);
+    float distance = 0;
+    bool blend_f = false;
+    bool anyNonSpecular = false;
+    uint id = 0;
 
     static const int max_samples = 1;
     static const int max_depth = 2;
-    if (let bsdf = payload.bsdf)
-    {
-        f = bsdf.f;
-        diffuse = payload.diffuse;
-        hit_normal = payload.normal;
-        pos = payload.origin;
-        pos_prev = payload.prev_pos;
-        particle_colour = payload.particle;
-        distance = payload.distance;
-        float3 initial_origin = payload.origin;
+    int real_samples = 0;
 
-        if (payload.depth < max_depth)
+    for (int samples = 0; samples < max_samples; ++samples)
+    {
+        payload.distance = 0.0;
+        ray.Origin = origin.xyz;
+        ray.Direction = dir.xyz;
+        float3 weight = 1.0;
+        for(payload.depth = 0; payload.depth < max_depth; payload.depth++)
         {
-            for (int samples = 0; samples < max_samples; ++samples)
+            if (payload.depth == 0)
             {
-                float3 weight = float(1.0); //accum will get multiplied by bsdf.f in the deferred shader
-                payload.depth = 1;
-                payload.distance = 0.0;
-                ray.Direction = bsdf.wi;
-                ray.Origin = initial_origin;
-                for(; payload.depth < max_depth; payload.depth++)
+                TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x10 | 0x20, 0, 0, 0, ray, payload);
+                hit_normal = payload.normal;
+                pos = payload.intersection;
+                pos_prev = payload.prev_pos;
+                particle_colour = payload.particle;
+                distance = payload.distance;
+                id = payload.id;
+            }
+            else
+            {
+                TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x20, 0, 0, 1, ray, payload);
+            }
+            var bsdf = pbr::BSDF(payload.bxdf, payload.normal);
+            if (anyNonSpecular)
+            {
+                bsdf.Regularize();
+            }
+            if (let sample = bsdf.Sample_f(-ray.Direction, pbr.rand::rnd(seed), float2(pbr.rand::rnd(seed), pbr.rand::rnd(seed))))
+            {
+                if (payload.depth == 0)
                 {
-                    TraceRay(topLevelAS, 0, 0x01 | 0x02 | 0x20, 0, 0, 1, ray, payload);
-                    if (let bsdf = payload.bsdf)
-                    {
-                        accumulation += bsdf.f * payload.diffuse * weight;
-                        weight *= bsdf.f * bsdf.pdf_inv;
-                        ray.Direction = bsdf.wi;
-                        ray.Origin = payload.origin;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    blend_f = blend_f || (sample.flags & pbr::BSDFFlags.Glossy);
+                    f += sample.f;
+                    real_samples++;
                 }
+                if (payload.distance < ray.TMax)
+                {
+                    float3 new_origin = payload.intersection + (payload.face_normal * 0.001 * (sample.flags & pbr::BSDFFlags.Transmission ? -1 : 1));
+                    for (int i = 0; i < lights[0].light.light_count; i++)
+                    {
+                        float2 u = float2(pbr.rand::rnd(seed), pbr.rand::rnd(seed));
+                        let l = lotus::TraceLight(lights[0].light_info, new_origin, payload.normal, u);
+                        accumulation += l.light * bsdf.f(-ray.Direction, l.wi) * weight;
+                    }
+                    weight *= sample.f * sample.pdf_inv * abs(dot(sample.wi, payload.normal));
+                    ray.Direction = sample.wi;
+                    ray.Origin = new_origin;
+                    anyNonSpecular |= ((sample.flags & pbr::BSDFFlags.Specular) == 0);
+                }
+                else
+                {
+                    accumulation += weight * sample.f * sample.pdf_inv;
+                    payload.depth = 10;
+                }
+            }
+            else
+            {
+                payload.depth = 10;
             }
         }
     }
 
-    float3 light_total = (accumulation / float(max_samples)) + diffuse;
+    float3 light_total = (accumulation / float3(real_samples));
+    f /= float3(real_samples);
+    light_total = clamp(light_total, float3(0), float3(10));
+
+    if (!blend_f && all(f > 0))
+    {
+        light_total /= f;
+    }
 
     float4 pos_proj = mul(camera[0].proj, mul(camera[0].view, float4(pos, 1.0)));
     float4 prev_pos_proj = mul(camera[1].proj, mul(camera[1].view, float4(pos_prev, 1.0)));
@@ -88,9 +122,9 @@ void Raygen()
     float2 curScreenPos = (pos_proj.xy / pos_proj.w) * 0.5 + 0.5;
     float2 prevScreenPos = (prev_pos_proj.xy / prev_pos_proj.w) * 0.5 + 0.5;
 
-    albedo[DispatchRaysIndex().xy] = float4(f, distance);
-    normal[DispatchRaysIndex().xy] = float4(hit_normal, 0.0);
-    light[DispatchRaysIndex().xy] = float4(light_total, 1.0);
+    albedo[DispatchRaysIndex().xy] = blend_f ? float4(1.0, 1.0, 1.0, distance) : float4(f, distance);
+    normal[DispatchRaysIndex().xy] = float4(hit_normal, blend_f ? 1.0 : 0.0);
+    light[DispatchRaysIndex().xy] = float4(light_total, id);
     particle[DispatchRaysIndex().xy] = float4(particle_colour, 1.0);
     motion_vector[DispatchRaysIndex().xy] = float4(float2(curScreenPos - prevScreenPos), pos_proj.z, prev_pos_proj.z);
 }
