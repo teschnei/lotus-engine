@@ -15,7 +15,7 @@ include(cmake/SlangUtils.cmake)
 
 find_package(Vulkan REQUIRED)
 find_package(GLM REQUIRED)
-find_package(SDL2 REQUIRED)
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 
 # Vulkan Module (temporary)
@@ -39,11 +39,10 @@ target_link_libraries( VulkanHppModule PUBLIC Vulkan::Vulkan )
 add_library(lotus-engine)
 
 target_include_directories(lotus-engine PUBLIC "." )
-target_include_directories(lotus-engine PUBLIC "external/soloud/include" )
 
 target_compile_features(lotus-engine PUBLIC cxx_std_23)
 
-target_link_libraries(lotus-engine PUBLIC VulkanHppModule SDL::SDL2 GLMModule soloud GPUOpen::VulkanMemoryAllocator)
+target_link_libraries(lotus-engine PUBLIC VulkanHppModule SDL3::SDL3 GLMModule GPUOpen::VulkanMemoryAllocator)
 
 target_compile_definitions(GLMModule PUBLIC
 	GLM_FORCE_LEFT_HANDED
@@ -56,4 +55,3 @@ target_compile_definitions(GLMModule PUBLIC
 
 add_subdirectory(lotus)
 add_subdirectory(shaders)
-add_subdirectory(external/soloud/contrib)

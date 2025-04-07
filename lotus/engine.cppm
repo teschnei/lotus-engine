@@ -7,7 +7,7 @@ module;
 
 export module lotus:core.engine;
 
-import :core.audio;
+import :audio.engine;
 import :core.config;
 import :core.input;
 import :renderer.vulkan.settings;

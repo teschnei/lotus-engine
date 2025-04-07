@@ -1,12 +1,14 @@
 export module lotus;
 
-export import :core.audio;
 export import :core.config;
 export import :core.engine;
 export import :core.game;
 export import :core.input;
 export import :core.light_manager;
 export import :core.scene;
+export import :audio.engine;
+export import :audio.instance;
+export import :audio.source;
 export import :entity;
 export import :entity.component;
 export import :entity.component.animation;

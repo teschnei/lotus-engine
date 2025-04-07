@@ -1,7 +1,7 @@
 module;
 
 #include "lotus/renderer/sdl_inc.h"
-#include <SDL2/SDL_vulkan.h>
+#include <SDL3/SDL_vulkan.h>
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_hpp_macros.hpp>
@@ -19,15 +19,14 @@ namespace lotus
 {
 Window::Window(Settings* _settings, Config* _config) : settings(_settings), config(_config)
 {
-    SDL_Init(SDL_INIT_VIDEO);
-    window = SDL_CreateWindow(settings->app_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, config->renderer.screen_width,
-                              config->renderer.screen_height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+    window =
+        SDL_CreateWindow(settings->app_name.c_str(), config->renderer.screen_width, config->renderer.screen_height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 }
 
 vk::UniqueSurfaceKHR Window::createSurface(vk::Instance instance)
 {
     VkSurfaceKHR vksurface;
-    if (!SDL_Vulkan_CreateSurface(window, instance, &vksurface))
+    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &vksurface))
     {
         throw std::runtime_error("Unable to create SDL Vulkan surface");
     }
@@ -38,11 +37,11 @@ std::vector<const char*> Window::getRequiredExtensions() const
 {
     uint32_t extensionCount = 0;
 
-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
+    auto sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
 
     std::vector<const char*> extensions(extensionCount);
 
-    SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensions.data());
+    SDL_memcpy(extensions.data(), sdl_extensions, extensionCount * sizeof(const char*));
 
     return extensions;
 }

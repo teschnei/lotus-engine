@@ -1,3 +1,0 @@
-[submodule "external/soloud"]
-	path = external/soloud
-	url = https://github.com/jarikomppa/soloud.git

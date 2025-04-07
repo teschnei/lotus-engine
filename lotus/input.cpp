@@ -19,12 +19,11 @@ void Input::GetInput()
     {
         switch (event.type)
         {
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
             engine->close();
             break;
-        case SDL_WINDOWEVENT:
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-                engine->renderer->resized();
+        case SDL_EVENT_WINDOW_RESIZED:
+            engine->renderer->resized();
             break;
         default:
             HandleInputEvent(event);

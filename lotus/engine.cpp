@@ -1,5 +1,6 @@
 module;
 
+#include <SDL3/SDL.h>
 #include <chrono>
 #include <coroutine>
 #include <memory>
@@ -8,7 +9,6 @@ module lotus;
 
 import :core.engine;
 
-import :core.audio;
 import :core.input;
 import :core.light_manager;
 import :renderer.vulkan.renderer.hybrid;
@@ -23,6 +23,7 @@ namespace lotus
 Engine::Engine(Game* _game, Settings settings, std::unique_ptr<Config> _config)
     : game(_game), config(std::move(_config)), settings(settings), simulation_time(sim_clock::now())
 {
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     if (config->renderer.render_mode == Config::Renderer::RenderMode::Rasterization)
     {
         renderer = std::make_unique<RendererRasterization>(this);
