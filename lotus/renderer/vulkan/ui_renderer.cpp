@@ -46,26 +46,26 @@ std::vector<vk::CommandBuffer> UiRenderer::Render()
 
     auto image = renderer->getCurrentImage();
 
-    std::array colour_attachments{vk::RenderingAttachmentInfoKHR{.imageView = *renderer->deferred_image_view,
+    std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *renderer->deferred_image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eLoad,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
-    vk::RenderingAttachmentInfoKHR depth_info{.imageView = *depth_image_view,
+    vk::RenderingAttachmentInfo depth_info{.imageView = *depth_image_view,
                                               .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
                                               .loadOp = vk::AttachmentLoadOp::eClear,
                                               .storeOp = vk::AttachmentStoreOp::eDontCare,
                                               .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
-    buffers[0]->beginRenderingKHR({.flags = vk::RenderingFlagBitsKHR::eSuspending,
+    buffers[0]->beginRendering({.flags = vk::RenderingFlagBits::eSuspending,
                                    .renderArea = {.extent = renderer->swapchain->extent},
                                    .layerCount = 1,
                                    .viewMask = 0,
                                    .colorAttachmentCount = colour_attachments.size(),
                                    .pColorAttachments = colour_attachments.data(),
                                    .pDepthAttachment = &depth_info});
-    buffers[0]->endRenderingKHR();
+    buffers[0]->endRendering();
     buffers[0]->end();
 
     auto ui_buffers = engine->ui->getRenderCommandBuffers(image);
@@ -75,14 +75,14 @@ std::vector<vk::CommandBuffer> UiRenderer::Render()
 
     buffers[1]->begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-    buffers[1]->beginRenderingKHR({.flags = vk::RenderingFlagBitsKHR::eResuming,
+    buffers[1]->beginRendering({.flags = vk::RenderingFlagBits::eResuming,
                                    .renderArea = {.extent = renderer->swapchain->extent},
                                    .layerCount = 1,
                                    .viewMask = 0,
                                    .colorAttachmentCount = colour_attachments.size(),
                                    .pColorAttachments = colour_attachments.data(),
                                    .pDepthAttachment = &depth_info});
-    buffers[1]->endRenderingKHR();
+    buffers[1]->endRendering();
 
     buffers[1]->end();
 
@@ -100,19 +100,19 @@ void UiRenderer::GenerateRenderBuffers(ui::Element* element)
 
         command_buffer->begin({.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse});
 
-        std::array colour_attachments{vk::RenderingAttachmentInfoKHR{.imageView = *renderer->deferred_image_view,
+        std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *renderer->deferred_image_view,
                                                                      .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                      .loadOp = vk::AttachmentLoadOp::eLoad,
                                                                      .storeOp = vk::AttachmentStoreOp::eStore,
                                                                      .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
-        vk::RenderingAttachmentInfoKHR depth_info{.imageView = *depth_image_view,
+        vk::RenderingAttachmentInfo depth_info{.imageView = *depth_image_view,
                                                   .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
                                                   .loadOp = vk::AttachmentLoadOp::eClear,
                                                   .storeOp = vk::AttachmentStoreOp::eDontCare,
                                                   .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
-        command_buffer->beginRenderingKHR({.flags = vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending,
+        command_buffer->beginRendering({.flags = vk::RenderingFlagBits::eResuming | vk::RenderingFlagBits::eSuspending,
                                            .renderArea = {.extent = renderer->swapchain->extent},
                                            .layerCount = 1,
                                            .viewMask = 0,
@@ -159,7 +159,7 @@ void UiRenderer::GenerateRenderBuffers(ui::Element* element)
         texture_write.descriptorCount = 1;
         texture_write.pImageInfo = &texture_info;
 
-        command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *pipeline_layout, 0, {buffer_write, texture_write});
+        command_buffer->pushDescriptorSet(vk::PipelineBindPoint::eGraphics, *pipeline_layout, 0, {buffer_write, texture_write});
 
         vk::Viewport viewport{.x = 0.0f,
                               .y = 0.0f,
@@ -177,7 +177,7 @@ void UiRenderer::GenerateRenderBuffers(ui::Element* element)
 
         command_buffer->draw(4, 1, 0, 0);
 
-        command_buffer->endRenderingKHR();
+        command_buffer->endRendering();
 
         command_buffer->end();
     }
@@ -202,7 +202,7 @@ void UiRenderer::createDescriptorSetLayout()
     std::vector<vk::DescriptorSetLayoutBinding> bindings = {buffer_binding, texture_binding};
 
     vk::DescriptorSetLayoutCreateInfo layout_info = {};
-    layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+    layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor;
     layout_info.bindingCount = static_cast<uint32_t>(bindings.size());
     layout_info.pBindings = bindings.data();
 
@@ -307,7 +307,7 @@ void UiRenderer::createPipeline()
 
     std::array attachment_formats{vk::Format::eR32G32B32A32Sfloat};
 
-    vk::PipelineRenderingCreateInfoKHR rendering_info{.viewMask = 0,
+    vk::PipelineRenderingCreateInfo rendering_info{.viewMask = 0,
                                                       .colorAttachmentCount = attachment_formats.size(),
                                                       .pColorAttachmentFormats = attachment_formats.data(),
                                                       .depthAttachmentFormat = renderer->gpu->getDepthFormat()};

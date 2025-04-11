@@ -57,8 +57,7 @@ private:
     bool extensionsSupported(vk::PhysicalDevice device);
 };
 
-const std::vector<const char*> device_extensions = {vk::KHRSwapchainExtensionName, vk::KHRPushDescriptorExtensionName, vk::KHRSynchronization2ExtensionName,
-                                                    vk::KHRDynamicRenderingExtensionName};
+const std::vector<const char*> device_extensions = {vk::KHRSwapchainExtensionName};
 
 GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, std::span<const char* const> layers)
     : instance(_instance), surface(_surface), config(_config)
@@ -150,19 +149,16 @@ void GPU::createDevice(std::span<const char* const> layers)
     vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rt_features{.rayTracingPipeline = config->renderer.RaytraceEnabled(),
                                                                 .rayTracingPipelineTraceRaysIndirect = config->renderer.RaytraceEnabled()};
 
-    // this is part of the 1.2 spec but not in Vulkan12Features...?
-    vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features{
-        .pNext = &rt_features,
-        .accelerationStructure = config->renderer.RaytraceEnabled(),
-        .descriptorBindingAccelerationStructureUpdateAfterBind = config->renderer.RaytraceEnabled()
-        // some day nvidia will support this
-        //.accelerationStructureHostCommands = true
-    };
+    vk::PhysicalDeviceAccelerationStructureFeaturesKHR as_features{.pNext = &rt_features,
+                                                                   .accelerationStructure = config->renderer.RaytraceEnabled(),
+                                                                   .descriptorBindingAccelerationStructureUpdateAfterBind = config->renderer.RaytraceEnabled()};
 
     vk::PhysicalDeviceShaderClockFeaturesKHR clock_features{.pNext = &as_features, .shaderSubgroupClock = true};
 
+    vk::PhysicalDeviceVulkan14Features vk_14_features{.pNext = &clock_features, .pushDescriptor = true};
+
     vk::PhysicalDeviceVulkan13Features vk_13_features{
-        .pNext = &clock_features,
+        .pNext = &vk_14_features,
         .synchronization2 = true,
         .dynamicRendering = true,
         .maintenance4 = true,
@@ -198,7 +194,6 @@ void GPU::createDevice(std::span<const char* const> layers)
         device_extensions2.push_back(vk::KHRAccelerationStructureExtensionName);
         device_extensions2.push_back(vk::KHRDeferredHostOperationsExtensionName);
         device_extensions2.push_back(vk::KHRPipelineLibraryExtensionName);
-        device_extensions2.push_back(vk::KHRGetMemoryRequirements2ExtensionName);
         device_extensions2.push_back(vk::KHRShaderClockExtensionName);
     }
 

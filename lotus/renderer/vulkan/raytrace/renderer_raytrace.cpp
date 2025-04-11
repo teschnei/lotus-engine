@@ -69,7 +69,7 @@ WorkerTask<> RendererRaytrace::InitWork()
 
     command_buffer->begin(begin_info);
 
-    vk::ImageMemoryBarrier2KHR barrier_albedo;
+    vk::ImageMemoryBarrier2 barrier_albedo;
     barrier_albedo.oldLayout = vk::ImageLayout::eUndefined;
     barrier_albedo.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
     barrier_albedo.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
@@ -85,29 +85,29 @@ WorkerTask<> RendererRaytrace::InitWork()
     barrier_albedo.srcStageMask = vk::PipelineStageFlagBits2::eNone;
     barrier_albedo.dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR;
 
-    vk::ImageMemoryBarrier2KHR barrier_particle = barrier_albedo;
+    vk::ImageMemoryBarrier2 barrier_particle = barrier_albedo;
     barrier_particle.image = gbuffer.particle.image->image;
 
-    vk::ImageMemoryBarrier2KHR barrier_light = barrier_albedo;
+    vk::ImageMemoryBarrier2 barrier_light = barrier_albedo;
     barrier_light.image = gbuffer.light.image->image;
     barrier_light.newLayout = vk::ImageLayout::eGeneral;
 
-    vk::ImageMemoryBarrier2KHR barrier_normal = barrier_albedo;
+    vk::ImageMemoryBarrier2 barrier_normal = barrier_albedo;
     barrier_normal.image = gbuffer.normal.image->image;
     barrier_normal.newLayout = vk::ImageLayout::eGeneral;
 
-    vk::ImageMemoryBarrier2KHR barrier_motion_vector = barrier_albedo;
+    vk::ImageMemoryBarrier2 barrier_motion_vector = barrier_albedo;
     barrier_motion_vector.image = gbuffer.motion_vector.image->image;
     barrier_motion_vector.newLayout = vk::ImageLayout::eGeneral;
 
-    std::vector<vk::ImageMemoryBarrier2KHR> barriers;
+    std::vector<vk::ImageMemoryBarrier2> barriers;
     barriers.push_back(barrier_albedo);
     barriers.push_back(barrier_light);
     barriers.push_back(barrier_normal);
     barriers.push_back(barrier_particle);
     barriers.push_back(barrier_motion_vector);
 
-    command_buffer->pipelineBarrier2KHR({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
+    command_buffer->pipelineBarrier2({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
 
     post_process->InitWork(*command_buffer);
 
@@ -160,7 +160,7 @@ void RendererRaytrace::createDescriptorSetLayout()
                                                                      light_buffer_sample_layout_binding, particle_sample_layout_binding, camera_buffer_binding};
 
     vk::DescriptorSetLayoutCreateInfo deferred_layout_info;
-    deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+    deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor;
     deferred_layout_info.bindingCount = static_cast<uint32_t>(deferred_bindings.size());
     deferred_layout_info.pBindings = deferred_bindings.data();
 
@@ -294,7 +294,7 @@ void RendererRaytrace::createGraphicsPipeline()
 
         std::array attachment_formats{vk::Format::eR32G32B32A32Sfloat};
 
-        vk::PipelineRenderingCreateInfoKHR rendering_info{.viewMask = 0,
+        vk::PipelineRenderingCreateInfo rendering_info{.viewMask = 0,
                                                           .colorAttachmentCount = attachment_formats.size(),
                                                           .pColorAttachmentFormats = attachment_formats.data(),
                                                           .depthAttachmentFormat = gpu->getDepthFormat()};
@@ -419,7 +419,7 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
     buffer.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
     std::array barriers = {
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader,
@@ -430,7 +430,7 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.albedo.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader,
@@ -441,7 +441,7 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.particle.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
             .srcAccessMask = {},
             .dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -453,21 +453,21 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
             .image = deferred_image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
-    buffer.pipelineBarrier2KHR({.imageMemoryBarrierCount = barriers.size(), .pImageMemoryBarriers = barriers.data()});
+    buffer.pipelineBarrier2({.imageMemoryBarrierCount = barriers.size(), .pImageMemoryBarriers = barriers.data()});
 
-    std::array colour_attachments{vk::RenderingAttachmentInfoKHR{.imageView = *deferred_image_view,
+    std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *deferred_image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
-    vk::RenderingAttachmentInfoKHR depth_info{.imageView = *depth_image_view,
+    vk::RenderingAttachmentInfo depth_info{.imageView = *depth_image_view,
                                               .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
                                               .loadOp = vk::AttachmentLoadOp::eClear,
                                               .storeOp = vk::AttachmentStoreOp::eDontCare,
                                               .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
-    buffer.beginRenderingKHR({.renderArea = {.extent = swapchain->extent},
+    buffer.beginRendering({.renderArea = {.extent = swapchain->extent},
                               .layerCount = 1,
                               .viewMask = 0,
                               .colorAttachmentCount = colour_attachments.size(),
@@ -540,7 +540,7 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
     descriptorWrites[4].descriptorCount = camera_buffer_info.size();
     descriptorWrites[4].pBufferInfo = camera_buffer_info.data();
 
-    buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
+    buffer.pushDescriptorSet(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
 
     vk::Viewport viewport{.x = 0.0f,
                           .y = 0.0f,
@@ -556,7 +556,7 @@ vk::UniqueCommandBuffer RendererRaytrace::getDeferredCommandBuffer()
 
     buffer.draw(3, 1, 0, 0);
 
-    buffer.endRenderingKHR();
+    buffer.endRendering();
     buffer.end();
 
     return std::move(deferred_command_buffers[0]);
@@ -593,7 +593,7 @@ void RendererRaytrace::initializeCameraBuffers()
 vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
 {
     std::array before_barriers = {
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eNone,
             .srcAccessMask = vk::AccessFlagBits2::eNone,
             .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
@@ -604,7 +604,7 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.albedo.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eNone,
             .srcAccessMask = vk::AccessFlagBits2::eNone,
             .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
@@ -693,7 +693,7 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
                            }};
 
     std::array after_barriers = {
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -704,7 +704,7 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.light.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -715,7 +715,7 @@ vk::CommandBuffer RendererRaytrace::getRenderCommandbuffer()
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = gbuffer.normal.image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -786,11 +786,11 @@ Task<> RendererRaytrace::drawFrame()
                                    .stageMask = vk::PipelineStageFlagBits2::eAllCommands},
         vk::SemaphoreSubmitInfoKHR{.semaphore = *frame_finish_sem[current_frame], .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput}};
 
-    gpu->graphics_queue.submit2KHR({vk::SubmitInfo2KHR{.commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
+    gpu->graphics_queue.submit2({vk::SubmitInfo2{.commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
                                                        .pCommandBufferInfos = buffers.data(),
                                                        .signalSemaphoreInfoCount = 1,
                                                        .pSignalSemaphoreInfos = &graphics_sem},
-                                    vk::SubmitInfo2KHR{.waitSemaphoreInfoCount = deferred_waits.size(),
+                                    vk::SubmitInfo2{.waitSemaphoreInfoCount = deferred_waits.size(),
                                                        .pWaitSemaphoreInfos = deferred_waits.data(),
                                                        .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
                                                        .pCommandBufferInfos = deferred_buffers.data(),

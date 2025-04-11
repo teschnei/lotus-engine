@@ -19,13 +19,13 @@ public:
 
     auto getPipelineLayout() { return *pipeline_layout; }
     auto getDescriptorSetLayout() { return *descriptor_set_layout; }
-    vk::PipelineRenderingCreateInfoKHR getMainRenderPassInfo();
-    vk::PipelineRenderingCreateInfoKHR getTransparentRenderPassInfo();
+    vk::PipelineRenderingCreateInfo getMainRenderPassInfo();
+    vk::PipelineRenderingCreateInfo getTransparentRenderPassInfo();
     const auto& getGBuffer() { return gbuffer; }
     void beginRendering(vk::CommandBuffer buffer);
     void endRendering(vk::CommandBuffer buffer);
-    void beginMainCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlagsKHR flags);
-    void beginTransparencyCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlagsKHR flags);
+    void beginMainCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlags flags);
+    void beginTransparencyCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlags flags);
 
 private:
     Renderer* renderer;

@@ -55,7 +55,7 @@ void AccelerationStructure::UpdateAccelerationStructure(vk::CommandBuffer comman
 void AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command_buffer, std::span<vk::AccelerationStructureGeometryKHR> geometries,
                                                        std::span<vk::AccelerationStructureBuildRangeInfoKHR> ranges, vk::BuildAccelerationStructureModeKHR mode)
 {
-    vk::BufferMemoryBarrier2KHR barrier{
+    vk::BufferMemoryBarrier2 barrier{
         .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
         .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
         .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
@@ -66,7 +66,7 @@ void AccelerationStructure::BuildAccelerationStructure(vk::CommandBuffer command
         .size = vk::WholeSize,
     };
 
-    command_buffer.pipelineBarrier2KHR({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
+    command_buffer.pipelineBarrier2({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
 
     vk::AccelerationStructureBuildGeometryInfoKHR build_info{.type = type,
                                                              .flags = flags,
@@ -169,14 +169,14 @@ WorkerTask<> TopLevelAccelerationStructure::Build(Engine* engine)
     memcpy(data, instances.GetData(), instance_count * sizeof(vk::AccelerationStructureInstanceKHR));
     instance_memory->unmap();
 
-    vk::MemoryBarrier2KHR barrier{
+    vk::MemoryBarrier2 barrier{
         .srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
         .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
         .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
         .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR | vk::AccessFlagBits2::eAccelerationStructureReadKHR,
     };
 
-    command_buffer->pipelineBarrier2KHR({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
+    command_buffer->pipelineBarrier2({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
 
     BuildAccelerationStructure(*command_buffer, instance_data_vec, instance_range_vec,
                                update ? vk::BuildAccelerationStructureModeKHR::eUpdate : vk::BuildAccelerationStructureModeKHR::eBuild);

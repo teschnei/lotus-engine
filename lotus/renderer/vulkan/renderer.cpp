@@ -29,7 +29,7 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-const std::vector<const char*> instance_extensions = {vk::KHRGetPhysicalDeviceProperties2ExtensionName};
+const std::vector<const char*> instance_extensions = {};
 
 static vk::Bool32 debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
                                 const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -99,7 +99,7 @@ void Renderer::createInstance(const std::string& app_name, uint32_t app_version)
                                 .applicationVersion = app_version,
                                 .pEngineName = "lotus",
                                 .engineVersion = vk::makeApiVersion(0, 1, 0, 0),
-                                .apiVersion = vk::ApiVersion13};
+                                .apiVersion = vk::ApiVersion14};
 
     vk::InstanceCreateInfo createInfo = {};
     createInfo.pApplicationInfo = &appInfo;
@@ -171,7 +171,7 @@ void Renderer::createAnimationResources()
     std::vector<vk::DescriptorSetLayoutBinding> descriptor_bindings = {vertex_info_buffer, skeleton_info_buffer, vertex_out_buffer};
 
     vk::DescriptorSetLayoutCreateInfo layout_info = {};
-    layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+    layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor;
     layout_info.bindingCount = static_cast<uint32_t>(descriptor_bindings.size());
     layout_info.pBindings = descriptor_bindings.data();
 
@@ -378,7 +378,7 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
     buffer.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
     std::array post_render_transitions{
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
@@ -389,7 +389,7 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = deferred_image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
             .srcAccessMask = {},
             .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
@@ -401,7 +401,7 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
             .image = swapchain->images[current_image],
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
-    buffer.pipelineBarrier2KHR(
+    buffer.pipelineBarrier2(
         {.imageMemoryBarrierCount = static_cast<uint32_t>(post_render_transitions.size()), .pImageMemoryBarriers = post_render_transitions.data()});
 
     std::array image_regions{vk::Offset3D{0, 0, 0}, vk::Offset3D{static_cast<int>(swapchain->extent.width), static_cast<int>(swapchain->extent.height), 1}};
@@ -413,7 +413,7 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
     buffer.blitImage(deferred_image->image, vk::ImageLayout::eTransferSrcOptimal, swapchain->images[current_image], vk::ImageLayout::eTransferDstOptimal,
                      image_blits, vk::Filter::eNearest);
 
-    std::array post_copy_transitions{vk::ImageMemoryBarrier2KHR{
+    std::array post_copy_transitions{vk::ImageMemoryBarrier2{
         .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
         .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
         .dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
@@ -425,7 +425,7 @@ vk::CommandBuffer Renderer::prepareDeferredImageForPresent()
         .image = swapchain->images[current_image],
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
-    buffer.pipelineBarrier2KHR(
+    buffer.pipelineBarrier2(
         {.imageMemoryBarrierCount = static_cast<uint32_t>(post_copy_transitions.size()), .pImageMemoryBarriers = post_copy_transitions.data()});
 
     buffer.end();

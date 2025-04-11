@@ -38,7 +38,7 @@ vk::UniqueDescriptorSetLayout RasterPipeline::initializeDescriptorSetLayout(Rend
                                                               .descriptorCount = 1,
                                                               .stageFlags = vk::ShaderStageFlagBits::eVertex}};
 
-    return renderer->gpu->device->createDescriptorSetLayoutUnique({.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR,
+    return renderer->gpu->device->createDescriptorSetLayoutUnique({.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor,
                                                                    .bindingCount = static_cast<uint32_t>(static_bindings.size()),
                                                                    .pBindings = static_bindings.data()},
                                                                   nullptr);
@@ -58,7 +58,7 @@ vk::UniquePipelineLayout RasterPipeline::initializePipelineLayout(Renderer* rend
                                                              nullptr);
 }
 
-vk::PipelineRenderingCreateInfoKHR RasterPipeline::getMainRenderPassInfo()
+vk::PipelineRenderingCreateInfo RasterPipeline::getMainRenderPassInfo()
 {
     return {.viewMask = 0,
             .colorAttachmentCount = static_cast<uint32_t>(main_attachment_formats.size()),
@@ -66,7 +66,7 @@ vk::PipelineRenderingCreateInfoKHR RasterPipeline::getMainRenderPassInfo()
             .depthAttachmentFormat = renderer->gpu->getDepthFormat()};
 }
 
-vk::PipelineRenderingCreateInfoKHR RasterPipeline::getTransparentRenderPassInfo()
+vk::PipelineRenderingCreateInfo RasterPipeline::getTransparentRenderPassInfo()
 {
     return {.viewMask = 0,
             .colorAttachmentCount = static_cast<uint32_t>(transparency_attachment_formats.size()),
@@ -157,7 +157,7 @@ RasterPipeline::GBuffer RasterPipeline::initializeGBuffer(Renderer* renderer)
 
 void RasterPipeline::beginRendering(vk::CommandBuffer buffer)
 {
-    std::vector<vk::ImageMemoryBarrier2KHR> pre_render_transitions;
+    std::vector<vk::ImageMemoryBarrier2> pre_render_transitions;
 
     for (const auto& i : {gbuffer.position.image->image, gbuffer.normal.image->image, gbuffer.face_normal.image->image, gbuffer.albedo.image->image,
                           gbuffer.material.image->image, gbuffer.light_type.image->image, gbuffer.motion_vector.image->image, gbuffer.accumulation.image->image,
@@ -188,13 +188,13 @@ void RasterPipeline::beginRendering(vk::CommandBuffer buffer)
          .image = gbuffer.depth.image->image,
          .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eDepth, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
 
-    buffer.pipelineBarrier2KHR(
+    buffer.pipelineBarrier2(
         {.imageMemoryBarrierCount = static_cast<uint32_t>(pre_render_transitions.size()), .pImageMemoryBarriers = pre_render_transitions.data()});
 }
 
 void RasterPipeline::endRendering(vk::CommandBuffer buffer)
 {
-    std::vector<vk::ImageMemoryBarrier2KHR> post_render_transitions;
+    std::vector<vk::ImageMemoryBarrier2> post_render_transitions;
 
     for (const auto& i : {gbuffer.position.image->image, gbuffer.normal.image->image, gbuffer.face_normal.image->image, gbuffer.albedo.image->image,
                           gbuffer.material.image->image, gbuffer.light_type.image->image, gbuffer.accumulation.image->image, gbuffer.revealage.image->image,
@@ -225,55 +225,55 @@ void RasterPipeline::endRendering(vk::CommandBuffer buffer)
          .image = gbuffer.motion_vector.image->image,
          .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
 
-    buffer.pipelineBarrier2KHR(
+    buffer.pipelineBarrier2(
         {.imageMemoryBarrierCount = static_cast<uint32_t>(post_render_transitions.size()), .pImageMemoryBarriers = post_render_transitions.data()});
 }
 
-void RasterPipeline::beginMainCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlagsKHR flags)
+void RasterPipeline::beginMainCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlags flags)
 {
-    std::array colour_attachments{vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.position.image_view,
+    std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *gbuffer.position.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.normal.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.normal.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.face_normal.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.face_normal.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.albedo.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.albedo.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.material.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.material.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.light_type.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.light_type.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.motion_vector.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.motion_vector.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
-    vk::RenderingAttachmentInfoKHR depth_info{.imageView = *gbuffer.depth.image_view,
+    vk::RenderingAttachmentInfo depth_info{.imageView = *gbuffer.depth.image_view,
                                               .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
                                               .loadOp = vk::AttachmentLoadOp::eClear,
                                               .storeOp = vk::AttachmentStoreOp::eStore,
                                               .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
-    buffer.beginRenderingKHR({.flags = flags,
+    buffer.beginRendering({.flags = flags,
                               .renderArea = {.extent = renderer->swapchain->extent},
                               .layerCount = 1,
                               .viewMask = 0,
@@ -282,31 +282,31 @@ void RasterPipeline::beginMainCommandBufferRendering(vk::CommandBuffer buffer, v
                               .pDepthAttachment = &depth_info});
 }
 
-void RasterPipeline::beginTransparencyCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlagsKHR flags)
+void RasterPipeline::beginTransparencyCommandBufferRendering(vk::CommandBuffer buffer, vk::RenderingFlags flags)
 {
-    std::array colour_attachments{vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.accumulation.image_view,
+    std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *gbuffer.accumulation.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.revealage.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.revealage.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{1.0f, 1.0f, 1.0f, 1.0f}}},
-                                  vk::RenderingAttachmentInfoKHR{.imageView = *gbuffer.particle.image_view,
+                                  vk::RenderingAttachmentInfo{.imageView = *gbuffer.particle.image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
-    vk::RenderingAttachmentInfoKHR depth_info{.imageView = *gbuffer.depth.image_view,
+    vk::RenderingAttachmentInfo depth_info{.imageView = *gbuffer.depth.image_view,
                                               .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
                                               .loadOp = vk::AttachmentLoadOp::eLoad,
                                               .storeOp = vk::AttachmentStoreOp::eDontCare,
                                               .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
-    buffer.beginRenderingKHR({.flags = flags,
+    buffer.beginRendering({.flags = flags,
                               .renderArea = {.extent = renderer->swapchain->extent},
                               .layerCount = 1,
                               .viewMask = 0,

@@ -136,7 +136,7 @@ WorkerTask<> AnimationComponent::renderWork()
     copy_region.size = skeleton->bones.size() * sizeof(AnimationComponent::BufferBone);
     command_buffer->copyBuffer(staging_buffer->buffer, skeleton_bone_buffer->buffer, copy_region);
 
-    vk::BufferMemoryBarrier2KHR barrier{.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+    vk::BufferMemoryBarrier2 barrier{.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
                                         .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
                                         .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
                                         .dstAccessMask = vk::AccessFlagBits2::eShaderRead,
@@ -146,7 +146,7 @@ WorkerTask<> AnimationComponent::renderWork()
                                         .offset = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size() * engine->renderer->getCurrentFrame(),
                                         .size = sizeof(AnimationComponent::BufferBone) * skeleton->bones.size()};
 
-    command_buffer->pipelineBarrier2KHR({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
+    command_buffer->pipelineBarrier2({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
     command_buffer->end();
 
     engine->worker_pool->command_buffers.graphics_primary.queue(*command_buffer);

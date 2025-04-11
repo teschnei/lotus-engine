@@ -81,7 +81,7 @@ void DeformableRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buf
         .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
     });
 
-    engine->renderer->rasterizer->beginMainCommandBufferRendering(command_buffer, vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending);
+    engine->renderer->rasterizer->beginMainCommandBufferRendering(command_buffer, vk::RenderingFlagBits::eResuming | vk::RenderingFlagBits::eSuspending);
 
     std::array camera_buffer_info{vk::DescriptorBufferInfo{.buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
                                                            .offset = image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
@@ -108,7 +108,7 @@ void DeformableRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buf
                                                        .descriptorType = vk::DescriptorType::eUniformBuffer,
                                                        .pBufferInfo = &model_buffer_info}};
 
-    command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
+    command_buffer.pushDescriptorSet(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
     command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 1,
                                       engine->renderer->global_descriptors->getDescriptorSet(), {});
 
@@ -127,7 +127,7 @@ void DeformableRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buf
     drawModels(command_buffer, false, false);
     drawModels(command_buffer, true, false);
 
-    command_buffer.endRenderingKHR();
+    command_buffer.endRendering();
     command_buffer.end();
 }
 
@@ -160,7 +160,7 @@ void DeformableRasterComponent::drawShadowmapsToBuffer(vk::CommandBuffer command
                                .pBufferInfo = &cascade_buffer_info},
     };
 
-    command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, engine->renderer->shadowmap_rasterizer->getPipelineLayout(), 0, descriptorWrites);
+    command_buffer.pushDescriptorSet(vk::PipelineBindPoint::eGraphics, engine->renderer->shadowmap_rasterizer->getPipelineLayout(), 0, descriptorWrites);
 
     command_buffer.setDepthBias(1.25f, 0, 1.75f);
 

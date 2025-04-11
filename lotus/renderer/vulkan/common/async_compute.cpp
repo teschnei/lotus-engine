@@ -48,7 +48,7 @@ void AsyncCompute::checkTasks()
             std::vector<vk::CommandBufferSubmitInfoKHR> submits;
             submits.resize(pending_tasks.size());
             std::ranges::transform(pending_tasks, submits.begin(), [](auto& i) { return vk::CommandBufferSubmitInfoKHR{.commandBuffer = *i->data.buffer}; });
-            renderer->gpu->async_compute_queue.submit2KHR({vk::SubmitInfo2KHR{
+            renderer->gpu->async_compute_queue.submit2({vk::SubmitInfo2{
                                                               .commandBufferInfoCount = static_cast<uint32_t>(submits.size()),
                                                               .pCommandBufferInfos = submits.data(),
                                                           }},

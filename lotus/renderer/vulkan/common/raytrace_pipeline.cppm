@@ -34,8 +34,8 @@ public:
 
     TopLevelAccelerationStructure* getTLAS(uint32_t image) const;
 
-    vk::UniqueCommandBuffer getCommandBuffer(std::span<vk::WriteDescriptorSet> input_output_descriptors, std::span<vk::ImageMemoryBarrier2KHR> before_barriers,
-                                             std::span<vk::ImageMemoryBarrier2KHR> after_barriers);
+    vk::UniqueCommandBuffer getCommandBuffer(std::span<vk::WriteDescriptorSet> input_output_descriptors, std::span<vk::ImageMemoryBarrier2> before_barriers,
+                                             std::span<vk::ImageMemoryBarrier2> after_barriers);
 
 private:
     Renderer* renderer;

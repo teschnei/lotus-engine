@@ -133,12 +133,12 @@ DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::Comman
 
     // TODO: transform with a default t-pose instead of current animation to improve acceleration structure build
     // make sure all vertex and index buffers are finished transferring
-    vk::MemoryBarrier2KHR barrier{.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+    vk::MemoryBarrier2 barrier{.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
                                   .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
                                   .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
                                   .dstAccessMask = vk::AccessFlagBits2::eShaderRead};
 
-    command_buffer.pipelineBarrier2KHR({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
+    command_buffer.pipelineBarrier2({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
 
     auto& skeleton = animation_component.skeleton;
     command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline);
@@ -156,7 +156,7 @@ DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::Comman
                                                        .descriptorType = vk::DescriptorType::eStorageBuffer,
                                                        .pBufferInfo = &skeleton_buffer_info};
 
-        command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
+        command_buffer.pushDescriptorSet(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
         for (size_t j = 0; j < model->meshes.size(); ++j)
         {
@@ -184,12 +184,12 @@ DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::Comman
                                                          .descriptorType = vk::DescriptorType::eStorageBuffer,
                                                          .pBufferInfo = &vertex_output_buffer_info};
 
-            command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0,
+            command_buffer.pushDescriptorSet(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0,
                                                 {weight_descriptor_set, output_descriptor_set});
 
             command_buffer.dispatch(mesh->getVertexCount(), 1, 1);
 
-            vk::BufferMemoryBarrier2KHR barrier{.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+            vk::BufferMemoryBarrier2 barrier{.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
                                                 .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
                                                 .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
                                                 .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR,
@@ -198,7 +198,7 @@ DeformedMeshComponent::ModelInfo DeformedMeshComponent::initModelWork(vk::Comman
                                                 .buffer = vertex_buffer->buffer,
                                                 .size = vk::WholeSize};
 
-            command_buffer.pipelineBarrier2KHR({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
+            command_buffer.pipelineBarrier2({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
         }
     }
     return info;
@@ -229,7 +229,7 @@ WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
                                                    .descriptorType = vk::DescriptorType::eStorageBuffer,
                                                    .pBufferInfo = &skeleton_buffer_info};
 
-    command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
+    command_buffer->pushDescriptorSet(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0, skeleton_descriptor_set);
 
     // transform skeleton with current animation
     for (size_t i = 0; i < models.size(); ++i)
@@ -262,12 +262,12 @@ WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
                                                          .descriptorType = vk::DescriptorType::eStorageBuffer,
                                                          .pBufferInfo = &vertex_output_buffer_info};
 
-            command_buffer->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0,
+            command_buffer->pushDescriptorSet(vk::PipelineBindPoint::eCompute, *engine->renderer->animation_pipeline_layout, 0,
                                                  {weight_descriptor_set, output_descriptor_set});
 
             command_buffer->dispatch(mesh->getVertexCount(), 1, 1);
 
-            vk::BufferMemoryBarrier2KHR barrier{.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+            vk::BufferMemoryBarrier2 barrier{.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
                                                 .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
                                                 .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
                                                 .dstAccessMask =
@@ -277,7 +277,7 @@ WorkerTask<> DeformedMeshComponent::tick(time_point time, duration elapsed)
                                                 .buffer = vertex_buffer->buffer,
                                                 .size = vk::WholeSize};
 
-            command_buffer->pipelineBarrier2KHR({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
+            command_buffer->pipelineBarrier2({.bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &barrier});
 
             auto current_vertex_buffer = models[i].vertex_buffers[current_frame]->buffer;
             auto prev_vertex_buffer = models[i].vertex_buffers[previous_frame]->buffer;

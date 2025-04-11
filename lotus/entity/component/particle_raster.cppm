@@ -71,7 +71,7 @@ void ParticleRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buffe
     });
 
     engine->renderer->rasterizer->beginTransparencyCommandBufferRendering(command_buffer,
-                                                                          vk::RenderingFlagBitsKHR::eResuming | vk::RenderingFlagBitsKHR::eSuspending);
+                                                                          vk::RenderingFlagBits::eResuming | vk::RenderingFlagBits::eSuspending);
 
     std::array camera_buffer_info{vk::DescriptorBufferInfo{.buffer = engine->renderer->camera_buffers.view_proj_ubo->buffer,
                                                            .offset = image * engine->renderer->uniform_buffer_align_up(sizeof(CameraComponent::CameraData)),
@@ -98,7 +98,7 @@ void ParticleRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buffe
                                                        .descriptorType = vk::DescriptorType::eUniformBuffer,
                                                        .pBufferInfo = &model_buffer_info}};
 
-    command_buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
+    command_buffer.pushDescriptorSet(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 0, descriptorWrites);
     command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, engine->renderer->rasterizer->getPipelineLayout(), 1,
                                       engine->renderer->global_descriptors->getDescriptorSet(), {});
 
@@ -117,7 +117,7 @@ void ParticleRasterComponent::drawModelsToBuffer(vk::CommandBuffer command_buffe
     drawModels(command_buffer, false);
     drawModels(command_buffer, true);
 
-    command_buffer.endRenderingKHR();
+    command_buffer.endRendering();
     command_buffer.end();
 }
 

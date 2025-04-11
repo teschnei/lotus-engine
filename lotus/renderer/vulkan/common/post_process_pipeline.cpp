@@ -64,7 +64,7 @@ void PostProcessPipeline::Init()
                                                           .pImmutableSamplers = nullptr}};
 
     vk::DescriptorSetLayoutCreateInfo layout_info{
-        .flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR, .bindingCount = descriptors.size(), .pBindings = descriptors.data()};
+        .flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor, .bindingCount = descriptors.size(), .pBindings = descriptors.data()};
 
     descriptor_set_layout = renderer->gpu->device->createDescriptorSetLayoutUnique(layout_info, nullptr);
 
@@ -142,10 +142,10 @@ void PostProcessPipeline::Init()
 
 void PostProcessPipeline::InitWork(vk::CommandBuffer command_buffer)
 {
-    std::vector<vk::ImageMemoryBarrier2KHR> barriers;
+    std::vector<vk::ImageMemoryBarrier2> barriers;
     for (const auto& buffer : image_buffers)
     {
-        barriers.push_back(vk::ImageMemoryBarrier2KHR{
+        barriers.push_back(vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eNone,
             .srcAccessMask = vk::AccessFlagBits2::eNone,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -159,7 +159,7 @@ void PostProcessPipeline::InitWork(vk::CommandBuffer command_buffer)
     }
     for (const auto& buffer : factor_buffers)
     {
-        barriers.push_back(vk::ImageMemoryBarrier2KHR{
+        barriers.push_back(vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eNone,
             .srcAccessMask = vk::AccessFlagBits2::eNone,
             .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
@@ -172,7 +172,7 @@ void PostProcessPipeline::InitWork(vk::CommandBuffer command_buffer)
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
     }
 
-    command_buffer.pipelineBarrier2KHR({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
+    command_buffer.pipelineBarrier2({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
 
     barriers.clear();
     for (const auto& buffer : factor_buffers)
@@ -182,7 +182,7 @@ void PostProcessPipeline::InitWork(vk::CommandBuffer command_buffer)
         vk::ClearColorValue clear{std::array<float, 4>{0, 0, 0, 0}};
         command_buffer.clearColorImage(buffer.image->image, vk::ImageLayout::eTransferDstOptimal, &clear, 1, &range);
 
-        barriers.push_back(vk::ImageMemoryBarrier2KHR{
+        barriers.push_back(vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
             .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -195,7 +195,7 @@ void PostProcessPipeline::InitWork(vk::CommandBuffer command_buffer)
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}});
     }
 
-    command_buffer.pipelineBarrier2KHR({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
+    command_buffer.pipelineBarrier2({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
 }
 
 vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView input_colour, vk::ImageView input_normals, vk::ImageView input_motionvectors)
@@ -279,7 +279,7 @@ vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView inpu
                                                        .pImageInfo = &output_image_info}};
 
     std::array before_barriers{
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -290,7 +290,7 @@ vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView inpu
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = image_buffers[buffer_index].image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -302,14 +302,14 @@ vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView inpu
             .image = factor_buffers[buffer_index].image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
-    buffer[0]->pipelineBarrier2KHR({.imageMemoryBarrierCount = static_cast<uint32_t>(before_barriers.size()), .pImageMemoryBarriers = before_barriers.data()});
+    buffer[0]->pipelineBarrier2({.imageMemoryBarrierCount = static_cast<uint32_t>(before_barriers.size()), .pImageMemoryBarriers = before_barriers.data()});
 
-    buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eCompute, *pipeline_layout, 0, descriptorWrites);
+    buffer[0]->pushDescriptorSet(vk::PipelineBindPoint::eCompute, *pipeline_layout, 0, descriptorWrites);
 
     buffer[0]->dispatch((renderer->swapchain->extent.width / 16) + 1, (renderer->swapchain->extent.height / 16) + 1, 1);
 
     std::array after_barriers{
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eNone,
@@ -320,7 +320,7 @@ vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView inpu
             .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
             .image = image_buffers[buffer_index].image->image,
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
-        vk::ImageMemoryBarrier2KHR{
+        vk::ImageMemoryBarrier2{
             .srcStageMask = vk::PipelineStageFlagBits2::eComputeShader,
             .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
             .dstStageMask = vk::PipelineStageFlagBits2::eNone,
@@ -333,7 +333,7 @@ vk::UniqueCommandBuffer PostProcessPipeline::getCommandBuffer(vk::ImageView inpu
             .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}},
     };
 
-    buffer[0]->pipelineBarrier2KHR({.imageMemoryBarrierCount = after_barriers.size(), .pImageMemoryBarriers = after_barriers.data()});
+    buffer[0]->pipelineBarrier2({.imageMemoryBarrierCount = after_barriers.size(), .pImageMemoryBarriers = after_barriers.data()});
 
     buffer[0]->end();
 

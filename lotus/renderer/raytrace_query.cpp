@@ -286,12 +286,12 @@ void RaytraceQueryer::runQueries()
                 std::vector<vk::WriteDescriptorSet> writes = {write_info_as, write_info_input, write_info_output};
                 engine->renderer->gpu->device->updateDescriptorSets(writes, nullptr);
 
-                vk::MemoryBarrier2KHR barrier{.srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+                vk::MemoryBarrier2 barrier{.srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
                                               .srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR,
                                               .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
                                               .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR};
 
-                buffer[0]->pipelineBarrier2KHR({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
+                buffer[0]->pipelineBarrier2({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
 
                 buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *rtx_pipeline_layout, 0, *rtx_descriptor_set, {});
                 buffer[0]->traceRaysKHR(raygenSBT, missSBT, hitSBT, {}, processing_queries.size(), 1, 1);

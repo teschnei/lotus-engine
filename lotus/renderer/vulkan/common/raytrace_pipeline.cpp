@@ -77,7 +77,7 @@ vk::UniqueDescriptorSetLayout RaytracePipeline::initializeInputOutputDescriptorS
                                                                                          std::span<vk::DescriptorSetLayoutBinding> descriptors)
 {
     return renderer->gpu->device->createDescriptorSetLayoutUnique({
-        .flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR,
+        .flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor,
         .bindingCount = static_cast<uint32_t>(descriptors.size()),
         .pBindings = descriptors.data(),
     });
@@ -351,8 +351,8 @@ TopLevelAccelerationStructure* RaytracePipeline::getTLAS(uint32_t image) const
 }
 
 vk::UniqueCommandBuffer RaytracePipeline::getCommandBuffer(std::span<vk::WriteDescriptorSet> input_output_descriptors,
-                                                           std::span<vk::ImageMemoryBarrier2KHR> before_barriers,
-                                                           std::span<vk::ImageMemoryBarrier2KHR> after_barriers)
+                                                           std::span<vk::ImageMemoryBarrier2> before_barriers,
+                                                           std::span<vk::ImageMemoryBarrier2> after_barriers)
 {
     auto frame = renderer->getCurrentFrame();
     auto buffer = renderer->gpu->device->allocateCommandBuffersUnique(
@@ -376,12 +376,12 @@ vk::UniqueCommandBuffer RaytracePipeline::getCommandBuffer(std::span<vk::WriteDe
     renderer->gpu->device->updateDescriptorSets({write_info_as}, nullptr);
 
     buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 0, *resources_descriptor_sets[frame], {});
-    buffer[0]->pushDescriptorSetKHR(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 1, input_output_descriptors);
+    buffer[0]->pushDescriptorSet(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 1, input_output_descriptors);
     buffer[0]->bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, *pipeline_layout, 2, renderer->global_descriptors->getDescriptorSet(), {});
 
     if (!before_barriers.empty())
     {
-        buffer[0]->pipelineBarrier2KHR(
+        buffer[0]->pipelineBarrier2(
             {.imageMemoryBarrierCount = static_cast<uint32_t>(before_barriers.size()), .pImageMemoryBarriers = before_barriers.data()});
     }
 
@@ -390,14 +390,14 @@ vk::UniqueCommandBuffer RaytracePipeline::getCommandBuffer(std::span<vk::WriteDe
                                     .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
                                     .dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR};
 
-    buffer[0]->pipelineBarrier2KHR({.memoryBarrierCount = 1, .pMemoryBarriers = &tlas_barrier});
+    buffer[0]->pipelineBarrier2({.memoryBarrierCount = 1, .pMemoryBarriers = &tlas_barrier});
 
     buffer[0]->traceRaysKHR(shader_binding_table.raygen, shader_binding_table.miss, shader_binding_table.hit, {}, renderer->swapchain->extent.width,
                             renderer->swapchain->extent.height, 1);
 
     if (!after_barriers.empty())
     {
-        buffer[0]->pipelineBarrier2KHR(
+        buffer[0]->pipelineBarrier2(
             {.imageMemoryBarrierCount = static_cast<uint32_t>(after_barriers.size()), .pImageMemoryBarriers = after_barriers.data()});
     }
 

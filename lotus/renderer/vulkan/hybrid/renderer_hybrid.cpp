@@ -66,7 +66,7 @@ WorkerTask<> RendererHybrid::InitWork()
 
     command_buffer->begin(begin_info);
 
-    std::vector barriers = {vk::ImageMemoryBarrier2KHR{
+    std::vector barriers = {vk::ImageMemoryBarrier2{
         .srcStageMask = vk::PipelineStageFlagBits2::eNone,
         .srcAccessMask = vk::AccessFlagBits2::eNone,
         .dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
@@ -78,7 +78,7 @@ WorkerTask<> RendererHybrid::InitWork()
         .image = rtx_gbuffer.colour.image->image,
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
-    command_buffer->pipelineBarrier2KHR({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
+    command_buffer->pipelineBarrier2({.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()), .pImageMemoryBarriers = barriers.data()});
 
     post_process->InitWork(*command_buffer);
 
@@ -170,7 +170,7 @@ void RendererHybrid::createDescriptorSetLayout()
     vk::DescriptorSetLayoutCreateInfo deferred_layout_info;
     deferred_layout_info.bindingCount = static_cast<uint32_t>(rtx_deferred_bindings.size());
     deferred_layout_info.pBindings = rtx_deferred_bindings.data();
-    deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR;
+    deferred_layout_info.flags = vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptor;
 
     descriptor_layout_deferred = gpu->device->createDescriptorSetLayoutUnique(deferred_layout_info, nullptr);
 }
@@ -319,7 +319,7 @@ void RendererHybrid::createGraphicsPipeline()
 
         std::array attachment_formats{vk::Format::eR32G32B32A32Sfloat};
 
-        vk::PipelineRenderingCreateInfoKHR rendering_info{.viewMask = 0,
+        vk::PipelineRenderingCreateInfo rendering_info{.viewMask = 0,
                                                           .colorAttachmentCount = attachment_formats.size(),
                                                           .pColorAttachmentFormats = attachment_formats.data(),
                                                           .depthAttachmentFormat = gpu->getDepthFormat()};
@@ -427,7 +427,7 @@ vk::UniqueCommandBuffer RendererHybrid::getDeferredCommandBuffer()
 
     buffer.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-    std::array pre_render_transitions{vk::ImageMemoryBarrier2KHR{
+    std::array pre_render_transitions{vk::ImageMemoryBarrier2{
         .srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
         .srcAccessMask = {},
         .dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -439,22 +439,22 @@ vk::UniqueCommandBuffer RendererHybrid::getDeferredCommandBuffer()
         .image = deferred_image->image,
         .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}}};
 
-    buffer.pipelineBarrier2KHR(
+    buffer.pipelineBarrier2(
         {.imageMemoryBarrierCount = static_cast<uint32_t>(pre_render_transitions.size()), .pImageMemoryBarriers = pre_render_transitions.data()});
 
-    std::array colour_attachments{vk::RenderingAttachmentInfoKHR{.imageView = *deferred_image_view,
+    std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *deferred_image_view,
                                                                  .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
                                                                  .loadOp = vk::AttachmentLoadOp::eClear,
                                                                  .storeOp = vk::AttachmentStoreOp::eStore,
                                                                  .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
-    vk::RenderingAttachmentInfoKHR depth_info{.imageView = *depth_image_view,
+    vk::RenderingAttachmentInfo depth_info{.imageView = *depth_image_view,
                                               .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
                                               .loadOp = vk::AttachmentLoadOp::eClear,
                                               .storeOp = vk::AttachmentStoreOp::eDontCare,
                                               .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
-    buffer.beginRenderingKHR({.renderArea = {.extent = swapchain->extent},
+    buffer.beginRendering({.renderArea = {.extent = swapchain->extent},
                               .layerCount = 1,
                               .viewMask = 0,
                               .colorAttachmentCount = colour_attachments.size(),
@@ -575,7 +575,7 @@ vk::UniqueCommandBuffer RendererHybrid::getDeferredCommandBuffer()
     descriptorWrites[9].descriptorCount = 1;
     descriptorWrites[9].pBufferInfo = &camera_buffer_info;
 
-    buffer.pushDescriptorSetKHR(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
+    buffer.pushDescriptorSet(vk::PipelineBindPoint::eGraphics, *deferred_pipeline_layout, 0, descriptorWrites);
 
     vk::Viewport viewport{.x = 0.0f,
                           .y = 0.0f,
@@ -591,7 +591,7 @@ vk::UniqueCommandBuffer RendererHybrid::getDeferredCommandBuffer()
 
     buffer.draw(3, 1, 0, 0);
 
-    buffer.endRenderingKHR();
+    buffer.endRendering();
 
     buffer.end();
 
@@ -621,8 +621,8 @@ std::vector<vk::CommandBuffer> RendererHybrid::getRenderCommandbuffers()
     buffer[0]->begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
     rasterizer->beginRendering(*buffer[0]);
-    rasterizer->beginMainCommandBufferRendering(*buffer[0], vk::RenderingFlagBitsKHR::eSuspending);
-    buffer[0]->endRenderingKHR();
+    rasterizer->beginMainCommandBufferRendering(*buffer[0], vk::RenderingFlagBits::eSuspending);
+    buffer[0]->endRendering();
     buffer[0]->end();
 
     render_buffers[0] = *buffer[0];
@@ -630,18 +630,18 @@ std::vector<vk::CommandBuffer> RendererHybrid::getRenderCommandbuffers()
 
     buffer[1]->begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-    rasterizer->beginMainCommandBufferRendering(*buffer[1], vk::RenderingFlagBitsKHR::eResuming);
-    buffer[1]->endRenderingKHR();
-    rasterizer->beginTransparencyCommandBufferRendering(*buffer[1], vk::RenderingFlagBitsKHR::eSuspending);
-    buffer[1]->endRenderingKHR();
+    rasterizer->beginMainCommandBufferRendering(*buffer[1], vk::RenderingFlagBits::eResuming);
+    buffer[1]->endRendering();
+    rasterizer->beginTransparencyCommandBufferRendering(*buffer[1], vk::RenderingFlagBits::eSuspending);
+    buffer[1]->endRendering();
     buffer[1]->end();
 
     render_buffers[1 + secondary_buffers.size()] = *buffer[1];
     std::ranges::copy(transparent_buffers, render_buffers.begin() + 2 + secondary_buffers.size());
 
     buffer[2]->begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
-    rasterizer->beginTransparencyCommandBufferRendering(*buffer[2], vk::RenderingFlagBitsKHR::eResuming);
-    buffer[2]->endRenderingKHR();
+    rasterizer->beginTransparencyCommandBufferRendering(*buffer[2], vk::RenderingFlagBits::eResuming);
+    buffer[2]->endRendering();
     rasterizer->endRendering(*buffer[2]);
     buffer[2]->end();
 
@@ -745,7 +745,7 @@ std::vector<vk::CommandBuffer> RendererHybrid::getRenderCommandbuffers()
                                .pBufferInfo = camera_buffer_info.data(),
                            }};
 
-    std::array after_writes{vk::ImageMemoryBarrier2KHR{
+    std::array after_writes{vk::ImageMemoryBarrier2{
         .srcStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         .srcAccessMask = vk::AccessFlagBits2::eShaderWrite,
         .dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
@@ -824,11 +824,11 @@ Task<> RendererHybrid::drawFrame()
                                    .stageMask = vk::PipelineStageFlagBits2::eAllCommands},
         vk::SemaphoreSubmitInfoKHR{.semaphore = *frame_finish_sem[current_frame], .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput}};
 
-    gpu->graphics_queue.submit2KHR({vk::SubmitInfo2KHR{.commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
+    gpu->graphics_queue.submit2({vk::SubmitInfo2{.commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
                                                        .pCommandBufferInfos = buffers.data(),
                                                        .signalSemaphoreInfoCount = 1,
                                                        .pSignalSemaphoreInfos = &graphics_sem},
-                                    vk::SubmitInfo2KHR{.waitSemaphoreInfoCount = deferred_waits.size(),
+                                    vk::SubmitInfo2{.waitSemaphoreInfoCount = deferred_waits.size(),
                                                        .pWaitSemaphoreInfos = deferred_waits.data(),
                                                        .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
                                                        .pCommandBufferInfos = deferred_buffers.data(),

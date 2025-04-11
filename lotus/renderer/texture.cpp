@@ -54,7 +54,7 @@ WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& t
 
     command_buffer->begin(begin_info);
 
-    vk::ImageMemoryBarrier2KHR barrier{.srcStageMask = vk::PipelineStageFlagBits2::eNone,
+    vk::ImageMemoryBarrier2 barrier{.srcStageMask = vk::PipelineStageFlagBits2::eNone,
                                        .srcAccessMask = vk::AccessFlagBits2::eNone,
                                        .dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
                                        .dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
@@ -71,7 +71,7 @@ WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& t
                                            .layerCount = static_cast<uint32_t>(texture_datas.size()),
                                        }};
 
-    command_buffer->pipelineBarrier2KHR({.imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrier});
+    command_buffer->pipelineBarrier2({.imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrier});
 
     vk::BufferImageCopy region;
     region.bufferOffset = 0;
@@ -100,7 +100,7 @@ WorkerTask<> Texture::Init(Engine* engine, std::vector<std::vector<uint8_t>>&& t
                                     .baseArrayLayer = 0,
                                     .layerCount = static_cast<uint32_t>(texture_datas.size())}};
 
-    command_buffer->pipelineBarrier2KHR({.imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrier});
+    command_buffer->pipelineBarrier2({.imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrier});
 
     command_buffer->end();
 

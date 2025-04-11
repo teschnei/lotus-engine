@@ -152,7 +152,7 @@ WorkerTask<> Model::InitWork(Engine* engine, const std::vector<std::span<const s
         {
             Renderer* renderer = engine->renderer.get();
             // TODO: test if just buffermemorybarrier is faster
-            vk::MemoryBarrier2KHR barrier{
+            vk::MemoryBarrier2 barrier{
                 .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
                 .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
                 .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
@@ -160,7 +160,7 @@ WorkerTask<> Model::InitWork(Engine* engine, const std::vector<std::span<const s
                                  vk::AccessFlagBits2::eTransferRead,
             };
 
-            command_buffer->pipelineBarrier2KHR({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
+            command_buffer->pipelineBarrier2({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
 
             bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(
                 renderer, *command_buffer, std::move(raytrace_geometry), std::move(raytrace_offset_info), std::move(max_primitive_count), false,
@@ -256,7 +256,7 @@ WorkerTask<> Model::InitWorkAABB(Engine* engine, std::vector<uint8_t>&& vertices
 
         if (engine->config->renderer.RaytraceEnabled())
         {
-            vk::MemoryBarrier2KHR barrier{
+            vk::MemoryBarrier2 barrier{
                 .srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
                 .srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
                 .dstStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
@@ -264,7 +264,7 @@ WorkerTask<> Model::InitWorkAABB(Engine* engine, std::vector<uint8_t>&& vertices
                                  vk::AccessFlagBits2::eTransferRead,
             };
 
-            command_buffer->pipelineBarrier2KHR({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
+            command_buffer->pipelineBarrier2({.memoryBarrierCount = 1, .pMemoryBarriers = &barrier});
             bottom_level_as = std::make_unique<BottomLevelAccelerationStructure>(engine->renderer.get(), *command_buffer, std::move(raytrace_geometry),
                                                                                  std::move(raytrace_offset_info), std::move(max_primitives), false, false,
                                                                                  BottomLevelAccelerationStructure::Performance::FastTrace);
