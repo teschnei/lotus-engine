@@ -120,7 +120,7 @@ MemoryManager::MemoryManager(vk::PhysicalDevice _physical_device, vk::Device _de
     vma_ci.device = device;
     vma_ci.physicalDevice = physical_device;
     vma_ci.instance = instance;
-    vma_ci.vulkanApiVersion = VK_API_VERSION_1_2;
+    vma_ci.vulkanApiVersion = VK_API_VERSION_1_4;
     vma_ci.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 
     vmaCreateAllocator(&vma_ci, &allocator);

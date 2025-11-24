@@ -3,7 +3,7 @@ module;
 #include <memory>
 #include <vector>
 
-module lotus:renderer.vulkan.pipelines.raster;
+export module lotus:renderer.vulkan.pipelines.raster;
 
 import :renderer.memory;
 import vulkan_hpp;

@@ -21,7 +21,7 @@ export namespace lotus
 class GPU
 {
 public:
-    GPU(vk::Instance instance, vk::SurfaceKHR surface, Config* config, std::span<const char* const> layers);
+    GPU(vk::Instance instance, vk::SurfaceKHR surface, Config* config);
 
     vk::PhysicalDevice physical_device;
     vk::PhysicalDeviceProperties2 properties;
@@ -52,18 +52,17 @@ private:
     Config* config{nullptr};
 
     void createPhysicalDevice();
-    void createDevice(std::span<const char* const> layers);
+    void createDevice();
     std::tuple<std::optional<uint32_t>, std::optional<std::uint32_t>, std::optional<uint32_t>> getQueueFamilies(vk::PhysicalDevice device) const;
     bool extensionsSupported(vk::PhysicalDevice device);
 };
 
 const std::vector<const char*> device_extensions = {vk::KHRSwapchainExtensionName};
 
-GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config, std::span<const char* const> layers)
-    : instance(_instance), surface(_surface), config(_config)
+GPU::GPU(vk::Instance _instance, vk::SurfaceKHR _surface, Config* _config) : instance(_instance), surface(_surface), config(_config)
 {
     createPhysicalDevice();
-    createDevice(layers);
+    createDevice();
 
     memory_manager = std::make_unique<MemoryManager>(physical_device, *device, instance);
 }
@@ -115,7 +114,7 @@ void GPU::createPhysicalDevice()
     physical_device.getProperties2(&properties);
 }
 
-void GPU::createDevice(std::span<const char* const> layers)
+void GPU::createDevice()
 {
     auto [graphics, present, compute] = getQueueFamilies(physical_device);
     graphics_queue_index = graphics.value();
@@ -195,6 +194,12 @@ void GPU::createDevice(std::span<const char* const> layers)
         device_extensions2.push_back(vk::KHRDeferredHostOperationsExtensionName);
         device_extensions2.push_back(vk::KHRPipelineLibraryExtensionName);
         device_extensions2.push_back(vk::KHRShaderClockExtensionName);
+#ifdef WIN32
+        device_extensions2.push_back(vk::KHRExternalMemoryWin32ExtensionName);
+#else
+        device_extensions2.push_back(vk::KHRExternalMemoryFdExtensionName);
+        device_extensions2.push_back(vk::EXTExternalMemoryDmaBufExtensionName);
+#endif
     }
 
     vk::DeviceCreateInfo device_create_info{.pNext = &vk_11_features,
@@ -204,15 +209,6 @@ void GPU::createDevice(std::span<const char* const> layers)
                                             .ppEnabledExtensionNames = device_extensions2.data(),
                                             .pEnabledFeatures = &physical_device_features};
 
-    if (!layers.empty())
-    {
-        device_create_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
-        device_create_info.ppEnabledLayerNames = layers.data();
-    }
-    else
-    {
-        device_create_info.enabledLayerCount = 0;
-    }
     device = physical_device.createDeviceUnique(device_create_info, nullptr);
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);

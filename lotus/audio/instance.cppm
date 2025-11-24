@@ -53,7 +53,7 @@ void audioCallback(void* userdata, SDL_AudioStream* stream, int additional_amoun
     int total_samples = 0;
     while (total_samples < samples && (instance->IsLooping() || !instance->hasEnded()))
     {
-        total_samples += instance->getAudio(buffer.data() + total_samples, samples);
+        total_samples += instance->getAudio(buffer.data() + total_samples, samples - total_samples);
     }
     SDL_PutAudioStreamData(instance->GetSDLStream(), buffer.data(), total_samples * sizeof(float));
     if (instance->hasEnded())

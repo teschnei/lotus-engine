@@ -4,7 +4,7 @@ module;
 #include <span>
 #include <vector>
 
-module lotus:renderer.vulkan.pipelines.raytrace;
+export module lotus:renderer.vulkan.pipelines.raytrace;
 
 import :renderer.acceleration_structure;
 import :renderer.memory;

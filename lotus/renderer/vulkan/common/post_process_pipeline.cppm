@@ -2,7 +2,7 @@ module;
 
 #include <memory>
 
-module lotus:renderer.vulkan.pipelines.post_process;
+export module lotus:renderer.vulkan.pipelines.post_process;
 
 import :renderer.memory;
 import vulkan_hpp;

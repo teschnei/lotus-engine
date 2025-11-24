@@ -49,19 +49,16 @@ Renderer::Renderer(Engine* _engine) : engine(_engine)
 
     surface = window->createSurface(*instance);
 
+    gpu = std::make_unique<GPU>(*instance, *surface, engine->config.get());
+
     if (enableValidationLayers)
     {
-        gpu = std::make_unique<GPU>(*instance, *surface, engine->config.get(), validation_layers);
         vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
         debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
         debugCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
                                       vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
         debugCreateInfo.pfnUserCallback = debugCallback;
         debug_messenger = instance->createDebugUtilsMessengerEXTUnique(debugCreateInfo);
-    }
-    else
-    {
-        gpu = std::make_unique<GPU>(*instance, *surface, engine->config.get(), std::vector<const char*>());
     }
 
     createSwapchain();
