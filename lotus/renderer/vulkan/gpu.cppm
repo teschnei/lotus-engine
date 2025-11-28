@@ -177,7 +177,7 @@ void GPU::createDevice()
                                                       .timelineSemaphore = true,
                                                       .bufferDeviceAddress = true};
 
-    vk::PhysicalDeviceVulkan11Features vk_11_features{.pNext = &vk_12_features, .storageBuffer16BitAccess = true};
+    vk::PhysicalDeviceVulkan11Features vk_11_features{.pNext = &vk_12_features, .storageBuffer16BitAccess = true, .shaderDrawParameters = true};
 
     vk::PhysicalDeviceFeatures physical_device_features{.independentBlend = true,
                                                         .depthClamp = true,

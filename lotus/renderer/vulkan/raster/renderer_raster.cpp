@@ -4,8 +4,6 @@ module;
 #include <coroutine>
 #include <cstdint>
 #include <cstring>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -51,8 +49,6 @@ Task<> RendererRasterization::Init()
     initializeCameraBuffers();
     generateCommandBuffers();
 
-    current_image =
-        gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
     co_return;
 }
 
@@ -425,9 +421,9 @@ void RendererRasterization::createGraphicsPipeline()
     std::array attachment_formats{vk::Format::eR32G32B32A32Sfloat};
 
     vk::PipelineRenderingCreateInfo rendering_info{.viewMask = 0,
-                                                      .colorAttachmentCount = attachment_formats.size(),
-                                                      .pColorAttachmentFormats = attachment_formats.data(),
-                                                      .depthAttachmentFormat = gpu->getDepthFormat()};
+                                                   .colorAttachmentCount = attachment_formats.size(),
+                                                   .pColorAttachmentFormats = attachment_formats.data(),
+                                                   .depthAttachmentFormat = gpu->getDepthFormat()};
 
     vk::GraphicsPipelineCreateInfo pipeline_info{.pNext = &rendering_info,
                                                  .stageCount = static_cast<uint32_t>(shaderStages.size()),
@@ -582,23 +578,23 @@ vk::UniqueCommandBuffer RendererRasterization::getDeferredCommandBuffer()
         {.imageMemoryBarrierCount = static_cast<uint32_t>(pre_render_transitions.size()), .pImageMemoryBarriers = pre_render_transitions.data()});
 
     std::array colour_attachments{vk::RenderingAttachmentInfo{.imageView = *deferred_image_view,
-                                                                 .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-                                                                 .loadOp = vk::AttachmentLoadOp::eClear,
-                                                                 .storeOp = vk::AttachmentStoreOp::eStore,
-                                                                 .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
+                                                              .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+                                                              .loadOp = vk::AttachmentLoadOp::eClear,
+                                                              .storeOp = vk::AttachmentStoreOp::eStore,
+                                                              .clearValue = {.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}}}};
 
     vk::RenderingAttachmentInfo depth_info{.imageView = *depth_image_view,
-                                              .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-                                              .loadOp = vk::AttachmentLoadOp::eClear,
-                                              .storeOp = vk::AttachmentStoreOp::eDontCare,
-                                              .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
+                                           .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+                                           .loadOp = vk::AttachmentLoadOp::eClear,
+                                           .storeOp = vk::AttachmentStoreOp::eDontCare,
+                                           .clearValue = {.depthStencil = vk::ClearDepthStencilValue{1.0f, 0}}};
 
     buffer.beginRendering({.renderArea = {.extent = swapchain->extent},
-                              .layerCount = 1,
-                              .viewMask = 0,
-                              .colorAttachmentCount = colour_attachments.size(),
-                              .pColorAttachments = colour_attachments.data(),
-                              .pDepthAttachment = &depth_info});
+                           .layerCount = 1,
+                           .viewMask = 0,
+                           .colorAttachmentCount = colour_attachments.size(),
+                           .pColorAttachments = colour_attachments.data(),
+                           .pDepthAttachment = &depth_info});
 
     vk::DescriptorImageInfo pos_info;
     pos_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -870,6 +866,16 @@ Task<> RendererRasterization::drawFrame()
 
     try
     {
+        previous_image = current_image;
+        current_image =
+            gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
+    }
+    catch (vk::OutOfDateKHRError&)
+    {
+    }
+
+    try
+    {
         engine->worker_pool->clearProcessed(current_frame);
         swapchain->checkOldSwapchain(current_frame);
 
@@ -904,22 +910,22 @@ Task<> RendererRasterization::drawFrame()
             vk::SemaphoreSubmitInfoKHR{.semaphore = *frame_timeline_sem[current_frame],
                                        .value = timeline_sem_base[current_frame] + timeline_frame_ready,
                                        .stageMask = vk::PipelineStageFlagBits2::eAllCommands},
-            vk::SemaphoreSubmitInfoKHR{.semaphore = *frame_finish_sem[current_frame], .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput}};
+            vk::SemaphoreSubmitInfoKHR{.semaphore = *frame_finish_sem[current_image], .stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput}};
 
         gpu->graphics_queue.submit2({vk::SubmitInfo2{.commandBufferInfoCount = static_cast<uint32_t>(buffers.size()),
-                                                           .pCommandBufferInfos = buffers.data(),
-                                                           .signalSemaphoreInfoCount = 1,
-                                                           .pSignalSemaphoreInfos = &graphics_sem},
-                                        vk::SubmitInfo2{.waitSemaphoreInfoCount = deferred_waits.size(),
-                                                           .pWaitSemaphoreInfos = deferred_waits.data(),
-                                                           .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
-                                                           .pCommandBufferInfos = deferred_buffers.data(),
-                                                           .signalSemaphoreInfoCount = deferred_signals.size(),
-                                                           .pSignalSemaphoreInfos = deferred_signals.data()}});
+                                                     .pCommandBufferInfos = buffers.data(),
+                                                     .signalSemaphoreInfoCount = 1,
+                                                     .pSignalSemaphoreInfos = &graphics_sem},
+                                     vk::SubmitInfo2{.waitSemaphoreInfoCount = deferred_waits.size(),
+                                                     .pWaitSemaphoreInfos = deferred_waits.data(),
+                                                     .commandBufferInfoCount = static_cast<uint32_t>(deferred_buffers.size()),
+                                                     .pCommandBufferInfos = deferred_buffers.data(),
+                                                     .signalSemaphoreInfoCount = deferred_signals.size(),
+                                                     .pSignalSemaphoreInfos = deferred_signals.data()}});
 
         engine->worker_pool->gpuResource(std::move(deferred_buffer));
 
-        std::vector<vk::Semaphore> present_waits{*frame_finish_sem[current_frame]};
+        std::vector<vk::Semaphore> present_waits{*frame_finish_sem[current_image]};
         std::vector<vk::SwapchainKHR> swap_chains = {*swapchain->swapchain};
 
         co_await engine->worker_pool->mainThread();
@@ -932,9 +938,6 @@ Task<> RendererRasterization::drawFrame()
 
         previous_frame = current_frame;
         current_frame = (current_frame + 1) % max_pending_frames;
-        previous_image = current_image;
-        current_image =
-            gpu->device->acquireNextImageKHR(*swapchain->swapchain, std::numeric_limits<uint64_t>::max(), *image_ready_sem[current_frame], nullptr).value;
     }
     catch (vk::OutOfDateKHRError&)
     {

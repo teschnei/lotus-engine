@@ -135,6 +135,9 @@ void Renderer::createSemaphores()
     for (uint32_t i = 0; i < max_pending_frames; ++i)
     {
         image_ready_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
+    }
+    for (uint32_t i = 0; i < swapchain->images.size(); ++i)
+    {
         frame_finish_sem.push_back(gpu->device->createSemaphoreUnique({}, nullptr));
     }
 }
